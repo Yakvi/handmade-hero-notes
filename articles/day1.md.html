@@ -1,0 +1,730 @@
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../css/style.css"/>
+
+**Day 1. Setting Up the Windows Build**
+_Video Length: [1h13](https://hero.handmade.network/episode/code/day001/)_
+
+# Start the Project
+
+The first thing we're going to do is to actually get the project started. We do it by setting up all our tools and by building _anything_ to ensure that the tools are working properly. While it may be a bit of _drudgework_, it's a vital step to ensure that, moving forward, the project can be continued successfully without any interruptions. 
+
+At its very core, the following things must be created: 
+
+*   Something that allows you to build the actual text files that you type into the source ("a text editor")
+*   Something that allows you to build the text files into the executables ("compiler", "linker", etc).
+
+You will also need a variety of additional tools that would render your life much simpler. All of these will be the focus of this Day.
+
+## Set Up the Compiler
+
+A compiler is something that takes the source code that you type, and it translates it _partially_ into executable code. The role of the linker then is to gather all that executable code and put it into an executable, which is something that we can run on our computer.
+
+Nowadays, these are usually bundled together under the name of <b>I</b>ntegrated <b>D</b>evelopment <b>E</b>nvironment, or IDE for short. A shorthand term "compiler" is also used.
+
+!!! Tip
+    For a more in-depth overview of how compiler and linker work, you can watch the short series [Intro to C][introtoc] where these topics are covered in detail.
+
+This course assumes you follow on a machine running Windows 10, and will use the <b>M</b>icro<b>s</b>oft <b>V</b>isual <b>C</b>++ development tools, or MSVC. These are available bundled with Visual Studio. You can download a free Community edition at [visualstudio.microsoft.com][msvc] and follow the installation instructions: 
+
+1. Run `vs_community.exe` file that will be downloaded after the prompt.
+2. Accept the terms and conditions.
+3. Wait for the installer setup to complete.
+4. In the `Workloads` section, select only `Desktop development with C++`
+5. You can further reduce total space required by leaving only the following tools (`###` stands for current version number of the tools): 
+    * MSVC v`###` - VS 2019 C++ x64/x86 build tools
+    * C++/CLI support for v`###`
+    * Windows 10 SDK (highest version available)
+    * IntelliCode (If you are planning on using Visual Studio as your text editor)
+6. After that, the development tools will be installed
+
+Once you are done, you can quickly test if everything was installed correctly by searching for "Visual Studio 2019" in your Start menu. You will be greeted with the Visual Studio IDE:
+
+![Figure [X]: Visual Studio Development Environment](../media/day1/1.1-vs_ide.png)
+
+This tool may be used to write, compile and debug all code. While some developers use this interface to make their projects, in this course we will use other means. Feel free to try to use Visual Studio editor tools to develop your code though!
+
+Other than that, depending on your choice of debugger (see Subsection [Set Up The Debugger]), you might only access this IDE for debugging purposes. As for compilation, we will do it through the <b>C</b>ommand <b>L</b>ine <b>I</b>nterface (CLI).
+
+## Command Line in Windows
+
+In 2020 world, the command line is getting somewhat of a comeback on Windows. Still, while on Linux the command line is omnipresent, it's still possible that you have used Windows without ever accessing it. 
+
+To open a command line, simply search in your Start Menu for `Command Prompt`. If you open it, you will be presented with a simple text window:
+
+![Figure [X]: Default Command Prompt Window](../media/day1/1.2-cmd.png)
+
+What this text window does is allow you to have dialogue with your computer the old-fashioned way: with the text commands. For instance, `dir` lists the contents of the current directory, `del [filename]` deletes the specified file, `cd [directory]` changes the current directory, etc. 
+
+!!! Tip
+    If you're completely unfamiliar with the command lines, check out a handy command list [here](https://en.wikipedia.org/wiki/Cmd.exe#Windows_NT_family).
+
+!!!
+    In this book, we will be using the terms "Command Line", "Command Prompt", "CLI" and "Terminal" interchangeably.
+
+![Figure [X]: Command Prompt window properties](../media/day1/1.3-cmd-prop.png) The default way the Command Prompt window looks is pretty simple, and you might want to customize its `Font`, `Colors`, `Layout`, etc. If you copy the shortcut to the Command Prompt to your desktop, you can right-click and customize all these settings in the `Properties` window, in the related tabs. Please note that, if you are using your default Windows 10 theme, you might not be able to `Ctrl-Click and Drag` the shortcut to copy it. Instead, you can right-click on the shortcut in the Start Menu, select `Open File Location`, and from there you can copy the shortcut. 
+
+### Create a Virtual drive
+
+Another thing Command Prompt Properties window allows you to specify is its starting location. By default, it starts in your user folder, which isn't very helpful if you keep your codebase somewhere else.
+
+One command to note is `subst`. On Windows, there're _drives_ (C, D, etc.) that, in the command line, you can quickly refer to by specifying their letter (e.g. `C:`). What `subst` does is an (available) drive letter and assigning it a path on your hard drive (you can get more details by typing `subst /?` in the command line). This can come handy to point your codebase root folder, especially if you move the codebase to another machine or location.
+
+!!! Trivia
+    [Casey][] notes that this habit of his is highly unusual, and that you can be completely free to skip it. It might be a legacy habit of him working a lot with the [Amiga computers](https://en.wikipedia.org/wiki/Amiga) popular in the late 80's... or of the people who watched [Handmade Hero][] a lot.
+
+Let's assign `w` drive to our codebase, create a `handmade` directory in it, and move into the directory.
+
+~~~~~~~ batch input
+C:\Users\Yakvi> subst w: d:\documents\codebase
+C:\Users\Yakvi> w:
+W:\> mkdir handmade
+W:\> cd handmade
+W:\handmade> _
+~~~~~~~
+[<file>[Command Prompt]</file> Setting up your work folder]
+
+!!! Warning
+    This command must be run each time you restart your PC. If you'd like subst to happen automatically, create a `startup.bat` file with the following commands: 
+
+    `@echo off`
+
+    `subst w: [your codebase location]`
+
+    Save this file in `%appdata%\Microsoft\Windows\Start Menu\Programs\Startup` folder.
+
+So now, coming back to `Command Prompt Properties` -> `General`, you can specify its `Start in` location as `w:\handmade`. After restarting your Command Prompt, it will start with the color scheme and in the location specified.
+
+
+
+![Figure [X]: Customized Command Prompt Window next to the Properties Window](../media/day1/1.4-cmd2.png)
+
+## Set Up the Text Editor
+
+To edit the source files, any text editor can do the job. Notepad on Windows, for example, is perfectly capable to do it. However, text editors created specifically for the purposes of source file editing come with a variety of additional features, such as automated formatting, code highlighting, smart completion, quick navigation, etc. 
+
+We will occasionally provide relevant tips on how to use the editor [4coder][]. In this section, we will provide some setup tips both for [4coder][] and [Visual Studio Code][vscode] (also know as VSCode), an alternative text editor developed by Microsoft.
+
+One thing to note that, as a rule of the thumb, when selecting your editor you should carefully choose how much it gets in your way, and compare it versus the various quality of life improvements it offers. Perhaps, there's a way to replicate the improvements or at least mitigate the distractions? 
+
+### 4coder Setup
+
+!!!
+    4coder is a paid editor, but once you purchased it, it's yours to keep. You can also download a free demo to test it out.
+
+After you downloaded 4coder, you will get a zipped folder. Unzip it somewhere, for example to `w:\apps`. Now, you can open it by doubleclicking `4ed.exe`, and it will open with 4coder as its working directory.
+
+![Figure [X]: Main window of 4coder](../media/day1/1.5-4coder.png)
+
+As the top message says, if you hit `Alt-X` shortcut and type "demo", you can select command "hms_demo_tutorial". Follow this tutorial to get hang of its main features.
+
+Overall, `Alt-X` is the main command lister. For instance, if you would like to change the theme from `theme-4coder` to `theme-handmade-hero`, hit `Alt-X`, type in `theme` and choose the appropriate theme from the theme lister. 
+
+If you'd like to change your default settings, open the `config.4coder` file (using the `Interactive Open` command or by hitting `Ctrl-O` shortcut), and `default_theme_name` to the theme of your choice. While you are here, check out other settings like `mode` or `automatically_load_project`. Hit `Ctrl-S` to save your changes.
+
+!!! Tip
+    You can further customize your 4coder experience by writing extensions directly in C++! For additional information, check out the [4coder wiki](https://4coder.handmade.network/wiki).
+
+If you want to start 4coder from your code directory, type the following command in the Command Line: 
+
+~~~~~~~ batch input
+W:\handmade\code> w:\apps\4coder\4ed
+~~~~~~~
+[<file>[Command Prompt]</file> Starting 4coder from Command Prompt]
+
+You can also add 4coder shortcut script, we'll look into it in Set Up Environment Variables subsection.
+
+### VSCode Setup
+
+Visual Studio Code is a free editor by Microsoft. One of its main advantages is a high availability of user-made and official extensions, however because it's using Chromium it might become rather memory-intensive. 
+
+You can download VSCode and get started with it [here](https://code.visualstudio.com/). If you choose this editor as the editor of your choice, here are some recommended extensions you might want to add to your environment (listed in alphabetical order). Many of these are of personal preference!
+
+* C/C++
+* C/C++ Snippets
+* Clang-Format (you will need to install separately [Clang-Format](https://releases.llvm.org/download.html) executable)
+* Color Highlight
+* Darcula Theme
+* File Template
+* GitLens (if you will be using version control)
+* glsl-canvas
+* Hex Editor
+* Indenticator
+* Insight
+* Paste and Indent
+* Rainbow brackets
+* Reloaded C/C++
+* Run in terminal (as an alternative to vscode's tasks to run your `build.bat` file)
+* select highlight in minimap
+* Select Line Status Bar
+* Select part of word
+* Shader languages support for VS Code
+* TODO Highlight
+
+Overall, however, you might want ot disable anything else that would distract you from development: Minimap, Menu bar, Side bar and the terminal (when you aren't using them).
+
+![Figure [X]: Visual Studio Code](../media/day1/1.7-vscode.png)
+
+# Create the First Code File
+
+Once we have our compiler and text editor at the ready, we can launch the latter and make a simple single C++ source file that we use to actually get our build going. 
+
+1. Launch your text editor.
+2. We need a folder where all our code would live. Create a folder called `code` inside your `handmade` directory. You can use the following command line prompt: 
+
+~~~~~~~ batch input
+W:\handmade> mkdir code
+W:\handmade> cd code
+W:\handmade\code> _
+~~~~~~~
+[<file>[Command Prompt]</file> Creating `code` folder]
+3. Create a new text file and save it as `win32_handmade.cpp` inside your `code` folder.
+
+!!! Tip
+    In [4coder][], you can create both the directory and the file in one go, by hitting `Ctrl-N` and typing their names.
+
+## Minimum Code You Will Need
+
+In this file we're going to do absolutely nothing (yet). We're going to insert just the entry point for Windows. Where to learn more about this? Whenever you're programming on Windows, you might want to always check out a website called [MSDN][] (now also known as Microsoft Docs). It is the documentation of everything that is on Windows. 
+
+If we search for `WinMain`, which is the entry point for Windows, you will quickly find the [related article](https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-winmain). 
+
+!!!
+    Much of the Windows core functionality has fallen into obscurity or obfuscated by the newer API. Additionally while this newer API is actively pushed by Microsoft and many developers, this might not be something you actively need in game development. So searching for the minutia of the programming API on Windows might become complex. The MSDN is huge, and it's hard to find your way around. So one reason this course exist is exactly to help finding the correct (or some of the correct) calls and articles. Hopefully this series will become a backbone that would show you want to search for.
+
+    However, even if we will present the direct links to many of the articles, this doesn't mean that you should learn how to use MSDN. If you want to program on Windows, you'll need to learn to navigate this website, read these pages and understand what they say in order to _fully_ understand everything that's going on.
+
+`WinMain` is the entry point that Windows will be looking for in our program[^entrypoint], everything starts from here. Its _syntax_ is specified at the top of its MSDN article: 
+
+~~~~~~~ C++
+int __clrcall WinMain(
+  HINSTANCE hInstance,
+  HINSTANCE hPrevInstance,
+  LPSTR     lpCmdLine,
+  int       nShowCmd
+);
+~~~~~~~
+
+This is the part we copy and paste in our `win32_handmade.cpp` file. We will also __include__ the file `windows.h`, which is the _header file_ on Windows containing many of the function definitions that we will need to call in order to get our job done. 
+
+~~~~~~~ C++
+#include <windows.h>
+
+int __clrcall 
+WinMain (
+         HINSTANCE hInstance,
+         HINSTANCE hPrevInstance,
+         LPSTR     lpCmdLine,
+         int       nShowCmd
+         )
+{
+}
+~~~~~~~
+[Listing [X]: <file>[win32_handmade.cpp]</file> Our first code]
+
+We assume that the reader has a basic knowledge of reading C code. If not, you can watch the short series [Intro to C][introtoc] to get you started. To recap, what happens is that we're including a _header file_, the definitions of functions we can call and types we can use that Windows wants us to use in order to communicate with us. And lower below is the entry point where Windows pass us some parameters: 
+* `HINSTANCE hInstance`: Handle to our executable.
+* `HINSTANCE hPrevInstance`: At this point, this is legacy, so the value passed is always 0.
+* `LPSTR lpCmdLine`: A C string describing how the command line was set when we ran the program.
+* `int nCmdShow`: A sort of a weird one of the bunch[^nCmdShow].
+
+We aren't going to do anything in here, other than returning 0. This would stand for "everything ran smoothly, we're done here". 
+
+~~~~~~~ C++
+int __clrcall
+WinMain (
+         HINSTANCE hInstance,
+         HINSTANCE hPrevInstance,
+         LPSTR     lpCmdLine,
+         int       nShowCmd
+         )
+{
+~~~~~~~ C++ add
+    return (0);
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [X]: <file>[win32_handmade.cpp]</file> C expects us to return something here, so we are returning 0.]
+
+# Configure Everything for Development
+
+We'll leave our source file leave as a stub, because we need to get this building and executing as it is. Before we can do that however, we need to do some final preparations.
+
+## Set Up Environment Variables
+
+To compile, we're going to call Visual Studio, that we installed earlier (see Set Up the Compiler subsection), or rather its command `cl`. Unfortunately, even after you've installed Visual Studio you will get an error:
+
+~~~~~~~ batch input
+W:\handmade>cl
+~~~~~~~ batch
+'cl' is not recognized as an internal or external command,
+operable program or batch file.
+
+
+~~~~~~~ batch input
+W:\handmade> _
+~~~~~~~ 
+[<file>[Command Prompt]</file> Trying to call cl]
+
+The reason for it is that every command is being looked up in the system Path (we mentioned some of it in Subsection [4coder setup]). If we type `cl` we can't find it because it's not in the Path. The basic way of doing it would be running a particular script that will set up our command line for us. 
+
+The file we're looking for is called `vcvars64.bat`. It's located deep inside the Visual Studio install folder. Head over to your `Program Files (x86)`, find the folder `Microsoft Visual Studio`, and then go down until you find folders `VC` -> `Auxiliary` -> `Build`.
+
+For Visual Studio 2019 Community edition, this path would therefore be `C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat`. 
+
+!!! Tip 
+    You can easily find a reference to it if you search for `x64 Native Tools Command Prompt for VS 2019` in your Start Menu. __Right click__ the link in the menu -> __Open File Location__ -> __Right click__ on the file -> __Properties__, and copy the address in quotes in the "Target" window. 
+
+![Figure [X]: Path to VCVars64.bat](../media/day1/1.8-vcvars.png)
+
+!!! Trivia Trivia: History of "Program Files (x86)"
+    The reason Visual Studio is in `Program Files (x86)` folder (instead of simply `Program Files`) is a historical accident. When Windows was running only in 32-bit on x86 processors, there was a push from Intel to go to a new processor line called [Itanium](https://en.wikipedia.org/wiki/Itanium), based on a proprietary 64-bit architecture. Meanwhile, due to the licensing limitation AMD stayed with x86. They started developping their own version of it.
+
+    At the end, the Itanium project didn't pan out at all, even if it was championed by Intel. Nobody wanted to go to a completely new architecture and switch to this whole new thing so that didn't work out. It was [AMD's architecture](https://en.wikipedia.org/wiki/X86-64), a version of [x86](https://en.wikipedia.org/wiki/X86) upgraded to handle 64 bit (while being able to run the x86 code just fine) that was endorsed and adopted. 
+    
+    Also it was at that time that the 64-bit versions of Windows started to get published. We'll talk a bit more about the differences between 32-bit and 64-bit CPUs later in this course when it becomes more relevant. What happened also at that time however, probably due to an attempt to keep the legacy programs running, was Microsoft's decision to make two separate `Program Files` directories: programs that are compiled to run under the 32-bit version of Windows end up installed in `Program Files (x86)` one, while the programs compiled under the 64-bit version go into `Program Files`. 
+
+    As for Visual Studio, as of 2020 it _still_ hasn't been updated to run on 64-bit computers.
+
+So now, if you run the `vcvars64.bat` in your Command Prompt you will see the following message:
+
+~~~~~~~ batch input
+W:\handmade>"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
+~~~~~~~ batch
+**********************************************************************
+** Visual Studio 2019 Developer Command Prompt v##.#.##
+** Copyright (c) 2019 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x64'
+
+
+~~~~~~~ batch input
+W:\handmade> _
+~~~~~~~ 
+[<file>[Command Prompt]</file> Initializing Developer Environment for 64-bit version of Windows]
+
+!!! Warning
+    If the path contains spaces, you need to enclose it in double quotes (")!
+
+!!! 
+    Note the `vcvarsall.bat` message. What `vcvars64` does is simply calling `vcvarsall` and asking it to set up dev environment in 64-bit mode. 
+
+    You can call `vcvarsall.bat` directly by replacing `"PATH_TO_VISUAL_STUDIO\vcvars64.bat"` with `"PATH_TO_VISUAL_STUDIO\vcvarsall.bat" x64`. 
+
+    Note also that the "x64" part should go outside of the quotes.
+
+So now, if you run `cl` in your Command Line, you will see a different message:
+
+~~~~~~~ batch input
+W:\handmade>cl
+~~~~~~~ batch
+Microsoft (R) C/C++ Optimizing Compiler Version ##.#.##### for x64
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+usage: cl [ option... ] filename... [ /link linkoption... ]
+
+
+~~~~~~~ batch input
+W:\handmade> _
+~~~~~~~
+[<file>[Command Prompt]</file> `cl` now works correctly.]
+
+
+Be mindful that this command must be run each time you restart your _Command Prompt_. In order to avoid doing it manually, you can set it up to run automatically:
+
+1. Create a new batch file named `shell.bat`, open it in any text editor. You can save the file in a directory called "misc" inside your project.
+2. Insert the following code: 
+
+~~~~~~~ batch
+@echo off
+
+call "PATH_TO_VISUAL_STUDIO\vcvarsall.bat" x64
+~~~~~~~
+[Listing [X]: <file>[shell.bat]</file> Setting up automated environment initialization.]
+
+    * `@echo off`: a command to _not_ display all the lines as they are getting executed. `@` symbol means that this line is included (so that your script won't print "echo off", either). 
+    * `call` command is required to _call_ a batch file from another batch file.
+3. Save the file and exit. 
+4. Open `Properties` to your shortcut to the Command Prompt.
+5. In the `Target`, add the line `/k "[path to your shell.bat file]"`
+
+Upon restart of the Command Prompt, you should be greeted with the `vcvars` initialization messages.
+
+You can go even one step further and expand your Path to include the `misc` directory, so that each time the system looks up a command it checks in there, as well. 
+
+~~~~~~~ batch
+@echo off
+
+call "PATH_TO_VISUAL_STUDIO\vcvarsall.bat" x64
+~~~~~~~ batch add
+set path=w:\handmade\misc;%path%
+~~~~~~~
+[Listing [X]: <file>[shell.bat]</file> Expanding your Path.]
+
+!!! Tip Quick 4coder launch
+    If you use 4coder, you can now add a shorcut `4ed.bat` file inside your `misc` folder, containing the path to your editor:
+    ~~~~~~~ batch
+    @echo off
+
+    start [PATH_TO_4CODER]\4ed
+    ~~~~~~~
+    [Listing [X]: <file>[4ed.bat]</file> Shortcut to your editor.]
+    
+    The `start` command allows you to return to the Command Line without having to wait for 4coder to exit.
+
+    Now you can simply run the 4coder by typing in `4ed`! 
+
+
+Last, you can add a command `cls` so that the screen is cleared after the environment has been set for us:
+
+~~~~~~~ batch
+@echo off
+
+call "PATH_TO_VISUAL_STUDIO/vcvarsall.bat" x64
+set path=w:/handmade/misc;%path%
+~~~~~~~ batch add
+cls
+~~~~~~~
+[Listing [X]: <file>[shell.bat]</file> Your final shell setup.]
+
+Remember to restart your terminal for the changes to apply!
+
+## Build.bat
+
+If you got this far, congratulations! That is the drudgework of setting up a machine to actually develop on. We can now start our dev environment with a double-click on an icon, and we can run our editor, compiler and debugger from here. This is some great progress right there. 
+
+So anyway, if you can call `cl` from your command line, we can build an executable. That is mostly all we need. Let's get to compiling. 
+
+Here is how we are going to do the builds. It is highly unusual way[^buildinginbat] in a world where the builds take complex make files. 
+
+In the root folder of our project (i.e. `handmade`), we will create a file named `build.bat`. A `.bat` (batch) file is a _script_, a list of things that the command line should do. What other programmers do is setting up a so-called "Make system" using a tool like GNU Make, Ninja, CMake, etc[^buildtools]. 
+
+So, in our course, there're no build tools. There's only a batch file, that's all there is. And this batch file compiles the code. Compiles __all the code__ every time. And the reason why it's unusual is because people are used to the fact that compiling all the code takes _a long_ time. The whole point of a make file is that you only compile that code that changed, and that's what these build utilities do: they try to optimize things so that they only do the minimal amount of work necessary to rebuild the project. And when projects tend to get very large, they tend to be very slow. But, as it turns out, if you just code _sanely_, you can compile _very_ large programs (certainly larger than it would take to make a full professional game on this stream) in only a few seconds. 
+
+In conclusion, what we're going to do is to make the `build.bat` file:: 
+
+~~~~~~~ batch
+@echo off
+
+cl code\win32_handmade.cpp
+~~~~~~~ 
+[Listing [X]: <file>[build.bat]</file> Your very own build file]
+
+We would take the source file we created in Subsection [Minimum Code You Will Need] and build it. This would be enough. However, we don't want to build it where it is right now, inside `code` directory. The compilation creates many secondary files which quickly mess up the `code` directory. Instead, we want the build output to go in a separate folder, let's call it `build`, to keep our source directory clean. For this, we will "virtually change" the folder using commands `pushd` and `popd`. Unlike the `cd` command, `pushd` remembers the original directory it switched from, so that `popd` can return to it once we're done.
+
+We will also create a `build` directory if it doesn't exist already (using the command `mkdir`). The `build` directory will be living in `handmade` directory, so one step higher than the folder we're currently in (`code`), so we'll need to navigate "up" using the `..\` pseudodirectory.
+
+~~~~~~~ batch
+@echo off
+~~~~~~~ batch add
+mkdir build
+pushd build
+
+~~~~~~~ batch delete
+cl code\win32_handmade.cpp
+~~~~~~~ batch add
+cl ..\code\win32_handmade.cpp
+
+popd
+~~~~~~~ 
+[Listing [X]: <file>[build.bat]</file> Moving the output to the build directory. ]
+
+So now, if you run the `build.bat` script and `dir` the build directory, you'll see your executable!
+~~~~~~~ batch input
+W:\handmade> build
+~~~~~~~ batch 
+Microsoft (R) C/C++ Optimizing Compiler Version XX.XX.XXXXX for x64
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+win32_handmade.cpp
+Microsoft (R) Incremental Linker Version XX.XX.XXXXX.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+/out:win32_handmade.exe
+win32_handmade.obj
+
+~~~~~~~ batch input
+
+W:\handmade>dir build
+~~~~~~~ batch 
+
+ Directory of W:\handmade\build
+
+    <DIR>          .
+    <DIR>          ..
+            89,600 win32_handmade.exe
+               650 win32_handmade.obj
+        2 File(s)         90,250 bytes
+
+
+~~~~~~~ batch input
+W:\handmade> _
+~~~~~~~ 
+[<file>[Command Prompt]</file> Building... Success!]
+
+Now you may ask: where does all the complicated build stuff come in? The answer is there isn't going to be any. The only additional thing is that we will start putting on the `cl` line additional things which are options to the compiler. Because the compiler has [a lot of options][msvc-options], and we're going to specify how the compiler produces the executable. For instance, we can set already the [-Zi][] flag (option) that, after rebuilding, would allow us to step into our code.
+
+~~~~~~~ batch delete
+cl ..\code\win32_handmade.cpp
+~~~~~~~ batch add
+cl -Zi ..\code\win32_handmade.cpp
+~~~~~~~ 
+[Listing [X]: <file>[build.bat]</file> Adding our first compiler flag. ]
+
+!!!
+    [MSDN][] lists the compiler flags with `/` instead of `-` (i.e. `/Zi` instead of `-Zi`). These are interchangeable on Windows, so use whichever you prefer. 
+
+!!! Tip Set up the project in 4coder
+    In [4coder][], you can now setup your project so that each time you resume your coding session, you can pick up the code from where you left it. Simply hit the command `setup_new_project` and follow the instructions: 
+
+    `Alt-X` -> `setup_new_project`
+
+    * **Build Target**: code/win32_handmade.cpp
+    * **Output Directory**: build
+    * **Output**: win32_handmade.exe
+
+    If you have `automatically_load_project` in the `config.4coder` set to `true`, the editor will automatically load your project on your next session.
+
+    To quickly build in 4coder, simply press `Alt-M` shortcut or `F1` if you loaded your project. `Alt-Comma` closes the compile window.
+
+# Debugging in RemedyBG and Visual Studio
+
+We now have a working Win32 program build by the Command Line using our own batch file. If we now want to step into that, we should start the debugger. 
+
+## Set Up RemedyBG
+
+We now need to set up the program through which we will be analyzing and debugging our code while it's running, i.e. a _debugger_. (Debugging is just a fancy word for "hunting for own mistakes").
+
+[Visual Studio][msvc] provides a debugger out of the box, and it's _fine_. Visual Studio itself is slow to boot and, overall is pretty gargantuan. For a nice sleek debugging experience, we recommend a debugger called [RemedyBG][]. While still in development, this program already matches all of the essential functionality from Visual Studio. 
+
+!!!
+    RemedyBG is a paid debugger, but once you purchased it, it's yours to keep.
+
+Once you downloaded the latest version, unzip it somewhere on your hard drive.
+
+![Figure [X]: RemedyBG debugger](../media/day1/1.9-remedybg.png)
+
+Let's make a `build.bat` file in your `misc` directory to run it. 
+
+~~~~~~~ batch
+@echo off
+
+start [PATH_TO_REMEDYBG]\RemedyBG build\win32_handmade.exe
+~~~~~~~
+[Listing [X]: <file>[debug.bat]</file> Launching debugging in RemedyBG]
+
+
+You'll need to set where are we running the program from. In any relatively low-level piece of code there's a so-called "Current Working Directory", from which the program was launched. Everything that you do when you reference external files in your code (like loading files) you should use with a relative path, relative specifically to Current Working Directory. In short, it's a path which is important for us to set from the get-go, so that we always reference things correctly.
+
+In order to set ourselves for success, let's make a directory called `data` in the root `handmade` directory. In this directory, all the packaged assets (art, sounds, etc.) will live. Then, in [RemedyBG][], in the menu `Session -> Working Directory`, change it to `W:\Handmade\Data`.
+
+![Figure [X]: Setting your working directory in RemedyBG](../media/day1/1.9-remedybg2.png)
+
+Additionally, save your session so your settings are preserved, click `Session -> Save as...` and save it as `misc/handmade.rdbg`. You then can modify the `debug.bat` so that this session is loaded automatically. 
+
+~~~~~~~ batch
+@echo off
+
+~~~~~~~ batch delete
+start [PATH_TO_REMEDY_BG_FOLDER]\RemedyBG build\win32_handmade.exe
+~~~~~~~ batch add
+start [PATH_TO_REMEDY_BG_FOLDER]\RemedyBG misc\handmade.rdbg
+~~~~~~~
+[Listing [X]: <file>[debug.bat]</file> ]
+
+## Set Up Visual Studio Debugger
+
+If you aren't interested in trying out RemedyBG just yet, you can instead use `debug.bat` to start Visual Studio debugger:
+
+~~~~~~~ batch
+@echo off
+
+devenv build\win32_handmade.exe
+~~~~~~~
+[Listing [X]: <file>[debug.bat]</file> Launching debugging in Visual Studio]
+
+Visual studio will load a dummy solution. You can then right-click on the `win32_handmade` in Solution Explorer -> `Properties` to change your `Working Directory` to `w:\handmade\data`. Click `File` -> `Save win32_handmade` to save your solution as `misc\handmade.sln`, then modify your `debug.bat` file to load the solution directly.
+
+~~~~~~~ batch
+@echo off
+
+~~~~~~~ batch delete
+start devenv build\win32_handmade.exe
+~~~~~~~ batch add
+start devenv misc\handmade.sln
+~~~~~~~
+[Listing [X]: <file>[debug.bat]</file> ]
+
+![Figure [X]: Setting your working directory in Visual Studio](../media/day1/1.9-vs_debug.png)
+
+!!! Warning
+    As of writing, Visual Studio 2019 Community Edition doesn't allow editing of the working directory. If this still is the case at the time of reading this, you can still follow these steps and then open `handmade.sln` in your text editor. Change `StartingDirectory` value to `W:\handmade\data` and save the file. 
+    
+    This is one of the reasons why you should try out RemedyBG. ;)
+
+## Debugging Your Program
+
+Once you completed your setup, while in the debugger, hit `F11` on your keyboard or `Control -> Step Into (Line)` (RemedyBG) / `Debug -> Step Into` (Visual Studio). You will see your source file appear on the screen, and a yellow arrow indicating the start of your `WinMain` function body. This arrow represents your current position in the program execution. If you hit `F11` a couple more times, it will go out of the program and into the disassembly (This is C runtime wrapping up your program exit). Hit `Shift-F5` to stop the debug process.
+
+![Figure [X]: Debugging start!](../media/day1/1.9-remedybg3.png)
+
+## Call Stack
+
+!!! Note Windows-Specific Things You Should Know
+    `WinMain` is an _entry point_ for Windows. An entry point is a function that gets called, executes the code inside it, and returns to whoever called it. But who called us in the first place? In this particular way of compiling which we are doing right now, it's not actually Windows that called us, it's the so-called "<b>C</b> <b>R</b>untime <b>L</b>ibrary", or CRT for short. CRT is something that ships with all the C compilers, as mandated by the C specification (for Windows, you can find documentation on [MSDN][crt]). In turn, the CRT was called by Windows. 
+    
+    However, CRT is not part of Windows, it's inside our executable. And even if we aren't going to use any of its functions (since this course is about making things from scratch yourself), we can't just remove it like this. The compiler counts on CRT for a number of things. These things are actually hard-coded into the compiler to call into the CRT, and if it's not there, you'll need to implement that code yourself. 
+
+    We aren't going to address this here but, if you are interested to learn more, check out [this discussion](https://hero.handmade.network/forums/code-discussion/t/94-guide_-_how_to_avoid_c_c++_runtime_on_windows) on Handmade Network.
+
+The debugger can display a number of useful windows that you should know about:
+
+* Call Stack
+* Watch
+* Output
+* Breakpoints
+* Threads
+* Disassembly
+* Memory
+
+And many, many more. These are available in the `Window` menu of RemedyBG or in `Debug` -> `Window` __during a debug session__ on Visual Studio. We will touch on them at the various stages of this book. For now, let's look at the Call Stack.
+
+Start a new debug session (hit `F11` again) and open the Call Stack. You will see an entire "train" of functions that called each other until we arrived to the current point (if you don't see the full stack in Visual Studio, right click your call stack and select `Show External Code`). 
+
+Module name          | Function Name              | Address
+-------------------- | -------------------------- | --------
+`win32_handmade.exe` | `int WinMain(...)`         | ...
+`win32_handmade.exe` | `__scrt_common_main_seh()` | ...
+`kernel32.dll`       |                            | ...
+`ntdll.dll`          |                            | ...
+[Table [X]: Call Stack]
+
+The call stack is read from bottom up (most recent call at the top). `ntdll.dll` and `kernel32.dll` are the actual operating system. We are going to talk about what generally `dll`s are later, so let's skip those. But then the operating system calls into `win32_handmade.exe`, not into the `WinMain` we defined, but into `__scrt_common_main_seh()`. 
+
+!!! Tip
+    You can see the source of the CRT if you double-click the function on the call stack, in Visual Studio. RemedyBG doesn't provide the sources of the C Runtime Library.
+
+In conclusion, if we _really_ want to see where the code starts when Windows calls us, this is where the code starts. There's a list of things that happen first, that we did not write, to set up a bunch of things (which we really aren't going to use). 
+
+# Add Something to Do for the Program
+
+Let's have some fun. We worked so hard for this lesson, so let's just make something functional: a message box! This will also serve us as a test that our program is running properly
+
+In order to pop up a message box, we call the Windows function [MessageBox][MessageBox]. As you can see from its syntax, this function takes the following _parameters_:
+* `HWND hWnd`: a handle to a window. We don't have one yet, so we just pass 0[^null].
+* `LPCTSTR lpText`: a C string to display inside the message box.
+* `LPCTSTR lpCaption`: a C string to serve as the message box title.
+* `UINT uType`: one of the predefined values as outlined further down the page. This determines how the message box looks and what it does. We will use a mix of values by _bitwise OR_ combining information icon with the OK button. 
+
+!!!
+    [Bitwise operators][bitwise] are operators that have a specific action on single bits inside the value. Of these [Bitwise OR operator][bOR] (single vertical bar, `|`) is a bitwise operator which checks if each bit of two values is set. The resulting number will have all corresponding bits set.
+
+    In this case, bitwise OR is used in `uType` as a way of setting _flags_ in a _bit field_, where each bit means a specific thing. by "ORing" the different bits together, you can have multiple things happening at once (in our case, we want the OK button to appear, as well as the information icon).
+
+    As you can see from the definitions in the [Parameters section][MessageBox], MB_ICONINFORMATION is a label for "hexadecimal 40" (i.e. binary 0100 0000), while MB_OK is a label for 0. We still want to specify it to avoid confusion, should we decide to replace it with, for example, OK and Cancel button set (MB_OKCANCEL, 1).
+    
+    This is a valid solution to a problem where the output is configurable. Depending on the situation, a similar solution might be achieved by:
+    * A list of booleans to pass as separate parameters
+    * A config struct 
+    * Multiple separate functions each doing its own thing
+    * Etc.
+    
+    Bitwise operators are a staple in programming, as they are fast and concise. Make sure you are comfortable with each new one you encounter (and each new application that we will showcase) before moving on!
+
+~~~~~~~ C++ add
+    MessageBox(0, "This is Handmade Hero.", "Handmade Hero", MB_ICONINFORMATION | MB_OK);
+~~~~~~~ C++
+    return (0);
+~~~~~~~
+[Listing [X]: <file>[win32_handmade.cpp]</file> Adding a Message Box to our program.]
+
+## Import a Library
+
+Now, if you try to compile now, the _compilation_ will go fine, but you will be immediately halted by the _linker_ which is called right after the complier:
+
+~~~~~~~ batch
+/out:win32_handmade.exe 
+/debug 
+win32_handmade.obj 
+win32_handmade.obj : error LNK2019: unresolved external symbol __imp_MessageBoxA referenced in function WinMain
+win32_handmade.exe : fatal error LNK1120: 1 unresolved externals
+~~~~~~~
+[<file>[Command Prompt]</file> Linker error]
+
+Let's look at the bottom two lines.
+
+The compilation result is recapped by the `fatal error LNK1120`: there was 1 "unresolved external", which is further clarified in the `error LNK2019`: we're missing one symbol `__imp_messageBoxA`. What does this mean? 
+
+During the compilation, the compiler (and the linker) only knows about the files that we specify in the `cl` line of our `build.bat`. In our previous compilation everything went smoothly:
+
+* Compiler built the `.cpp` file and produced the `.obj` file
+* Linker linked the `.obj` file together and produced the `.exe` file
+
+In this case, the linker went to look for the function `MessageBoxA` declared in `windows.h` but not defined, and didn't find it. 
+
+However, there's something else that happens under the hood: we need to _bind_ with (running) Windows at runtime, we can't just have its functions defined in our code. So the linker needs to find the places where we call Windows and patch those references with the Windows' own code that's running at that time in memory. In order to that, we need to use what's called an [Import Library][uselib] (not to be confused with the normal libraries, also `.lib`). This library will do just that: it will put some markers in our code that, upon its loading, will be found by Windows and pointed to the actual functions running in memory.
+
+!!! Tip
+    For a more in-depth overview of how dynamic linking works, you can watch the short series [Intro to C][introtoc] where this topic is covered in detail.
+
+We were able to link successfully beforehand, because there're a one _implicit_ library that is imported together with the CRT (`kernel32.lib`). However if we try, for example, to call into the UI system to draw our message box, we need to let the linker know about a new library (`user32.lib`) to import. 
+
+To recap, when the linker combines all the `.obj` files and makes an executable, we should add an import library for the runtime functions that we use. Let's do just that: 
+
+~~~~~~~ batch delete
+cl -Zi ..\code\win32_handmade.cpp
+~~~~~~~ batch add
+cl -Zi ..\code\win32_handmade.cpp user32.lib
+~~~~~~~ 
+[Listing [X]: <file>[build.bat]</file> Linking with `user32.lib`. ]
+
+!!! Tip
+    In [MSDN][], you can always look up the Import Library to be used at the bottom of the function article.
+
+!!!
+    Note that the function linker was looking for is `MessageBoxA`, while we called for `MessageBox`. This is because in Windows, any function that takes a string as input has an <b>A</b>nsi and a <b>W</b>ide (Unicode) version, and a macro decides which function to call By default, the ANSI mode is enabled, but you can short-circuit this and call the version you prefer directly: 
+
+    ~~~~~~~ C++ delete
+        MessageBox(0, "This is Handmade Hero.", "Handmade Hero", MB_ICONINFORMATION | MB_OK);
+    ~~~~~~~ C++ add
+        MessageBoxA(0, "This is Handmade Hero.", "Handmade Hero", MB_ICONINFORMATION | MB_OK);
+    ~~~~~~~
+    [<file>[win32_handmade.cpp]</file>]
+
+# Recap
+
+And there you have it! Today, we covered a lot of ground: set up our tools for writing, building and debugging our program, our dev environment, compiled our first program, and even dived a bit into the intricansies of the compiler and linker! Tomorrow, we will start laying down the groundwork to open our window and display something on the screen.
+
+Before we move on, make sure you are comfortable with all this. If you made mistakes and learned from them, it's even better! It's practice, trial and error which will solidify all these notions in you, so that by the end of the day you'll just _know_ it. 
+
+![Figure [X]: Our message box](../media/day1/1-messagebox.png)
+
+[^entrypoint]: Technically, it's the entry point that the _C runtime library_ (that links with our program) will be entering... We'll see about that in Subsection [Windows-Specific Things You Should Know].
+
+[^nCmdShow]: If you right-click on any shortcut -> Properties -> Shortcut, you will see a `run` dropdown list with a few options like "Normal Window", "Minimized", "Maximized". This is what's passed in nCmdShow. It's bizarre that Windows developers decided to pass it on together with the WinMain, and not through some function call. 
+
+[^buildinginbat]: Or was, before [Handmade Hero][] made its debut a few years back...
+
+[^buildtools]: People _love_ their build tools. They have scripts that build their build files that their build tools modify for actual builds, with tools which are analysing their build tools... You get the idea. This however has a downside of having to mess around with your build tools a lot, just trying to get your stuff to build. 
+
+[^null]: This course will use 0 instead of `NUL` or `nullptr`. Feel free to use your preferred null identifier.
+
+(#) Navigation
+
+<!-- Up Next: [Day X. ](dayX.md.html) -->
+
+[Back to Index](../index.md.html)
+
+(insert appendix.md.html here)
+(insert links.md.html here)
+
+
+<style class="fallback">
+  body {
+    visibility: hidden;
+    font-family: monospace;
+  }
+</style>
+<!-- Markdeep: https://casual-effects.com/markdeep/ -->
+<script>markdeepOptions = { tocStyle: 'long' }; window.alreadyProcessedMarkdeep || (document.body.style.visibility = 'visible');</script>
+<script src="../js/markdeep.min.js" charset="utf-8"></script>
+<script src="https://morgan3d.github.io/markdeep/latest/markdeep.min.js" charset="utf-8"></script>
