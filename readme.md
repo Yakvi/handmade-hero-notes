@@ -2,4 +2,6 @@
 
 A book by Ivan Yakymchak
 
-Based on the popular series by Casey Muratori (handmadehero.org)
+Based on [Handmade Hero](handmadehero.org) by Casey Muratori.
+
+[Read the book](https://yakvi.github.io/handmade-hero-notes/index.md.html)
