@@ -52,7 +52,7 @@ Once you are done, you can quickly test if everything was installed correctly by
 
 This tool may be used to write, compile and debug all code. While some developers use this interface to make their projects, in this course we will use other means. Feel free to try to use Visual Studio editor tools to develop your code though!
 
-Other than that, depending on your choice of debugger (see Subsection [Set Up The Debugger]), you might only access this IDE for debugging purposes. As for compilation, we will do it through the <b>C</b>ommand <b>L</b>ine <b>I</b>nterface (CLI).
+Other than that, depending on your choice of debugger (see Subsection [Debugging in RemedyBG and Visual Studio]), you might only access this IDE for debugging purposes. As for compilation, we will do it through the <b>C</b>ommand <b>L</b>ine <b>I</b>nterface (CLI).
 
 ## Command Line in Windows
 
@@ -101,7 +101,7 @@ W:\handmade> _
 
     Save this file in `%appdata%\Microsoft\Windows\Start Menu\Programs\Startup` folder.
 
-So now, coming back to `Command Prompt Properties` -> `General`, you can specify its `Start in` location as `w:\handmade`. After restarting your Command Prompt, it will start with the color scheme and in the location specified.
+So now, coming back to `Command Prompt Properties` -> `Shortcut`, you can specify its `Start in` location as `w:\handmade`. After restarting your Command Prompt, it will start with the color scheme and in the location specified.
 
 
 
@@ -124,9 +124,9 @@ After you downloaded 4coder, you will get a zipped folder. Unzip it somewhere, f
 
 ![Figure [X]: Main window of 4coder](../media/day1/1.5-4coder.png)
 
-As the top message says, if you hit `Alt-X` shortcut and type "demo", you can select command "hms_demo_tutorial". Follow this tutorial to get hang of its main features.
+As the top message on the screenshot says, if you hit `Alt-X` shortcut and type in "demo", you can select command `hms_demo_tutorial`. Follow this tutorial to get a hang of its main features.
 
-Overall, `Alt-X` is the main command lister. For instance, if you would like to change the theme from `theme-4coder` to `theme-handmade-hero`, hit `Alt-X`, type in `theme` and choose the appropriate theme from the theme lister. 
+Overall, `Alt-X` is the main command lister. For instance, if you would like to change the theme from `theme-4coder` to `theme-handmade-hero`, hit `Alt-X`, type in `theme` and choose the appropriate theme from the `Theme lister`. 
 
 If you'd like to change your default settings, open the `config.4coder` file (using the `Interactive Open` command or by hitting `Ctrl-O` shortcut), and `default_theme_name` to the theme of your choice. While you are here, check out other settings like `mode` or `automatically_load_project`. Hit `Ctrl-S` to save your changes.
 
@@ -195,17 +195,15 @@ W:\handmade\code> _
 
 In this file we're going to do absolutely nothing (yet). We're going to insert just the entry point for Windows. Where to learn more about this? Whenever you're programming on Windows, you might want to always check out a website called [MSDN][] (now also known as Microsoft Docs). It is the documentation of everything that is on Windows. 
 
-If we search for `WinMain`, which is the entry point for Windows, you will quickly find the [related article](https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-winmain). 
-
-!!!
-    Much of the Windows core functionality has fallen into obscurity or obfuscated by the newer API. Additionally while this newer API is actively pushed by Microsoft and many developers, this might not be something you actively need in game development. So searching for the minutia of the programming API on Windows might become complex. The MSDN is huge, and it's hard to find your way around. So one reason this course exist is exactly to help finding the correct (or some of the correct) calls and articles. Hopefully this series will become a backbone that would show you want to search for.
+!!! Warning Learn ins and outs of MSDN!
+    Much of the Windows core functionality has fallen into obscurity or obfuscated by the newer API. Additionally, while this newer API is actively pushed by Microsoft and many developers, this might not be something you actively need in game development. So searching for the minutia of the programming API on Windows might become complex. The MSDN is _huge_, and it's hard to find your way around. So one reason this course exists is exactly to help finding the correct (or some of the correct) calls and articles. Hopefully this series will become a backbone that would show you want to search for.
 
     However, even if we will present the direct links to many of the articles, this doesn't mean that you should learn how to use MSDN. If you want to program on Windows, you'll need to learn to navigate this website, read these pages and understand what they say in order to _fully_ understand everything that's going on.
 
-`WinMain` is the entry point that Windows will be looking for in our program[^entrypoint], everything starts from here. Its _syntax_ is specified at the top of its MSDN article: 
+If we search for `WinMain`, which is the entry point for Windows, you will quickly find the [related article](https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-winmain). `WinMain` is the entry point that Windows will be looking for in our program[^entrypoint], everything starts from here. Its `syntax` is specified at the top of its MSDN article we provided above: 
 
 ~~~~~~~ C++
-int __clrcall WinMain(
+int WINAPI WinMain(
   HINSTANCE hInstance,
   HINSTANCE hPrevInstance,
   LPSTR     lpCmdLine,
@@ -218,7 +216,7 @@ This is the part we copy and paste in our `win32_handmade.cpp` file. We will als
 ~~~~~~~ C++
 #include <windows.h>
 
-int __clrcall 
+int WINAPI 
 WinMain (
          HINSTANCE hInstance,
          HINSTANCE hPrevInstance,
@@ -236,10 +234,10 @@ We assume that the reader has a basic knowledge of reading C code. If not, you c
 * `LPSTR lpCmdLine`: A C string describing how the command line was set when we ran the program.
 * `int nCmdShow`: A sort of a weird one of the bunch[^nCmdShow].
 
-We aren't going to do anything in here, other than returning 0. This would stand for "everything ran smoothly, we're done here". 
+We aren't going to do anything in here, other than returning 0. In `WinMain`, this stands for "everything ran smoothly, we're done here". 
 
 ~~~~~~~ C++
-int __clrcall
+int WINAPI
 WinMain (
          HINSTANCE hInstance,
          HINSTANCE hPrevInstance,
@@ -256,7 +254,7 @@ WinMain (
 
 # Configure Everything for Development
 
-We'll leave our source file leave as a stub, because we need to get this building and executing as it is. Before we can do that however, we need to do some final preparations.
+We'll leave our source file as a stub, because we need to get this building and executing as it is. Before we can do that however, we need to do some final preparations.
 
 ## Set Up Environment Variables
 
@@ -274,7 +272,7 @@ W:\handmade> _
 ~~~~~~~ 
 [<file>[Command Prompt]</file> Trying to call cl]
 
-The reason for it is that every command is being looked up in the system Path (we mentioned some of it in Subsection [4coder setup]). If we type `cl` we can't find it because it's not in the Path. The basic way of doing it would be running a particular script that will set up our command line for us. 
+The reason for it is that every command is being looked up in the system _Path_. If we type `cl` we can't find it because it's not in the Path. The basic way of doing it would be running a particular script that will set up our command line for us. 
 
 The file we're looking for is called `vcvars64.bat`. It's located deep inside the Visual Studio install folder. Head over to your `Program Files (x86)`, find the folder `Microsoft Visual Studio`, and then go down until you find folders `VC` -> `Auxiliary` -> `Build`.
 
@@ -286,9 +284,9 @@ For Visual Studio 2019 Community edition, this path would therefore be `C:\Progr
 ![Figure [X]: Path to VCVars64.bat](../media/day1/1.8-vcvars.png)
 
 !!! Trivia Trivia: History of "Program Files (x86)"
-    The reason Visual Studio is in `Program Files (x86)` folder (instead of simply `Program Files`) is a historical accident. When Windows was running only in 32-bit on x86 processors, there was a push from Intel to go to a new processor line called [Itanium](https://en.wikipedia.org/wiki/Itanium), based on a proprietary 64-bit architecture. Meanwhile, due to the licensing limitation AMD stayed with x86. They started developping their own version of it.
+    The reason Visual Studio is in `Program Files (x86)` folder (instead of simply `Program Files`) is a historical accident. When Windows was running only in 32-bit on [x86](https://en.wikipedia.org/wiki/X86) processors, there was a push from Intel to go to a new processor line called [Itanium](https://en.wikipedia.org/wiki/Itanium), based on a proprietary 64-bit architecture. Meanwhile, due to the licensing limitation AMD stayed with x86. They started developping their own version of x64 achitecture though, to stay competitive.
 
-    At the end, the Itanium project didn't pan out at all, even if it was championed by Intel. Nobody wanted to go to a completely new architecture and switch to this whole new thing so that didn't work out. It was [AMD's architecture](https://en.wikipedia.org/wiki/X86-64), a version of [x86](https://en.wikipedia.org/wiki/X86) upgraded to handle 64 bit (while being able to run the x86 code just fine) that was endorsed and adopted. 
+    At the end, the Itanium project didn't pan out at all, even if it was championed by Intel. Nobody wanted to go to a completely new architecture and switch to this whole new thing so that didn't work out. It was [AMD's architecture](https://en.wikipedia.org/wiki/X86-64), a version of x86 upgraded to handle 64 bit (while being able to run the x86 code just fine) that was endorsed and adopted. 
     
     Also it was at that time that the 64-bit versions of Windows started to get published. We'll talk a bit more about the differences between 32-bit and 64-bit CPUs later in this course when it becomes more relevant. What happened also at that time however, probably due to an attempt to keep the legacy programs running, was Microsoft's decision to make two separate `Program Files` directories: programs that are compiled to run under the 32-bit version of Windows end up installed in `Program Files (x86)` one, while the programs compiled under the 64-bit version go into `Program Files`. 
 
@@ -312,7 +310,7 @@ W:\handmade> _
 [<file>[Command Prompt]</file> Initializing Developer Environment for 64-bit version of Windows]
 
 !!! Warning
-    If the path contains spaces, you need to enclose it in double quotes (")!
+    If a path contains spaces, you need to enclose it in double quotes (")!
 
 !!! 
     Note the `vcvarsall.bat` message. What `vcvars64` does is simply calling `vcvarsall` and asking it to set up dev environment in 64-bit mode. 
@@ -352,6 +350,8 @@ call "PATH_TO_VISUAL_STUDIO\vcvarsall.bat" x64
 
     * `@echo off`: a command to _not_ display all the lines as they are getting executed. `@` symbol means that this line is included (so that your script won't print "echo off", either). 
     * `call` command is required to _call_ a batch file from another batch file.
+
+
 3. Save the file and exit. 
 4. Open `Properties` to your shortcut to the Command Prompt.
 5. In the `Target`, add the line `/k "[path to your shell.bat file]"`
@@ -405,11 +405,17 @@ So anyway, if you can call `cl` from your command line, we can build an executab
 
 Here is how we are going to do the builds. It is highly unusual way[^buildinginbat] in a world where the builds take complex make files. 
 
-In the root folder of our project (i.e. `handmade`), we will create a file named `build.bat`. A `.bat` (batch) file is a _script_, a list of things that the command line should do. What other programmers do is setting up a so-called "Make system" using a tool like GNU Make, Ninja, CMake, etc[^buildtools]. 
+In the root folder of our project (i.e. `handmade`), we will create a file named `build.bat`. A `.bat` (batch) file is a _script_, a list of things that the command line should do. 
 
-So, in our course, there're no build tools. There's only a batch file, that's all there is. And this batch file compiles the code. Compiles __all the code__ every time. And the reason why it's unusual is because people are used to the fact that compiling all the code takes _a long_ time. The whole point of a make file is that you only compile that code that changed, and that's what these build utilities do: they try to optimize things so that they only do the minimal amount of work necessary to rebuild the project. And when projects tend to get very large, they tend to be very slow. But, as it turns out, if you just code _sanely_, you can compile _very_ large programs (certainly larger than it would take to make a full professional game on this stream) in only a few seconds. 
+!!! Trivia
+    What other programmers do is setting up a so-called "Make system" using a tool like GNU Make, Ninja, CMake, etc[^buildtools]. 
 
-In conclusion, what we're going to do is to make the `build.bat` file:: 
+    The reason why it's unusual is because people are used to the fact that compiling all the code takes _a long_ time. The whole point of a make file is that you only compile that code that changed, and that's what these build utilities do: they try to optimize things so that they only do the minimal amount of work necessary to rebuild the project. And when projects tend to get very large, they tend to be very slow. But, as it turns out, if you just code _sanely_, you can compile _very_ large programs (certainly larger than it would take to make a full professional game on this stream) in _only a few seconds_. 
+
+    So, in our course, there're no build tools. There's only a batch file, that's all there is. And this batch file compiles the code. Compiles __all the code__, every time. 
+
+
+In conclusion, what we're going to do is to make the `build.bat` file:
 
 ~~~~~~~ batch
 @echo off
@@ -420,7 +426,7 @@ cl code\win32_handmade.cpp
 
 We would take the source file we created in Subsection [Minimum Code You Will Need] and build it. This would be enough. However, we don't want to build it where it is right now, inside `code` directory. The compilation creates many secondary files which quickly mess up the `code` directory. Instead, we want the build output to go in a separate folder, let's call it `build`, to keep our source directory clean. For this, we will "virtually change" the folder using commands `pushd` and `popd`. Unlike the `cd` command, `pushd` remembers the original directory it switched from, so that `popd` can return to it once we're done.
 
-We will also create a `build` directory if it doesn't exist already (using the command `mkdir`). The `build` directory will be living in `handmade` directory, so one step higher than the folder we're currently in (`code`), so we'll need to navigate "up" using the `..\` pseudodirectory.
+We will also create a `build` directory if it doesn't exist already (using the command `mkdir`). The `build` directory will be living in `handmade` directory, so one step higher than the folder we're currently in (`code`), so we'll need to navigate "up" using the `..\\` pseudodirectory.
 
 ~~~~~~~ batch
 @echo off
@@ -616,16 +622,37 @@ In conclusion, if we _really_ want to see where the code starts when Windows cal
 
 # Add Something to Do for the Program
 
-Let's have some fun. We worked so hard for this lesson, so let's just make something functional: a message box! This will also serve us as a test that our program is running properly
+Let's have some fun. We worked so hard for this lesson, so let's just make something functional: a message box! This will also serve us as a test that our program is running properly.
 
-In order to pop up a message box, we call the Windows function [MessageBox][MessageBox]. As you can see from its syntax, this function takes the following _parameters_:
+In order to pop up a message box, we call the Windows function [MessageBox][MessageBox]. Let's open the link to see its syntax and copy paste in our program: 
+
+~~~~~~~ C++ add
+    int MessageBox(
+      HWND    hWnd,
+      LPCTSTR lpText,
+      LPCTSTR lpCaption,
+      UINT    uType
+    );
+~~~~~~~ C++
+    return (0);
+~~~~~~~
+[Listing [X]: <file>[win32_handmade.cpp]</file> Adding a Message Box to our program.]
+
+`int` at the beginning is its _return type_. We don't care about this function's _return value_ right now so we should remove it.
+
+!!! Warning
+    If you don't remove `int` before MessageBox, you will get the error `C2440: 'initializing': cannot convert from 'initializer list' to 'int'`!
+
+Then, this function takes the following _parameters_:
+
 * `HWND hWnd`: a handle to a window. We don't have one yet, so we just pass 0[^null].
-* `LPCTSTR lpText`: a C string to display inside the message box.
+* `LPCTSTR lpText`: a C string to display inside the message box. Don't forget the Double quotes for a C string! (")
 * `LPCTSTR lpCaption`: a C string to serve as the message box title.
 * `UINT uType`: one of the predefined values as outlined further down the page. This determines how the message box looks and what it does. We will use a mix of values by _bitwise OR_ combining information icon with the OK button. 
 
 !!!
     [Bitwise operators][bitwise] are operators that have a specific action on single bits inside the value. Of these [Bitwise OR operator][bOR] (single vertical bar, `|`) is a bitwise operator which checks if each bit of two values is set. The resulting number will have all corresponding bits set.
+
 
     In this case, bitwise OR is used in `uType` as a way of setting _flags_ in a _bit field_, where each bit means a specific thing. by "ORing" the different bits together, you can have multiple things happening at once (in our case, we want the OK button to appear, as well as the information icon).
 
@@ -637,7 +664,23 @@ In order to pop up a message box, we call the Windows function [MessageBox][Mess
     * Multiple separate functions each doing its own thing
     * Etc.
     
-    Bitwise operators are a staple in programming, as they are fast and concise. Make sure you are comfortable with each new one you encounter (and each new application that we will showcase) before moving on!
+    While bitwise operators are a staple in programming, they are a bit of an advanced topic. For now, suffice to say that we want our message box to contain an Information Icon and an OK button, and we tell it by writing `MB_ICONINFORMATION | MB_OK`. 
+    
+
+Combining all these things together and putting them on one line, we get our Message Box call:
+
+~~~~~~~ C++ add
+    MessageBox(0, 
+               "This is Handmade Hero.", 
+               "Handmade Hero", 
+               MB_ICONINFORMATION | MB_OK
+               );
+~~~~~~~ C++
+    return (0);
+~~~~~~~
+[Listing [X]: <file>[win32_handmade.cpp]</file> Adding a Message Box to our program.]
+
+We can even go further and compress it on one line: 
 
 ~~~~~~~ C++ add
     MessageBox(0, "This is Handmade Hero.", "Handmade Hero", MB_ICONINFORMATION | MB_OK);
@@ -690,7 +733,7 @@ cl -Zi ..\code\win32_handmade.cpp user32.lib
     In [MSDN][], you can always look up the Import Library to be used at the bottom of the function article.
 
 !!!
-    Note that the function linker was looking for is `MessageBoxA`, while we called for `MessageBox`. This is because in Windows, any function that takes a string as input has an <b>A</b>nsi and a <b>W</b>ide (Unicode) version, and a macro decides which function to call By default, the ANSI mode is enabled, but you can short-circuit this and call the version you prefer directly: 
+    Note that the function linker was looking for is `MessageBoxA`, while we called for `MessageBox`. This is because in Windows, any function that takes a string as input has an <b>A</b>nsi and a <b>W</b>ide (Unicode) version, and a macro decides which function to call. By default, the ANSI mode is enabled, but you can short-circuit this and call the version you prefer directly: 
 
     ~~~~~~~ C++ delete
         MessageBox(0, "This is Handmade Hero.", "Handmade Hero", MB_ICONINFORMATION | MB_OK);
@@ -717,9 +760,9 @@ Before we move on, make sure you are comfortable with all this. If you made mist
 
 [^null]: This course will use 0 instead of `NUL` or `nullptr`. Feel free to use your preferred null identifier.
 
-(#) Navigation
+# Navigation
 
-<!-- Up Next: [Day X. ](dayX.md.html) -->
+Up Next: [Day 2. Opening a Win32 Window](day2.md.html)
 
 [Back to Index](../index.md.html)
 
