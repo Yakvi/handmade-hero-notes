@@ -1,0 +1,1192 @@
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../css/style.css"/>
+
+**Day 2. Opening a Win32 Window**
+
+_Video Length: [1h00](https://hero.handmade.network/episode/code/day002/)_
+
+[Last time](day1.md.html), we set up our dev environment allowing us to launch our text editor (we showcased [4coder][] and [Visual Studio Code][vscode]). We then created a simple Win32 application launching a modest message box. We made a "make file" for it, just batch file compiling something directly into the `build` directory. We then learned how to launch the debugger ([RemedyBG][] or Visual Studio), with some simple actions like stepping into our code. 
+
+But a message box is not a very useful thing for a game to pop up; in fact, if you ever _see_ one pop up in a game, this usually means that the game has encountered a very serious error, and it's not something you'd ever want to have. What we'll try to do is to open a window which is a bit more useful. 
+
+The window that we are going to open is a basic Windows one. All the programs go through a specific path for opening a window, and we're going to follow that path as well, for a while. But shortly after we are going to create a special _buffer_ in memory which we can write to ourselves, do all the rendering into and, once we're ready, display in the window.
+
+!!!
+    This is not exactly how a modern game would start up. Modern games pretty much exclusively let the graphics card do their work for them. While we will eventually get there, it's not a very good start for educational purposes. Unfortunately, the GPU is a pretty opacque resourse where we have a very limited insight into what it's doing to render graphics for our game. 
+
+# Window Class
+
+From the earliest days of Windows, to start out opening your windows you had to declare and register a Window Class (i.e. `WNDCLASS`). If we open up [MSDN][], we can quickly find the relevant article (in this case, we need a simple [WNDCLASSA][] structure[^AWnotation]). 
+
+~~~~~~~ C++
+typedef struct tagWNDCLASSA {
+  UINT      style;
+  WNDPROC   lpfnWndProc;
+  int       cbClsExtra;
+  int       cbWndExtra;
+  HINSTANCE hInstance;
+  HICON     hIcon;
+  HCURSOR   hCursor;
+  HBRUSH    hbrBackground;
+  LPCSTR    lpszMenuName;
+  LPCSTR    lpszClassName;
+} WNDCLASSA, *PWNDCLASSA, *NPWNDCLASSA, *LPWNDCLASSA;
+~~~~~~~
+[<file>[MSDN]</file> Window Class structure syntax.]
+
+## Concerning typedefs
+
+As you can see, `WNDCLASS` (or, to be precise, `WNDCLASSA`) is a C struct, with some interesting decoration. Let's look at it more closely.
+
+* The _struct_ itself is defined as `struct tagWNDCLASSA {...};` In C, a struct is just a record, a collection of variables that together. When you refer to a struct, you refer to a specific memory layout where each of these individual things is sequentially ordered and (usually) stored back to back[^align].
+* You will note that the struct is actually called <i>tag</i>WNDCLASSA. The reasons for this are, in part, historical. The bottom line is because the Windows headers want to support both C and C++ compilation.  
+* In C++, it's enough for you to declare the struct to start immediately using it. 
+
+~~~~~~~ C++
+struct dim
+{
+    int Width;
+    int Height;
+};
+
+dim ScreenDimension;
+~~~~~~~
+[<file>[Example 1]</file> In C++, if we declare a struct, we can start using it right away by its name.]
+
+* In C, however, this is not true. C does not look up the names of types if you don't decorate them accordingly.
+
+~~~~~~~ C
+struct dim
+{
+    int Width;
+    int Height;
+};
+
+       dim ScreenDimension;  // error C2065: 'dim': undeclared identifier
+                             // error C2065: 'ScreenDimension': undeclared identifier
+
+struct dim ScreenDimension;  // OK
+
+~~~~~~~
+[<file>[Example 2]</file> In C, each struct must be marked as such in your code.]
+
+* If you want to avoid using again and again the keyword `struct`, you can create an `alias` of sorts using the keyword `typedef`. Think of this keyword as a way to specify a name for something declared previously.
+
+~~~~~~~ C
+
+struct dim {...};
+
+typedef struct dim dim_t;
+
+struct dim ScreenDimension;  // OK
+dim_t OtherDimension;        // Also OK
+
+~~~~~~~
+[<file>[Example 3]</file> In this case, we define "struct dim" as a type "dim_t".]
+
+* `typedef` is a powerful keyword. It allows creating multiple types at the same time, using one source and separated by a comma (`,`):
+
+~~~~~~~ C
+
+struct dim {...};
+
+typedef struct dim dim, *pDim, twoDim[2];               // typedef 3 types in one call
+
+dim ADimension;
+pDim PointerToDim = &ADim;                              // take the address of our dim and store it as pDim. * not necessary!
+twoDim DoubleDimension = { ADimension, ADimension };    // take two dims and store it in twoDim array type. 
+
+// etc., etc.
+
+~~~~~~~
+[<file>[Example 4]</file> typedefs can get very complex and silly very quickly.]
+
+* Finally, it's possible to `typedef` preemptively, without having to go to a separate line, and that is what Windows headers are doing. The complete solution would be the where we started: 
+
+~~~~~~~ C++
+typedef struct tagWNDCLASSA {
+...; // contents of the struct
+} WNDCLASSA, *PWNDCLASSA, *NPWNDCLASSA, *LPWNDCLASSA;
+
+// WNDCLASSA WindowClass; -> struct tagWNDCLASSA WindowClass;
+// PWNDCLASSA WindowClass; -> struct tagWNDCLASSA *WindowClass;
+// NPWNDCLASSA WindowClass; -> struct tagWNDCLASSA *WindowClass;
+// LPWNDCLASSA WindowClass; -> struct tagWNDCLASSA *WindowClass;
+
+~~~~~~~
+[<file>[MSDN]</file> Window Class structure syntax, hopefully clarified`.]
+
+!!! Trivia Some further reading
+    At this point, you have probably noticed that `WNDCLASSA` comes with not one, but with three pointer types. In fact, there's `*P...` (pointer), `*NP...` (near pointer) and `*LP...` (long, or far pointer). At this point, this is an anachronistic residual of a 16-bit era of [MS-DOS](https://en.wikipedia.org/wiki/MS-DOS), which became obsolete with the advent of [80386 Intel processors in 1985](https://en.wikipedia.org/wiki/Intel_80386). If you're still interested, further reading is available [here](https://www.answers.com/Q/What_are_near_far_and_huge_pointers_in_C).
+    
+    For all intents and purpuses on a modern 32-bit+ operating system, they are the same type, a pointer to `WINCLASSA` structure.
+
+    Another note: struct identifier shouldn't necessarily be different from one of its types (i.e. it can be simply `typedef struct WNDCLASSA....` instead of `tagWNDCLASSA`) or even be there (`typedef struct {...} WNDCLASSA, ...;`). The way Windows headers do it is somewhat the more explicit way, supposedly to support some old compiler.
+
+## WNDCLASSA Implementation
+
+We now have our `WNDCLASSA` that we want to define in our program. This is a recurring pattern in the Win32 API: In order to do some function you need to: 
+
+1. Create a struct.
+2. Fill it out with as desired.
+3. Call a function with this struct as a parameter.
+
+The struct therefore serves as a parameter list to the function you are calling, a set of informational variables to communicate to a function when you call it[^bitwiseOr]. Let's do just that: 
+
+~~~~~~~ C++ delete
+MessageBoxA(0, "This is Handmade Hero.", "Handmade Hero", MB_ICONINFORMATION | MB_OK);
+~~~~~~~ C++ add
+WNDCLASSA WindowClass = {}; 
+~~~~~~~ C++
+return (0);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Defining our `WNDCLASSA`.]
+
+
+!!! Note Struct initialization
+    Let's look at these braces `{}` here. 
+
+    A variable must not necessarily be initialized. You can simply declare it (like this: `int x;`, `WNDCLASSA WindowClass`, etc.) and move on, if that is your intention. However, what if we want to _initialize_ a variable to a value? In case of a simple type, you just write its initial value after `=` (in the example above, `int x = 5;`). In case of a _struct_, you can use the values inside the braces (i.e. `WNDCLASSA WindowClass = { MyStyle, "Hello" };`, etc.). The elements that you don't assign value to, all the elements onwards, are set to 0. If you simply assign it `{}`, you zero out the whole struct, however big it is. 
+
+    We want to do this here, because a) it's more readable to see which value you assing to which element, and b) because we don't even need to fill out all the elements. 
+
+!!! Warning
+    In C, you should use `{0}` instead of `{}`. 
+
+### WindowClass Values Before and After Initialization
+
+Let's see what's going on in here, under the hood. Compile your program and head out to the debugger. 
+
+In RemedyBG or Visual Studio debugger, if you press `F9` next to your WindowClass declaration, you'll see a red circle appearing next to the line. This means you set up a _breakpoint_: a point where the program will stop and let you inspect its state. You then should find your `Watch` window and type in the name of your WindowClass structure. 
+
+If you did everything correctly, once you run the program (`F5`) it should halt at the line you highlighted, and the current value of `WindowClass` appear in your `Watch` window:
+
+![Figure [X]: Inspecting WindowClass](../media/day2/debug1.png)
+
+As you can see, the values are completely random. This is because the program actually stops _before_ the line is executed, and the values in `WindowClass` are garbage. You wouldn't want to pass this struct to any function! But if you hit `F11` once to _step over_ this line, you will notice that all the values in the struct have been cleared to 0 (which is what we wanted):
+
+![Figure [X]: Inspecting WindowClass](../media/day2/debug2.png)
+
+!!! Tip Zero Is Initialization
+    Unless the code is in a performance-critical area, it is a good practice to apply the so-called _Zero is Initialization_ principle. For most of the code we won't be using any constructors or other advanced initialization techniques of C++. As long as it was cleared to zero, most structures would work fine moving forward. 
+
+    This is quite different from a C++ model where everything has a constructor, and there's a lot of things happening at the start of the life of a variable. 
+
+    In a performance-critical area, even the "initialize to zero" step are to be skipped. The variables will be immediately initialized with specific values.
+
+### Filling out the WindowClass
+
+Let's look back at the members of our WindowClass: 
+
+~~~~~~~ C++
+UINT      style;
+WNDPROC   lpfnWndProc;
+int       cbClsExtra;
+int       cbWndExtra;
+HINSTANCE hInstance;
+HICON     hIcon;
+HCURSOR   hCursor;
+HBRUSH    hbrBackground;
+LPCSTR    lpszMenuName;
+LPCSTR    lpszClassName;
+~~~~~~~
+[<file>[MSDN]</file> `WNDCLASSA` members.]
+
+Which ones do we want? We want to skip a few, and some definitely want to fill out. Let's replace start assigning the fields that we need and remove the ones that we don't: 
+
+* `style`: a bit field which sets the properties of our window to have. 
+* `lpfnWndProc`: a _pointer_ to the window function that we will define in a second. This function defines how the window responds to _events_.
+* `cbClsExtra`: how many extra bytes we need to store alongside our `WindowProc`. We don't really need to do it, so we delete it.
+* `cbWndExtra`: same as `cbWndExtra`, it allows to reserve some extra memory, this time for the window. Again, we don't have a use for it.
+* `hInstance`: the instance _handle_ of the currently running code. We have received `hInstance` with our `WinMain` so we can simply pass it along 
+    * If we didn't, there's a handy [Kernel call](https://docs.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulehandlea) `GetModuleHandle(0)`, which returns just the same thing.
+* `hIcon`: handle for our game icon. For now, we will comment it out and return to it once we're ready to set the icon for our game (much later down the line).
+* `hCursor`: handle for the cursor. Our game will not have a cursor, so we'll leave it at 0.
+* `hbrBackground`: allows to clear the background for us, these are relevant if we're using [Windows Brushes]. We don't need this, so it can also go.
+* `lpszMenuName`: the name for your menu if you use the default Windows one. We don't want this, either.
+* `lpszClassName`: Name for our Window Class. We need it because, once we create our window, we'll need to pass the class name again for the window to use. 
+
+~~~~~~~ C++
+WNDCLASSA WindowClass = {}; 
+
+~~~~~~~ C++ add
+WindowClass.style = ;
+WindowClass.lpfnWndProc = ;
+WindowClass.hInstance = hInstance;
+// WindowClass.hIcon;
+WindowClass.lpszClassName = "HandmadeHeroWindowClass";
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Selecting the `Window Class` fields that we don't need to have set to 0.]
+
+This leaves us with 4, potentially 5 values to set out of 10, the rest are cleared to 0. Let's go back to the couple values we do need to think a bit harder about.
+
+### Window Class Style
+
+`UINT style` is of type `UINT`, which is defined by Windows to be a 32-bit unsigned integer (a.k.a. `unsigned int`). You can set it as specified in the [Window Class Styles](https://docs.microsoft.com/en-us/windows/win32/winmsg/window-class-styles) guide. In here, you will find several values which, as many things in Windows by now are there more for legacy support purposes. We are however interested in a couple: 
+
+!!! Tip
+    Remember to use [MSDN][]! You won't always remember these things, even the veteran Windows programmers constantly consult with the documentation. 
+
+    MSDN is your friend; it will tell you what you need to know. 
+
+* `CS_CLASSDC` / `CS_OWNDC`: Allocates a _Device Context_ per class / window. 
+    * Device Context is a structure used by Windows to keep the state of a drawing while we're drawing to the window. It was initially intended to be used in conjunction with the [brushes][win32 brushes]. 
+    * Normally, Windows would have several device contexts available. When a program needs to draw, it gets one, uses it and then gives it back. 
+    * `CS_CLASSDC` / `CS_OWNDC` allows programs to declare their intent of focusing on graphics. In this case, there would be no reason of _sharing_ a device context. `CS_CLASSDC` allows a class to request unique ownership rights for one device context, while `CS_OWNDC` would request a unique device context _per window_. 
+    * In the end, `CS_OWNDC` is the one we're going to use, if only for the peace of mind. We won't have to return here if we ever decide to open a new window. 
+* `CS_HREDRAW` / `CS_VREDRAW`: Redraws the entire window (as opposed to only the affected piece) if movement or resizing changes the width/height of the _client area_ (in case of movement, this would happen if part of the window goes off screen). We want to use both here.
+
+At this point however, we need to verify if all of these options are even relevant anymore in this day and age. Let's put a `TODO` note so that we can return to at a later stage. It might be an interesting exploration journey at some point, but for now we'll set it aside. 
+
+~~~~~~~ C++ add
+// TODO(casey): Check if HREDRAW/VREDRAW/OWNDC still matter
+~~~~~~~ C++ edit
+WindowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
+~~~~~~~ C++
+WindowClass.lpfnWndProc = ;
+WindowClass.hInstance = hInstance;
+// WindowClass.hIcon;
+WindowClass.lpszClassName = "HandmadeHeroWindowClass";
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Adding the style options and our first `TODO`.]
+
+# Main Window Callback
+
+Now, we have one element remaining: the mysterious `lpfnWndProc`. What is that? And how would you have known what it was if this guide wasn't here to tell you? Well, here's another example of how [MSDN][] can help you. 
+
+If you look at the `Members` section of `WNDCLASSA` [article][WNDCLASSA], you will see that `lpfnWndProc` is a "pointer to the window procedure. [...] For more information, see WindowProc." If you follow the [link](WindowProc) to the latter, you will see that this new article defines what that procedure is right there, in the `Syntax` window: 
+
+~~~~~~~ C++
+LRESULT CALLBACK WindowProc(
+  HWND   hwnd,
+  UINT   uMsg,
+  WPARAM wParam,
+  LPARAM lParam
+);
+~~~~~~~ 
+[<file>[MSDN]</file> Signature for a `WindowProc` function.]
+
+As you can see, this is a _CALLBACK_. The keyword CALLBACK is exactly what it sounds like: Windows _calls us back_ from its code to have us do something for it. And you can see that it gets passed 4 mysterious parameters: an `HWND`, a `UINT`, `WPARAM` and `LPARAM`. It also _returns_ an `LRESULT`.
+
+We haven't really dealt with these up until now. Even if we already saw type `UINT` which is nothing else than a 32-bit unsigned integer, we don't know what it means. We're going to check [MSDN][] and see what all this is, but for now what we do know is that this will be our _Main Window Callback_, so let's implement it as such in our code. As Windows doesn't care how this function will be called (but only of its signature), we will call it just that, `MainWindowCallback`.
+
+Make sure to add it outside of our `WinMain`! And inside the `WinMain`, we can then "register" it as our `lpfnWndProc`, which is nothing else than our function name.
+
+~~~~~~~ C++ add
+LRESULT CALLBACK
+MainWindowCallback(HWND hwnd, 
+                   UINT uMsg,
+                   WPARAM wParam,
+                   LPARAM lParam)
+{
+}
+
+~~~~~~~ C++
+int CALLBACK
+WinMain(...) {
+//...
+~~~~~~~ C++ edit
+WindowClass.lpfnWndProc = MainWindowCallback;
+~~~~~~~ C++
+//...
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Adding our Main Window Callback.]
+
+This callback will be called any time Windows needs to send something to a window of this class (our `WindowClass`) to have it do something. 
+
+## Rename Variables
+
+There's one step that we'd like to take before we move on.
+
+To make things a bit less cryptic, let's rename all our variables to something more understandbale to us. Thus, our `hInstance` becomes `Instance`, `lpCmdLine` becomes `CommandLine`, etc.
+
+Unfortunately, we cannot rename Windows struct members, so we'll have to leave them as they are, but we can easily do it for the functions. This is because in C and C++, the function _signatures_ are really only about types. The compiler will only check the _type_ of something you're trying to pass (in case of `MainWindowCallback`, it's `HWND, UINT, WPARAM, LPARAM`, in this exact sequence). The name of the parameter is up to us, so let's change it to our liking:
+
+~~~~~~~ C++
+//...
+
+LRESULT CALLBACK
+~~~~~~~ C++ edit
+MainWindowCallback(HWND Window, 
+                   UINT Message,
+                   WPARAM WParam,
+                   LPARAM LParam)
+~~~~~~~ C++ 
+{
+}
+
+int CALLBACK
+~~~~~~~ C++ edit
+WinMain(HINSTANCE Instance,
+        HINSTANCE PrevInstance,
+        LPSTR     CommandeLine,
+        int       ShowCode)
+~~~~~~~ C++
+{
+    WNDCLASS WindowClass = {};
+    
+    WindowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
+    WindowClass.lpfnWndProc = MainWindowCallback;
+~~~~~~~ C++ edit
+    WindowClass.hInstance = Instance;
+~~~~~~~ C++
+    // WindowClass.hIcon;
+    WindowClass.lpszClassName = "HandmadeHeroWindowClass";
+
+//...
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Renaming our variables.]
+
+
+!!! Trivia Hungarian Notation
+    Older Microsoft's API made use of so-called "Hungarian notation". The name refers to its inventor's, Charles Simonyi, country of origin, and also hints at a peculiar way of the Hungarians of saying their last name before the first name. 
+    
+    The prefixes and name abbreviations you see here are nothing else that a naming convention adopted when even the space for the source files and variable names was limited, but also to provide clarity to the type this variable brings. Thus, from the name `hInstance` we can deduce that it's an `Instance` of type `HANDLE`, `lpCmdLine` is a `Command Line` of type `long pointer`, etc. 
+
+    Nowadays, many programmers moved away from these conventions and prefer simple and explicit names for their variables, and leave the types at the variable declarations, and the code follows our personal taste of reading them. You can decide whichever way you prefer. 
+    
+    One thing however that is recommended pretty much universally is: once you choose a style, stick to it in the whole project. It's very difficult to maintain a codebase which is written in different styles and naming conventions, let alone expand it.
+
+    If you are interested in reading more, check out this [article on Wikipedia](https://en.wikipedia.org/wiki/Hungarian_notation).
+
+## Continue Implementing MainWindowCallback
+
+Let's look at the parameters we're getting for our `MainWindowCallback` (don't forget about [MSDN][WindowProc]!):
+
+* `HWND`: A handle to the window. This is an opacque (to us) piece of data that we can pass back to Windows to identify a window. It's like Windows says: "Hey, here's the handle to your window. If you need to talk to me about the window, pass it back, and I'll know what you mean".
+* `UINT`: The message. This is the coded message that Windows is asking us to handle in the callback. The messages vary greately, and you can find many lists on [MSDN](https://docs.microsoft.com/en-us/windows/win32/winmsg/about-messages-and-message-queues#system-defined-messages). As you can see, over the ages the number of messages has grown to become _absurdly_ huge, the number of messages you can receive. 
+
+That said, most of these messages will be irrelevant for our project, and even less so now that we're starting. "Animation Control Messages", "Combo boxes"... Since we are not going to be using Windows hardly at all (we'll be basically opening a window and then doing everything else ourselves), we mostly care about basic window operations. These all fall under the `WM` category, and we will not need much else.
+
+The list for `WM` category is still big. To narrow it down even further for now, let's focus entirely on very a few [Window Notifications](https://docs.microsoft.com/en-us/windows/win32/winmsg/window-notifications). 
+
+In order to process messages, we will be using the `switch` statement. 
+
+!!! 
+    The `switch` statement allows to test if a variable we get equals any `constant` value. If it does, you apply a relevant `case` to it. 
+
+    Remember that by executing the `case` you don't automatically fall out of the `switch`! You need to use the `break` statement in order to not keep executing all the `cases` that follow.
+
+    If no value falls under a specific `case`, you can specify a `default` to execute if every other fails. 
+
+!!! Tip Style of our `switch` statements
+    The way we are going to write `switch` statements in this course is shown below. It might seem a bit unusual if you've seen these statements elsewhere because each `case` statement is limited by a basic block (delimited by braces (`{}`)). While this is not required, it allows defining variables specific to that case, and they will not "spill" outside to another case (because after you close your block, you go outside of those variables' _scope_ and they cease to exist). `break` will go just outside the block, again in a mix of a convention, convenience and practicality. 
+
+~~~~~~~ C++
+LRESULT CALLBACK
+MainWindowCallback(HWND Window, 
+                   UINT Message,
+                   WPARAM WParam,
+                   LPARAM LParam)
+{
+~~~~~~~ C++ add
+    switch (Message)
+    {
+        case:
+        {
+
+        } break;
+
+        default:
+        {
+            // Do something in case of any other message
+        } break;
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Getting ready to respond to Windows messages.]
+
+The constants which you see, for instance, [here](https://docs.microsoft.com/en-us/windows/win32/winmsg/window-notifications), are nothing else than unique numbers identifying that message. So which messages do we want to deal with first? 
+
+* `WM_SIZE`: When the user changes the size of the window.
+* `WM_DESTROY`: When Windows deletes our window. 
+* `WM_CLOSE`: When the user clicks on that little __X__ in the top-right corner.
+* `WM_ACTIVATEAPP`: When the user clicked on the window and it became _active_.
+
+~~~~~~~ C++
+switch (Message)
+{
+~~~~~~~ C++ add
+    case WM_SIZE:
+    {
+
+    } break;
+
+    case WM_DESTROY:
+    {
+
+    } break;
+    
+    case WM_CLOSE:
+    {
+
+    } break;
+    
+    case WM_ACTIVATEAPP:
+    {
+
+    } break;
+
+~~~~~~~ C++
+    default:
+    {
+        // Do something in case of any other message
+    } break;
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Defining our first cases.]
+
+For now, we are not going to do anything useful inside these cases. We will only output to the debug console when these messages fire. To do that, we're going to call the function [OutputDebugStringA][]. 
+
+As you can see from its [MSDN][] article, this function takes simply a `LPSTR`, a string, as the text to output. We will use it to output the message name and `newline` symbol (`\n`). In order to see the message, you should be `debugging` the program, and the messages will go in the `Output` window of your debugger.
+
+~~~~~~~ C++
+    case WM_SIZE:
+    {
+~~~~~~~ C++ add
+        OutputDebugStringA("WM_SIZE\n");
+~~~~~~~ C++
+    } break;
+
+    case WM_DESTROY:
+    {
+~~~~~~~ C++ add
+        OutputDebugStringA("WM_DESTROY\n");
+~~~~~~~ C++
+    } break;
+    
+    case WM_CLOSE:
+    {
+~~~~~~~ C++ add
+        OutputDebugStringA("WM_CLOSE\n");
+~~~~~~~ C++
+    } break;
+    
+    case WM_ACTIVATEAPP:
+    {
+~~~~~~~ C++ add
+        OutputDebugStringA("WM_ACTIVATEAPP\n");
+~~~~~~~ C++
+    } break;
+
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> "Responding" to the first cases.]
+
+## Get a Result
+
+As it is now, we still won't be able to compile our program. The compiler (and, later, Windows), will expect us to return to whoever called the function a specific parameter of type `LRESULT` (as it says on its signature). It was a similar case for `WinMain`, where we returned a `0`. As a bit of refresher, here is the signature for a `WindowProc`:
+
+~~~~~~~ C++
+LRESULT CALLBACK WindowProc(
+  HWND   hwnd,
+  UINT   uMsg,
+  WPARAM wParam,
+  LPARAM lParam
+);
+~~~~~~~ 
+[<file>[MSDN]</file> Signature for a `WindowProc` function.]
+
+The type `LRESULT` is simply a return code saying what we did with the message. From its [type definition](https://docs.microsoft.com/en-us/windows/win32/winprog/windows-data-types#lresult) we can further see that it's a `Long pointer` (i.e. up to 64 bits). Windows will give potentially different meanings to this result, depending on the message that was passed in first place. 
+
+How do we know which `LRESULT` to return when? We look at the documentation, of course! For instance, [MSDN][] tells us that if we deal with [WM_CLOSE](https://docs.microsoft.com/en-us/windows/win32/winmsg/wm-close) and process the message, `LRESULT` should be `0`. This is actually true for most cases, so let's initialize our LRESULT to `0` and also return it at the end. If we'll want to change our `Result`, we'll be able to do so inside a respective message's `case` block.
+
+~~~~~~~ C++
+LRESULT CALLBACK
+MainWindowCallback(HWND Window, 
+                   UINT Message,
+                   WPARAM WParam,
+                   LPARAM LParam)
+{
+~~~~~~~ C++ add
+    LRESULT Result = 0;
+~~~~~~~ C++
+    switch (Message)
+    {
+        //...
+    }
+
+~~~~~~~ C++ add
+    return (Result);
+~~~~~~~ C++
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Defining the LRESULT.]
+
+Finally, let's deal with our `default` case. This is going to be a catch-all for allll those myriads of messages that Windows would decide to throw our way and that we will essentially ignore. In our `default` case, `Result` is going to be... whatever Windows decides it to be. 
+
+!!! 
+    Windows has already defined a default case for each and every message it gives us. So all we need to do is to ask Windows to produce the default result based on our `Window, Message, WParam` and `LParam`. To get this default treatment, we need to simply call the function called 
+
+    In this sense, our function positions itself between Windows and Windows. We say: before this message gets any further, let's see if _we_ are interested in treating it in some way (in this case: is it one of these 4 we care about?). If so, that's it, move along, if not you can deal with it in the manner you see fit. Even more than that: sometimes we will want to do something extra on top of the default treatment a message gets. We will deal with that message and then pass it _back_ to Windows for default process.
+
+The default Windows procedure is actually documented in _all_ the message-related articles on [MSDN][], and is called [DefWindowProc][DefWindowProcA]. 
+
+~~~~~~~ C++
+LRESULT WINAPI DefWindowProcA(
+  HWND   hWnd,
+  UINT   Msg,
+  WPARAM wParam,
+  LPARAM lParam
+);
+~~~~~~~ 
+[<file>[MSDN]</file> Signature for the `DefWindowProcA`[^AWnotation].]
+
+As you can see, this function has the exact same function signature as our `MainWindowCallback`. The only difference is, instead of being a `CALLBACK` as we are, it's a `WINAPI` (which means that we are calling it instead)[^winapi]. Let's  call it in our `default` case:
+
+~~~~~~~ C++
+    LRESULT Result = 0;
+
+    switch (Message)
+    {
+        //...
+        default:
+        {
+~~~~~~~ C++ add
+            Result = DefWindowProc(Window, Message, WParam, LParam);
+~~~~~~~ C++
+        } break;
+    }
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Calling `DefWindowProc`.]
+
+We're simply passing down the same parameters we were passed. We don't care what they mean and what they are, we just pass them along. Our task will be to figure out a response to the messages we chose.
+
+We now have a (very barebones) callback function. let's quickly compile to ensure that we compile successfully. 
+
+~~~~~~~ batch input
+W:\handmade\>build
+~~~~~~~ batch
+A subdirectory or file build already exists.
+Microsoft (R) C/C++ Optimizing Compiler Version ##.##.##### for x64
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+win32_handmade.cpp
+Microsoft (R) Incremental Linker Version ##.##.#####.#
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+/out:win32_handmade.exe
+/debug
+win32_handmade.obj
+user32.lib
+
+W:\handmade\> _
+~~~~~~~
+[<file>[Command Prompt]</file> Compiling... Success!]
+
+!!! 
+    If you aren't getting a successful compile right away, try to go back until you reach your last successful compile to understand something you might have missed.
+
+# Register the WindowClass
+
+We're almost ready of opening our window using our WindowClass, but before we can do it, we need to _register_ the latter.
+It's as easy as calling a function may be. The function in question is called [RegisterClassA][]. It takes a _pointer_ to a `WNDCLASS` structure and... that's it. 
+
+!!! Note What is a pointer?
+    Every variable has a location in memory, its _address_. This address is nothing more than a number that, as any other number in C, may be manipulated with ease. To something's _address_ ("get its pointer") you simply but the ampersand symbol (`&`) before a variable's name. To learn the _contents_ of an address ("dereference a pointer"), you simply put a star symbol (`*`) before the pointer.
+
+    There's a lot more to know about the pointers, and this course will certainly touch a lot on this subject.
+    
+    For a more in-depth overview on pointers, you can watch the short series [Intro to C][introtoc] where this topic is covered in detail.
+
+    For our purposes, to pass a _pointer_ to our WindowClass, we simply write `&WindowClass`. 
+
+~~~~~~~ C++
+    // WinMain
+    WindowClass.lpszClassName = "HandmadeHeroWindowClass";
+~~~~~~~ C++ add
+    RegisterClassA(&WindowClass);
+~~~~~~~ C++ 
+    return(0);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Registering the class.]
+
+!!! Trivia ATOMs
+    If you look in the syntax of [RegisterClassA][] function, you will see that it returns an `ATOM`. Nowadays it's a mostly obsolete type that is used to create windows and in a small bunch of other functions. Even there, this use is purely optional.
+
+    In fact, an _atom table_ is a "system-defined table that stores strings" and their IDs. An `ATOM` is just that, an ID of that can be converted to a string.
+
+    If you are interested in learning more, check out [this article on MSDN](https://docs.microsoft.com/en-us/windows/win32/dataxchg/about-atom-tables).
+
+Registering `RegisterClass` _could_ fail, and in that case it will return `0`. It's highly improbable, it almost never happens, but it _might_ happen. Let's ensure that `0` is _not_ returned to us before we proceed. We will use it by putting the `RegisterClass` function as the criteria of an `if` statement. If the value is not `0`, we continue the program; if it is, we simply exit. 
+
+As for the case when it fails? In the future we might create an advanced logging system to report the error, so let's leave a TODO for it: 
+
+~~~~~~~ C++ edit
+    if (RegisterClassA(&WindowClass))
+~~~~~~~ C++ add
+    {
+        // Window Class Registration successful, the rest of our WinMain
+        // the rest of our WinMain
+    }
+    else
+    {
+        // Window Class Registration failed
+        // TODO(casey): Logging
+    }
+~~~~~~~ C++ 
+    return(0);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Registering the class and checking if it was successul.]
+
+# Create Window
+
+So now we're finally getting to today's objective! Let's create a window! The function responsible for it is called... `CreateWindow`. There are two versions of it: an old version, [CreateWindowA][], and a newer version [CreateWindowEx][]. The only difference is that `Ex` function allows to specify more window style options. Let's go for the latter. 
+
+~~~~~~~ C++
+HWND CreateWindowExA(
+  DWORD     dwExStyle,
+  LPCSTR    lpClassName,
+  LPCSTR    lpWindowName,
+  DWORD     dwStyle,
+  int       X,
+  int       Y,
+  int       nWidth,
+  int       nHeight,
+  HWND      hWndParent,
+  HMENU     hMenu,
+  HINSTANCE hInstance,
+  LPVOID    lpParam
+);
+~~~~~~~
+[<file>[MSDN]</file> `CreateWindowExA` syntax.]
+
+Wow, that's a lot of parameters! But they are all quite straightforward, we'll go through them one by one. 
+
+This function returns a `HWND`, a _handle_ to the created window. We will need it for other things, so let's store it in a variable `Window`. 
+
+* `dwExStyle` (extended style): this is one of those _bit fields_ like the one we've seen in the WindowClass style. By now you should know the drill: find [documentation](https://docs.microsoft.com/en-us/windows/win32/winmsg/extended-window-styles), choose the style options that you want, and chain them together using the bitwise OR operator (`|`). Which option do we want? Actually none for now, so let's put a nice `0`. 
+* `lpClassName` (class name): We have that one, we defined it above! So we'll just pass it straight from our `WindowClass`.
+* `lpWindowName` (window name): Let's call it `Handmade Hero` for now.
+* `dwStyle` (style): Another _bit field_. Here we'll want to specify a few options from the get-go:
+    * `WS_OVERLAPPEDWINDOW`: An aggregate option, combining together several other ones. This option will give our window a typical thick frame, three buttons in the top right corner, a menu and a caption. 
+    * `WS_VISIBLE`: Ensures that our window will be on visible and top when it spawns.
+* `X` and `Y`: Starting coordinates of the window. We... are not going to specify these just yet. Instead, we're going to use the special value `CW_USEDEFAULT` to let the operating system to put the window where it sees fit. 
+* `nWidth` and `nHeight`: Width and Height, we're also going to skip these for now and let Windows deal with it via CW_USEDEFAULT. 
+* `hWndParent` (parent window): for those cases if you want to have a window inside another window. This is not the case for us so we just put a `0` there. Windows will therefore use Desktop as our "parent window"
+* `hMenu`: `0`, we don't have a menu to pass here. 
+* `hInstance`: this is easy, we just pass it our `Instance` handle. 
+* `lpParam`: any other parameter we'd like to pass to your window. This would be passed with the `WM_CREATE` message, so that you can intercept it and do something you like. We're fine, so just leave at 0. 
+
+If you filled out everything correctly, you should have something similar: 
+
+~~~~~~~ C++
+    if (RegisterClassA(&WindowClass))
+    {
+~~~~~~~ C++ add
+        HWND Window = CreateWindowExA(0,
+                                      WindowClass.lpszClassName,
+                                      "Handmade Hero",
+                                      WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                                      CW_USEDEFAULT,
+                                      CW_USEDEFAULT,
+                                      CW_USEDEFAULT,
+                                      CW_USEDEFAULT,
+                                      0,
+                                      0,
+                                      Instance,
+                                      0);
+~~~~~~~ C++ 
+    }
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Creating our window.]
+
+We can compress all this a bit to look better:
+
+~~~~~~~ C++
+    if (RegisterClassA(&WindowClass))
+    {
+~~~~~~~ C++ edit
+        HWND Window = CreateWindowExA(0, WindowClass.lpszClassName, "Handmade Hero",
+                                      WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                                      CW_USEDEFAULT, CW_USEDEFAULT,
+                                      CW_USEDEFAULT, CW_USEDEFAULT,
+                                      0, 0, Instance, 0);
+~~~~~~~ C++ 
+    }
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Creating our window.]
+
+!!! Tip
+    Try compiling quickly to see if you missed something. If compile fails, it means you added one too much or one too many parameters.
+
+Similarly to `RegisterClassA`, should in some hypothetical circumstance `CreateWindowExA` fail, it will also return `0`. Let's add another check to ensure that our `Window` handle is valid.
+
+~~~~~~~ C++
+        if (RegisterClassA(&WindowClass))
+        {
+            HWND Window = CreateWindowExA(...);
+~~~~~~~ C++ add
+            if (Window)
+            {
+                // Window creation successful! 
+            }
+            else
+            {
+                // Window Creation failed! 
+                // TODO(casey): Logging
+            }
+~~~~~~~ C++
+        }
+        else
+        {
+            // Window Class Registration failed
+            // TODO(casey): Logging
+        }
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Ensuring our window handle is valid.]
+
+!!! Trivia Null-checking
+    Some programmers prefer being more explicit and writing something along the lines of `if (Window != NULL)` instead. There's no real reason for it, and you can simply write as we do. While such a comparison would yield us a `boolean` value, in C `true` and `false` are defined simply as `1` and `0`, respectively.
+
+## Window Message Queue
+
+Now, if you compile and run your program, you will see that the window quickly blinks in and out of existence. This is exactly what you told it to do: Create window, check if it exists.... and return `0` out of `WinMain`. At this point, Windows considers your program complete, cleans everything up and closes your window.
+
+Because we want our window to exist more than a fraction of a second, we need a so-called _message loop_. We will induce our window to be always open and read Windows' messages until one of them simply doesn't tell the window to close, or we break out of that loop. 
+
+In order to read the messages, we need to pull it from a Windows system called [Windows Message Queue][]. It works the following way: when a window is created, it also sets up a queue for itself which starts to be filling up with all sorts of messages. These may be sent by Windows or anyone else who uses the Windows system. Our task would be to loop through this message queue, extract all the messages and read them. 
+
+For today, we can use the [GetMessage][] function. This function allows us to pull the messages off our queue and process them.
+
+!!!  
+    If there're no messages in the queue, the program will simply sit there and wait for new messages to come. This is not very convenient for the games, where things happen even if there's no messages coming up from the operating system.
+    
+    We will change this once we are ready to animate our game. 
+    
+~~~~~~~ C++
+BOOL GetMessage(
+  LPMSG lpMsg,
+  HWND  hWnd,
+  UINT  wMsgFilterMin,
+  UINT  wMsgFilterMax
+);
+~~~~~~~ 
+[<file>MSDN</file> `GetMessage` Syntax]
+
+As you can see, `GetMessage` returns a `BOOL` (i.e. `true` or `false`) and takes four parameters:
+
+* `lpMsg` (Message): A pointer to the message of type `MSG`. We'll need to define it and then pass its _address_ (using the `&` sign) to this function, so that it can be filled out if a message arrives.
+* `hWnd` (Window): A window handle. We can pass to it our `Window` or we can pass `0`. In the latter case, `GetMessage` will collect any message directed at our program. Let's do that. 
+* `wMsgFilterMin` and `wMsgFilterMax`: These serve to filter out specific messages. In our case, we want all the messages, so we leave these at `0`. 
+
+~~~~~~~ C++
+if (Window)
+{
+~~~~~~~ C++ add
+    MSG Message;
+    GetMessage(&Message, 0, 0, 0);
+~~~~~~~ C++
+}
+else
+{
+    // Window Creation failed! 
+    // TODO(casey): Logging
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Ensuring our window handle is valid.]
+
+!!! 
+    MSG is another Windows structure. We won't look closely into it today, but feel free to learn more [here][MSG].
+
+This program will exit as fast as the previous one because we _still_ don't have a loop. Luckily, `GetMessage` itself can help us out here. If we look at the documentation, we can see that "If the function retrieves a message other than `WM_QUIT`, the return value is nonzero. If the function retrieves the `WM_QUIT` message, the return value is zero."
+
+This means that, if we put `GetMessage` as a test condition in a _while_ loop, this program will run forever, until someone posts a "quit" message to the queue (and it gets retrieved by `GetMessage`). 
+
+!!! Note `while` loops
+    If you're unfamiliar with `while` loop, imagine an `if` statement. If the test is `true`, the program will execute the code inside and immidiately return to test again. If the test is `false`, the program will skip the code inside and will continue after the scope of the statement.
+
+~~~~~~~ C++
+if (Window)
+{
+    MSG Message;
+~~~~~~~ C++ edit
+    while(GetMessage(&Message, 0, 0, 0))
+~~~~~~~ C++ add
+    {
+        // process message and go get another message
+    }
+    // Exit procedures
+~~~~~~~ C++
+}
+else
+{
+    // Window Creation failed! 
+    // TODO(casey): Logging
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Ensuring our window handle is valid.]
+
+!!! Warning
+    If you read the [documentation][GetMessage] carefully, you'll notice that it explicitly recommends _against_ doing the while loop the way we did it. The reason for it is that Windows' `BOOL` may return any number, not only `true` or `false`, including -1 in case of invalid window handle. 
+
+This is not the way we will implement our message loop in the future anyway. This code will be replaced by the more robust code that better suits our needs. 
+
+For the sake of correctness, if you want to make use of `GetMessage` in your code, you may use the example provided in the documentation, or a construct such as this one: 
+
+~~~~~~~ C++ edit
+for(;;)                              // a for loop which would run forever
+{
+    MSG Message;
+    BOOL MessageResult = GetMessage(&Message, 0, 0, 0);
+    if (MessageResult > 0)          // 0 is the WM_QUIT message, -1 is invalid window handle
+    {
+        // Do work in your window
+    }
+    else
+    {
+        break;                      // break out of the loop
+    }
+}
+~~~~~~~ C++
+// Exit procedures
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> API-correct way of verifying `GetMessage`.]
+
+!!! Note `for` loops
+    A `for` loop is an iteration loop. Usually it's used the following way: initialize a variable `i`; compare if `i` is smaller than some value; increment `i` and go into loop if true, otherwise break out. All this is compactly represented at the head of the loop as follows: 
+
+    ~~~~~~~ C++
+    for (int i = 0; i < SomeValue; ++i)
+    {
+        // do your operations
+    }
+    ~~~~~~~
+
+    However, strictly speaking you _don't have to_ fill out the head parts, all or any. And if you leave it as `(;;)` this loop will simply run forever, unless some other condition inside it `breaks` it out.
+
+    There're many useful applications to the `for` loops that we will see throughout this course.
+
+## Translating and Dispatching Messages
+
+We're still not out of the woods yet. If you'll try to compile and debug the program, you will notice that it runs forever, even if you try to close it (the only way to stop it would be to stop debugging). That's... not exactly what we had in mind, right? Well, that's fine, this is due to the fact that hitting `Alt-F4` or the red `X` button doesn't create a `WM_QUIT` message, but `WM_CLOSE`. And we're basically ignoring this message by replacing its default behaviour with an `OutputDebugStringA` call (see Subsection [continue implementing mainwindowcallback]).
+
+However, if you try to resize the program, or minimize the window, it doesn't react to your inputs at all. Moreover, if you check the `Output` window in your debugger, you will only notice a single `WM_ACTIVATEAPP` and `WM_SIZE` message (and more `WM_ACTIVATESIZE` messages if you switch in and out of the window). We don't get additional `WM_SIZE` messages if we try to resize the window, or any `WM_CLOSE` messages at all! 
+
+~~~~~~~ batch
+Debugging new process...[OK] Process ID: #####
+WM_ACTIVATEAPP
+WM_SIZE
+WM_ACTIVATEAPP
+WM_ACTIVATEAPP
+WM_ACTIVATEAPP
+~~~~~~~
+[<file>[Output window]</file>]
+
+This is because we don't do anything with our messages (and the messages that do come through to our `MainWindowCallback` aren't sent by our window). We simply pul them out of the queue and... discard them. In order to send the messages to our `MainWindowCallback` (and then to `DefWindowProc`), we need to _dispatch_ our message. The Windows command to do that is called simply [DispatchMessage][].
+
+~~~~~~~ C++
+LRESULT DispatchMessage(
+  const MSG *lpMsg
+);
+~~~~~~~
+[<file>[MSDN]</file> `DispatchMessage` syntax]
+
+As you can see, the syntax for `DispatchMessage` is super simple, it only takes a pointer to the message. Moreover, we're not interested in the `LRESULT` this function returns so we can simply discard it. Let's plug it in our message loop: 
+
+~~~~~~~ C++
+MSG Message;
+BOOL MessageResult = GetMessage(&Message, 0, 0, 0);
+if (MessageResult > 0)
+{
+~~~~~~~ C++ add
+    DispatchMessage(&Message);
+~~~~~~~ C++
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Adding `DispatchMessage`.]
+
+!!!
+    We _might_ try to call `MainWindowCallback` ourselves, however this is generally considered not a good idea. Windows expects the control flow to be in a specific shape, and it's better not to go against this set of things. 
+
+While we're at it, we can add another useful function called [TranslateMessage][]. It has nearly identical syntax except it returns a `BOOL`: 
+
+~~~~~~~ C++
+BOOL TranslateMessage(
+  const MSG *lpMsg
+);
+~~~~~~~
+[<file>[MSDN]</file> `TranslateMessage` syntax]
+
+This function doesn't have a purpose right now, but might be useful later. It's used to "translate" Windows virtual key character codes to actual `char` symbols, and post the result as a new message to the queue. Let's add it before our `DispatchMessage` call:
+
+~~~~~~~ C++
+MSG Message;
+BOOL MessageResult = GetMessage(&Message, 0, 0, 0);
+if (MessageResult > 0)
+{
+~~~~~~~ C++ add
+    TranslateMessage(&Message);
+~~~~~~~ C++
+    DispatchMessage(&Message);
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Adding `TranslateMessage`.]
+
+We'll talk more about virtual keyboard input once we get to our input system.
+
+So there you have it! Your barebones window. It's not pretty, it cannot be closed unless you force it from the debugger or the Task Manager, but you can rezise it, minimize and maximize it! 
+
+![Figure [x]. Your blank canvas, to build your worlds in.](../media/day2/canvas.png)
+
+Additionally, if you inspect your `Output` window you will see a great many messages sent by resize and close messages. We will never, however, get a `WM_DESTROY` message because it will come from someone trying to forcefully close our window, or if we call it ourselves.
+
+# Drawing Something to Our Window
+
+Let's have some fun. As of now, your window doesn't have any defined contents, so it might start white, black, "transparent", or whatever else way Windows decides. Resizing it also randomly changes its contents. Instead, let's try and give our window some specific color. 
+
+We're going to do it by securing a special path for the `WM_PAINT` message inside our `MainWindowCallback`. We are also going to make use of the  _Device Context_ that we secured for ourselves during the class registration, as well as the workflow Windows intended us to use for painting. This workflow intends us using the [BeginPaint][] and the [EndPaint][] functions, [PAINTSTRUCT][] structure, as well as the use of various "brushes". 
+
+!!! Tip
+    If you're interested in the whole process, check out [this article](https://docs.microsoft.com/en-us/windows/win32/learnwin32/painting-the-window) on MSDN.
+
+~~~~~~~ C++
+HDC BeginPaint(
+  HWND          hWnd,
+  LPPAINTSTRUCT lpPaint
+);
+
+BOOL EndPaint(
+  HWND                hWnd,
+  const LPPAINTSTRUCT *lpPaint
+);
+~~~~~~~ 
+[<file>[MSDN]</file> `BeginPaint` and `EndPaint` syntax.]
+
+As you can see, `BeginPaint` returns a handle to one of those _Device Contexts_. We may should store it for painting. Both `BeginPaint` and `EndPaint` take window handle and a apointer to a `PAINTSTRUCT`. The latter is a set of parameters that Windows fills out in `BeginPaint`, containing some useful information like `rcPaint` (rectangle where we can paint), `fErase` (a boolean saying whether or not we paint or erase), etc.
+
+~~~~~~~ C++
+    case WM_ACTIVATEAPP:
+    {
+        // ...
+    } break;
+
+~~~~~~~ C++ add
+    case WM_PAINT:
+    {
+        PAINTSTRUCT Paint;
+        HDC DeviceContext = BeginPaint(Window, &Paint);
+
+        // Do our painting here
+
+        EndPaint(Window, &Paint);
+    } break;
+~~~~~~~ C++
+
+    default: // ...
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Defining custom paint workflow.]
+
+In here, we can get as extravagant as we want to. Since we've done a lot already today, and we aren't going to make use of this system moving forward, let's use a simple call to [PatBlt][] ("Pat Blit"). This is a super simple function, allowing us to fill out a rectangle with a specified color or pattern. 
+
+~~~~~~~ C++
+BOOL PatBlt(
+  HDC   hdc,
+  int   x,
+  int   y,
+  int   w,
+  int   h,
+  DWORD rop
+);
+~~~~~~~ 
+[<file>[MSDN]</file> `PatBlt` syntax.]
+
+* `hdc`: The device context handle. We just got one, so we'll pass it down. 
+* `x, y`: Top left coordinates of our painting rectangle. 
+* `w, h`: Width and Height of our painting rectangle.
+* `rop`: Keyword for the operation to do. Let's fill it with `WHITENESS` constant for now.
+
+So where we can get the `x, y, w` and `h`? We have our `PAINTSTRUCT` with plenty useful information, including the `RECT` of the painting area. As you can see from [documentation](https://docs.microsoft.com/en-us/windows/win32/api/windef/ns-windef-rect), `RECT` structure contains a `left`, `top`, `right`, and `bottom`. This gives us immediately `x` and `y`, while `Width` and `Height` can be obtained by simply subtracting right from left, and bottom from top:
+
+~~~~~~~ C++
+    case WM_PAINT:
+    {
+        PAINTSTRUCT Paint;
+        HDC DeviceContext = BeginPaint(Window, &Paint);
+
+~~~~~~~ C++ add
+        int X = Paint.rcPaint.left;
+        int Y = Paint.rcPaint.top;
+        int Width = Paint.rcPaint.right - Paint.rcPaint.left;
+        int Height = Paint.rcPaint.bottom - Paint.rcPaint.top;
+        PatBlt(DeviceContext, X, Y, Width, Height, WHITENESS);
+~~~~~~~ C++
+
+        EndPaint(Window, &Paint);
+    } break;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> `PatBlt`]
+
+We compile... and get a `LNK2019` error: `unresolved external symbol ....PatBlt`. If you remember [Day1](day1.md.html#addsomethingtodofortheprogram/importalibrary) you should have the exact solution for it in mind.
+
+!!! Tip
+    Take a second looking for solution yourself before scrolling further down!
+
+If we inspect better the documentation for [PatBlt][], we will quickly see that it requires `Gdi32.lib` library. That's simple, let's add it in our `build.bat`!
+
+~~~~~~~ batch edit
+cl -Zi ..\code\win32_handmade.cpp user32.lib gdi32.lib
+~~~~~~~ 
+[Listing [X]: <file>[build.bat]</file> Linking with `gdi32.lib`.]
+
+## "Animating" the Window
+
+!!! Warning Epilepsy Warning
+    WARNING: This section contains code which may potentially trigger seizures for people with photosensitive epilepsy. 
+
+As you remember from its [documentation][PatBlt], `PatBlt` allows us to set our window to `WHITENESS` or to `BLACKNESS`. Let's alternate between the two each time we process `WM_PAINT` message! 
+
+Let's assign our `PatBlt` operation (which is a `DWORD` type) to a variable, similar to how we assigned `X, Y, Width` and `Height` before using them. However, we will do one thing differently and mark the variable as `static`:
+
+~~~~~~~ C++
+HDC DeviceContext = BeginPaint(Window, &Paint);
+int X = Paint.rcPaint.left;
+int Y = Paint.rcPaint.top;
+int Width = Paint.rcPaint.right - Paint.rcPaint.left;
+int Height = Paint.rcPaint.bottom - Paint.rcPaint.top;
+~~~~~~~ C++ add
+static DWORD Operation = WHITENESS;
+~~~~~~~ C++ edit
+PatBlt(DeviceContext, X, Y, Width, Height, Operation);
+~~~~~~~ C++
+
+EndPaint(Window, &Paint);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Extracting operation to a variable.]
+
+!!! Note `static` keyword and the _scope_
+    In C/C++, `static` is actually quite a confusing keyword: it has three meanings depending on the context. We will return to its definitions later down the line. 
+
+    In this case, it has to do with the persistance of variables.
+
+    Normally, whenever you enter a _scope_, area designated by braces (`{}`), variables declared inside it live until you go out it. Then that memory is cleared, variable becomes undefined and, if there was already a variable with the same name declared further "above", the latter's value is returned to the variable.
+
+    ~~~~~~~ C++
+    int x = 0;
+    { // enter scope
+        int x = 1; 
+        int y = 2; 
+
+        printf(x); // 1
+        printf(y); // 2
+    } // exit scope
+
+    printf(x); // 0
+    printf(y); // compilation error: y is undefined
+
+    ~~~~~~~
+    [<file>Example 1</file>. Redaclaring a variable will also produce a warning on a higher warning level.]
+
+    Back to `static`, if you mark a variable with this keyword, it will be declared only once for the whole duration of the program. Each time that your program returns to that point (in a loop, or by calling the function multiple times), it will skip initialization step and **will remember** its value from the last time it was at this point in the program.
+
+    ~~~~~~~ C++
+    int GetNextNumber()
+    {
+        int Result = 0;
+        int x = -1;
+        
+        {
+            static int x = 0; 
+            x = x + 1;
+            Result = x;
+        }
+
+        return (Result);
+    }
+
+    int main()
+    {
+        printf(GetNextNumber()); // 1
+        printf(GetNextNumber()); // 2
+        printf(GetNextNumber()); // 3
+        printf(GetNextNumber()); // 4
+    }
+    ~~~~~~~
+    [<file>Example 2</file>. Note that this wouldn't change the variable's scope, it will still be only available inside its block.]
+
+    In our example, inner `x` is initialized to 1 only once. The rest of the times, when we call our `GetNextNumber` function, it "remembers" its value from the last time, and correctly increments itself by 1.
+
+!!! Warning Don't use `static` in your final code!
+    There're many reasons to _never_ use static variables in the final code. This is a very bad idea for thread safety and other advanced things. 
+    
+    However, they are a handy tool for development purposes, because they allow to quickly introduce something to the code without having to worry about passing things around, and this is exactly what we are doing right now: making sure our `PatBlt` does exactly what we want to it to do. 
+
+In our case, `Operation` will be initialized to `WHITENESS` only once, the rest of the times we can return and swap its current value to its opposite, like so: 
+
+~~~~~~~ C++
+static DWORD Operation = WHITENESS;
+~~~~~~~ C++ add
+if (Operation == WHITENESS)
+{ 
+    Operation = BLACKNESS;
+}
+else
+{
+    Operation = WHITENESS;
+}
+~~~~~~~ C++
+PatBlt(DeviceContext, X, Y, Width, Height, Operation);
+
+EndPaint(Window, &Paint);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Changing `Operation` at every pass.]
+
+!!! Note `Assign` vs. `Equal to` operators
+    Note that `==` and `=` mean totally different things in C/C++. 
+    
+    * `=` (Assignment operator) assigns the right value to the left variable.
+    * `==` ("Equal to" operator) compares if the left and right values are mathematically equal.
+
+    It's a common beginner error inserting `=` instead of `==` in the `if` statement and producing all sorts of errors as a result.
+
+!!! Warning **Epilepsy Warning**
+    **WARNING**: This section may potentially trigger seizures for people with photosensitive epilepsy. You may want to skip observing the results and call it a day here.
+
+If you compile and run the program now, you will see the window change color each time the window is resized. If you bring it closer to the border, you will notice it's only repainting the portions which were previously hidden.
+
+# Recap
+
+And there you have it! Opening a window is some great progress and, if you look back, it's not that much of code! 
+
+Next time, we will be defining the `MainWindowCallback` messages a bit more appropriately, as well as create a _bitmap_ which we will then display to our window. This will bring us to the point where we can actually render our game. 
+
+[^AWnotation]: We briefly touched on `...A` and `...W` notation in [Day 1](day1.md.html#addsomethingtodofortheprogram/importalibrary). To recap, any function that takes a string as input has an <b>A</b>nsi and a <b>W</b>ide (Unicode) version, and a macro decides which function to call. Here, you can use the macro `WNDCLASS` or the ANSI/Wide version, as you prefer. 
+
+[^align]: It's not entirely true though, depending on the sizing of the elements in the struct some additional _padding_ may be introduced to preserve memory _alignment_. We will look into the alignment later down the line. 
+
+[^bitwiseOr]: See also some additional methods to pass parameters to function [here](day1.md.html#addsomethingtodofortheprogram).
+
+[^winapi]: The only difference between the two is their _calling convention_. For MSVC calling conventions, you can read more [here](https://docs.microsoft.com/en-us/cpp/cpp/argument-passing-and-naming-conventions).
+
+
+# Navigation
+
+Previous: [Day 1. Setting the Windows Build](day1.md.html)
+
+<!-- Up Next: [Day X. ](dayX.md.html) -->
+
+[Back to Index](../index.md.html)
+
+
+(#) Glossary
+
+(insert glossary/glossary_day2.md.html here)
+
+(#) References
+
+(insert References/refs_day2.md.html here)
+
+(insert links.md.html here)
+
+
+<style class="fallback">
+  body {
+    visibility: hidden;
+    font-family: monospace;
+  }
+</style>
+<!-- Markdeep: https://casual-effects.com/markdeep/ -->
+<script>markdeepOptions = { tocStyle: 'long' }; window.alreadyProcessedMarkdeep || (document.body.style.visibility = 'visible');</script>
+<script src="../js/markdeep.min.js" charset="utf-8"></script>
+<script src="https://morgan3d.github.io/markdeep/latest/markdeep.min.js" charset="utf-8"></script>
