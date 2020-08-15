@@ -203,7 +203,7 @@ In this file we're going to do absolutely nothing (yet). We're going to insert j
 If we search for `WinMain`, which is the entry point for Windows, you will quickly find the [related article](https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-winmain). `WinMain` is the entry point that Windows will be looking for in our program[^entrypoint], everything starts from here. Its `syntax` is specified at the top of its MSDN article we provided above: 
 
 ~~~~~~~ C++
-int WINAPI WinMain(
+int CALLBACK WinMain(
   HINSTANCE hInstance,
   HINSTANCE hPrevInstance,
   LPSTR     lpCmdLine,
@@ -216,13 +216,11 @@ This is the part we copy and paste in our `win32_handmade.cpp` file. We will als
 ~~~~~~~ C++
 #include <windows.h>
 
-int WINAPI 
-WinMain (
-         HINSTANCE hInstance,
+int CALLBACK 
+WinMain (HINSTANCE hInstance,
          HINSTANCE hPrevInstance,
          LPSTR     lpCmdLine,
-         int       nShowCmd
-         )
+         int       nShowCmd)
 {
 }
 ~~~~~~~
@@ -237,13 +235,11 @@ We assume that the reader has a basic knowledge of reading C code. If not, you c
 We aren't going to do anything in here, other than returning 0. In `WinMain`, this stands for "everything ran smoothly, we're done here". 
 
 ~~~~~~~ C++
-int WINAPI
-WinMain (
-         HINSTANCE hInstance,
+int CALLBACK
+WinMain (HINSTANCE hInstance,
          HINSTANCE hPrevInstance,
          LPSTR     lpCmdLine,
-         int       nShowCmd
-         )
+         int       nShowCmd)
 {
 ~~~~~~~ C++ add
     return (0);
@@ -766,7 +762,13 @@ Up Next: [Day 2. Opening a Win32 Window](day2.md.html)
 
 [Back to Index](../index.md.html)
 
-(insert appendix.md.html here)
+(#) Glossary
+
+(insert glossary/glossary_day1.md.html here)
+
+(#) References
+
+(insert References/refs_day1.md.html here)
 
 (insert links.md.html here)
 

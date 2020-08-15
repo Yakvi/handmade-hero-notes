@@ -90,21 +90,22 @@ body#md {
 }
 
 .md code { 
-    color: #c9b5a4; 
+    color: #9b7c62;/* #c9b5a4; */
     background: unset;
     padding-left: 2px;
     padding-right: 2px;
 }
 
-.md code { font-size: 90%; }
-.md p code, .md ul li code, .md ol li code, .md .listingcaption code { font-size: 105%; color: #9b7c62; }
+.md code { font-size: 105%; }
+.md pre.listing code { font-size: 90%; color: #c9b5a4; }
+/* .md p code, .md ul li code, .md ol li code, .md .listingcaption code { font-size: 105%; color: #9b7c62; } */
 
 .hljs-comment,.hljs-quote{color:#a0f0aa;}
 .hljs-variable,.hljs-template-variable,.hljs-tag,.hljs-name,.hljs-selector-id,.hljs-selector-class,.hljs-regexp,.hljs-deletion{color:#cc6666;}
 .hljs-number,.hljs-built_in,.hljs-builtin-name,.hljs-literal,.hljs-type,.hljs-params,.hljs-meta,.hljs-link{color:#de935f}
 .hljs-attribute{color:#f0c674;}
 .hljs-string,.hljs-symbol,.hljs-bullet,.hljs-addition{color:#b5bd68;}
-.hljs-title,.hljs-section{color:#81a2be;}
+.hljs-title,.hljs-section{color:#81a2be !important;}
 .hljs-keyword,.hljs-selector-tag{color:#daa71e;}
 .hljs{display:block;overflow-x:auto;background:#1d1f21;color:#c5c8c6;padding:.5em}
 .hljs-emphasis{font-style:italic}
@@ -113,6 +114,7 @@ body#md {
 
 
 .md code > .highlight, .md code > .add { background-color: #374737; color: #bdbdbd; }
+.md code > .edit { color: #acacac; background: #57553e; }
 .md code > .delete { text-decoration: line-through; color: #acacac; background: #604949; }
 .md code > .input { font-weight: bold; }
 
