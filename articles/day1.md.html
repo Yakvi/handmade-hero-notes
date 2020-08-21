@@ -730,9 +730,23 @@ cl -Zi ..\code\win32_handmade.cpp user32.lib
 
 And there you have it! Today, we covered a lot of ground: set up our tools for writing, building and debugging our program, our dev environment, compiled our first program, and even dived a bit into the intricansies of the compiler and linker! Tomorrow, we will start laying down the groundwork to open our window and display something on the screen.
 
+![Figure [X]: Our message box](../media/day1/1-messagebox.png)
+
+# Exercises
+
 Before we move on, make sure you are comfortable with all this. If you made mistakes and learned from them, it's even better! It's practice, trial and error which will solidify all these notions in you, so that by the end of the day you'll just _know_ it. 
 
-![Figure [X]: Our message box](../media/day1/1-messagebox.png)
+Below we're proposing a few exercises but feel free to think about something different!
+
+## A Different Message Box
+
+Instead of using `MB_ICONINFORMATION | MB_OK` flags, try to put a different set of flags to your `MessageBoxA`. Change a message. See what happens if you have more than one button and you click one.
+
+## Respawning Message Boxes
+
+Use the return of `MessageBoxA` to potentially spawn more message boxes. Spam yourself.
+
+-------------
 
 [^entrypoint]: Technically, it's the entry point that the _C runtime library_ (that links with our program) will be entering... We'll see about that in Subsection [Windows-Specific Things You Should Know].
 
