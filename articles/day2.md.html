@@ -295,7 +295,7 @@ WindowClass.lpfnWndProc = MainWindowCallback;
 
 This callback will be called any time Windows needs to send something to a window of this class (our `WindowClass`) to have it do something. 
 
-## Rename Variables
+## Refactoring: Rename Variables
 
 There's one step that we'd like to take before we move on.
 
@@ -351,7 +351,7 @@ WinMain(HINSTANCE Instance,
 
     If you are interested in reading more, check out this [article on Wikipedia](https://en.wikipedia.org/wiki/Hungarian_notation).
 
-## Continue Implementing MainWindowCallback
+## Process Some Messages
 
 Let's look at the parameters we're getting for our `MainWindowCallback` (don't forget about [MSDN][WindowProc]!):
 
@@ -821,9 +821,7 @@ else
 !!! Warning
     If you read the [documentation][GetMessage] carefully, you'll notice that it explicitly recommends _against_ doing the while loop the way we did it. The reason for it is that Windows' `BOOL` may return any number, not only `true` or `false`, including -1 in case of invalid window handle. 
 
-This is not the way we will implement our message loop in the future anyway. This code will be replaced by the more robust code that better suits our needs. 
-
-For the sake of correctness, if you want to make use of `GetMessage` in your code, you may use the example provided in the documentation, or a construct such as this one: 
+While this is not the way we will implement our message loop in the future anyway, and this code will be replaced by the more robust code that better suits our needs, for the sake of correctness, if you want to make use of `GetMessage` in your code, you may use the example provided in the documentation, or a construct such as this one: 
 
 ~~~~~~~ C++ edit
 for(;;)                              // a for loop which would run forever
@@ -874,16 +872,16 @@ WM_ACTIVATEAPP
 ~~~~~~~
 [<file>[Output window]</file>]
 
-This is because we don't do anything with our messages (and the messages that do come through to our `MainWindowCallback` aren't sent by our window). We simply pul them out of the queue and... discard them. In order to send the messages to our `MainWindowCallback` (and then to `DefWindowProc`), we need to _dispatch_ our message. The Windows command to do that is called simply [DispatchMessage][].
+This is because we don't do anything with our messages (and the messages that do come through to our `MainWindowCallback` aren't sent by our window). We simply pul them out of the queue and... discard them. In order to send the messages to our `MainWindowCallback` (and then to `DefWindowProc`), we need to _dispatch_ our message. The Windows command to do that is called simply [DispatchMessageA][].
 
 ~~~~~~~ C++
-LRESULT DispatchMessage(
+LRESULT DispatchMessageA(
   const MSG *lpMsg
 );
 ~~~~~~~
-[<file>[MSDN]</file> `DispatchMessage` syntax]
+[<file>[MSDN]</file> `DispatchMessageA` syntax]
 
-As you can see, the syntax for `DispatchMessage` is super simple, it only takes a pointer to the message. Moreover, we're not interested in the `LRESULT` this function returns so we can simply discard it. Let's plug it in our message loop: 
+As you can see, the syntax for `DispatchMessageA` is super simple, it only takes a pointer to the message. Moreover, we're not interested in the `LRESULT` this function returns so we can simply discard it. Let's plug it in our message loop: 
 
 ~~~~~~~ C++
 MSG Message;
@@ -891,11 +889,11 @@ BOOL MessageResult = GetMessage(&Message, 0, 0, 0);
 if (MessageResult > 0)
 {
 ~~~~~~~ C++ add
-    DispatchMessage(&Message);
+    DispatchMessageA(&Message);
 ~~~~~~~ C++
 }
 ~~~~~~~ 
-[Listing [x]: <file>[win32_handmade.cpp]</file> Adding `DispatchMessage`.]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Adding `DispatchMessageA`.]
 
 !!!
     We _might_ try to call `MainWindowCallback` ourselves, however this is generally considered not a good idea. Windows expects the control flow to be in a specific shape, and it's better not to go against this set of things. 
@@ -909,7 +907,7 @@ BOOL TranslateMessage(
 ~~~~~~~
 [<file>[MSDN]</file> `TranslateMessage` syntax]
 
-This function doesn't have a purpose right now, but might be useful later. It's used to "translate" Windows virtual key character codes to actual `char` symbols, and post the result as a new message to the queue. Let's add it before our `DispatchMessage` call:
+This function doesn't have a purpose right now, but might be useful later. It's used to "translate" Windows virtual key character codes to actual `char` symbols, and post the result as a new message to the queue. Let's add it before our `DispatchMessageA` call:
 
 ~~~~~~~ C++
 MSG Message;
@@ -919,14 +917,14 @@ if (MessageResult > 0)
 ~~~~~~~ C++ add
     TranslateMessage(&Message);
 ~~~~~~~ C++
-    DispatchMessage(&Message);
+    DispatchMessageA(&Message);
 }
 ~~~~~~~ 
 [Listing [x]: <file>[win32_handmade.cpp]</file> Adding `TranslateMessage`.]
 
 We'll talk more about virtual keyboard input once we get to our input system.
 
-So there you have it! Your barebones window. It's not pretty, it cannot be closed unless you force it from the debugger or the Task Manager, but you can rezise it, minimize and maximize it! 
+So there you have it! Your barebones window. It's not pretty, it cannot be closed unless you force it from the debugger (`Shift-F5`) or the Task Manager, but you can rezise it, minimize and maximize it! 
 
 ![Figure [x]. Your blank canvas, to build your worlds in.](../media/day2/canvas.png)
 
@@ -1056,61 +1054,9 @@ EndPaint(Window, &Paint);
 [Listing [x]: <file>[win32_handmade.cpp]</file> Extracting operation to a variable.]
 
 !!! Note `static` keyword and the _scope_
-    In C/C++, `static` is actually quite a confusing keyword: it has three meanings depending on the context. We will return to its definitions later down the line. 
+    In C/C++, `static` is actually quite a confusing keyword: it has three meanings depending on the context. We will return to its definitions more in detailed [in the next chapter](day3.md.html#differentmeaningsofstatic). 
 
-    In this case, it has to do with the persistance of variables.
-
-    Normally, whenever you enter a _scope_, area designated by braces (`{}`), variables declared inside it live until you go out it. Then that memory is cleared, variable becomes undefined and, if there was already a variable with the same name declared further "above", the latter's value is returned to the variable.
-
-    ~~~~~~~ C++
-    int x = 0;
-    { // enter scope
-        int x = 1; 
-        int y = 2; 
-
-        printf(x); // 1
-        printf(y); // 2
-    } // exit scope
-
-    printf(x); // 0
-    printf(y); // compilation error: y is undefined
-
-    ~~~~~~~
-    [<file>Example 1</file>. Redaclaring a variable will also produce a warning on a higher warning level.]
-
-    Back to `static`, if you mark a variable with this keyword, it will be declared only once for the whole duration of the program. Each time that your program returns to that point (in a loop, or by calling the function multiple times), it will skip initialization step and **will remember** its value from the last time it was at this point in the program.
-
-    ~~~~~~~ C++
-    int GetNextNumber()
-    {
-        int Result = 0;
-        int x = -1;
-        
-        {
-            static int x = 0; 
-            x = x + 1;
-            Result = x;
-        }
-
-        return (Result);
-    }
-
-    int main()
-    {
-        printf(GetNextNumber()); // 1
-        printf(GetNextNumber()); // 2
-        printf(GetNextNumber()); // 3
-        printf(GetNextNumber()); // 4
-    }
-    ~~~~~~~
-    [<file>Example 2</file>. Note that this wouldn't change the variable's scope, it will still be only available inside its block.]
-
-    In our example, inner `x` is initialized to 1 only once. The rest of the times, when we call our `GetNextNumber` function, it "remembers" its value from the last time, and correctly increments itself by 1.
-
-!!! Warning Don't use `static` in your final code!
-    There're many reasons to _never_ use static variables in the final code. This is a very bad idea for thread safety and other advanced things. 
-    
-    However, they are a handy tool for development purposes, because they allow to quickly introduce something to the code without having to worry about passing things around, and this is exactly what we are doing right now: making sure our `PatBlt` does exactly what we want to it to do. 
+    In this particular case, by marking `Operation` as `static`, it will be declared only once for the whole duration of the program. Only on the first time you step into `WM_PAINT` the `Operation` will be initialized, after that the application will skip the initialization step and will remember its previous value.
 
 In our case, `Operation` will be initialized to `WHITENESS` only once, the rest of the times we can return and swap its current value to its opposite, like so: 
 
@@ -1147,9 +1093,23 @@ If you compile and run the program now, you will see the window change color eac
 
 # Recap
 
-And there you have it! Opening a window is some great progress and, if you look back, it's not that much of code! 
+And there you have it! Opening a window is some great progress and, if you look back, it's not that much of code. We set up our own Window Class; additionally, we started laying the ground work of our main window callback. Finally, we were in position to open our window and we immediately started drawing some crazy stuff into it.
 
 Next time, we will be defining the `MainWindowCallback` messages a bit more appropriately, as well as create a _bitmap_ which we will then display to our window. This will bring us to the point where we can actually render our game. 
+
+# Exercises
+
+## Intercept More Messages
+
+Try to look around the [message lists](https://docs.microsoft.com/en-us/windows/win32/winmsg/about-messages-and-message-queues#system-defined-messages). See if you find some of your liking; then add the relevant `case` to your `switch` statement, add a debug line and try to have it go off during your program execution. Try to see if you can do something with the data they might bring.
+
+## Creating Custom Window
+
+Right now, we are letting Windows used default size and position of our Window. What if you put some actual values into it? Does `CreateWindowEx` operate as you would expect it to? 
+
+Try adding some different styles to `dwStyle`. See what results does it bring you. 
+
+------------
 
 [^AWnotation]: We briefly touched on `...A` and `...W` notation in [Day 1](day1.md.html#addsomethingtodofortheprogram/importalibrary). To recap, any function that takes a string as input has an <b>A</b>nsi and a <b>W</b>ide (Unicode) version, and a macro decides which function to call. Here, you can use the macro `WNDCLASS` or the ANSI/Wide version, as you prefer. 
 
@@ -1159,12 +1119,11 @@ Next time, we will be defining the `MainWindowCallback` messages a bit more appr
 
 [^winapi]: The only difference between the two is their _calling convention_. For MSVC calling conventions, you can read more [here](https://docs.microsoft.com/en-us/cpp/cpp/argument-passing-and-naming-conventions).
 
-
 # Navigation
 
 Previous: [Day 1. Setting the Windows Build](day1.md.html)
 
-<!-- Up Next: [Day X. ](dayX.md.html) -->
+Up Next: [Day 3. Allocating a Back Buffer](day3.md.html)
 
 [Back to Index](../index.md.html)
 
