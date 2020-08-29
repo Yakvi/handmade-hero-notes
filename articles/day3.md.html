@@ -287,7 +287,7 @@ printf(x); // 0
 printf(y); // compilation error: y is undefined
 
 ~~~~~~~
-[<file>Example 1</file>. Redaclaring a variable will also produce a warning on a higher warning level.]
+[<file>[Example 1]</file>. Redaclaring a variable will also produce a warning on a higher warning level.]
 
 If you mark a variable with `static` (or, in our case, `local_persist`), it will be declared only once for the whole duration of the program. Each time that your program returns to that point (in a loop, or by calling the function multiple times), the application will remember the variable's value from the last time it was at this point in the program.
 
@@ -314,7 +314,7 @@ int main()
     printf(GetNextNumber()); // 4
 }
 ~~~~~~~
-[<file>Example 2</file>. Note that this wouldn't change the variable's scope, it will still be only available inside its block.]
+[<file>[Example 2]</file>. Note that this wouldn't change the variable's scope, it will still be only available inside its block.]
 
 In <file>example 2</file>, inner `x` is initialized to 1 only once. The rest of the times, when we call our `GetNextNumber` function, it "remembers" its value from the last time, and correctly increments itself by 1.
 
@@ -360,7 +360,7 @@ We fixed the only problem with our application that we had: that we couldn't clo
 * Since we want to do everything from scratch, we want to interface with GDI as little as possible. In practice, we will use it only pass a bitmap to display in our window.
     - Think of a bitmap as simply a picture. It's literally a _bit map_, a sequence of colors: Red, Green, Blue, Red, Green, Blue, etc[^bitmap].
 * The bitmap itself would be created (rendered) using our own code and techniques. 
-* To create the bitmap, we need to ask Windows to allocate a _memory buffer_ (literally a block of memory) that we can write into. 
+* To create the bitmap, we need to ask Windows to _allocate_ (prepare and assign to us) a _memory buffer_ (a block of memory) that we can write into. 
     - We need to ask for the memory because we can't simply create a variable with many _bits_ and write into it: for very big memory blocks (like our buffer) you need to _allocate memory_ (or reserve it for our use).
     - Also we need to ask for it because Windows (or any other good operating system) is very protective of the memory its applications use.
     - We will then arrange it in a format that Windows is comfortable with us handing back to it.
@@ -541,7 +541,7 @@ A quick research on MSDN (using words as `Create`, `DIB`, etc.) leads us to two 
 `StretchDIBits` is a rectangle-to-rectangle image copy. If the destination rectangle is bigger, the image is increased, if not, shrunk down. 
 
 !!! Tip
-    Look up the function syntax on MSDN! 
+    Look up the function syntax on MSDN! If you can't find it, use [this link][StretchDIBits].
 
 As you can see, the function takes quite a few parameters, but most of them are pretty straightforward.
 
@@ -551,15 +551,6 @@ As you can see, the function takes quite a few parameters, but most of them are 
 * `*lpBits` and `*lpbmi`: We can skip these for now.
 * `iUsage`: specified what kind of buffer is passed (whether it's palettized or RBG). We'll use `DIB_RGB_COLORS`. 
 * `rop`: raster operation code. This code allows to specify what do we want to do with the destination on bitwise level. We only want to copy from `Src`, so let's use `SRCCOPY` constant.
-
-!!! Note RGB and Palette colors
-    We assume that you have knowledge of how the RGB values work in computers. If you bring up a color picking utility, you will see that each color (in RGB mode) has a Red, Green and Blue component, each represented by a number from 0 to 255. 
-    
-    On the topic of color-picking utilities, we highly recommend one called [Color Cop][]. 
-
-    This is what's intended under RBG color mode. Each pixel is represented by a Red byte, a Green byte and a Blue byte per each pixel drawn.
-
-    A Palette however is when you want to be more indirect (and potentially save buffer memory). For example, if you want to have 16 colors total in your image (from 0 to 15), in your buffer you will write just numbers, from 0 to 15, and have a "palette" passed somewhere together with your buffer, where each index has its corresponding RGB color. This is how, for example, a GIF image works, or "Posterize" effect in Photoshop.
 
 ~~~~~~~ C++
 internal void
@@ -578,6 +569,16 @@ Win32UpdateWindow(HDC DeviceContext, int Width, int Height)
 [Listing [x]: <file>[win32_handmade.cpp > Win32UpdateWindow]</file> Filling out `StretchDIBits`.]
 
 We don't really care about the return of this function. If it succeeds, it returns a non-zero value, so we could in theory capture it to ensure it went smoothly. We leave this as an excercise for the reader.
+
+!!! Note RGB and Palette colors
+    ![Figure [x]: Color cop.](../media/day3/colorcop.png)
+    We assume that you have knowledge of how the RGB values work in computers. If you bring up a color picking utility, you will see that each color (in RGB mode) has a Red, Green and Blue component, each represented by a number from 0 to 255. 
+    
+    This is what's intended under RBG color mode. Each pixel is represented by a Red byte, a Green byte and a Blue byte per each pixel drawn.
+    
+    A Palette however is when you want to be more indirect (and potentially save buffer memory). For example, if you want to have 16 colors total in your image (from 0 to 15), in your buffer you will write just numbers, from 0 to 15, and have a "palette" passed somewhere together with your buffer, where each index has its corresponding RGB color. This is how, for example, a GIF image works, or "Posterize" effect in Photoshop.
+    
+    On the topic of color-picking utilities, we highly recommend one called [Color Cop][]. It's a lightweight utility which allows you to pick any color on the screen
 
 To conclude, we now miss the bitmap info and the actual buffer. And to get those, we need to go back to `Win32ResizeDIBSection` and `CreateDIBSection`.
 
@@ -664,7 +665,7 @@ typedef struct tagBITMAPINFOHEADER {
   DWORD biClrImportant;
 } BITMAPINFOHEADER, *PBITMAPINFOHEADER;
 ~~~~~~~
-[<file>MSDN</file> `BITMAPINFOHEADER` structure syntax.]
+[<file>[MSDN]</file> `BITMAPINFOHEADER` structure syntax.]
 
 We can fill it out directly by referencing it directly via the `BitmapInfo.bmiHeader` as follows: 
 
@@ -891,7 +892,7 @@ If you end up in the `Disassembly` (by stepping into a function you don't have c
 
 Previous: [Day 2. Opening a Win32 Window](day2.md.html)
 
-<!-- Up Next: [Day X. ](dayX.md.html) -->
+Up Next: [Day 4. Animating the Back buffer](day4.md.html)
 
 [Back to Index](../index.md.html)
 
@@ -901,8 +902,6 @@ Previous: [Day 2. Opening a Win32 Window](day2.md.html)
 (insert glossary/glossary_day3.md.html here)
 
 (#) References
-
-(insert references/refs_day2.md.html here)
 
 (insert references/refs_day3.md.html here)
 
