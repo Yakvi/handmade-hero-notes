@@ -13,6 +13,8 @@ Welcome to Handmade Hero! This is a series where we program an entire game, from
 
 Keep in mind that everything we're going to show you in this course is only _one way_ of coding a game from scratch. It is not the only way, and you don't have to follow each step the same manner it is presented here. In this course, we will present you how [Casey][] makes games, so that you can see one __complete way__ of doing it, where nothing is left out. You are encouraged however to develop your own techniques and experiment with your own styles, try different things and see what works best for you. 
 
+No prior knowledge of programming is required to start following along. The only thing that will help you along the way is the basic knowledge of Windows, the insides of a computer (what's a CPU, graphics card, Memory (RAM), etc. at a very general notion). Knowledge about that binary exists, that a byte is 8 bits and a Kibibyte (KiB) is 1024 bytes, and other basic computer theory, as well as the basics of color theory would definitely help as well.
+
 # Start the Project
 
 The first thing we're going to do is to actually get the project started. We do it by setting up all our tools and by building _anything_ to ensure that the tools are working properly. While it may be a bit of _drudgework_, it's a vital step to ensure that, moving forward, the project can be continued successfully without any interruptions. 
@@ -33,7 +35,7 @@ Nowadays, these are usually bundled together under the name of <b>I</b>ntegrated
 !!! Tip
     For a more in-depth overview of how compiler and linker work, you can watch the short series [Intro to C][introtoc] where these topics are covered in detail.
 
-This course assumes you follow on a machine running Windows 10, and will use the <b>M</b>icro<b>s</b>oft <b>V</b>isual <b>C</b>++ development tools, or MSVC. These are available bundled with Visual Studio. You can download a free Community edition at [visualstudio.microsoft.com][msvc] and follow the installation instructions: 
+This course assumes you follow along on a machine running Windows 10, and will use the <b>M</b>icro<b>s</b>oft <b>V</b>isual <b>C</b>++ development tools, or MSVC. These are available bundled with Visual Studio. You can download a free Community edition at [visualstudio.microsoft.com][msvc] and follow the installation instructions: 
 
 1. Run `vs_community.exe` file that will be downloaded after the prompt.
 2. Accept the terms and conditions.
@@ -62,50 +64,53 @@ To open a command line, simply search in your Start Menu for `Command Prompt`. I
 
 ![Figure [X]: Default Command Prompt Window](../media/day1/1.2-cmd.png)
 
-What this text window does is allow you to have dialogue with your computer the old-fashioned way: with the text commands. For instance, `dir` lists the contents of the current directory, `del [filename]` deletes the specified file, `cd [directory]` changes the current directory, etc. 
+This text window allows you to have dialogue with your computer the old-fashioned way: with the text commands. For instance, `dir` lists the contents of the current directory, `del [filename]` deletes the specified file, `cd [directory]` changes the current directory, etc. 
 
 !!! Tip
-    If you're completely unfamiliar with the command lines, check out a handy command list [here](https://en.wikipedia.org/wiki/Cmd.exe#Windows_NT_family).
+    If you're completely unfamiliar with the command lines, check out a handy command list [on Wikipedia](https://en.wikipedia.org/wiki/Cmd.exe#Windows_NT_family).
 
 !!!
     In this book, we will be using the terms "Command Line", "Command Prompt", "CLI" and "Terminal" interchangeably.
 
-![Figure [X]: Command Prompt window properties](../media/day1/1.3-cmd-prop.png) The default way the Command Prompt window looks is pretty simple, and you might want to customize its `Font`, `Colors`, `Layout`, etc. If you copy the shortcut to the Command Prompt to your desktop, you can right-click and customize all these settings in the `Properties` window, in the related tabs. Please note that, if you are using your default Windows 10 theme, you might not be able to `Ctrl-Click and Drag` the shortcut to copy it. Instead, you can right-click on the shortcut in the Start Menu, select `Open File Location`, and from there you can copy the shortcut. 
+![Figure [X]: Command Prompt window properties](../media/day1/1.3-cmd-prop.png) 
 
-### Create a Virtual drive
+The default way the Command Prompt window looks is pretty basic, and you might want to customize its font, colors, layout, etc. To do that, you should first make the shortcut to the Command Prompt on your desktop.
 
-Another thing Command Prompt Properties window allows you to specify is its starting location. By default, it starts in your user folder, which isn't very helpful if you keep your codebase somewhere else.
+!!! Note Copying shortcuts from Windows 10 Start Menu
+    Please note that, if you are using your default Windows 10 theme, you might not be able to `Ctrl-Click and Drag` the shortcut to copy it. Instead, you should right-click on the shortcut in the Start Menu, select `Open File Location`, and from there you can make the copy. 
 
-One command to note is `subst`. On Windows, there're _drives_ (C, D, etc.) that, in the command line, you can quickly refer to by specifying their letter (e.g. `C:`). What `subst` does is an (available) drive letter and assigning it a path on your hard drive (you can get more details by typing `subst /?` in the command line). This can come handy to point your codebase root folder, especially if you move the codebase to another machine or location.
+If you now right-click and select `Properties` window, you will be able to customize a world of settings. For instance, you can specify the starting location for your terminal. By default, it starts in your user folder, which isn't very helpful if you keep your codebase somewhere else.
 
-!!! Trivia
-    [Casey][] notes that this habit of his is highly unusual, and that you can be completely free to skip it. It might be a legacy habit of him working a lot with the [Amiga computers](https://en.wikipedia.org/wiki/Amiga) popular in the late 80's... or of the people who watched [Handmade Hero][] a lot.
+To set up your starting location: 
 
-Let's assign `w` drive to our codebase, create a `handmade` directory in it, and move into the directory.
+1. Pick up a place where you will keep your codebase (for example, `D:\Documents\Codebase`).
+2. Open `Command Prompt Properties` -> `Shortcut` tab.
+3. Specify the `Start in` location to be your codebase location.
+4. Navigate the other tabs to set up the color, font and layout options of your preference.
+5. After restarting your Command Prompt, it will start with the color scheme and in the location specified.
+
+For your convenience, these are the preferences we're using:
+
+* `Font`: [Liberation Mono][] (download the latest release and install the fonts in your `Fonts` folder on Windows), size 18.
+* `Layout`: 
+    * Window Width: 120.
+    * Window Height: 30.
+* `Colors`: 
+    * Screen Text: Red 140, Green 114, Blue 9
+    * Screen Background: Red 16, Green 16, Blue 16
+
+As the first action in your terminal, let's create a directory for our project! If your codebase is located on a different drive than the one you start in, you'll need to switch the drives first. Below we assume that your codebase is located at the `D:\Documents\Codebase`:
 
 ~~~~~~~ batch input
-C:\Users\Yakvi> subst w: d:\documents\codebase
-C:\Users\Yakvi> w:
-W:\> mkdir handmade
-W:\> cd handmade
-W:\handmade> _
+C:\Users\Yakvi> D: 
+D:> cd d:\documents\codebase
+D:\Documents\Codebase> mkdir handmade
+D:\Documents\Codebase\> cd handmade
+D:\Documents\Codebase\handmade> _
 ~~~~~~~
-[<file>[Command Prompt]</file> Setting up your work folder]
+[<file>[Command Prompt]</file> Creating your work folder]
 
-!!! Warning
-    This command must be run each time you restart your PC. If you'd like subst to happen automatically, create a `startup.bat` file with the following commands: 
-
-    `@echo off`
-
-    `subst w: [your codebase location]`
-
-    Save this file in `%appdata%\Microsoft\Windows\Start Menu\Programs\Startup` folder.
-
-So now, coming back to `Command Prompt Properties` -> `Shortcut`, you can specify its `Start in` location as `w:\handmade`. After restarting your Command Prompt, it will start with the color scheme and in the location specified.
-
-
-
-![Figure [X]: Customized Command Prompt Window next to the Properties Window](../media/day1/1.4-cmd2.png)
+An extra thing that we'd like to touch regarding the Command Prompt is discussed in the Create a Virtual Drive subsection.
 
 ## Set Up the Text Editor
 
@@ -210,6 +215,7 @@ int CALLBACK WinMain(
   int       nShowCmd
 );
 ~~~~~~~
+[<file>[MSDN]</file> WinMain function _syntax_, or _signature_.]
 
 This is the part we copy and paste in our `win32_handmade.cpp` file. We will also __include__ the file `windows.h`, which is the _header file_ on Windows containing many of the function definitions that we will need to call in order to get our job done. 
 
@@ -403,7 +409,7 @@ Here is how we are going to do the builds. It is highly unusual way[^buildinginb
 
 In the root folder of our project (i.e. `handmade`), we will create a file named `build.bat`. A `.bat` (batch) file is a _script_, a list of things that the command line should do. 
 
-!!! Trivia
+!!! Trivia Trivia: The downsides of the Make systems
     What other programmers do is setting up a so-called "Make system" using a tool like GNU Make, Ninja, CMake, etc[^buildtools]. 
 
     The reason why it's unusual is because people are used to the fact that compiling all the code takes _a long_ time. The whole point of a make file is that you only compile that code that changed, and that's what these build utilities do: they try to optimize things so that they only do the minimal amount of work necessary to rebuild the project. And when projects tend to get very large, they tend to be very slow. But, as it turns out, if you just code _sanely_, you can compile _very_ large programs (certainly larger than it would take to make a full professional game on this stream) in _only a few seconds_. 
@@ -572,13 +578,6 @@ Once you completed your setup, while in the debugger, hit `F11` on your keyboard
 
 ## Call Stack
 
-!!! Note Windows-Specific Things You Should Know
-    `WinMain` is an _entry point_ for Windows. An entry point is a function that gets called, executes the code inside it, and returns to whoever called it. But who called us in the first place? In this particular way of compiling which we are doing right now, it's not actually Windows that called us, it's the so-called "<b>C</b> <b>R</b>untime <b>L</b>ibrary", or CRT for short. CRT is something that ships with all the C compilers, as mandated by the C specification (for Windows, you can find documentation on [MSDN][crt]). In turn, the CRT was called by Windows. 
-    
-    However, CRT is not part of Windows, it's inside our executable. And even if we aren't going to use any of its functions (since this course is about making things from scratch yourself), we can't just remove it like this. The compiler counts on CRT for a number of things. These things are actually hard-coded into the compiler to call into the CRT, and if it's not there, you'll need to implement that code yourself. 
-
-    We aren't going to address this here but, if you are interested to learn more, check out [this discussion](https://hero.handmade.network/forums/code-discussion/t/94-guide_-_how_to_avoid_c_c++_runtime_on_windows) on Handmade Network.
-
 The debugger can display a number of useful windows that you should know about:
 
 * Call Stack
@@ -589,7 +588,7 @@ The debugger can display a number of useful windows that you should know about:
 * Disassembly
 * Memory
 
-And many, many more. These are available in the `Window` menu of RemedyBG or in `Debug` -> `Window` __during a debug session__ on Visual Studio. We will touch on them at the various stages of this book. For now, let's look at the Call Stack.
+And many, many more that might or might not be that useful. These are available in the `Window` menu of RemedyBG or in `Debug` -> `Window` __during a debug session__ on Visual Studio. We will touch on them at the various stages of this book. For now, let's look at the Call Stack.
 
 Start a new debug session (hit `F11` again) and open the Call Stack. You will see an entire "train" of functions that called each other until we arrived to the current point (if you don't see the full stack in Visual Studio, right click your call stack and select `Show External Code`). 
 
@@ -637,23 +636,7 @@ Then, this function takes the following _parameters_:
 * `LPCTSTR lpText`: a C string to display inside the message box. Don't forget the Double quotes for a C string! (")
 * `LPCTSTR lpCaption`: a C string to serve as the message box title.
 * `UINT uType`: one of the predefined values as outlined further down the page. This determines how the message box looks and what it does. We will use a mix of values by _bitwise OR_ combining information icon with the OK button. 
-
-!!!
-    [Bitwise operators][bitwise] are operators that have a specific action on single bits inside the value. Of these [Bitwise OR operator][bOR] (single vertical bar, `|`) is a bitwise operator which checks if each bit of two values is set. The resulting number will have all corresponding bits set.
-
-
-    In this case, bitwise OR is used in `uType` as a way of setting _flags_ in a _bit field_, where each bit means a specific thing. by "ORing" the different bits together, you can have multiple things happening at once (in our case, we want the OK button to appear, as well as the information icon).
-
-    As you can see from the definitions in the [Parameters section][MessageBox], MB_ICONINFORMATION is a label for "hexadecimal 40" (i.e. binary 0100 0000), while MB_OK is a label for 0. We still want to specify it to avoid confusion, should we decide to replace it with, for example, OK and Cancel button set (MB_OKCANCEL, 1).
-    
-    This is a valid solution to a problem where the output is configurable. Depending on the situation, a similar solution might be achieved by:
-    * A list of booleans to pass as separate parameters
-    * A config struct 
-    * Multiple separate functions each doing its own thing
-    * Etc.
-    
-    While bitwise operators are a staple in programming, they are a bit of an advanced topic. For now, suffice to say that we want our message box to contain an Information Icon and an OK button, and we tell it by writing `MB_ICONINFORMATION | MB_OK`. 
-    
+    * While bitwise operators are a staple in programming, they are a bit of an advanced topic. For now, suffice to say that we want our message box to contain an Information Icon and an OK button, and we tell it by writing `MB_ICONINFORMATION | MB_OK`. Read more about the Bitwise Operators in Subsection [bitwise operators].    
 
 Combining all these things together and putting them on one line, we get our Message Box call:
 
@@ -718,8 +701,8 @@ cl -Zi ..\code\win32_handmade.cpp user32.lib
 !!! Tip
     In [MSDN][], you can always look up the Import Library to be used at the bottom of the function article.
 
-!!!
-    Note that the function linker was looking for is `MessageBoxA`, while we called for `MessageBox`. This is because in Windows, any function that takes a string as input has an <b>A</b>nsi and a <b>W</b>ide (Unicode) version, and a macro decides which function to call. By default, the ANSI mode is enabled, but you can short-circuit this and call the version you prefer directly: 
+!!! Note `A` and `W` suffixes in Windows functions
+    Note that the function linker was looking for is `MessageBoxA`, while we called for `MessageBox`. This is because in Windows, any function that takes a string as input has an <b>A</b>NSI and a <b>W</b>ide (Unicode) version, and a macro decides which function to call. By default, the ANSI mode is enabled, but you can short-circuit this and call the version you prefer directly: 
 
     ~~~~~~~ C++ edit
         MessageBoxA(0, "This is Handmade Hero.", "Handmade Hero", MB_ICONINFORMATION | MB_OK);
@@ -732,11 +715,23 @@ And there you have it! Today, we covered a lot of ground: set up our tools for w
 
 ![Figure [X]: Our message box](../media/day1/1-messagebox.png)
 
+-------------
+
+[^entrypoint]: Technically, it's the entry point that the _C runtime library_ (that links with our program) will be entering... We'll see about that in Subsection [Entry Point on Windows].
+
+[^nCmdShow]: If you right-click on any shortcut -> Properties -> Shortcut, you will see a `run` dropdown list with a few options like "Normal Window", "Minimized", "Maximized". This is what's passed in nCmdShow. It's bizarre that Windows developers decided to pass it on together with the WinMain, and not through some function call. 
+
+[^buildinginbat]: Or was, before [Handmade Hero][] made its debut a few years back...
+
+[^buildtools]: People _love_ their build tools. They have scripts that build their build files that their build tools modify for actual builds, with tools which are analysing their build tools... You get the idea. This however has a downside of having to mess around with your build tools a lot, just trying to get your stuff to build. 
+
+[^null]: This course will use 0 instead of `NUL` or `nullptr`. Feel free to use your preferred null identifier.
+
 # Exercises
 
 Before we move on, make sure you are comfortable with all this. If you made mistakes and learned from them, it's even better! It's practice, trial and error which will solidify all these notions in you, so that by the end of the day you'll just _know_ it. 
 
-Below we're proposing a few exercises but feel free to think about something different!
+Below we're proposing a few exercises but feel free to think about something different! This is your world, and you're the creator.
 
 ## A Different Message Box
 
@@ -746,17 +741,71 @@ Instead of using `MB_ICONINFORMATION | MB_OK` flags, try to put a different set 
 
 Use the return of `MessageBoxA` to potentially spawn more message boxes. Spam yourself.
 
--------------
+# Basics of Programming
 
-[^entrypoint]: Technically, it's the entry point that the _C runtime library_ (that links with our program) will be entering... We'll see about that in Subsection [Windows-Specific Things You Should Know].
+In this section, we will be detailing some of important programming concepts that we will encounter along the way. Some of these will be general programming, some C-specific, and others might be even more specific than that.
 
-[^nCmdShow]: If you right-click on any shortcut -> Properties -> Shortcut, you will see a `run` dropdown list with a few options like "Normal Window", "Minimized", "Maximized". This is what's passed in nCmdShow. It's bizarre that Windows developers decided to pass it on together with the WinMain, and not through some function call. 
+## Entry Point on Windows
 
-[^buildinginbat]: Or was, before [Handmade Hero][] made its debut a few years back...
+`WinMain` is an _entry point_ for Windows. An entry point is a function that gets called, executes the code inside it, and returns to whoever called it. But who called us in the first place? In this particular way of compiling which we are doing right now, it's not actually Windows that called us, it's the so-called "<b>C</b> <b>R</b>untime <b>L</b>ibrary", or CRT for short. CRT is something that ships with all the C compilers, as mandated by the C specification (for Windows, you can find documentation on [MSDN][crt]). In turn, the CRT was called by Windows. 
 
-[^buildtools]: People _love_ their build tools. They have scripts that build their build files that their build tools modify for actual builds, with tools which are analysing their build tools... You get the idea. This however has a downside of having to mess around with your build tools a lot, just trying to get your stuff to build. 
+However, CRT is not part of Windows, it's inside our executable. And even if we aren't going to use any of its functions (since this course is about making things from scratch yourself), we can't just remove it like this. The compiler counts on CRT for a number of things. These things are actually hard-coded into the compiler to call into the CRT, and if it's not there, you'll need to implement that code yourself. 
 
-[^null]: This course will use 0 instead of `NUL` or `nullptr`. Feel free to use your preferred null identifier.
+We aren't going to address this here but, if you are interested to learn more, check out [this discussion](https://hero.handmade.network/forums/code-discussion/t/94-guide_-_how_to_avoid_c_c++_runtime_on_windows) on Handmade Network.
+
+## Bitwise Operators
+
+[Bitwise operators][bitwise] are operators that have a specific action on single bits inside the value. Of these [Bitwise OR operator][bOR] (single vertical bar, `|`) is a bitwise operator which checks if each bit of two values is set. The resulting number will have all corresponding bits set.
+
+In this case, bitwise OR is used in `uType` as a way of setting _flags_ in a _bit field_, where each bit means a specific thing. by "ORing" the different bits together, you can have multiple things happening at once (in our case, we want the OK button to appear, as well as the information icon).
+
+As you can see from the definitions in the [Parameters section][MessageBox], MB_ICONINFORMATION is a label for "hexadecimal 40" (i.e. binary 0100 0000), while MB_OK is a label for 0. We still want to specify it to avoid confusion, should we decide to replace it with, for example, OK and Cancel button set (MB_OKCANCEL, 1).
+
+This is a valid solution to a problem where the output is configurable. Depending on the situation, a similar solution might be achieved by:
+* A list of booleans to pass as separate parameters
+* A config struct 
+* Multiple separate functions each doing its own thing
+* Etc.
+
+_(back to Section [add something to do for the program])_
+
+# Additional Tweaks
+
+In this section, we will be showcasing additional things you might want to do to make your life easier, and to follow more closely our own way of doing things. 
+
+## Create a Virtual Drive
+
+One command to note is `subst`. On Windows, there're _drives_ (C, D, etc.) that, in the command line, you can quickly refer to by specifying their letter (e.g. `C:`). What `subst` does is taking an (available) drive letter and assigning it a path on your hard drive. This can come handy to point your codebase root folder, especially if you move the codebase to another machine or location. 
+
+For more details, simply type `subst /?` in the command line.
+
+!!! Trivia Trivia: `subst` and Amiga computer veterans
+    [Casey][] notes that this habit of his is highly unusual, and that you can be completely free to skip it. It might be a legacy habit of him working a lot with the [Amiga computers](https://en.wikipedia.org/wiki/Amiga) popular in the late 80's... or of the people who watched [Handmade Hero][] a lot.
+
+Let's assign `w` drive to our codebase, create a `handmade` directory in it, and move into the directory.
+
+~~~~~~~ batch input
+D:\Documents\Codebase> subst w: d:\documents\codebase
+D:\Documents\Codebase> w:
+W:\> cd handmade
+W:\handmade> _
+~~~~~~~
+[<file>[Command Prompt]</file> Setting up your work folder]
+
+!!! Note
+    This command must be run each time you restart your PC. If you'd like subst to happen automatically, create a `startup.bat` file with the following commands: 
+
+    `@echo off`
+
+    `subst w: [your codebase location]`
+
+    Save this file in `%appdata%\Microsoft\Windows\Start Menu\Programs\Startup` folder.
+
+So now, coming back to `Command Prompt Properties` -> `Shortcut`, you can specify its `Start in` location as `w:\handmade`. Remember to restart!
+
+![Figure [X]: Customized Command Prompt Window next to the Properties Window](../media/day1/1.4-cmd2.png)
+
+If you're coming from Subsection [command line in windows], you can continue by going to the Set Up the Text Editor subsection.
 
 # Navigation
 
