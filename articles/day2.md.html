@@ -34,94 +34,7 @@ typedef struct tagWNDCLASSA {
 ~~~~~~~
 [<file>[MSDN]</file> Window Class structure syntax.]
 
-## Concerning typedefs
-
-As you can see, `WNDCLASS` (or, to be precise, `WNDCLASSA`) is a C struct, with some interesting decoration. Let's look at it more closely.
-
-* The _struct_ itself is defined as `struct tagWNDCLASSA {...};` In C, a struct is just a record, a collection of variables that together. When you refer to a struct, you refer to a specific memory layout where each of these individual things is sequentially ordered and (usually) stored back to back[^align].
-* You will note that the struct is actually called <i>tag</i>WNDCLASSA. The reasons for this are, in part, historical. The bottom line is because the Windows headers want to support both C and C++ compilation.  
-* In C++, it's enough for you to declare the struct to start immediately using it. 
-
-~~~~~~~ C++
-struct dim
-{
-    int Width;
-    int Height;
-};
-
-dim ScreenDimension;
-~~~~~~~
-[<file>[Example 1]</file> In C++, if we declare a struct, we can start using it right away by its name.]
-
-* In C, however, this is not true. C does not look up the names of types if you don't decorate them accordingly.
-
-~~~~~~~ C
-struct dim
-{
-    int Width;
-    int Height;
-};
-
-       dim ScreenDimension;  // error C2065: 'dim': undeclared identifier
-                             // error C2065: 'ScreenDimension': undeclared identifier
-
-struct dim ScreenDimension;  // OK
-
-~~~~~~~
-[<file>[Example 2]</file> In C, each struct must be marked as such in your code.]
-
-* If you want to avoid using again and again the keyword `struct`, you can create an `alias` of sorts using the keyword `typedef`. Think of this keyword as a way to specify a name for something declared previously.
-
-~~~~~~~ C
-
-struct dim {...};
-
-typedef struct dim dim_t;
-
-struct dim ScreenDimension;  // OK
-dim_t OtherDimension;        // Also OK
-
-~~~~~~~
-[<file>[Example 3]</file> In this case, we define "struct dim" as a type "dim_t".]
-
-* `typedef` is a powerful keyword. It allows creating multiple types at the same time, using one source and separated by a comma (`,`):
-
-~~~~~~~ C
-
-struct dim {...};
-
-typedef struct dim dim, *pDim, twoDim[2];               // typedef 3 types in one call
-
-dim ADimension;
-pDim PointerToDim = &ADim;                              // take the address of our dim and store it as pDim. * not necessary!
-twoDim DoubleDimension = { ADimension, ADimension };    // take two dims and store it in twoDim array type. 
-
-// etc., etc.
-
-~~~~~~~
-[<file>[Example 4]</file> typedefs can get very complex and silly very quickly.]
-
-* Finally, it's possible to `typedef` preemptively, without having to go to a separate line, and that is what Windows headers are doing. The complete solution would be the where we started: 
-
-~~~~~~~ C++
-typedef struct tagWNDCLASSA {
-...; // contents of the struct
-} WNDCLASSA, *PWNDCLASSA, *NPWNDCLASSA, *LPWNDCLASSA;
-
-// WNDCLASSA WindowClass; -> struct tagWNDCLASSA WindowClass;
-// PWNDCLASSA WindowClass; -> struct tagWNDCLASSA *WindowClass;
-// NPWNDCLASSA WindowClass; -> struct tagWNDCLASSA *WindowClass;
-// LPWNDCLASSA WindowClass; -> struct tagWNDCLASSA *WindowClass;
-
-~~~~~~~
-[<file>[MSDN]</file> Window Class structure syntax, hopefully clarified`.]
-
-!!! Trivia Some further reading
-    At this point, you have probably noticed that `WNDCLASSA` comes with not one, but with three pointer types. In fact, there's `*P...` (pointer), `*NP...` (near pointer) and `*LP...` (long, or far pointer). At this point, this is an anachronistic residual of a 16-bit era of [MS-DOS](https://en.wikipedia.org/wiki/MS-DOS), which became obsolete with the advent of [80386 Intel processors in 1985](https://en.wikipedia.org/wiki/Intel_80386). If you're still interested, further reading is available [here](https://www.answers.com/Q/What_are_near_far_and_huge_pointers_in_C).
-    
-    For all intents and purpuses on a modern 32-bit+ operating system, they are the same type, a pointer to `WINCLASSA` structure.
-
-    Another note: struct identifier shouldn't necessarily be different from one of its types (i.e. it can be simply `typedef struct WNDCLASSA....` instead of `tagWNDCLASSA`) or even be there (`typedef struct {...} WNDCLASSA, ...;`). The way Windows headers do it is somewhat the more explicit way, supposedly to support some old compiler.
+If you're unfamiliar with the decoration around this struct, we have detailed it in the Subsection [concerning typedefs].
 
 ## WNDCLASSA Implementation
 
@@ -142,16 +55,7 @@ return (0);
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Defining our `WNDCLASSA`.]
 
-
-!!! Note Struct initialization
-    Let's look at these braces `{}` here. 
-
-    A variable must not necessarily be initialized. You can simply declare it (like this: `int x;`, `WNDCLASSA WindowClass`, etc.) and move on, if that is your intention. However, what if we want to _initialize_ a variable to a value? In case of a simple type, you just write its initial value after `=` (in the example above, `int x = 5;`). In case of a _struct_, you can use the values inside the braces (i.e. `WNDCLASSA WindowClass = { MyStyle, "Hello" };`, etc.). The elements that you don't assign value to, all the elements onwards, are set to 0. If you simply assign it `{}`, you zero out the whole struct, however big it is. 
-
-    We want to do this here, because a) it's more readable to see which value you assing to which element, and b) because we don't even need to fill out all the elements. 
-
-!!! Warning
-    In C, you should use `{0}` instead of `{}`. 
+You will note that we added a couple of braces (`{}`). This allows us to initialize the whole struct to `0`. For more information, read Struct Initialization subsection.
 
 ### WindowClass Values Before and After Initialization
 
@@ -297,7 +201,7 @@ This callback will be called any time Windows needs to send something to a windo
 
 ## Refactoring: Rename Variables
 
-There's one step that we'd like to take before we move on.
+There's one sidestep that we'd like to make before we move on.
 
 To make things a bit less cryptic, let's rename all our variables to something more understandbale to us. Thus, our `hInstance` becomes `Instance`, `lpCmdLine` becomes `CommandLine`, etc.
 
@@ -339,8 +243,7 @@ WinMain(HINSTANCE Instance,
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Renaming our variables.]
 
-
-!!! Trivia Hungarian Notation
+!!! Trivia Trivia: Hungarian Notation
     Older Microsoft's API made use of so-called "Hungarian notation". The name refers to its inventor's, Charles Simonyi, country of origin, and also hints at a peculiar way of the Hungarians of saying their last name before the first name. 
     
     The prefixes and name abbreviations you see here are nothing else that a naming convention adopted when even the space for the source files and variable names was limited, but also to provide clarity to the type this variable brings. Thus, from the name `hInstance` we can deduce that it's an `Instance` of type `HANDLE`, `lpCmdLine` is a `Command Line` of type `long pointer`, etc. 
@@ -362,17 +265,7 @@ That said, most of these messages will be irrelevant for our project, and even l
 
 The list for `WM` category is still big. To narrow it down even further for now, let's focus entirely on very a few [Window Notifications](https://docs.microsoft.com/en-us/windows/win32/winmsg/window-notifications). 
 
-In order to process messages, we will be using the `switch` statement. 
-
-!!! 
-    The `switch` statement allows to test if a variable we get equals any `constant` value. If it does, you apply a relevant `case` to it. 
-
-    Remember that by executing the `case` you don't automatically fall out of the `switch`! You need to use the `break` statement in order to not keep executing all the `cases` that follow.
-
-    If no value falls under a specific `case`, you can specify a `default` to execute if every other fails. 
-
-!!! Tip Style of our `switch` statements
-    The way we are going to write `switch` statements in this course is shown below. It might seem a bit unusual if you've seen these statements elsewhere because each `case` statement is limited by a basic block (delimited by braces (`{}`)). While this is not required, it allows defining variables specific to that case, and they will not "spill" outside to another case (because after you close your block, you go outside of those variables' _scope_ and they cease to exist). `break` will go just outside the block, again in a mix of a convention, convenience and practicality. 
+In order to process messages, we will be using a `switch`. If you'd like to learn more, check out the Switch Statements subsection.
 
 ~~~~~~~ C++
 LRESULT CALLBACK
@@ -583,15 +476,9 @@ W:\handmade\> _
 We're almost ready of opening our window using our WindowClass, but before we can do it, we need to _register_ the latter.
 It's as easy as calling a function may be. The function in question is called [RegisterClassA][]. It takes a _pointer_ to a `WNDCLASS` structure and... that's it. 
 
-!!! Note What is a pointer?
-    Every variable has a location in memory, its _address_. This address is nothing more than a number that, as any other number in C, may be manipulated with ease. To something's _address_ ("get its pointer") you simply but the ampersand symbol (`&`) before a variable's name. To learn the _contents_ of an address ("dereference a pointer"), you simply put a star symbol (`*`) before the pointer.
-
-    There's a lot more to know about the pointers, and this course will certainly touch a lot on this subject.
+!!! Note 
+    If you'd like to learn more about the pointers, check out subsection [Pointers].
     
-    For a more in-depth overview on pointers, you can watch the short series [Intro to C][introtoc] where this topic is covered in detail.
-
-    For our purposes, to pass a _pointer_ to our WindowClass, we simply write `&WindowClass`. 
-
 ~~~~~~~ C++
     // WinMain
     WindowClass.lpszClassName = "HandmadeHeroWindowClass";
@@ -630,7 +517,7 @@ As for the case when it fails? In the future we might create an advanced logging
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Registering the class and checking if it was successul.]
 
-# Create Window
+# Create a Window
 
 So now we're finally getting to today's objective! Let's create a window! The function responsible for it is called... `CreateWindow`. There are two versions of it: an old version, [CreateWindowA][], and a newer version [CreateWindowEx][]. The only difference is that `Ex` function allows to specify more window style options. Let's go for the latter. 
 
@@ -794,8 +681,8 @@ This program will exit as fast as the previous one because we _still_ don't have
 
 This means that, if we put `GetMessage` as a test condition in a _while_ loop, this program will run forever, until someone posts a "quit" message to the queue (and it gets retrieved by `GetMessage`). 
 
-!!! Note `while` loops
-    If you're unfamiliar with `while` loop, imagine an `if` statement. If the test is `true`, the program will execute the code inside and immidiately return to test again. If the test is `false`, the program will skip the code inside and will continue after the scope of the statement.
+!!! Note Loops
+    To learn more about the `while` and `for` loops, check out the Loops subsection.
 
 ~~~~~~~ C++
 if (Window)
@@ -841,20 +728,6 @@ for(;;)                              // a for loop which would run forever
 // Exit procedures
 ~~~~~~~ 
 [Listing [x]: <file>[win32_handmade.cpp]</file> API-correct way of verifying `GetMessage`.]
-
-!!! Note `for` loops
-    A `for` loop is an iteration loop. Usually it's used the following way: initialize a variable `i`; compare if `i` is smaller than some value; increment `i` and go into loop if true, otherwise break out. All this is compactly represented at the head of the loop as follows: 
-
-    ~~~~~~~ C++
-    for (int i = 0; i < SomeValue; ++i)
-    {
-        // do your operations
-    }
-    ~~~~~~~
-
-    However, strictly speaking you _don't have to_ fill out the head parts, all or any. And if you leave it as `(;;)` this loop will simply run forever, unless some other condition inside it `breaks` it out.
-
-    There're many useful applications to the `for` loops that we will see throughout this course.
 
 ## Translating and Dispatching Messages
 
@@ -1097,6 +970,16 @@ And there you have it! Opening a window is some great progress and, if you look 
 
 Next time, we will be defining the `MainWindowCallback` messages a bit more appropriately, as well as create a _bitmap_ which we will then display to our window. This will bring us to the point where we can actually render our game. 
 
+------------
+
+[^AWnotation]: We briefly touched on `...A` and `...W` notation in [Day 1](day1.md.html#addsomethingtodofortheprogram/importalibrary). To recap, any function that takes a string as input has an <b>A</b>nsi and a <b>W</b>ide (Unicode) version, and a macro decides which function to call. Here, you can use the macro `WNDCLASS` or the ANSI/Wide version, as you prefer. 
+
+[^align]: It's not entirely true though, depending on the sizing of the elements in the struct some additional _padding_ may be introduced to preserve memory _alignment_. We will look into the alignment later down the line. 
+
+[^bitwiseOr]: See also some additional methods to pass parameters to function [here](day1.md.html#addsomethingtodofortheprogram).
+
+[^winapi]: The only difference between the two is their _calling convention_. For MSVC calling conventions, you can read more [here](https://docs.microsoft.com/en-us/cpp/cpp/argument-passing-and-naming-conventions).
+
 # Exercises
 
 ## Intercept More Messages
@@ -1109,15 +992,152 @@ Right now, we are letting Windows used default size and position of our Window. 
 
 Try adding some different styles to `dwStyle`. See what results does it bring you. 
 
-------------
+# Basics of Programming
 
-[^AWnotation]: We briefly touched on `...A` and `...W` notation in [Day 1](day1.md.html#addsomethingtodofortheprogram/importalibrary). To recap, any function that takes a string as input has an <b>A</b>nsi and a <b>W</b>ide (Unicode) version, and a macro decides which function to call. Here, you can use the macro `WNDCLASS` or the ANSI/Wide version, as you prefer. 
+## Concerning typedefs
 
-[^align]: It's not entirely true though, depending on the sizing of the elements in the struct some additional _padding_ may be introduced to preserve memory _alignment_. We will look into the alignment later down the line. 
+As you can see, `WNDCLASS` (or, to be precise, `WNDCLASSA`) is a C struct, with some interesting decoration. Let's look at it more closely.
 
-[^bitwiseOr]: See also some additional methods to pass parameters to function [here](day1.md.html#addsomethingtodofortheprogram).
+* The _struct_ itself is defined as `struct tagWNDCLASSA {...};` In C, a struct is just a record, a collection of variables that together. When you refer to a struct, you refer to a specific memory layout where each of these individual things is sequentially ordered and (usually) stored back to back[^align].
+* You will note that the struct is actually called <i>tag</i>WNDCLASSA. The reasons for this are, in part, historical. The bottom line is because the Windows headers want to support both C and C++ compilation.  
+* In C++, it's enough for you to declare the struct to start immediately using it. 
 
-[^winapi]: The only difference between the two is their _calling convention_. For MSVC calling conventions, you can read more [here](https://docs.microsoft.com/en-us/cpp/cpp/argument-passing-and-naming-conventions).
+~~~~~~~ C++
+struct dim
+{
+    int Width;
+    int Height;
+};
+
+dim ScreenDimension;
+~~~~~~~
+[<file>[Example 1]</file> In C++, if we declare a struct, we can start using it right away by its name.]
+
+* In C, however, this is not true. C does not look up the names of types if you don't decorate them accordingly.
+
+~~~~~~~ C
+struct dim
+{
+    int Width;
+    int Height;
+};
+
+       dim ScreenDimension;  // error C2065: 'dim': undeclared identifier
+                             // error C2065: 'ScreenDimension': undeclared identifier
+
+struct dim ScreenDimension;  // OK
+
+~~~~~~~
+[<file>[Example 2]</file> In C, each struct must be marked as such in your code.]
+
+* If you want to avoid using again and again the keyword `struct`, you can create an `alias` of sorts using the keyword `typedef`. Think of this keyword as a way to specify a name for something declared previously.
+
+~~~~~~~ C
+
+struct dim {...};
+
+typedef struct dim dim_t;
+
+struct dim ScreenDimension;  // OK
+dim_t OtherDimension;        // Also OK
+
+~~~~~~~
+[<file>[Example 3]</file> In this case, we define "struct dim" as a type "dim_t".]
+
+* `typedef` is a powerful keyword. It allows creating multiple types at the same time, using one source and separated by a comma (`,`):
+
+~~~~~~~ C
+
+struct dim {...};
+
+typedef struct dim dim, *pDim, twoDim[2];               // typedef 3 types in one call
+
+dim ADimension;
+pDim PointerToDim = &ADim;                              // take the address of our dim and store it as pDim. * not necessary!
+twoDim DoubleDimension = { ADimension, ADimension };    // take two dims and store it in twoDim array type. 
+
+// etc., etc.
+
+~~~~~~~
+[<file>[Example 4]</file> typedefs can get very complex and silly very quickly.]
+
+* Finally, it's possible to `typedef` preemptively, without having to go to a separate line, and that is what Windows headers are doing. The complete solution would be the where we started: 
+
+~~~~~~~ C++
+typedef struct tagWNDCLASSA {
+...; // contents of the struct
+} WNDCLASSA, *PWNDCLASSA, *NPWNDCLASSA, *LPWNDCLASSA;
+
+// WNDCLASSA WindowClass; -> struct tagWNDCLASSA WindowClass;
+// PWNDCLASSA WindowClass; -> struct tagWNDCLASSA *WindowClass;
+// NPWNDCLASSA WindowClass; -> struct tagWNDCLASSA *WindowClass;
+// LPWNDCLASSA WindowClass; -> struct tagWNDCLASSA *WindowClass;
+
+~~~~~~~
+[<file>[MSDN]</file> Window Class structure syntax, hopefully clarified`.]
+
+!!! Trivia Trivia: Old pointer types
+    At this point, you have probably noticed that `WNDCLASSA` comes with not one, but with three pointer types. In fact, there's `*P...` (pointer), `*NP...` (near pointer) and `*LP...` (long, or far pointer). At this point, this is an anachronistic residual of a 16-bit era of [MS-DOS](https://en.wikipedia.org/wiki/MS-DOS), which became obsolete with the advent of [80386 Intel processors in 1985](https://en.wikipedia.org/wiki/Intel_80386). If you're still interested, further reading is available [here](https://www.answers.com/Q/What_are_near_far_and_huge_pointers_in_C).
+    
+    For all intents and purpuses on a modern 32-bit+ operating system, they are the same type, a pointer to `WINCLASSA` structure.
+
+    Another note: struct identifier shouldn't necessarily be different from one of its types (i.e. it can be simply `typedef struct WNDCLASSA....` instead of `tagWNDCLASSA`) or even be there (`typedef struct {...} WNDCLASSA, ...;`). The way Windows headers do it is somewhat the more explicit way, supposedly to support some old compiler.
+
+_(Continue following along: Subsection [wndclassa implementation])_
+
+## Struct Initialization
+
+Let's look at the braces `{}` we provided in subsection [wndclassa implementation]. 
+
+A variable must not necessarily be initialized. You can simply declare it (like this: `int x;`, `WNDCLASSA WindowClass`, etc.) and move on, if that is your intention. However, what if we want to _initialize_ a variable to a value? In case of a simple type, you just write its initial value after `=` (in the example above, `int x = 5;`). In case of a _struct_, you can use the values inside the braces (i.e. `WNDCLASSA WindowClass = { MyStyle, "Hello" };`, etc.). The elements that you don't assign value to, all the elements onwards, are set to 0. If you simply assign it `{}`, you zero out the whole struct, however big it is. 
+
+We want to do this here, because a) it's more readable to see which value you assing to which element, and b) because we don't even need to fill out all the elements. 
+
+!!! Warning
+    In C, you should use `{0}` instead of `{}`. 
+
+_(Back to Subsection [wndclassa implementation])_
+
+## Switch Statements
+
+The `switch` statement allows to test if a variable we get equals any `constant` value. If it does, you apply a relevant `case` to it. 
+
+Remember that by executing the `case` you don't automatically fall out of the `switch`! You need to use the `break` statement in order to not keep executing all the `cases` that follow.
+
+If no value falls under a specific `case`, you can specify a `default` to execute if every other fails. 
+
+The way we are going to write `switch` statements in this course might seem a bit unusual if you've seen these statements elsewhere because each `case` statement is limited by a basic block (delimited by braces (`{}`)). While this is not required, it allows defining variables specific to that case, and they will not "spill" outside to another case. This is due to the fact that, after you close your block, you go outside of those variables' _scope_ and they cease to exist. `break` will go just outside the block, again in a mix of a convention, convenience and practicality. 
+
+_(Back to Subsection [process some messages])_
+
+## Pointers
+
+Every variable, function, struct, everything in computer has a location in memory, its _address_. This address is nothing more than a number that, as any other number in C, may be manipulated with ease. To get something's _address_, or a _pointer_ to something, you simply put the ampersand symbol (`&`) before a variable's name. To learn the _contents_ of an address ("dereference a pointer"), you simply put a star operator (`*`) before the pointer in question.
+
+There's a lot more to know about the pointers, and this course will certainly touch a lot on this subject.
+
+For a more in-depth overview on pointers, you can watch the short series [Intro to C][introtoc] where this topic is covered in detail.
+
+For our purposes, to pass a _pointer_ to our WindowClass, we simply write `&WindowClass`. 
+
+## Loops
+
+There're many ways to create a "loop", or to repeat execution of a chunk of code. Two common ways to implement a loop is to use `while` or `for` keywords.
+
+A `while` loop has one condition which is being tested at the beginning of the loop. If the test is `true`, the program will execute the code inside and immidiately return to test again. If the test is `false`, the program will skip the `while` block and continue after the scope of the statement.
+
+A `for` loop is an iteration loop. Usually it's used the following way: initialize a variable `i`; compare if `i` is smaller than some value; increment `i` and go into loop if true, otherwise break out. All this is compactly represented at the head of the loop as follows: 
+
+~~~~~~~ C++
+for (int i = 0; i < SomeValue; ++i)
+{
+// do your operations
+}
+~~~~~~~
+
+However, strictly speaking you _don't have to_ fill out the head parts, all or any. And if you leave it as `(;;)` this loop will simply run forever, unless some other condition inside it `breaks` it out. In the same way, a `while (1)` or `while (true)` loop will also run forever.
+
+_(Back to Subsection [window message queue])_
 
 # Navigation
 

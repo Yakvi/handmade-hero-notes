@@ -147,36 +147,12 @@ Win32UpdateWindow(HDC DeviceContext, int X, int Y, int Width, int Height)
 
 In the code above, we left a stub for the `BitmapMemory` allocation. Let's actually write a custom memory allocator that would give us the memory we need!
 
-## Introduction to Alignment
-
-Now, let's look again at our Bitmap Info Header that we filled out:
-
-~~~~~~~ C++
-BITMAPINFO BitmapInfo = {};
-
-BitmapInfo.bmiHeader.biSize = sizeof(BitmapInfo.bmiHeader);
-BitmapInfo.bmiHeader.biWidth = Width;
-BitmapInfo.bmiHeader.biHeight = Height;
-BitmapInfo.bmiHeader.biPlanes = 1;
-BitmapInfo.bmiHeader.biBitCount = 32;
-BitmapInfo.bmiHeader.biCompression = BI_RGB;
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > Win32UpdateWindow]</file> BitmapInfo header structure.]
-
-One thing to note is that `biBitCount`. We said that we need 3 bytes to draw an RGB pixel: one for red, one for green, and one for blue channels. $3 \cdot\ 8 = 24$, so where does the extra byte come from? 
-
-!!! Note Value Alignment in Memory
-    In general, on the `x86` architecture there is often a penalty for doing the so-called _unaligned memory access_. Whenever you make an operation on a value, its actual position in memory should begin at the multiple of its size (8 bit, 16 bit, 32 bit, etc.). For instance, the 32-bit values (which are 4 bytes long) should start at the bytes 0, 4, 8, 12, etc. They shouldn't begin at, for example, the 2nd byte, or the 5th byte. 
-    
-    The reason for it is that the processor will spend (quite a bit of) time realigning any non-aligned value before processing it. 
-
-In our case, whenever we do an operation on a pixel, especially to simplify the things, we want to access it on an 4-byte boundary. So if we want to ask only for the bits we need to insert R, G and B values, i.e. 24 bytes, 3 bytes are in no way aligned to 4, so constant adjustment will be required. So the extra 8 bits will simply be padding. They don't mean anything and they will not be used, and their sole purpose will be to align the rest of the pixel to the 4-byte boundary.
-
 ## Allocate the Bitmap Memory
 
 We now have everything in place to determine the amount of the memory we will need for our buffer. 
 
-* Each pixel should be 4 bytes wide.
+* Each pixel should be 4 bytes wide. 
+    * Why do we need 4 if we only need 3 bytes to store RGB values? You can find our considerations in subsection [Introduction to Alignment].
 * We need `Width` amount of pixels for each row.
 * We need `Height` amount of rows to form the full picture.
 
@@ -230,12 +206,10 @@ BitmapMemory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Allocating Bitmap Memory.]
 
-!!! Note Virtual Memory vs. Physical Memory
-    Physical memory is a complicated thing. If you think of it, memory constantly moves around the HDD/SSDs, Main Memory, "Cache" memory of the CPU, etc. This is confusing and complicated. So what the operating systems usually do is to abstract it all away for the benefit of the programs into the Virtual Memory.
-    
-    Virtual Memory is simple. It's a flat array of addresses, and programs (and therefore, programmers such as yourself) don't care where exactly your data currently sits. Each program has a 64-bit address space (in the 64-bit OSes, of course) where all its data, functions, and other good stuff resides. Even stuff belonging to the other running programs! Programs have access only access to some pieces of this address space at a time, and the OS manages allocation of more or less memory for them. 
-
 What does it all mean in practice? If we have a significant `void * Mem` returned (non-zero), it means we can access any location within the `dwSize` we provided, as well as read and write data to it. So we can access the location `Mem`, `Mem + 1`, `Mem + dwSize`... and even a bit more (but you shouldn't count on it!), but we can't access the memory `Mem - 1` as it's outside of the "authorized" boundaries.
+
+!!! Note 
+    `VirtualAlloc` has `Virtual` in it because we're reserving _virtual_ memory. If you're unfamiliar with the concept of virtual memory, read more in the Virtual Memory vs. Physical Memory subsection.
 
 ## Cleanup
 
@@ -472,11 +446,11 @@ Win32UpdateWindow(HDC DeviceContext, RECT *WindowRect)
 [Listing [x]: <file>[win32_handmade.cpp]</file> Changing `Win32UpdateWindow` signature.]
 
 !!! Note Passing by pointer vs. passing by value.
-    Note that instead of passing the entire `RECT` structure, we're passing a _pointer_ to it. This allows us to save space on the _stack_. It's a bit of an advanced topic for now, but the bottom line is that the bigger the structure, the more it makes sense to pass a pointer to it, instead of a 64-bit pointer.
+    Note that instead of passing the entire `RECT` structure, we're passing a _pointer_ to it. This allows us to save space on the _stack_. We'll talk more about it in the next lesson, but the bottom line is that the bigger the structure, the more it makes sense to pass a pointer to it, instead of a 64-bit pointer.
 
     One thing to note however, if we try to access members of a struct passed by pointer, we should _dereference_ them with the `->` operator, instead of accessing them via `.` operator. 
 
-    Another reason you sometimes want to receive a structure by pointer is the one we've seen before: if you want to changes to the structure propagate outside the function itself.
+    Another reason you sometimes want to receive a structure by pointer is the one we've seen before: if you want the changes to the structure propagate outside the function itself.
 
     ~~~~~~~ C++
     struct dim
@@ -561,32 +535,6 @@ Win32UpdateWindow(HDC DeviceContext, RECT *ClientRect)
 }
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Correcting `ClientRect` name in `Win32UpdateWindow`.]
-
-# Aside: `build.bat`: Request MSVC to Give Full Paths
-
-If you ever encountered compiler errors so far (if you are following along we're fairly confident you did!), you might have noticed that each error is prefixed by its _relative_ path to the code: 
-
-~~~~~~~ batch
-..\code\win32_handmade.cpp(##): error C####
-~~~~~~~ 
-
-Now, if you use [4coder][], you have an option to use `Alt-N` to jump to the next or `Alt-Shift-N` to jump to the previous error in your `build.bat` (in [vscode][], you can jump to the next error by `Ctrl-Click` on the address inside Terminal). In order to do so however, you need to provide _absolute_ paths to the source files. Luckily, there's an option to do just that: [-FC][]. Let's quickly edit our `build.bat` before we move on: 
-
-~~~~~~~ batch
-@echo off
-
-mkdir build
-pushd build
-
-~~~~~~~ batch edit
-cl -FC -Zi ..\code\win32_handmade.cpp user32.lib gdi32.lib
-~~~~~~~ batch
-
-popd
-~~~~~~~ 
-[Listing [x]: <file>[build.bat]</file> Adding -FC compiler option.]
-
-![Figure [x]: You can now jump to your errors.](../media/day4/build_fc.png)
 
 # Draw Pixels to the Bitmap
 
@@ -703,7 +651,7 @@ for (int Y = 0;
 
 We have our `BitmapMemory`. It's a huge block of memory that Windows gave us specifically for the purpose of drawing pixels into. Unfortunately, it's also a `void *`, something that C doesn't really know how to work with. So in order to start writing to `BitmapMemory`, we have to change it to a pointer C does understand. 
 
-We want to set up control over the pointer and how it's going to move, so we can _cast_ our `void *` to `unsigned char *` to have control over every single byte in our memory (On x86 processors, `char` is long exactly 1 byte, or 8 bits). 
+We want to set up control over the pointer and how it's going to move, so we can _cast_ our `void *` to `unsigned char *` to have control over every single byte in our memory (On x86 processors, `char` is long exactly 1 byte, or 8 bits). For more about type casting, check out subsection [Type Casting].
 
 ~~~~~~~ C++ 
 BitmapMemory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
@@ -718,17 +666,6 @@ for (int Y = 0;
 }
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Casting `BitmapMemory` to `Row`.]
-
-!!! Note Type Casting
-    Converting one data type into another is known as _casting_. It is performed by using the cast operator (`()`) placed before the value to cast. From there on, C will treat the bits in that value as if they were of the casted type.
-
-    ~~~~~~~ C++
-    int Value = 56523565;       // 32-bit value
-    char Byte = (char)Value;    // Take only in the first 8 bits of our value
-    ~~~~~~~
-    [<file>[Example]</file> The simplest application of type casting]
-
-    A common application of type casting is to perform floating-point math or pointer arithmetic, but there're many others that we will see throughout this course.
 
 ## Set Up Basic Types
 
@@ -845,7 +782,9 @@ for (int Y...) // Outer loop
 [Listing [x]: <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Advancing the `Row` pointer.]
 
 !!! Note Pointer Arithmetic
-    If you are familiar with pointer arithmetic, you know that pointer values (the addresses in memory) can be added, multiplied, subtracted and divided just like any other integer. However, C also will silently multiply that movement by the size of the thing it's pointing to. 
+    If you are familiar with pointer arithmetic, you know that pointer values (the addresses in memory) can be added, multiplied, subtracted and divided just like any other integer. 
+    
+    Please be mindful that C will also silently multiply that movement by the size of the thing it's pointing to. 
 
     ~~~~~~~ C++
     void *MyPointer = 1000;
@@ -907,20 +846,8 @@ Each of the pixels contains _packed_ values for Red, Green and Blue channels.
 ***************************
 [Figure [pixel]: 32-bit value in hexadecimal.]
 
-!!! Note Hexadecimal
-    When reading bytes, it's common to use the so-called "hex format", where the numbers are represented with 16 distinct symbols, as opposed to the common 10. 
-    
-    The reason for it is that 8 bits of binary translate very nicely to hexadecimal. Any value of a single byte can be represented with a pair of hexadecimal numbers ranging from `00` to `FF`. In decimal, the same byte would range from `000` to `255`, while in binary it obviously ranges from `0000 0000` to `1111 1111`.
-
-    If you are completely unfamiliar with Hexadecimal, you can simply boot up Windows Calculator and select Programmer Mode. You can type in different values in Decimal and convert them to Hex, and vice versa.
-
-    ![Figure [x]: Calculator in Windows 10. Note that you can click `HEX` and `DEC` buttons to switch from one base to another.](../media/day4/calculator.png)
-
-    Another common application for hex format that you might be familiar with is RGB color representation in image editors and on the web. 
-    
-    ![Figure [x]: Hex color value in Color cop. Red's `255` corresponds to `FF`, Green's `0` to `00`, while Blue's `255` to `FF`.](../media/day3/colorcop.png)
-
-    You can quickly distinguish the "Hex code" of a color by a `#` follow by six hexadecimal characters (`0 1 2 3 4 5 6 7 8 9 A B C D E F`). 
+!!!
+    To learn more about hexadecimal, check out Subsection [hexadecimal].
 
 We know that we have to write `RGB` values to it. We also know that we have one byte per color channel `R`, `G` and `B`, and one unused (`XX`). But which one do we write where? In the figure [pixel], numbers above the bytes represent their location in memory, or offset in bytes from the pointer. You can also read it as `Pixel + 0`, `Pixel + 1`, `Pixel + 2`, `Pixel + 3`, if `Pixel` was an 8-bit value. 
 
@@ -1333,48 +1260,6 @@ while (Running)
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Blitting to our window at the end of each frame.]
 
-!!! Tip
-    If you would like to try RAII (Resource Acquisition Is Initialization), this would be one of the few places where it would be appropriate. You could then have something like: 
-
-    ~~~~~~~ C++ add
-    class DC
-    {
-        public:
-            HDC Handle;
-            DC(HWND Window) // Constructor, called during object creation
-            {
-                m_Window = Window;
-                Handle = GetDC(m_Window);
-            }
-            ~DC()           // Destructor, called when exiting scope
-            {
-                ReleaseDC(m_Window, Handle);
-            }
-        private:
-           HWND m_Window;
-    };
-    ~~~~~~~ C++
-    //...
-
-    int CALLBACK
-    WinMain(...)
-    {
-        //...
-    ~~~~~~~ C++ edit    
-        {
-            DC DeviceContext {Window};
-
-            RECT ClientRect;
-            GetClientRect(Window, &ClientRect);
-            
-            Win32UpdateWindow(DeviceContext.Handle, &ClientRect);
-        } // No need to call destructor, it will be called automatically when exiting the block
-    ~~~~~~~ C++
-    }
-    ~~~~~~~
-
-    Every programming pattern, feature or system has its place; it's the dogma that catches you. Try not to get into the dogma because you don't want to go the same route all the time, you need to know _when_ to use things. 
-
 Compile, fix all your errors and run and... we finally have our animation!
 
 ## Recompress Pixel to 32-bit Value
@@ -1415,27 +1300,6 @@ for (int X...)
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Compressing the pixel]
 
-!!! Note Pre-increment and Post-increment operator
-    You'll notice that sometimes we put `++` operator before the variable, and sometimes after. This actually has a meaning. 
-
-    In and of itself, `++` operator increases the value by 1 and reassigns the result to the variable. That is, it's analagous to writing `Value = Value + 1;`. However, its position before or after the variable can matter if the increment happens during another operation.
-
-    Consider two examples:
-
-    ~~~~~~~ C++
-    int ExampleOne = 7;
-    int ExampleTwo = 7;
-
-    printf(++ExampleOne);
-    printf(ExampleTwo++);
-    ~~~~~~~
-
-    What will be the print output? 
-
-    In `ExampleOne`, the result would be `8`. This is because the addition happens first, and the rest of the operation after. However, in `ExampleTwo` the addition will happen _after_ `printf`, so the result that will be printed will be `7`. At the end of the day, both values would be `8`, but we used them in a different way in the meantime.
-    
-    Also, `--` operator functions in the similar way but with the decrement.
-
 We will need to do some _bit shifting_. Using the `<<` or `>>` operator we can actually move the bits left or right in the memory by the amount of bits specified. Now, we know that our `Pixel`'s bits are arranged in the following manner: 
 
 ************************************
@@ -1443,6 +1307,7 @@ We will need to do some _bit shifting_. Using the `<<` or `>>` operator we can a
 *           .----+----+----+----.  *
 * Register: | xx | RR | GG | BB |  *
 *           '----+----+----+----'  *
+*                                  *
 *           .----+----+----+----.  *
 *   Memory: | BB | GG | RR | XX |  *
 *           '----+----+----+----'  *
@@ -1482,6 +1347,166 @@ Next time, we will be do a massive cleanup of the work done so far, so that we c
 ## Draw Other Weird Gradients
 
 Get creative! What happens if you change the `RenderWeirdGradient` formula? For example, if you put `XOffset` in the red channel? What if you do some other math operation on them? Play around and see which bizarre animations can you get.
+
+# Programming Basics
+
+## Virtual Memory vs. Physical Memory
+
+Physical memory is a complicated thing. If you think of it, memory constantly moves around the HDD/SSDs, Main Memory, "Cache" memory of the CPU, etc. This is confusing and complicated. So what the operating systems usually do is to abstract it all away for the benefit of the programs into the Virtual Memory.
+    
+Virtual Memory is simple. It's a flat array of addresses, and programs (and therefore, programmers such as yourself) don't care where exactly your data currently sits. Each program has a 64-bit address space (in the 64-bit OSes, of course) where all its data, functions, and other good stuff resides. Even stuff belonging to the other running programs! Programs have access only access to some pieces of this address space at a time, and the OS manages allocation of more or less memory for them. 
+
+_(Continue to Subsection [cleanup])_
+
+## Type Casting
+Converting one data type into another is known as _casting_. It is performed by using the cast operator (`()`) placed before the value to cast. From there on, C will treat the bits in that value as if they were of the casted type.
+
+~~~~~~~ C++
+int Value = 56523565;       // 32-bit value
+char Byte = (char)Value;    // Take only in the first 8 bits of our value
+~~~~~~~
+[<file>[Example]</file> The simplest application of type casting]
+
+A common application of type casting is to perform floating-point math or pointer arithmetic, but there're many others that we will see throughout this course.
+
+_(Continue to Subsection [set up basic types])_
+
+## Hexadecimal
+When reading bytes, it's common to use the so-called "hex format", where the numbers are represented with 16 distinct symbols, as opposed to the common 10. 
+
+The reason for it is that 8 bits of binary translate very nicely to hexadecimal. Any value of a single byte can be represented with a pair of hexadecimal numbers ranging from `00` to `FF`. In decimal, the same byte would range from `000` to `255`, while in binary it obviously ranges from `0000 0000` to `1111 1111`.
+
+If you are completely unfamiliar with Hexadecimal, you can simply boot up Windows Calculator and select Programmer Mode. You can type in different values in Decimal and convert them to Hex, and vice versa.
+
+![Figure [x]: Calculator in Windows 10. Note that you can click `HEX` and `DEC` buttons to switch from one base to another.](../media/day4/calculator.png)
+
+Another common application for hex format that you might be familiar with is RGB color representation in image editors and on the web. 
+
+![Figure [x]: Hex color value in Color cop. Red's `255` corresponds to `FF`, Green's `0` to `00`, while Blue's `255` to `FF`.](../media/day3/colorcop.png)
+
+You can quickly distinguish the "Hex code" of a color by a `#` follow by six hexadecimal characters (`0 1 2 3 4 5 6 7 8 9 A B C D E F`). 
+
+_(Back to Subsection [possible arrangments in memory])_
+
+## Pre-increment and Post-increment operator
+
+You'll notice that sometimes we put `++` operator before the variable, and sometimes after. This actually has a meaning. 
+
+In and of itself, `++` operator increases the value by 1 and reassigns the result to the variable. That is, it's analagous to writing `Value = Value + 1;`. However, its position before or after the variable can matter if the increment happens during another operation.
+
+Consider two examples:
+
+~~~~~~~ C++
+int ExampleOne = 7;
+int ExampleTwo = 7;
+
+printf(++ExampleOne);
+printf(ExampleTwo++);
+~~~~~~~
+
+What will be the print output? 
+
+In `ExampleOne`, the result would be `8`. This is because the addition happens first, and the rest of the operation after. However, in `ExampleTwo` the addition will happen _after_ `printf`, so the result that will be printed will be `7`. At the end of the day, both values would be `8`, but we used them in a different way in the meantime.
+
+Also, `--` operator functions in the similar way but with the decrement.
+
+# Side Considerations
+
+## `build.bat`: Request MSVC to Give Full Paths
+
+If you ever encountered compiler errors so far (if you are following along we're fairly confident you did!), you might have noticed that each error is prefixed by its _relative_ path to the code: 
+
+~~~~~~~ batch
+..\code\win32_handmade.cpp(##): error C####
+~~~~~~~ 
+
+Now, if you use [4coder][], you have an option to use `Alt-N` to jump to the next or `Alt-Shift-N` to jump to the previous error in your `build.bat` (in [vscode][], you can jump to the next error by `Ctrl-Click` on the address inside Terminal). In order to do so however, you need to provide _absolute_ paths to the source files. Luckily, there's an option to do just that: [-FC][]. Let's quickly edit our `build.bat` before we move on: 
+
+~~~~~~~ batch
+@echo off
+
+mkdir build
+pushd build
+
+~~~~~~~ batch edit
+cl -FC -Zi ..\code\win32_handmade.cpp user32.lib gdi32.lib
+~~~~~~~ batch
+
+popd
+~~~~~~~ 
+[Listing [x]: <file>[build.bat]</file> Adding -FC compiler option.]
+
+![Figure [x]: You can now jump to your errors.](../media/day4/build_fc.png)
+
+## Introduction to Alignment
+
+Let's review our Bitmap Info Header:
+
+~~~~~~~ C++
+BITMAPINFO BitmapInfo = {};
+
+BitmapInfo.bmiHeader.biSize = sizeof(BitmapInfo.bmiHeader);
+BitmapInfo.bmiHeader.biWidth = Width;
+BitmapInfo.bmiHeader.biHeight = Height;
+BitmapInfo.bmiHeader.biPlanes = 1;
+BitmapInfo.bmiHeader.biBitCount = 32;
+BitmapInfo.bmiHeader.biCompression = BI_RGB;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32UpdateWindow]</file> BitmapInfo header structure.]
+
+One thing to note is that `biBitCount`. We said that we need 3 bytes to draw an RGB pixel: one for red, one for green, and one for blue channels. $3 \cdot\ 8 = 24$, so where does the extra byte come from? 
+
+It has to do what memory alignment. In general, on the `x86` architecture there is often a penalty for doing the so-called _unaligned memory access_. Whenever you make an operation on a value, its actual position in memory should begin at the multiple of its size (8 bit, 16 bit, 32 bit, etc.). For instance, the 32-bit values (which are 4 bytes long) should start at the bytes 0, 4, 8, 12, etc. They shouldn't begin at, for example, the 2nd byte, or the 5th byte. 
+    
+In other words, the processor will spend (quite a bit of) time realigning any non-aligned value before processing it. 
+
+In our case, whenever we do an operation on a pixel, especially to simplify the things, we want to access it on an 4-byte boundary. So if we want to ask only for the bits we need to insert R, G and B values, i.e. 24 bytes, 3 bytes are in no way aligned to 4, so constant adjustment will be required. So the extra 8 bits will simply be padding. They don't mean anything and they will not be used, and their sole purpose will be to align the rest of the pixel to the 4-byte boundary.
+
+_(Back to Subsection [allocate the bitmap memory])_
+
+## RAII
+
+If you would like to try RAII (Resource Acquisition Is Initialization), Subsection [our first animation] would be one of the few places where it would be appropriate. You could then have something like: 
+
+~~~~~~~ C++ add
+class DC
+{
+    public:
+        HDC Handle;
+        DC(HWND Window) // Constructor, called during object creation
+        {
+            m_Window = Window;
+            Handle = GetDC(m_Window);
+        }
+        ~DC()           // Destructor, called when exiting scope
+        {
+            ReleaseDC(m_Window, Handle);
+        }
+    private:
+        HWND m_Window;
+};
+~~~~~~~ C++
+//...
+
+int CALLBACK
+WinMain(...)
+{
+    //...
+~~~~~~~ C++ edit    
+    {
+        DC DeviceContext {Window};
+
+        RECT ClientRect;
+        GetClientRect(Window, &ClientRect);
+        
+        Win32UpdateWindow(DeviceContext.Handle, &ClientRect);
+    } // No need to call destructor, it will be called automatically when exiting the block
+~~~~~~~ C++
+}
+~~~~~~~
+
+Every programming pattern, feature or system has its place; it's the dogma that catches you. Try not to get into the dogma because you don't want to go the same route all the time, you need to know _when_ to use things. 
+
 
 # Navigation
 

@@ -83,20 +83,7 @@ Let's compile and debug our program.
 
 ![Figure [x]: Hitting our breakpoint to exit the loop. Notice that this happens (shortly) after we have processed `WM_CLOSE` message, as the `Output` line states.](../media/day3/quit1.png)
 
-!!! Note About Resource Handling
-    If you have experience programming in an Object-Oriented languages like C++ of Java, you might be asking: what about closing our window? 
-
-    When programming in Object-Oriented languages, people usually make extreme care in making sure they have completely symmetric construction and destruction (or aquisition and release) of their resources. Some programmers know it as <b>R</b>esource <b>A</b>cquisition <b>I</b>s <b>I</b>nitialization (or RAII), others wrap it inside class Constructors and Distructors, but it all boils down to a rather simple concept. This means every time you make something, such as `CreateWindowEx` or `RegisterClass`, you want to make sure: if there is some way to clean up, you do so.
-    
-    As an example we've seen in our program, in `WM_PAINT`, where there is `BeginPaint`, there should be a correspondent `EndPaint` somewhere along the line. However, we registered a window class and opened a window with no intention of cleaning it up, and it would be a no-go for RAII. Why so?
-
-    The problem with this pattern is it sounds good on paper or on test dummy projects, but it's less than ideal in real world applications. If you care about performance and many other things, you will quickly discover it's almost always better that resources are acquired and released in _aggregate_. 
-
-    Instead of thinking about things individually, you should think about them as a part of a group bundled together. As a result, you will notice that resources are better acquired and released in _waves_. You don't have to worry about what this means for now: we're going to get into those things much later, when we have more resources to deal with. 
-    
-    Back to the present, we're creating a window which we know will be running for the rest of our game's execution. When we exit the application, Windows will clean up all of our windows, handles, memory, etc. So if we actually ask to close our window before we exit, we're wasting the user's time. 
-    
-    If you ever encountered those applications that you try to close, and it takes a while to close down, you know what we are talking about here. Those programs try to close everything manually, tidy everything up... things that, if they would be thought about in waves, would be gone right away.
+If you're wondering out why aren't we closing our window, check out subsection [About Resource Handling].
 
 There's a bit of an oddity in that we are handling the `WM_CLOSE` message but not the `WM_DESTROY`. If you want to write a bit _cleaner_ code, you may also add the same `PostQuitMessage` to `WM_DESTROY`:
 
@@ -203,36 +190,9 @@ We [already encountered](day2.md.html#drawingsomethingtoourwindow/â€œanimatingâ€
 // the rest of our program
 ~~~~~~~ 
 
-!!! Note `#define` directive
-    `#define` is a so-called "preprocessor directive" (it's in the same family as `#include` above). It has a syntax of `#define NAME value` and serves for _macro definition_. That is, you designate `NAME` as a _macro_, and whenever you type `NAME` in your code the compiler simply reads it as `value`.
-
-    In its simplest form, it works the following way: 
-
-    ~~~~~~~ C++
-
-    #define Pi32 3.1415926535 
-
-    // later in your code
-
-    x = x * Pi32; // Compiler sees it as "x = x * 3.1415926535;"
-
-    ~~~~~~~
-
-    A more advanced form would be using parameters `#define SOMETHING(param)`, where `param` is an arbitrary number of parameters you can pass to the macro. Note the absence of space between the name and the parenthesis.
-
-    ~~~~~~~ C++
-
-    #define Square(number) (number * number)
-
-    // later in your code
-
-    x = Square(x); // Compiler sees it as "x = (x * x);"
-
-    ~~~~~~~
-
-!!! Warning
-    `#define` might lead to unexpected results, so make sure to use this feature sporadically. In this case, we use it in a way similar to a `typedef`, and only because you cannot `typedef` a `static` keyword.
-
+!!! Note
+    Learn more about the `#define` in the subsection [Define Directive].
+    
 In our case, we `#define` three different names to translate as the `static` keyword. Let's look in which situations to use which.
 
 ## global_variable
@@ -258,14 +218,7 @@ global_variable bool Running;
 [Listing [x]: <file>[win32_handmade.cpp]</file> Renaming `static` Running]
 
 !!! Note About Global Variables
-    In the programming world, the usage of global variables is generally being frowned upon. And, while we don't agree that their usage should be avoided at all costs, there's a reason while such an aversity exists. Many of the common critisisms of the global variables are totally valid, and here is how we are going to try and go around them: 
-
-    * Prevent the code from "touching" variables it shouldn't
-    * Make our code clear about what it can and cannot access
-
-    This is where global variables pose a problem. Since everyone can change their value, tracking those changes may become difficult. In this case, the risk is small since the `Running` variable is totally harmless (it controls the exit from the main loop and nothing else). Additionally, because of how Windows API is constructed our code will always be somewhat "janky", globals are somewhat inevitable in the Win32 platform layer. Most of our code will not be in that layer, and most of our code will not be touching any Win32 platform globals (or even be aware of its existence). Even then, we will probably move `Running` somewhere outside at some point. 
-
-    That said, it's a totally valid strategy of using globals while you are levelling up your code during the development, as long as that usage is cleaned up by the time the codebase is solidified, and we are ready to ship our code. 
+    You can read some additional consideration about the global variables in the subsection [About Global Variables].
 
 ## local_persist
 
@@ -593,19 +546,11 @@ From the get-go, we can fill out a few parameters:
 * `**ppvBits`: a pointer to a `void` pointer.
     * It simply means that Windows will need an address of a `void *`. 
     * This `void *` will contain the address to our `BitmapMemory`, the reason for why we actually started this whole enterprise.
+        * To read more about the `void *`, check out void Type subsection.
 * `hSection`: As you can see from its description in MSDN, this is something we need to specify if we want to get fancy with our DIB section. We just need the memory, so `0` is fine.
 * `offset`: An offset referencing the `hSection` above. We'll also leave it at `0`. 
 
 We will also make use of the handle that this function returns, so let's capture it, as well. 
-
-!!! Note `void` type 
-    A `void` is a very special type in C. 
-    
-    * If it's a return from a function, it simply means nothing. Moreover, you will receive an error if you try to return from a `void` function.
-    * If you don't have any parameters to pass to a function, in C you also used to type `void` as a parameter (in more recent versions of C it's no longer necessary, and it's been deprecated in C++). 
-    * Finally, a `void *` ("void pointer") variable is a pointer to raw memory, without any "type" associated with it. Compiler doesn't care what type of data does this pointer points to, any address is fine. 
-        * This is useful when you don't know the format of the data you're getting, for example from some opacque API which ends up consuming the same pointer later on. 
-        * Alternatively, if you know what data does it point to, you can _cast_ it to the type of your choice. In our case, we will use the `BitmapMemory` to cast it as several different types, depending on the operation we're doing.   
 
 ~~~~~~~ C++
 internal void
@@ -872,6 +817,12 @@ We covered a lot of ground here. We got a more robust way of closing our window,
 
 In the next chapter, we will start animating our buffer with our own data.
 
+------------
+
+[^bitmap]: In reality it's _slightly_ more complicated than this but we'll get there soon, and you get the point.
+
+[^fullscreen]: This will not matter once we go into fullscreen mode, but until then, we have to accept the window borders that we have to take into account.
+
 # Exercises
 
 ## Experiment with the Debugger
@@ -882,11 +833,85 @@ Start a debug session. Step in your code, inspect different variables into your 
 
 If you end up in the `Disassembly` (by stepping into a function you don't have code for) try to see what's going on there. Each line represents machine instructions as converted from the C code, written in the language called `assembly`, and you can learn more about it [here](https://en.wikipedia.org/wiki/Assembly_language). You can also watch an excellent video on the matter [here](https://www.youtube.com/watch?v=yOyaJXpAYZQ). 
 
-------------
+# Programming Basics
 
-[^bitmap]: In reality it's _slightly_ more complicated than this but we'll get there soon, and you get the point.
+## About Resource Handling
 
-[^fullscreen]: This will not matter once we go into fullscreen mode, but until then, we have to accept the window borders that we have to take into account.
+If you have experience programming in an Object-Oriented languages like C++ of Java, you might be asking: what about closing our window? 
+
+When programming in Object-Oriented languages, people usually make extreme care in making sure they have completely symmetric construction and destruction (or aquisition and release) of their resources. Some programmers know it as <b>R</b>esource <b>A</b>cquisition <b>I</b>s <b>I</b>nitialization (or RAII), others wrap it inside class Constructors and Distructors, but it all boils down to a rather simple concept. This means every time you make something, such as `CreateWindowEx` or `RegisterClass`, you want to make sure: if there is some way to clean up, you do so.
+    
+As an example we've seen in our program, in `WM_PAINT`, where there is `BeginPaint`, there should be a correspondent `EndPaint` somewhere along the line. However, we registered a window class and opened a window with no intention of cleaning it up, and it would be a no-go for RAII. Why so?
+
+The problem with this pattern is it sounds good on paper or on test dummy projects, but it's less than ideal in real world applications. If you care about performance and many other things, you will quickly discover it's almost always better that resources are acquired and released in _aggregate_. 
+
+Instead of thinking about things individually, you should think about them as a part of a group bundled together. As a result, you will notice that resources are better acquired and released in _waves_. You don't have to worry about what this means for now: we're going to get into those things much later, when we have more resources to deal with. 
+    
+Back to the present, we're creating a window which we know will be running for the rest of our game's execution. When we exit the application, Windows will clean up all of our windows, handles, memory, etc. So if we actually ask to close our window before we exit, we're wasting the user's time. 
+    
+If you ever encountered those applications that you try to close, and it takes a while to close down, you know what we are talking about here. Those programs try to close everything manually, tidy everything up... things that, if they would be thought about in waves, would be gone right away.
+
+_(Back to Subsection [closing the window])_
+
+## Define Directive
+
+`#define` is a so-called "preprocessor directive" (it's in the same family as `#include` above). It has a syntax of `#define NAME value` and serves for _macro definition_. That is, you designate `NAME` as a _macro_, and whenever you type `NAME` in your code the compiler simply reads it as `value`.
+
+In its simplest form, it works the following way: 
+
+~~~~~~~ C++
+
+#define Pi32 3.1415926535 
+
+// later in your code
+
+x = x * Pi32; // Compiler sees it as "x = x * 3.1415926535;"
+
+~~~~~~~
+
+A more advanced form would be using parameters `#define SOMETHING(param)`, where `param` is an arbitrary number of parameters you can pass to the macro. Note the absence of space between the name and the parenthesis.
+
+~~~~~~~ C++
+
+#define Square(number) (number * number)
+
+// later in your code
+
+x = Square(x); // Compiler sees it as "x = (x * x);"
+
+~~~~~~~
+
+!!! Warning
+    `#define` might lead to unexpected results, so make sure to use this feature sporadically. In this case, we use it in a way similar to a `typedef`, and only because you cannot `typedef` a `static` keyword.
+
+_(Back to Section [different meanings of static])_
+
+## void Type
+
+A `void` is a very special type in C. 
+
+* If it's a return from a function, it simply means nothing. Moreover, you will receive an error if you try to return from a `void` function.
+* If you don't have any parameters to pass to a function, in C you also used to type `void` as a parameter (in more recent versions of C it's no longer necessary, and it's been deprecated in C++). 
+* Finally, a `void *` ("void pointer") variable is a pointer to raw memory, without any "type" associated with it. Compiler doesn't care what type of data does this pointer points to, any address is fine. 
+    * This is useful when you don't know the format of the data you're getting, for example from some opacque API which ends up consuming the same pointer later on. 
+    * Alternatively, if you know what data does it point to, you can _cast_ it to the type of your choice. In our case, we will use the `BitmapMemory` to cast it as several different types, depending on the operation we're doing. 
+
+_(back to Subsection [createdibsection implementation])_
+
+# Side Considerations
+
+## About Global Variables
+
+In the programming world, the usage of global variables is generally being frowned upon. And, while we don't agree that their usage should be avoided at all costs, there's a reason while such an aversity exists. Many of the common critisisms of the global variables are totally valid, and here is how we are going to try and go around them: 
+
+* Prevent the code from "touching" variables it shouldn't
+* Make our code clear about what it can and cannot access
+
+This is where global variables pose a problem. Since everyone can change their value, tracking those changes may become difficult. In this case, the risk is small since the `Running` variable is totally harmless (it controls the exit from the main loop and nothing else). Additionally, because of how Windows API is constructed our code will always be somewhat "janky", globals are somewhat inevitable in the Win32 platform layer. Most of our code will not be in that layer, and most of our code will not be touching any Win32 platform globals (or even be aware of its existence). Even then, we will probably move `Running` somewhere outside at some point. 
+
+That said, it's a totally valid strategy of using globals while you are levelling up your code during the development, as long as that usage is cleaned up by the time the codebase is solidified, and we are ready to ship our code. 
+
+_(Continue to Section [local_persist])_
 
 # Navigation
 
