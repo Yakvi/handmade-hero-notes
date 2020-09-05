@@ -5,14 +5,949 @@
 
 _Video Length (includig Q&A): [2h07](https://hero.handmade.network/episode/code/day005/)_
 
+In the past four chapters, a tremendous amount of work was done. If you have followed along, you will have you very own animated graphics on the screen in Windows that you wrote entirely yourself. So today we'll be focusing on cleaning up, explaining some things we've left behind, and going to some related tangents. Also we'll walk through our whole program, reviewing what's going on, and fixing and commenting where necessary.
+
+If you review your code file, `win32_handmade.cpp`, you will notice that there's not a lot of code here, and what's in there is already pretty straightforward. You might have been intimidated by the prospect of writing everything from scratch, that it would be a huge, huge _huge_ amount of work. But it's not, there's very little code here. 
+
+One thing that really needs to be addressed today are all those global variables that are sitting on top of our code. But we'll get to there in due time.
+
+# Revisit `WNDCLASS` style
+
+The first thing we're going to look at is the `style` of our Window Class. If you remember, from [Day 2](day2.md.html), we have set three flags as our style: `CS_HREDRAW`, `CS_VREDRAW` and `CS_OWNDC`. You can find the description of all of the window class flags available in the [Window Class Styles](https://docs.microsoft.com/en-us/windows/win32/winmsg/window-class-styles) guide. 
+
+## CS_OWNDC
+
+`CS_OWNDC` allocates a device contest for every window. As of right now, we make use of a device context at every frame update, and a of a special one when `WM_PAINT` message is processed. However, as we use it now, we can simply grab and use any available DC Windows would give us. We don't really need it to keep track of the various handles, brushes, etc.
+
+So we have two options: either to remove this flag completely or to get it and _keep it_. The second option would mean only asking for it once, once we get our window. This would allow us to stop asking and releasing a device context every loop. 
+
+Let's go with the second option; we can always change in case. We'll also leave a comment for posterity.
+
+~~~~~~~ C++
+if (Window)
+{
+~~~~~~~ C++ add
+    // NOTE(casey): Since we specified CS_OWNDC, we can just
+    // get one device context and use it forever because we
+    // are not sharing it with anyone.
+    HDC DeviceContext = GetDC(Window);
+~~~~~~~ C++
+    // ...     
+    while (Running)
+    {
+~~~~~~~ C++ delete
+        HDC DeviceContext = GetDC(Window);
+~~~~~~~ C++
+        // ... 
+~~~~~~~ C++ delete
+        ReleaseDC(Window, DeviceContext);
+~~~~~~~ C++ 
+    }
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Getting a hold off a single device context]
+
+!!!
+    If you implemented a RAII approach, this would mean either dismantling your solution or removing the destructor. As we said before, we don't need to do the clean up after we exit our program since Windows will do it for us.
+
+## CS_HRDERAW / CS_VREDRAW
+
+For what it might concern `CS_HREDRAW` and `CS_VREDRAW`, we can confirm their usefulness. These options come into play when resizing the window, and force the _whole_ window to be repainted right away, and not just the chunks we resize. You can easily test it if you disable it (comment out or delete the line altogether), recompile, run, and try to resize the window. If you re-enable these style options you'll notice that the whole window is being blacked out as soon as you start resizing it.
+
+![Figure [x]: `VREDRAW | HREDRAW` disabled vs. enabled, after some resizing from the lower right corner.](../media/day5/redraw.png)
+
+# Revisit `Win32UpdateWindow` Parameters
+
+Let's fast forward a bit to [day 4](day4.md.html) where we decided to pass our `ClientRect` as a pointer. Now, it's true that `RECT` is a structure, but it's a rather small one, and stack savings are minimal. But what's more, typically nowadays you want to avoid passing pointers to functions.
+
+~~~~~~~ C++
+internal void
+Win32UpdateWindow(HDC DeviceContext, RECT *ClientRect)
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> `Win32UpdateWindow` function signature]
+
+If you pass the structure to a function by value (i.e. `RECT ClientRect` instead of `RECT *ClientRect`), compiler can make several assumptions: 
+
+* No one else is going to touch (modify) it outside of the function.
+* It's a private copy for the use of the function.
+* There's no possibility for _aliasing_.
+
+!!! 
+    We will talk about the stack in section [Stack]. Learn more about pointer aliasing in subsection [Pointer Aliasing].
+
+There are many ways of preventing pointer aliasing but the easiest way is to just not use any pointers. One of the things you notice about `Win32UpdateWindow` is that it is _small_. It's a classic candidate to be _inlined_ (literally copied its code in the place from which it was called, instead of defining the function in a separate place), and if the compiler will know that the `ClientRect` stays the same it will have an easier time deciding to inline the function. 
+
+Now why isn't the compiler "smart enough" to figure out that the `ClientRect` stays the same is a different story. Compiling process is complicated, and the compiler might not see the same thing we see. The code that goes through multiple transformations comes out from the other side quite different from when it came in. 
+
+Of course, in this case it's not a performance-critical thing to do in this case, but let's go ahead and change the signature for `Win32UpdateWindow` to take `ClientRect` by value: 
+
+~~~~~~~ C++
+internal void
+~~~~~~~ C++ edit
+Win32UpdateWindow(HDC DeviceContext, RECT ClientRect)
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Updating `Win32UpdateWindow` function signature]
+
+Now, if you try to compile now you can use the compiler errors to guide you through the changes to do: 
+
+1. Inside `Win32UpdateWindow` Replace the `->` operator accessing the `ClientRect` members with the `.` operator: 
+
+~~~~~~~ C++ edit
+int WindowWidth = ClientRect.right - ClientRect.left;
+int WindowHeight = ClientRect.bottom - ClientRect.top;
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > Win32UpdateWindow]</file>]
+
+2. Remove the `&` operator in the `WinMain` and `Win32MainWindowCallback`. 
+
+~~~~~~~ C++ edit
+Win32UpdateWindow(DeviceContext, ClientRect);
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain; Win32MainWindowCallback]</file> Updating `Win32UpdateWindow` calls]
+
+# Revisit the Global Variables
+
+Now, back to our global variables. 
+
+~~~~~~~ C++
+global_variable bool Running;
+global_variable BITMAPINFO BitmapInfo;
+global_variable void *BitmapMemory;
+global_variable int BitmapWidth;
+global_variable int BitmapHeight;
+global_variable int BytesPerPixel;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Our current globals]
+
+As you can see, by now we have quite a few of them. As the globals grow, it might become confusing who can access each variable. A neat way to check would be to simply add a character at the end of the name and try to compile: you will quickly see the errors where these variables are used.
+
+An edit
+~~~~~~~ C++ edit
+global_variable int BytesPerPixel_;
+~~~~~~~
+results in
+~~~~~~~ batch
+win32_handmade.cpp
+W:handmade\code\win32_handmade.cpp(29): error C2065: 'BytesPerPixel': undeclared identifier
+W:handmade\code\win32_handmade.cpp(73): error C2065: 'BytesPerPixel': undeclared identifier
+W:handmade\code\win32_handmade.cpp(74): error C2065: 'BytesPerPixel': undeclared identifier
+~~~~~~~
+[<file>[build output]</file> Detecting where `BytesPerPixel` is used.]
+
+However, our program is small enough that we can go ahead directly and bundle most of these variables up into something that a bit more concise. It's not for performance: this way the things are organized in a cleaner and a more manageable way. This one anyone who is looking at the code can see exactly what has to happen for these bitmaps to be created. 
+
+## Bundle Bitmap Globals Together
+
+Now, `Running` aside all our globals refer to our bitmap. It's almost as if they were begging to be bundled together. So let's create a struct and do just that. Thus we'll be able to pass this structure to anyone who needs to do something with our _offscreen buffer_.
+
+~~~~~~~ C++ add
+struct win32_offscreen_buffer
+{
+~~~~~~~ C++ edit
+    BITMAPINFO BitmapInfo;
+    void *BitmapMemory;
+    int BitmapWidth;
+    int BitmapHeight;
+    int BytesPerPixel;
+~~~~~~~ C++ add
+};
+~~~~~~~ C++
+global_variable bool Running;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Defining a struct for our offscreen buffer.]
+
+This way we know that we need: 
+
+* A `BITMAPINFO` to describe our bitmap
+* A pointer to the bits of the bitmap
+* We need a width and a height, as well as those bytes per pixel. 
+
+We can go ahead and shorten these variables' names since we know they will all belong to a bitmap:
+
+~~~~~~~ C++
+struct win32_offscreen_buffer
+{
+~~~~~~~ C++ edit
+    BITMAPINFO Info;
+    void *Memory;
+    int Width;
+    int Height;
+~~~~~~~ C++
+    int BytesPerPixel;
+};
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Shortening the variables names.]
+
+Last thing that we can do is to comment on the convention we're using for our buffer. This might come handy if you ever forget it: 
+
+~~~~~~~ C++
+struct win32_offscreen_buffer
+{
+~~~~~~~ C++ edit
+    // NOTE(casey): Pixels are always 32-bits wide, 
+    // Memory Order  0x BB GG RR xx
+    // Little Endian 0x xx RR GG BB
+~~~~~~~ C++
+    BITMAPINFO Info;
+    void *Memory;
+    int Width;
+    int Height;
+    int BytesPerPixel;
+};
+~~~~~~~
+
+## Update Buffer Function Definitions
+
+If we try to compile now, we will be greeted with with a couple dozen errors. We'll go through each error one by one and implement the changes. We can keep in mind what we said before and only pass by pointer if we need to edit the structure.
+
+* `RenderWeirdGradient`: needs the structure to read Width and Height, as well as to read the Memory pointer (to write to the pixels).
+    * While we need to the right to wherever the `Memory` pointer points to, we don't need to overwrite the pointer itself, so we can pass by the struct value.
+* `Win32ResizeDIBSection`: needs the structure to actually fill it out. Now here we have two options:
+    * We can pass by pointer the structure to be filled out.
+    * We can initialize the structure inside the function and _return_ it. 
+    * Both methods have their advantages and disadvantages. Let's go with the first one because we still need the `win32_offscreen_buffer` to be passed by value for an eventual memory release. This results in the function being a bit error-prone, and it's not a performance-sensitive place of our code. 
+* `Win32UpdateWindow`: we only need the structure to read from it, so pass by value. 
+    * While we're at it, let's rename the function to something more concrete, i.e. `Win32DisplayBufferInWindow`. (the names are really up to you!)
+
+You will note that with that, we're levelling up our capabilities, as well! Before we could only read/write from the globals, but now the functions can use whichever buffer they receive. So there you have another advantage to pull values from the globals: not only it makes things more clear but also more flexible.
+
+~~~~~~~ C++
+internal void
+~~~~~~~ C++ edit
+RenderWeirdGradient(win32_offscreen_buffer Buffer, int XOffset, int YOffset)
+~~~~~~~ C++
+{
+~~~~~~~ C++ edit
+    int Pitch = Buffer.Width * Buffer.BytesPerPixel;
+    u8 *Row = (u8 *)Buffer.Memory;
+~~~~~~~ C++
+    for (int Y = 0;
+~~~~~~~ C++ edit
+         Y < Buffer.Height;
+~~~~~~~ C++
+         ++Y)
+    {
+        u8 *Pixel = (u8 *)Row;
+        for(int X = 0;
+~~~~~~~ C++ edit
+            X < Buffer.Width;
+~~~~~~~ C++
+            ++X)
+~~~~~~~ C++
+        {
+            //...
+        }
+        Row += Pitch;
+    }
+}
+
+internal void
+~~~~~~~ C++ edit
+Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
+~~~~~~~ C++
+{
+~~~~~~~ C++ edit
+    if(Buffer->Memory)
+~~~~~~~ C++
+    {
+~~~~~~~ C++ edit
+        VirtualFree(Buffer->Memory, 0, MEM_RELEASE);
+~~~~~~~ C++
+    }
+~~~~~~~ C++ edit
+    Buffer->Width = Width;
+    Buffer->Height = Height;
+    Buffer->BytesPerPixel = 4;
+    
+    Buffer->Info.bmiHeader.biSize = sizeof(Buffer->Info.bmiHeader);
+    Buffer->Info.bmiHeader.biWidth = Buffer->Width;
+    Buffer->Info.bmiHeader.biHeight = -Buffer->Height; // negative value: top-down
+    Buffer->Info.bmiHeader.biPlanes = 1;
+    Buffer->Info.bmiHeader.biBitCount = 32;
+    Buffer->Info.bmiHeader.biCompression = BI_RGB;
+    
+    int BitmapMemorySize = Buffer->BytesPerPixel * Buffer->Width * Buffer->Height;
+    
+    Buffer->Memory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+~~~~~~~ C++
+}
+
+internal void
+~~~~~~~ C++ edit
+Win32DisplayBufferInWindow(HDC DeviceContext, RECT ClientRect, 
+                           win32_offscreen_buffer Buffer)
+~~~~~~~ C++
+{
+    int WindowWidth = ClientRect.right - ClientRect.left;
+    int WindowHeight = ClientRect.bottom - ClientRect.top;
+    
+    StretchDIBits(DeviceContext,
+                  0, 0, WindowWidth, WindowHeight,
+~~~~~~~ C++ edit
+                  0, 0, Buffer.Width, Buffer.Height,
+                  Buffer.Memory,
+                  &Buffer.Info,
+~~~~~~~ C++
+                  DIB_RGB_COLORS, SRCCOPY);
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Edits to the functions.]
+
+Now, you'll notice that we use the `Pitch` every frame, so we might want to decide to also make it part of the buffer and initialize the pitch with everything else. Make sure to place the `Pitch` intialization after the `Width`, `Height` and `BytesPerPixel` since it uses these!
+
+~~~~~~~ C++
+struct win32_offscreen_buffer
+{
+    BITMAPINFO Info;
+    void *Memory;
+    int Width;
+    int Height;
+~~~~~~~ C++ add
+    int Pitch;
+~~~~~~~ C++
+    int BytesPerPixel;
+};
+
+internal void
+RenderWeirdGradient(win32_offscreen_buffer Buffer, int XOffset, int YOffset)
+{
+~~~~~~~ C++ delete
+    int Pitch = Buffer.Width * Buffer.BytesPerPixel;
+~~~~~~~ C++
+    u8 *Row = (u8 *)Buffer.Memory;
+    for (int Y = 0;
+         Y < Buffer.Height;
+         ++Y)
+    {
+~~~~~~~ C++ edit
+        Row += Buffer.Pitch;
+~~~~~~~ C++
+    }
+}
+
+internal void
+Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
+{
+    //...
+    Buffer->Width = Width;
+    Buffer->Height = Height;
+    Buffer->BytesPerPixel = 4;
+
+~~~~~~~ C++ add
+    Buffer->Pitch = Buffer->Width * Buffer->BytesPerPixel;
+~~~~~~~ C++
+    
+    //...
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Updating the changes.]
+
+
+## Update Buffer Function Calls
+
+Now let's also look at the calls to these functions. We call them from our `Win32MainWindowCallback` and `WinMain`. 
+
+Now, because these functions are called by Windows indipendently, the simplest thing for now would be to return one global variable holding our back buffer. We will then use it to pass it where it's currently required: 
+
+* `Win32MainWindowCallback`: inside the cases `WM_SIZE` and `WM_PAINT`.
+* `WinMain`: inside our loop. 
+
+~~~~~~~ C++
+LRESULT CALLBACK
+Win32MainWindowCallback(...)
+{
+    //...
+    case WM_SIZE:
+    {
+        RECT ClientRect;
+        GetClientRect(Window, &ClientRect);
+        int Width = ClientRect.right - ClientRect.left;
+        int Height = ClientRect.bottom - ClientRect.top;
+~~~~~~~ C++ edit
+        Win32ResizeDIBSection(&GlobalBackbuffer, Width, Height);
+~~~~~~~ C++
+    } break;
+    //...
+    case WM_PAINT:
+    {
+        PAINTSTRUCT Paint;
+        HDC DeviceContext = BeginPaint(Window, &Paint);
+        
+        RECT ClientRect;
+        GetClientRect(Window, &ClientRect);
+        
+~~~~~~~ C++ edit
+        Win32DisplayBufferInWindow(DeviceContext, ClientRect, GlobalBackbuffer);
+~~~~~~~ C++
+        
+        EndPaint(Window, &Paint);
+    } break;
+}
+
+int CALLBACK
+WinMain(...)
+{
+    //... 
+~~~~~~~ C++ edit
+    RenderWeirdGradient(GlobalBackbuffer, XOffset, YOffset);
+~~~~~~~ C++
+    ++XOffset;
+                
+    RECT ClientRect;
+    GetClientRect(Window, &ClientRect);
+    
+~~~~~~~ C++ edit
+    Win32DisplayBufferInWindow(DeviceContext, ClientRect, GlobalBackbuffer);
+~~~~~~~ C++ 
+    //...
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Propagating the updates to the calls.]
+
+We now should be compilable. If you build and run, you'll notice that no changes have been made on the output of the program. The refactorings serve other purposes: to make the code more efficient, cleaner and overall better. 
+
+At this point we could as well remove our last global buffer-variable, `GlobalBackbuffer` but it would be a bit of overkill. You don't want to be doing things that you don't need to do, for the sake of doing them. You risk falling into dogma and making busywork.
+
+!!! 
+    We explore a potential scenario where you might get an access violation in subsection [access violations]. Check it out!
+
+# Stack
+
+The _stack_ is a block of memory that is allocated by the system for our program to run. It's different from the _heap_ in that it's used directly by the application as the local memory bank for local variables inside functions. The stack grows and shrinks from the "top" every time we call a new function: 
+
+1. We call into a function. 
+2. The function puts on the stack the values that are passed to it, as well as it reserves the space necessary for its local variables.
+3. Once you're out of the function, this space is marked unused and the stack returns to its precedent value. 
+
+In other words, when we declare a local variable, like for example `WindowClass`, `offset` integers and the `Message` in `WinMain`, we're actually growing the stack to make room to store that. So instead of doing an allocation which will sit around for a while (like using `VirtualAlloc` to get a block of memory), the stack grows and shrinks allowing the memory to be reused. 
+
+Think of it as a watermark: we have an empty pool when the program starts, then the water rises and falls depending on the functions called. In the same way, when you call into a function, it uses space on the stack, stores parameters and local variables. Then, after the function is done, the next functions reuse that space (the stack remains occupied if you call a function from the other).
+
+One thing that makes a stack different from a swimming pool (except, you know, water and bytes) is that direction this stack is growing from. On the `x86` architecture, the stack grows _downward_, meaning that it starts on a bigger address, and the new allocations receive progressively smaller addresses. 
+
+*************************************************************************************************
+*    .----.           .----.          .----.          .----.          .----.          .----.    *
+*    |▒▒▒▒|           |▒▒▒▒|          |▒▒▒▒|          |▒▒▒▒|          |▒▒▒▒|          |▒▒▒▒|    *
+*    |    |           |▒▒▒▒|          |▒▒▒▒|          |▒▒▒▒|          |    |          |▒▒▒▒|    *
+*    |    |           |▒▒▒▒|          |▒▒▒▒|          |▒▒▒▒|          |    |          |▒▒▒▒|    *
+*    |    |           |▒▒▒▒|          |▒▒▒▒|          |▒▒▒▒|          |    |          |▒▒▒▒|    *
+*    |    |           |▒▒▒▒|          |▒▒▒▒|          |▒▒▒▒|          |    |          |    |    *
+*    |    |           |▒▒▒▒|          |▒▒▒▒|          |▒▒▒▒|          |    |          |    |    *
+*    |    |           |    |          |▒▒▒▒|          |    |          |    |          |    |    *
+*    |    |           |    |          |    |          |    |          |    |          |    |    *
+*    '----'           '----'          '----'          '----'          '----'          '----'    *
+*   Program         Function A      Function B      Function B      Function A      Function C  *
+*    Start            Called          Called         Returned        Returned         Called    *
+*************************************************************************************************
+[Figure [diagram]: The Ebb and Flow of the Stack (downwards).]
+
+!!! 
+    There's a third memory location, different from the stack and the heap, which is used to store _permanent data_, such as functions, global variables, etc.
+
+
+## Deep Dive Into the Stack
+
+To really drive the message home, let's start a debug session at the beginning of `WinMain` and open the `Memory` window of our debugger. As the address, you can type `&WindowClass` or get the address of `WindowClass` in the watch window and type it directly.
+
+`Memory` window is divided in three sections: The left column shows the address (in hexadecimal) of the first byte in the row, the middle one shows the bytes (in hexadecimal, each pair of numbers represents one byte), and the right one converts the bytes to ASCII characters.
+
+![Figure [x]: Inspecting `Memory` Window.](../media/day5/memory.png)
+
+!!! Tip
+    If you click and drag any window title in your debugger, you can reposition the window at your convenience.
+
+You will notice that, even if we didn't allocate any memory for our `WindowClass`, it's still has an address and memory pages associated with it. These pages are exactly the same as when you call `VirtualAlloc`, with the sole exception of being reserved for the stack. 
+
+At the same way, you can inspect `&Instance`, `&PrevInstance`, `&CommandLine` and `&ShowCode` and see that these are also located close to the `WindowClass` bytes and to each other.
+
+## Overflowing the Stack
+
+[By default][Stack Size] on MSVC, you get 1MB of memory for your stack (you can request more or less by providing the appropriate [compiler option][-F]). Some of it is taken by your globals and the CRT right away, so you get actually even less. You can test it by allocating directly on the stack a huge structure at the beginning of your `WinMain`: 
+
+~~~~~~~ C++
+u8 HugeBuffer[1024*1024] = {};
+~~~~~~~
+[<file>[WinMain]</file> Don't try this at home.]
+
+If you compile it and run, you'll quickly see the error message `Stack Overflow`. We asked to put too much stuff to it, and our program crashed. 
+
+!!! Trivia
+    By `Stack Overflow` we don't mean a website where programmers exchange questions and answers (that might sometimes be correct). 
+
+The bottom line is: memory does not come for free from thin air. Even the stack which is managed by the compiler (and Windows) is limited. Of course, you might not simply allocate such a huge structure on stack, but you might still reach Stack Overflow if you allocate a lot of things on your stack or if you go very deep in your recursive functions. We will touch the latter much later, so you don't need to worry about it just yet. 
+
+_(Read more: Variable Initialization subsection)_
+
+# Extract `ClientRect` Calculations
+
+You'll find by now several places in your code where we calculate the `ClientRect`, and even further, the `ClientRect`'s width and height. Let's make a small helper function that would do all these calculations for us so that we don't need to copy-paste the same chunk of code over and over again. 
+
+## Create Window Dimension
+
+First, we'll need to create a struct that we'll be returning from this function. We'll call this struct `win32_window_dimension` and it will have only a pair of `Width` and `Height`:
+ 
+~~~~~~~ C++ add
+struct win32_window_dimension
+{
+    int Width;
+    int Height;
+};
+~~~~~~~ C++
+
+global_variable bool Running;
+global_variable win32_offscreen_buffer GlobalBackbuffer;
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Defining `win32_window_dimension`.]
+
+The code we're optimizing is the following: 
+
+~~~~~~~ C++ 
+RECT ClientRect;
+GetClientRect(Window, &ClientRect);
+int Width = ClientRect.right - ClientRect.left;
+int Height = ClientRect.bottom - ClientRect.top;
+~~~~~~~ 
+
+So we can use this code to get our window dimension. We only need a window handle for it: 
+
+~~~~~~~ C++
+global_variable bool Running;
+global_variable win32_offscreen_buffer GlobalBackbuffer;
+
+~~~~~~~ C++ add
+internal win32_window_dimension
+Win32GetWindowDimension(HWND Window)
+{
+    win32_window_dimension Result; 
+    
+    RECT ClientRect;
+    GetClientRect(Window, &ClientRect);    
+    Result.Width = ClientRect.right - ClientRect.left;
+    Result.Height = ClientRect.bottom - ClientRect.top;
+    
+    return(Result);
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Defining `Win32GetWindowDimension`.]
+
+## Make Use of `Win32GetWindowDimension`
+
+We can now go to the places where we asked for `ClientRect` and replace that code. It's straightforward where we call `Win32ResizeDIBSection`:
+
+~~~~~~~ C++ delete
+RECT ClientRect;
+GetClientRect(Window, &ClientRect);
+int Width = ClientRect.right - ClientRect.left;
+int Height = ClientRect.bottom - ClientRect.top;
+~~~~~~~ C++ add
+win32_window_dimension Dimension = Win32GetWindowDimension(Window);
+~~~~~~~ C++ edit
+Win32ResizeDIBSection(&GlobalBackbuffer, Dimension.Width, Dimension.Height);
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > Win32MainWindowCallback > WM_SIZE]</file> Start using `Win32GetWindowDimension`.]
+
+However, our call to recently renamed `Win32DisplayBufferInWindow` is a bit different. We take the Window `RECT` and _then_ calculate the `WindowWidth` and `WindowHeight`. That's... really not what we need to do inside this function. We need to pass exactly what a function needs, no more and no less. You can read more about it in Subsection [Passing Parameters to the Functions].
+
+With this in mind, let's make our changes: 
+
+~~~~~~~ C++
+internal void
+~~~~~~~ C++ edit
+Win32DisplayBufferInWindow(HDC DeviceContext, int WindowWidth, int WindowHeight,
+                           win32_offscreen_buffer Buffer)
+~~~~~~~ C++
+{
+~~~~~~~ C++ delete
+    int WindowWidth = ClientRect.right - ClientRect.left;
+    int WindowHeight = ClientRect.bottom - ClientRect.top;
+~~~~~~~ C++ 
+StretchDIBits(DeviceContext,
+                  0, 0, WindowWidth, WindowHeight,
+                  0, 0, Buffer.Width, Buffer.Height,
+                  Buffer.Memory,
+                  &Buffer.Info,
+                  DIB_RGB_COLORS, SRCCOPY);
+}
+~~~~~~~
+[<file>[win32_handmade.cpp]</file>]
+~~~~~~~ C++ delete
+RECT ClientRect;
+GetClientRect(Window, &ClientRect);
+~~~~~~~ C++ add
+win32_window_dimension Dimension = Win32GetWindowDimension(Window);
+~~~~~~~ C++ edit
+Win32DisplayBufferInWindow(DeviceContext, Dimension.Width, Dimension.Height, GlobalBackbuffer);
+~~~~~~~
+[<file>[win32_handmade.cpp > Win32MainWindowCallback > WM_PAINT]</file>]
+~~~~~~~ C++ delete
+RECT ClientRect;
+GetClientRect(Window, &ClientRect);
+~~~~~~~ C++ add
+win32_window_dimension Dimension = Win32GetWindowDimension(Window);
+~~~~~~~ C++ edit
+Win32DisplayBufferInWindow(DeviceContext, Dimension.Width, Dimension.Height, GlobalBackbuffer);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Propagating `Win32GetWindowDimension` changes.]
+
+This looks a bit messy but it has great benefits. This update makes the code go through exactly the same path as the previous code. It's always good to have the fewest _code paths_ as possible if you can avoid having them. It just means that our life will be easier if we need to change this code later (and more likely to find bugs).
+
+# Setting a Fixed Size for Backbuffer
+
+Right now, our bitmap depends on the size of the window. But, since `StretchDIBits` allows for stretching, let's test it out! We will cut everything out from `WM_SIZE` and paste it into our `WinMain`. 
+
+~~~~~~~ C++ 
+case WM_SIZE:
+{
+~~~~~~~ C++ delete
+    win32_window_dimension Dimension = Win32GetWindowDimension(Window);
+    Win32ResizeDIBSection(&GlobalBackbuffer, Dimension.Width, Dimension.Height);
+~~~~~~~ C++
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > Win32MainWindowCallback > WM_SIZE]</file>]
+~~~~~~~ C++
+if (Window)
+{
+~~~~~~~ C++ add
+    win32_window_dimension Dimension = Win32GetWindowDimension(Window);
+    Win32ResizeDIBSection(&GlobalBackbuffer, Dimension.Width, Dimension.Height);
+~~~~~~~ C++
+    //... 
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Bringing over the buffer allocation to WinMain]
+
+!!! Note Why do we keep handling messages we don't really handle? 
+    The concept of "handling a message" is a bit fuzzy. Sometimes by leaving a message blank ourselves we prevent Windows from doing anything in response to this message.
+
+    In our case, the `WM_SIZE` message can be left there or removed altogether: there is no default action that Windows takes in `DefWindowProc`. On the other hand, `WM_CLOSE` and `WM_DESTROY` do have a default behaviour that we don't want to invoke (we're also doing our own stuff in there). Same thing with `WM_ACTIVATEAPP`. 
+    
+    In other cases again, like `WM_PAINT`, you might want to have your own code to do some compulsory work _or_ at least invoke `DefWindowProc`. In case of `WM_PAINT`, unless you do `BeginPaint`-`EndPaint` the "dirty" region of the window will never be validated. Windows will continue to think the region is dirty and will continue sending `WM_PAINT` messages. Thus having an empty `case WM_PAINT: {} break;` would be bad. If you don't want to handle this message, rather delete the case entirely. Windows will clear the client area to zero and consider the region validated.
+
+    If in doubt, check documentation! All the messages have detailed documentation on [MSDN][].
+
+Furthermore, we can now say that we want a fixed buffer size, for instance 1280x720. We won't even need `Dimension` after that!
+
+if (Window)
+{
+~~~~~~~ C++ delete
+    win32_window_dimension Dimension = Win32GetWindowDimension(Window);
+~~~~~~~ C++ edit
+    Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
+~~~~~~~ C++
+    //... 
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Bringing over the buffer allocation to WinMain.]
+
+It's not perfect and, if you resize it significantly, it produces some weird artifacts, but it works. Our `WeirdGradient` proportionally now always occupies the same amount of space inside the window. 
+
+!!! Tip
+    If you don't see the weird gradient occupying the whole window, make sure you pass the correct values to `StretchDIBits`!
+
+    ~~~~~~~ C++
+    StretchDIBits(DeviceContext,
+                  0, 0, WindowWidth, WindowHeight,    // Destination (where the bitmap will be copied)
+                  0, 0, Buffer.Width, Buffer.Height,  // Source (from where the bitmap will be copied)
+                  Buffer.Memory,
+                  &Buffer.Info,
+                  DIB_RGB_COLORS, SRCCOPY);
+    ~~~~~~~
+    [<file>[StretchDIBits]</file>]
+
+Of course, you'll notice that now that we have a fixed buffer size, you'll realize that the _aspect ratio_ of our image changes depending on its size: The squares of our gradient may be squashed vertically or horizontally, and it would represent any image we'd want to display on screen. This is something that we'll leave for another time. Let's leave a `TODO` in our `Win32DisplayBufferInWindow` to remind us of it for another time:
+
+~~~~~~~ C++
+Win32DisplayBufferInWindow(HDC DeviceContext, int WindowWidth, int WindowHeight,
+                           win32_offscreen_buffer Buffer)
+{
+    // TODO(casey): Aspect ration correction
+    // ...
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Saving some work for later.]
+
+# Full Program Step-through
+
+Today specifically we've made a _lot_ of refactoring. Let's go through the code and make sure we understand deeply what it does and how every little thing works.
+
+Open your debugger, hit `F11` (or set your breakpoint at the beginning of your `WinMain`) and prepare for the ride. Each numbered step below assumes that you hit `F11` to move forward one or more times.
+
+1. The first thing that happens in our program happens inside the C Runtime Library. The code that compiler added before ours makes some preparations and calls `WinMain`. 
+    * We receive `Instance`, `PrevInstance`, `CommandLine` and `ShowCode` which are allocated on stack for us.
+2. We pass a pointer to our `GlobalBackbuffer` (located in our Data memory) and the desired buffer width and height (as constants) to `Win32ResizeDIBSection`. 
+    1. We allow this function to be called as many times as we want to, so the first thing we do is to check if we allocated any memory already. If we did, we'd clear that memory first. 
+    2. Then we fill out various fields that we will need to remember: width, height, bytes per pixel, pitch. 
+        * Our `Pitch` is the width of the bytes times the number of bytes per pixel, since this is how much we should move to advance to the next row of pixels.
+    3. After this, we fill out the `BITMAPINFO` structure. This one will be used by Windows at a later stage to blit the buffer. 
+        * This is a description for Windows of how it's supposed to interpret the memory that we pass to it.
+        * If you fill particularly inclined so, you can change `biBitCount` to be `Buffer->BytesPerPixel * 8` instead of a constant `32`.
+        * As for `biHeight`, it might become confusing to the future you why there's a `-` there, so let's add a comment to it: 
+            ~~~~~~~ C++ add
+            // NOTE(casey): When the biHeight field is negative, this is the clue 
+            // to Windows to treat this bitmap as top-down, not bottom-up, meaning
+            // that the first bytes of the image are the color for the top left 
+            // pixel in the bitmap, not the bottom left!
+            ~~~~~~~ C++
+            Buffer->Info.bmiHeader.bisize = sizeof(Buffer->Info.bmiHeader);
+            ~~~~~~~
+    4. We then compute the size and request our chunk of memory. 
+        * We do so by calling Windows function `VirtualAlloc` that reserves the pages for us to hold the size we calculated.
+        * You may ask: why won't we just declare that chunk up there? We could have done that, it's totally valid, but we want to have flexibility to change the size of our bitmap. On the other hand, if we would have put the bitmap as a global, its size should've been known at _compile_ time.
+3. We initialize and fill out our `WindowClass`, which is allocated on the stack.
+    1. The `{}` symbol initially clears the structure to zero
+    2. We fill out the fields allowing the window class to inform Windows of our program.
+        * The instance handle so Windows knows which virtual address space (or which process) to call.
+        * A pointer to our callback function so Windows knows which function within that address space to call.
+        * This is all important because a pointer **does not uniquely identify memory in the system**, only inside one process. 
+        * We also give a random name to our class because we'll then need to pass it to `CreateWindowEx` call.
+    4. The window class is then registered with `RegisterClass` Windows call.
+        * We don't really care about `WindowClass` structure at that point. Windows will register our class in its own registries and will keep track of it that way. 
+        * This is different from other times when you do care about conserving a handle that you passed to Windows, in case other things might use it. 
+4. Once we ensure that `WindowClass` registration completed successfully, we go ahead and create our window calling `CreateWindowEx`. 
+    * We pass our window the class name so that it can intercept messages directed to our class.
+    * We make sure that the window has all the standard properties (`WS_OVERLAPPEDWINDOW` is a composite set of flags), as well as it's immediately visible. 
+    * We also pass our `Instance` handle to make sure Windows knows who called it.
+5. If the `Window` handle returns valid, we assume that we're ready to run. 
+6. We next request a device context that would allow us to issue draw calls. It's a purely artificial construct by Windows because the device contexts save state of the brushes you might have used. We don't really need all this, but all the drawing should happen through this path. Usually you're supposed to release a DC once you're done with it. However, since we have specified `CS_OWNDC` we can keep one for the whole duration of our window.
+7. We enter the main loop by initializing our `Running` global variable to `true` and entering the `while` loop. This loop will remain infinite until `Running` set to `false`.
+    * Since it's a global, let's actually prefix it as such. Find each reference to `Running` in your code and rename it to `GlobalRunning`. 
+        ~~~~~~~ C++ edit
+        global_variable bool GlobalRunning;
+        // we leave search and rename of the variable as the exercise for the reader
+        ~~~~~~~ 
+    * It's a good habit to keep track of our globals by their name so that we don't lose them from our view. Some use the prefix `g_`, as usual we leave the naming convention to you!
+8. We reserve some space on stack for our `Message` and use it to _peek_ if there're any messages (using `PeekMessageA`). If we find any: 
+    1. We remove the message from the queue (`PM_REMOVE`). 
+    2. We quickly check if the message is `WM_QUIT`, if so, we set `GlobalRunning` to `false`.
+    3. We then call `TranslateMessage` to translate a keycode into characters. 
+    4. We then dispatch the message so that it's intercepted by our `Win32MainWindowCallback` function.
+        * Remember that Windows doesn't call the callback function only through this pass!
+    5. We then check for the new messages until we clear the whole queue.
+9. After we finish processing all the messages, we call `RenderWeirdGradient`!
+    1. We pass it our `GlobalBackbuffer` and the `OffsetX` and `OffsetY` that we initialized earlier.
+    2. `RenderWeirdGradient` points at the beginning of our `Buffer.Memory`.
+    3. It steps through every row of this buffer. We advance each row by the buffer's `Pitch`. 
+        * `Pitch` is in single bytes, so the `Row` should be a pointer to single bytes as well, otherwise C will do the silent multiplication throwing us way out of our memory boundaries.
+    4. Inside each step, the function grabs a pointer to the beginning of the row as individual pixels. 
+    5. We step through each 32 bits in a row. These are our pixels. 
+    6. We set `Blue`, `Green` and `Red` pixels 
+        * `Blue` and `Green` receive the values of `X` and `Y`, respectively, with whatever value the offset is. The offset is what creates our animation. 
+        * Red we set to `0`. 
+        * Since they are all byte-long, they will _overflow_ at 255 and return to `0`. This is what creates those 256x256 block pattern that you see in our gradient: it's those 8 bits wrapping and overflowing every time. 
+    7. We set our `Pixel` in a very concise manner. `*Pixel++ = Red << 16 | Green << 8 | Blue;`
+        * `*Pixel` dereferences the `Pixel` (writes to whatever value `Pixel` is pointing to)
+        * `++` is the post-increment operator. It says: "_After_ this statement, this value should be incremented by 1. This results in the pointer moving by its size, i.e. 4 bytes (i.e. `1 * sizeof(u32)`).
+        * As the value, we pack `Red`, `Green` and `Blue` components into a single 32-bit value. Since in memory the layout `xx RR GG BB` looks like `BB GG RR xx`, we need to _shift_ `Red` by 2 bytes and `Green` by 1. There is no need to move the `Blue`. The shifting is done by the `<<` operator, and it shifts by bits.
+10. We then use helper function `Win32GetWindowDimension` to get the width and height of our window (or client area, to be precise). 
+    1. We ask Windows to get us the `ClientRect` which is the writable region of a window in _window's space_. This means that `Left` and `Top` will always be `0`. 
+    2. We make `GetClientRect` to get just that. 
+    3. `Right` and `Bottom` should always return width and height, but we're being extra diligent and making the calculations to get the width and the height. 
+11. After we're out, we go straight in `Win32DisplayBufferInWindow` and ask Windows to display our buffer in our client area, by calling `StretchDIBits`. 
+    * `StretchDIBits` also stretches the buffer (increasing or decreasing its size as relevant) so that it fits in client area. 
+    * We pass it the various parameters including the bitmap info that we filled out earlier, the memory, and a few flags so that the function knows what we want to do with all this. 
+12. We increment our gradient offset(s). 
+
+This is the end of our main loop! This program will run forever until we cancel it. Occasionally it will also hop into our `Win32MainWindowCallback` to check if there's a message that we want to process.
+
+* By now we only really process the `WM_CLOSE` and `WM_DESTROY` messages which set `GlobalRunning` to `false`. 
+* We also have our `WM_PAINT` message. It still displays our buffer in window but remember: by now we're forcing the program to display the buffer each time a `GlobalRunning` loop runs. We're like a chihuahua on speed trying to blit as fast as possible. But if we, for example, try to resize the window, our update loop stops but we still repaint the window. This is what happens inside the `WM_PAINT`: we continuosly blit our buffer into newly-sized window. 
+    * You will notice `BeginPaint` and `EndPaint` calls. These happen only inside `WM_PAINT` message. You _need_ to call `BeginPaint` and `EndPaint`. If you don't, Windows will flood your message queue with `WM_PAINT` messages. 
+* Any time we get a message that we don't handle, we fall into our `default` case and let Windows to do whatever it thinks the way of treating that message. 
+
+And... this is the end of our program (as of today)!
+
+!!! Warning Recompile while running
+    You cannot recompile while the program is running! If you try to recompile, you'll get the following message: 
+    ~~~~~~~ batch
+    LINK : fatal error LNK1168: cannot open win32_handmade.exe for writing
+    ~~~~~~~ 
+    If you get this message, simply stop debugging and try again. This is a downside of Windows. UNIX-based systems uses a different system which allows the program to be recompiled on the fly. 
+
+
 # Recap
+
+A long road lies ahead of us, but where we got so far gives us already a lot of freedom. This is where the joy of programming is coming from: by simply diving into the code and tinkering with various values to see where they bring you.
+
+As this program becomes more and more complicated, we will not be offering many guided walkthroughs of the whole program. But it's a good habit to get into, of doing similar walkthroughs after you implement a new code path: go into the debugger, step into each thing, inspect it through `Watch` window and try to understand if it does what you think it does, commenting in the confusing places, and correcting things that aren't clear.
 
 # Exercises
 
+## Learn More About Refactoring
+
+"Refactoring" is a relatively new term, but it's definitely not a new concept. Learn more about how it works and see if you can refactor something else in your program!
+
+For instance, since we aren't using `BytesPerPixel` anywhere but in `Win32ResizeDIBSection`, you can also remove this variable from the `win32_offscreen_buffer`.
+
 # Programming Basics
+
+## Pointer Aliasing
+
+There're many things that are called aliasing. You might be familiar with the aliasing (or even better yet, anti-aliasing) in computer graphics, here though we're talking about something specific to C and C++ languages.
+
+Pointer aliasing happens when two pointers COULD point to the same memory. The compiler doesn't know if a write to one of those pointers might affect a read from the other pointer, so really it doesn't know whether or not to optimize that read.
+
+To give you an example, Let's imagine you have two pointers: a `*A` and a `*B` which are pointing to somewhere in memory. These addresses might or might not be the same.
+
+~~~~~~~ C++
+int *A = somewhere_in_memory;
+int *B = somewhere_in_memory;
+~~~~~~~ 
+[<file>[Example]</file> Your example pointers]
+
+Let's say that we want to write something to `*A`. Similarly, you want to read something from `B`:
+
+~~~~~~~ C++
+int X = *B;
+*A = 5;
+int Y = *B;
+~~~~~~~ 
+[<file>[Example]</file> Reading and writing to the example pointers]
+
+Now, if you take a look at this code it looks pretty obvious what's going on: 
+
+1. We take whatever value `*B` was pointing to and give it to `X`.
+2. We assign `5` as the new value to whichever address `*A` was pointing to.
+3. We then read the value of `*B` again and give it to `Y`.
+
+So at the end of this, we're looking at it, and saying: "Obviously, `X` and `Y` are the same! So of course the compiler should load it once. Compiler should just convert to `int Y = X` and assign whichever value `X` was holding." 
+
+Well... unfortunately the compiler cannot do that because we have not given enough information to the compiler to know that `*A` doesn't point to the same location as `*B`. So it could be that that assignment to `*A` overwrote whichever value `*B` held, and in reality `Y == 5` (while `X == whatever_value_there_was_before_5`). There might as well be an `A = B` somewhere in between the `*A` and `*B` initialization and our code snippet.
+
+That said, there optimization modes you can put the compilers in that make it assume specific things about aliasing. Using them is generally not a good idea: it's bugs waiting to happen. Nowadays, compilers assume more and more things about aliasing that might not be true or intended by the programmer. Generally assuming that there is no aliasing is not bad, rather there should be a way for the programmer to mark the pointers that _don't_ result in the aliasing. This way is partially provided by the `restrict` and `assume` keywords. 
+
+For more information about how a modern compiler approaches optimization, watch [this talk by Chandler Carruth][karruth].
+
+_(back to Section [Revisit Win32UpdateWindow Parameters])_
+
+## Access Violations
+
+Let's say you failed to initalize the memory properly. For instance, we can modify our program in the following way: 
+
+~~~~~~~ C++
+internal void
+Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
+{
+    //...
+    Buffer->Width = Width;
+    Buffer->Height = Height;
+~~~~~~~ C++ edit
+    // Buffer->BytesPerPixel = 4;
+~~~~~~~ C++
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Breaking our program.]
+
+If we build and run our program now, our debugger suddenly halts the execution with the following message:
+
+![Figure [x]: Access Violation exception.](../media/day5/access_viol.png)
+
+What happened?
+
+When we talked about virtual address space, you'll remember that by default we get no memory pages reserved or committed. So if we try to write to a pointer which point to an invalid page/address, the CPU will raise an exception and halt the program's execution. The operating system will be then notified and let the program know that it's touching invalid memory. 
+
+Note that it could well be that the program is touching the memory it's allowed to. For instance, an allocated memory chunk could need to have its memory reserved somewhere else. But it's not that happened in this case: we tried to an invalid pointer and got what's known an _access violation or segmentation fault_. Now, if you notice, this pointer is _awfully_ suspicious: it's _all zeroes_. And what this means is that we tried to write to a pointer that we never initialized. 
+
+We know what happened in this case, but let's see how we arrived to it. If we inspect our `Pixel` pointer, we'll see that it's invalid, and that probably means that the `Buffer.Memory` pointer is invalid (`0`). Halt the program's execution (`Ctrl-F5`), put a breakpoint at the start of the  `Win32ResizeDIBSection` and run again. 
+
+1. `ResizeDIBSection` gets a pointer to the `GlobalBackbuffer` which, at the start of the program should be completely initialized.
+2. We initialize the various values.
+3. We try to calculate our memory size and... we get `0`. 
+
+Bug found! `BytesPerPixel` is not initialized, so what happens during the memory size calculation is the multiplication for `0`. You don't need any memory for something that requires `0` bytes to store.
+
+This was a very simple mistake. It can happen when quickly typing and often intercepted as quickly. Unfortunately often the effects of such mistakes are not as clearly visible, and this is where _assertions_ would save the day. 
+
+We will return to assertions later down the line but for now keep in mind that there're errors which you want to safeguard against at all times. The ones might be insidious and hard to find, they do not manifest themselves that often. The errors that appear every time you run our problem will always be there, but they're not as important to guard against. We'll always be able to fix those. What you need to worry about are the errors which might not appear until after you ship. 
+
+~~~~~~~ C++
+internal void
+Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
+{
+    //...
+    Buffer->Width = Width;
+    Buffer->Height = Height;
+~~~~~~~ C++ edit
+    Buffer->BytesPerPixel = 4;
+~~~~~~~ C++
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Fixing our program.]
+
+_(Continue to Section [Extract ClientRect Calculations])_
 
 # Side Considerations
 
+## Variable Initialization
+
+You might wonder: what is the performance difference between defining a variable within the loop vs. outside the loop? For example, see two code snippets below:  
+
+~~~~~~~ C++
+while (Running)
+{
+~~~~~~~ C++ edit
+    MSG Message;
+~~~~~~~ C++
+    PeekMessageA(&Message, ...)
+    {
+        // ... 
+    }
+}
+~~~~~~~
+versus
+~~~~~~~ C++ edit
+MSG Message;
+~~~~~~~ C++
+while (Running)
+{
+    PeekMessageA(&Message, ...)
+    {
+        // ... 
+    }
+}
+~~~~~~~
+
+Is there a difference? What difference does it make for the code that gets generated? 
+
+The difference is... _nothing_. Nowadays most compilers are pretty smart about how they lay out things on the _stack_. And where you declare your local variables is largely your convenience. 
+
+There's one practical difference: when you put something inside a `while` loop, the variable's scope is only bound within that loop. If you put the variable outside, other code that you wouldn't intend to might interact with that variable. In our case, `Message` is only serving for our message loop so it's bound inside it.
+
+So this _lexical scoping_ allows to prevent referrals to things that shouldn't be referred. While it seems like an odd thing to protect against, it's useful because often code gets moved around, cut and pasted in different ways inside a function, and you may accidentally leave something that moves to some place it shouldn't... and you've got a bug. Putting a variable inside helps compiler to catch a few mistakes for you. It's not really a big deal. Old-school C programmers put all their declarations on top (because you used to not be able to declare them inside the code)... but it's something to consider.
+
+!!! Tip
+    This is some great minutia that you'd want to know; once you learned it, you have a much better idea about what's going on under the hood. Nowadays people are largely detached from what's CPU is doing, and it'd be great to stop that. Reach down, figure out what's going on... it makes you a much better programmer, and your code much more powerful. 
+
+There's another thing to watch out for if you go overboard with some C++ features: class and struct constructors and destructors. Constructors and destructors get called when a class or a struct come into existance and go out of existance, respectively. They are function calls triggered on those boundaries. 
+
+So if, for example, your `MSG` structure had a constructor or a destructor, the compiler has to call them _each time_ a this variable goes in and out of the scope (created and eliminated). At that point there _would_ be a potential performance hit: putting it inside the `while` loop means that `MSG` constructor and destructor are called at each `while` cycle. That is compiler's responsibility, and it does not have flexibility to do anything else unless it can determine that it can safely defer that destruction in some way. 
+
+_(Continue to Section [Extract ClientRect Calculations])_
+
+## Passing Parameters to the Functions 
+
+You may ask: why would you not pass the structure itself? The reason is that you don't want to go overboard with your _type wrapping_. 
+
+We created `win32_window_dimension` in first place for the sole reason that you cannot return two values from a C function. So when we want to return more than one value, you bundle those together. There're languages that support return of two integers, and if you're using a language using one of those, this is exactly what you should do. 
+
+However, if we pass this structure as is to our `Win32ResizeDIBSection` and `Win32DisplayBufferInWindow` we will force everyone who will ever call these functions to bundle that width and height together, even if you had that width and height from something else. That is not what we want to do. 
+
+When making a function you want to make it available as much as possible, in the most number of circumstances. This is what gives us leverage and allows us to reuse the code more often. The only time when you really want to bundle things together is when these types interdepend on each other. Take `win32_offscreen_buffer`: the pitch, width, height, bytes per pixel... all these value influence how the final memory would look. They go together and they cannot be used separately. But `win32_window_dimension` is some arbitrary dimension. You could have gotten it from anywhere, not necessarily from `Win32GetWindowDimension` call. 
+
+_(Back to Subsection [Make Use of Win32GetWindowDimension])_
+
+## About `const` Keyword
+
+In this course, we won't be using `const` keyword. `const` is a language-specific keyword (i.e. it doesn't have any impact on the code generated) which prevents the programmer from modifying a value that normally would be read-only.
+
+~~~~~~~ C++ 
+int const BytesPerPixel = 4;
+
+BytesPerPixel = 8; // error C3892: 'BytesPerPixel: you cannot assign to a variable that is const
+~~~~~~~
+[<file>[Example]</file> Assigning to const.]
+
+As everything in this course, not using `const` is our own convention. If you find yourself doing many `const`-related mistakes in your code, feel free to use it!
 
 # Navigation
 

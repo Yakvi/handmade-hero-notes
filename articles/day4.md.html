@@ -19,9 +19,9 @@ Before we get going, let's look back at the two functions we defined. We went a 
         * You could also imagine these as some additional pointers passed to our function.
     * At its core, we use a couple of Windows calls:
         * [CreateCompatibleDC](https://docs.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createcompatibledc) to initialize the bitmap device context.
-        * Bitmap info is filled out by us using some constant values that we won't change throughout the program.
+        * Bitmap info is filled out by us using some constant values that we won't change unless the size changes.
         * [CreateDIBSection][] used to initialize the bitmap memory.
-* Inside `Win32UpdateWindow`, we would store the device context and bitmap info to copy pixels from the bitmap memory to the window.
+* Inside `Win32UpdateWindow`, we would store the device context to copy pixels from the bitmap memory to the window.
     * This function would take the coordinates of our client area rectangle, and a device context.
     * As of now, it would only pass these to the [StretchDIBits][] function from Windows.
 
@@ -43,27 +43,6 @@ As our program is written right now, it's a matter of a personal taste which bli
 
 This is how a potential refactoring would look like: 
 
-~~~~~~~ C++
-//...
-~~~~~~~ C++ delete
-global_variable BITMAPINFO BitmapInfo;
-~~~~~~~ C++
-global_variable void *BitmapMemory;
-global_variable HBITMAP BitmapHandle;
-global_variable HDC BitmapDeviceContext;
-
-internal void
-Win32ResizeDIBSection(int Width, int Height) 
-{
-~~~~~~~ C++ add
-    BITMAPINFO BitmapInfo = {}; // remember to initialize this struct to 0!
-~~~~~~~ C++ 
-    // ...
-}
-
-internal void
-Win32UpdateWindow(HDC DeviceContext, int X, int Y, int Width, int Height)
-{
 ~~~~~~~ C++ delete
     StretchDIBits(DeviceContext,
                   X, Y, Width, Height,
@@ -76,10 +55,8 @@ Win32UpdateWindow(HDC DeviceContext, int X, int Y, int Width, int Height)
     BitBlt(DeviceContext,
            X, Y, Width, Height,
            BitmapDeviceContext, X, Y, SRCCOPY);
-~~~~~~~ C++
-}
 ~~~~~~~
-[<file>[Hypothetic win32_handmade.cpp]</file> A possible `BitBlt` implementation.]
+[<file>[Hypothetic win32_handmade.cpp > Win32UpdateWindow]</file> A possible `BitBlt` implementation.]
 
 !!! Trivia Why so many similar calls? 
     It's easy to sit in 2020 and wonder why would someone need multiple blit calls in 1994. But the reality at the time was that `BitBlt` was objectively faster at the time, and allowed the DOS games to run on Windows _almost_ at the same framerate as on DOS. Since Windows could do the allocation of memory and had the correct device context already selected, it was a faster path than going through `StretchDIBits`. 
@@ -93,15 +70,12 @@ Since we're going with `StretchDIBits`, we can make a number of simplifications:
 * We don't even need a DIB section! Bitmap Memory can be allocated directly by us.
     * Yeah, it's actually a simplification. We have all the control that we want over this allocation process. 
     * As long as it's right size, Windows will accept this memory with no issues.
-* Bitmap Info also doesn't need to be stored globally, we only need it for the output.
 
 This results in a following refactoring from the get-go:
 
 ~~~~~~~ C++
 //...
-~~~~~~~ C++ delete
 global_variable BITMAPINFO BitmapInfo;
-~~~~~~~ C++
 global_variable void *BitmapMemory;
 ~~~~~~~ C++ delete
 global_variable HBITMAP BitmapHandle;
@@ -112,6 +86,7 @@ internal void
 Win32ResizeDIBSection(int Width, int Height) 
 {
     // ...
+    BitmapInfo.bmiHeader.biCompression = BI_RGB;
 ~~~~~~~ C++ delete
     if(BitmapHandle)
     {
@@ -127,21 +102,11 @@ Win32ResizeDIBSection(int Width, int Height)
                                     DIB_RGB_COLORS,
                                     &BitmapMemory,
                                     0, 0);
-~~~~~~~ C++ 
+~~~~~~~ C++ add
     BitmapMemory = ; // TODO allocation
 }
-
-internal void
-Win32UpdateWindow(HDC DeviceContext, int X, int Y, int Width, int Height)
-{
-~~~~~~~ C++ add
-    BITMAPINFO BitmapInfo = {}; // remember to initialize this struct to 0!
-~~~~~~~ C++ 
-    //...
-    StretchDIBits(...);
-}
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> Simplifying our back buffer calls. That's a lot of removed lines!]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Simplifying `Win32ResizeDIBSection`. That's a lot of removed lines!]
 
 # Our Custom Bitmap Memory Allocator
 
@@ -285,14 +250,6 @@ Now that we're happy with the `Win32ResizeDIBSection`, let's have a better look 
 internal void
 Win32UpdateWindow(HDC DeviceContext, int X, int Y, int Width, int Height)
 {
-    BITMAPINFO BitmapInfo = {};
-    
-    BitmapInfo.bmiHeader.biSize = sizeof(BitmapInfo.bmiHeader);
-    BitmapInfo.bmiHeader.biWidth = Width;
-    BitmapInfo.bmiHeader.biHeight = Height;
-    BitmapInfo.bmiHeader.biPlanes = 1;
-    BitmapInfo.bmiHeader.biBitCount = 32;
-    BitmapInfo.bmiHeader.biCompression = BI_RGB;
     
     StretchDIBits(DeviceContext,
                   X, Y, Width, Height,
@@ -399,7 +356,7 @@ We will also use the same `BitmapWidth` and `BitmapHeight` inside our `BitmapInf
     BitmapInfo.bmiHeader.biWidth = BitmapWidth;
     BitmapInfo.bmiHeader.biHeight = BitmapHeight;
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > Win32UpdateWindow]</file> Updating BitmapInfo.]
+[Listing [x]: <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Updating BitmapInfo.]
 
 ## Propagate the Changes Outside
 
@@ -604,9 +561,6 @@ The most intutive way would be just go in sequence: one row, then the next row, 
 What does it mean? If we want the rows to go sequentially from top-down, we need to update our `BitmapInfo` header height. Let's do it now: 
 
 ~~~~~~~ C++
-StretchDIBits(...);
-BITMAPINFO BitmapInfo = {};
-
 BitmapInfo.bmiHeader.biSize = sizeof(BitmapInfo.bmiHeader);
 BitmapInfo.bmiHeader.biWidth = BitmapWidth;
 ~~~~~~~ C++ edit
@@ -616,7 +570,7 @@ BitmapInfo.bmiHeader.biPlanes = 1;
 BitmapInfo.bmiHeader.biBitCount = 32;
 BitmapInfo.bmiHeader.biCompression = BI_RGB;
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > Win32UpdateWindow]</file> Setting pitch to be vertical.]
+[Listing [x]: <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Setting pitch to be vertical.]
 
 !!! Trivia Why top-down pitch?
     This is partly a matter of preference on our side, but also it's a simpler way of thinking about how code is arranged in memory. It's also in-line with the way Windows thinks about the coordinate system. We have already seen that Windows intends the top-left corner to be the beginning of the coordinates. Last but not least, it's reminiscing of the oldschool frame buffers which started in top-left and went down. 
@@ -1452,7 +1406,7 @@ BitmapInfo.bmiHeader.biPlanes = 1;
 BitmapInfo.bmiHeader.biBitCount = 32;
 BitmapInfo.bmiHeader.biCompression = BI_RGB;
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > Win32UpdateWindow]</file> BitmapInfo header structure.]
+[Listing [x]: <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> BitmapInfo header structure.]
 
 One thing to note is that `biBitCount`. We said that we need 3 bytes to draw an RGB pixel: one for red, one for green, and one for blue channels. $3 \cdot\ 8 = 24$, so where does the extra byte come from? 
 
@@ -1512,7 +1466,7 @@ Every programming pattern, feature or system has its place; it's the dogma that 
 
 Previous: [Day 3. Allocating a Back Buffer](day2.md.html)
 
-<!-- Up Next: [Day 5. ](day5.md.html) -->
+Up Next: [Day 5. Windows Graphics Review](day5.md.html)
 
 [Back to Index](../index.md.html)
 
