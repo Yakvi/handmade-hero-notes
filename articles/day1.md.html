@@ -178,6 +178,16 @@ Overall, however, you might want ot disable anything else that would distract yo
 
 ![Figure [X]: Visual Studio Code](../media/day1/1.7-vscode.png)
 
+If you're using IntelliSense, you might want to consider to tinker with you C/C++ Configurations: 
+
+1. Press `F1` and type the option "C/C++ Configurations" (you can choose UI or JSON)
+2. As `Include path` (`includePath` in JSON) set your `code` folder: `${workspaceFolder}/code/**`
+
+We're peeking a bit in the future, but you might want to also _force include_ your platform `.cpp` file by adding its full path to the `forcedInclude` list.
+
+!!! Note Writing code directly in Visual Studio
+    If you would like to use Visual Studio as your editor, you can follow the guide outlined here: [Setting up project in Visual Studio][vsguide]
+
 # Create the First Code File
 
 Once we have our compiler and text editor at the ready, we can launch the latter and make a simple single C++ source file that we use to actually get our build going. 
