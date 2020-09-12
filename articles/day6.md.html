@@ -264,7 +264,7 @@ So what do we do? Let's talk about direct loading of functions.
 
 What we're going to discuss here is a concept of loading the Windows functions ourselves, without a need of an Import Library. 
 
-You might remember [day 1](day1.md.html) when we discussed the role of the Import Libraries in the program execution. The Import Libraries serve to put specific markers into the code which, upon the program's loading, will be found by Windows and patched with the actual functions running in memory.
+You might remember [day 1][day 1] when we discussed the role of the Import Libraries in the program execution. The Import Libraries serve to put specific markers into the code which, upon the program's loading, will be found by Windows and patched with the actual functions running in memory.
 
 We will get the code to skip just this step. Our executable will look for a Windows binding, then look up the function pointers so that we can call the function directly, thus eliminating the middle man.
 
@@ -370,7 +370,7 @@ Now you should be able to compile your program. Action we've taken will resolve 
 
 However, if we try to run, we will get an Access Execution Violation while trying to run `XInputGetState`(`_`). 
 
-We've discussed Access Violations in the [previous chapter](day5.md.html). These happen when we try to read from a pointer addressing invalid (unaccessible) memory. Access Execution Violation is different in that not only it tries to read (or write) a page, but also to _call the code_ on it.
+We've discussed Access Violations in the [previous chapter][day 5]. These happen when we try to read from a pointer addressing invalid (unaccessible) memory. Access Execution Violation is different in that not only it tries to read (or write) a page, but also to _call the code_ on it.
 
 We defined `XInputGetState` and `SetState` as global variable function pointers. And being a `static` global variable, they are cleared to `0`, so in fact by calling `XInputGetState` we try to access and execute a function located at the address `0`. And that's very much illegal. 
 
@@ -768,7 +768,7 @@ If you look the documentation for [WM_KEYDOWN][], you will see that the 32 bits 
 
 At this moment, we want to check if the _30th bit_ is set. This bit corresponds exactly to the state of the button before the message fired: if set to 1, the key was down before the message was sent, if zero, the key was up. We might do the same thing we did earlier above for the gamepad buttons, and `&` it against some value provided by Windows. Unfortunatley, Windows does not provide a define for the 30th bit of the keyboard `LParam`, so we need to do some bit shifting:
 
-We've seen bit shifting on [Day 4](day4.md.html), when we were shifting the red, green and blue bytes to their place inside the pixel. Our task is the following:
+We've seen bit shifting on [Day 4][], when we were shifting the red, green and blue bytes to their place inside the pixel. Our task is the following:
 
 1. Shift a `1` by 30 to the "left": `(1 << 30)`
 2. Use it to bitwise AND the `LParam`: `LParam & (1 << 30)`
@@ -942,9 +942,9 @@ To recap, you'll need to know what you want to be doing, to know what the CPU wi
 
 # Navigation
 
-Previous: [Day 5. Windows Graphics Review](day5.md.html)
+Previous: [Day 5. Windows Graphics Review][day 5]
 
-<!--Up Next: [Day 7. ](day7.md.html)-->
+Up Next: [Day 7. Initializing DirectSound][day 7]
 
 
 [Back to Index](../index.md.html)

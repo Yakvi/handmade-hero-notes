@@ -13,7 +13,7 @@ One thing that really needs to be addressed today are all those global variables
 
 # Revisit `WNDCLASS` style
 
-The first thing we're going to look at is the `style` of our Window Class. If you remember, from [Day 2](day2.md.html), we have set three flags as our style: `CS_HREDRAW`, `CS_VREDRAW` and `CS_OWNDC`. You can find the description of all of the window class flags available in the [Window Class Styles](https://docs.microsoft.com/en-us/windows/win32/winmsg/window-class-styles) guide. 
+The first thing we're going to look at is the `style` of our Window Class. If you remember, from [Day 2][], we have set three flags as our style: `CS_HREDRAW`, `CS_VREDRAW` and `CS_OWNDC`. You can find the description of all of the window class flags available in the [Window Class Styles](https://docs.microsoft.com/en-us/windows/win32/winmsg/window-class-styles) guide. 
 
 ## CS_OWNDC
 
@@ -60,7 +60,7 @@ For what it might concern `CS_HREDRAW` and `CS_VREDRAW`, we can confirm their us
 
 # Revisit `Win32UpdateWindow` Parameters
 
-Let's fast forward a bit to [day 4](day4.md.html) where we decided to pass our `ClientRect` as a pointer. Now, it's true that `RECT` is a structure, but it's a rather small one, and stack savings are minimal. But what's more, typically nowadays you want to avoid passing pointers to functions.
+Let's fast forward a bit to [day 4][] where we decided to pass our `ClientRect` as a pointer. Now, it's true that `RECT` is a structure, but it's a rather small one, and stack savings are minimal. But what's more, typically nowadays you want to avoid passing pointers to functions.
 
 ~~~~~~~ C++
 internal void
@@ -983,9 +983,9 @@ As everything in this course, not using `const` is our own convention. If you fi
 
 # Navigation
 
-Previous: [Day 4. Animating the Back buffer](day4.md.html)
+Previous: [Day 4. Animating the Back buffer][day 4]
 
-Up Next: [Day 6. Gamepad and Keyboard Input](day6.md.html)
+Up Next: [Day 6. Gamepad and Keyboard Input][day 6]
 
 [Back to Index](../index.md.html)
 
