@@ -200,39 +200,39 @@ struct win32_offscreen_buffer
 
 ## Update Buffer Function Definitions
 
-If we try to compile now, we will be greeted with with a couple dozen errors. We'll go through each error one by one and implement the changes. We can keep in mind what we said before and only pass by pointer if we need to edit the structure.
+If we try to compile now, we will be greeted with with a couple dozen errors. We'll go through each error one by one and implement the changes. 
+
+We will put the "main" thing that the function has to take account of (in this case, the buffer) at the very beginning of the parameter list.
 
 * `RenderWeirdGradient`: needs the structure to read Width and Height, as well as to read the Memory pointer (to write to the pixels).
-    * While we need to the right to wherever the `Memory` pointer points to, we don't need to overwrite the pointer itself, so we can pass by the struct value.
 * `Win32ResizeDIBSection`: needs the structure to actually fill it out. Now here we have two options:
-    * We can pass by pointer the structure to be filled out.
+    * We pass the structure to be filled out.
     * We can initialize the structure inside the function and _return_ it. 
     * Both methods have their advantages and disadvantages. Let's go with the first one because we still need the `win32_offscreen_buffer` to be passed by value for an eventual memory release. This results in the function being a bit error-prone, and it's not a performance-sensitive place of our code. 
-* `Win32UpdateWindow`: we only need the structure to read from it, so pass by value. 
-    * While we're at it, let's rename the function to something more concrete, i.e. `Win32DisplayBufferInWindow`. (the names are really up to you!)
+* `Win32UpdateWindow`: While we're at it, let's rename the function to something more concrete, i.e. `Win32DisplayBufferInWindow`. 
 
-You will note that with that, we're levelling up our capabilities, as well! Before we could only read/write from the globals, but now the functions can use whichever buffer they receive. So there you have another advantage to pull values from the globals: not only it makes things more clear but also more flexible.
+With this chage, we're levelling up our capabilities, as well! Before we could only read/write from the globals, but now the functions can use whichever buffer they receive. So there you have another advantage to pull values from the globals: not only it makes things more clear but also more flexible.
 
 ~~~~~~~ C++
 internal void
 ~~~~~~~ C++ edit
-RenderWeirdGradient(win32_offscreen_buffer Buffer, int XOffset, int YOffset)
+RenderWeirdGradient(win32_offscreen_buffer *Buffer, int XOffset, int YOffset)
 ~~~~~~~ C++
 {
 ~~~~~~~ C++ edit
-    int Pitch = Buffer.Width * Buffer.BytesPerPixel;
-    u8 *Row = (u8 *)Buffer.Memory;
+    int Pitch = Buffer->Width * Buffer->BytesPerPixel;
+    u8 *Row = (u8 *)Buffer->Memory;
 ~~~~~~~ C++
     for (int Y = 0;
 ~~~~~~~ C++ edit
-         Y < Buffer.Height;
+         Y < Buffer->Height;
 ~~~~~~~ C++
          ++Y)
     {
         u8 *Pixel = (u8 *)Row;
         for(int X = 0;
 ~~~~~~~ C++ edit
-            X < Buffer.Width;
+            X < Buffer->Width;
 ~~~~~~~ C++
             ++X)
 ~~~~~~~ C++
@@ -276,8 +276,8 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 
 internal void
 ~~~~~~~ C++ edit
-Win32DisplayBufferInWindow(HDC DeviceContext, RECT ClientRect, 
-                           win32_offscreen_buffer Buffer)
+Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer, 
+                           HDC DeviceContext, RECT ClientRect)
 ~~~~~~~ C++
 {
     int WindowWidth = ClientRect.right - ClientRect.left;
@@ -286,9 +286,9 @@ Win32DisplayBufferInWindow(HDC DeviceContext, RECT ClientRect,
     StretchDIBits(DeviceContext,
                   0, 0, WindowWidth, WindowHeight,
 ~~~~~~~ C++ edit
-                  0, 0, Buffer.Width, Buffer.Height,
-                  Buffer.Memory,
-                  &Buffer.Info,
+                  0, 0, Buffer->Width, Buffer->Height,
+                  Buffer->Memory,
+                  &Buffer->Info,
 ~~~~~~~ C++
                   DIB_RGB_COLORS, SRCCOPY);
 }
@@ -311,18 +311,18 @@ struct win32_offscreen_buffer
 };
 
 internal void
-RenderWeirdGradient(win32_offscreen_buffer Buffer, int XOffset, int YOffset)
+RenderWeirdGradient(win32_offscreen_buffer *Buffer, int XOffset, int YOffset)
 {
 ~~~~~~~ C++ delete
-    int Pitch = Buffer.Width * Buffer.BytesPerPixel;
+    int Pitch = Buffer->Width * Buffer->BytesPerPixel;
 ~~~~~~~ C++
-    u8 *Row = (u8 *)Buffer.Memory;
+    u8 *Row = (u8 *)Buffer->Memory;
     for (int Y = 0;
-         Y < Buffer.Height;
+         Y < Buffer->Height;
          ++Y)
     {
 ~~~~~~~ C++ edit
-        Row += Buffer.Pitch;
+        Row += Buffer->Pitch;
 ~~~~~~~ C++
     }
 }
@@ -343,7 +343,6 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 }
 ~~~~~~~ 
 [Listing [x]: <file>[win32_handmade.cpp]</file> Updating the changes.]
-
 
 ## Update Buffer Function Calls
 
@@ -379,7 +378,7 @@ Win32MainWindowCallback(...)
         GetClientRect(Window, &ClientRect);
         
 ~~~~~~~ C++ edit
-        Win32DisplayBufferInWindow(DeviceContext, ClientRect, GlobalBackbuffer);
+        Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext, ClientRect);
 ~~~~~~~ C++
         
         EndPaint(Window, &Paint);
@@ -391,7 +390,7 @@ WinMain(...)
 {
     //... 
 ~~~~~~~ C++ edit
-    RenderWeirdGradient(GlobalBackbuffer, XOffset, YOffset);
+    RenderWeirdGradient(&GlobalBackbuffer, XOffset, YOffset);
 ~~~~~~~ C++
     ++XOffset;
                 
@@ -399,7 +398,7 @@ WinMain(...)
     GetClientRect(Window, &ClientRect);
     
 ~~~~~~~ C++ edit
-    Win32DisplayBufferInWindow(DeviceContext, ClientRect, GlobalBackbuffer);
+    Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext, ClientRect);
 ~~~~~~~ C++ 
     //...
 }
@@ -554,9 +553,9 @@ With this in mind, let's make our changes:
 
 ~~~~~~~ C++
 internal void
+Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer, 
 ~~~~~~~ C++ edit
-Win32DisplayBufferInWindow(HDC DeviceContext, int WindowWidth, int WindowHeight,
-                           win32_offscreen_buffer Buffer)
+                           HDC DeviceContext, int WindowWidth, int WindowHeight)
 ~~~~~~~ C++
 {
 ~~~~~~~ C++ delete
@@ -565,9 +564,9 @@ Win32DisplayBufferInWindow(HDC DeviceContext, int WindowWidth, int WindowHeight,
 ~~~~~~~ C++ 
 StretchDIBits(DeviceContext,
                   0, 0, WindowWidth, WindowHeight,
-                  0, 0, Buffer.Width, Buffer.Height,
-                  Buffer.Memory,
-                  &Buffer.Info,
+                  0, 0, Buffer->Width, Buffer->Height,
+                  Buffer->Memory,
+                  &Buffer->Info,
                   DIB_RGB_COLORS, SRCCOPY);
 }
 ~~~~~~~
@@ -578,7 +577,7 @@ GetClientRect(Window, &ClientRect);
 ~~~~~~~ C++ add
 win32_window_dimension Dimension = Win32GetWindowDimension(Window);
 ~~~~~~~ C++ edit
-Win32DisplayBufferInWindow(DeviceContext, Dimension.Width, Dimension.Height, GlobalBackbuffer);
+Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext, Dimension.Width, Dimension.Height);
 ~~~~~~~
 [<file>[win32_handmade.cpp > Win32MainWindowCallback > WM_PAINT]</file>]
 ~~~~~~~ C++ delete
@@ -587,7 +586,7 @@ GetClientRect(Window, &ClientRect);
 ~~~~~~~ C++ add
 win32_window_dimension Dimension = Win32GetWindowDimension(Window);
 ~~~~~~~ C++ edit
-Win32DisplayBufferInWindow(DeviceContext, Dimension.Width, Dimension.Height, GlobalBackbuffer);
+Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext, Dimension.Width, Dimension.Height);
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Propagating `Win32GetWindowDimension` changes.]
 
@@ -650,9 +649,9 @@ It's not perfect and, if you resize it significantly, it produces some weird art
     ~~~~~~~ C++
     StretchDIBits(DeviceContext,
                   0, 0, WindowWidth, WindowHeight,    // Destination (where the bitmap will be copied)
-                  0, 0, Buffer.Width, Buffer.Height,  // Source (from where the bitmap will be copied)
-                  Buffer.Memory,
-                  &Buffer.Info,
+                  0, 0, Buffer->Width, Buffer->Height,  // Source (from where the bitmap will be copied)
+                  Buffer->Memory,
+                  &Buffer->Info,
                   DIB_RGB_COLORS, SRCCOPY);
     ~~~~~~~
     [<file>[StretchDIBits]</file>]
@@ -660,10 +659,10 @@ It's not perfect and, if you resize it significantly, it produces some weird art
 Of course, you'll notice that now that we have a fixed buffer size, you'll realize that the _aspect ratio_ of our image changes depending on its size: The squares of our gradient may be squashed vertically or horizontally, and it would represent any image we'd want to display on screen. This is something that we'll leave for another time. Let's leave a `TODO` in our `Win32DisplayBufferInWindow` to remind us of it for another time:
 
 ~~~~~~~ C++
-Win32DisplayBufferInWindow(HDC DeviceContext, int WindowWidth, int WindowHeight,
-                           win32_offscreen_buffer Buffer)
+Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer, 
+                           HDC DeviceContext, int WindowWidth, int WindowHeight)
 {
-    // TODO(casey): Aspect ration correction
+    // TODO(casey): Aspect ratio correction
     // ...
 }
 ~~~~~~~
@@ -737,8 +736,8 @@ Open your debugger, hit `F11` (or set your breakpoint at the beginning of your `
         * Remember that Windows doesn't call the callback function only through this pass!
     5. We then check for the new messages until we clear the whole queue.
 9. After we finish processing all the messages, we call `RenderWeirdGradient`!
-    1. We pass it our `GlobalBackbuffer` and the `OffsetX` and `OffsetY` that we initialized earlier.
-    2. `RenderWeirdGradient` points at the beginning of our `Buffer.Memory`.
+    1. We pass it the pointer to our `GlobalBackbuffer`, and the `OffsetX` and `OffsetY` that we initialized earlier.
+    2. `RenderWeirdGradient` points at the beginning of our buffer memory.
     3. It steps through every row of this buffer. We advance each row by the buffer's `Pitch`. 
         * `Pitch` is in single bytes, so the `Row` should be a pointer to single bytes as well, otherwise C will do the silent multiplication throwing us way out of our memory boundaries.
     4. Inside each step, the function grabs a pointer to the beginning of the row as individual pixels. 
@@ -858,6 +857,9 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 ~~~~~~~ 
 [Listing [x]: <file>[win32_handmade.cpp]</file> Breaking our program.]
 
+!!! Tip
+    You can "drag" a line in `4coder` by pressing `Alt-Up` or `Alt-Down`. 
+
 If we build and run our program now, our debugger suddenly halts the execution with the following message:
 
 ![Figure [x]: Access Violation exception.](../media/day5/access_viol.png)
@@ -956,9 +958,19 @@ When making a function you want to make it available as much as possible, in the
 
 _(Back to Subsection [Make Use of Win32GetWindowDimension])_
 
+## About Conventions
+
+You will note that that many of the things you've encountered so are prefaced with "this is our convention", "this is how we would do". This is because, in programming, there's no right or wrong, even if someone tries to tell you otherwise. There're clearly inefficient practices that can make your program super slow and your life super hard, but it doesn't mean that those aren't valid if, at the end of the day, your code does what you set it up to do.
+
+We could keep in mind what we said before and pass by value if we don't need to edit the structure. However, here we're falling into the realm of the premature optimization, and we won't really do it. This sort of optimizations should be profiled only at the very latest stages of development, so we'll just stick to our conventions and pass by pointer if the struct size is of any consideration (like `win32_offscreen_buffer` actually shapes out to be).
+
+As everything in this program, the names are really up to you! This is your world, and you are the master of your code. 
+
+However a word is in place: while we don't teach "good ways" of programming, when in Rome, do as Romans do! Whenever you're working on a collective project, be sure to take your time to get used to the programming conventions and style guides your team is using, even if it's not necessarily how you'd do the things!
+
 ## About `const` Keyword
 
-In this course, we won't be using `const` keyword. `const` is a language-specific keyword (i.e. it doesn't have any impact on the code generated) which prevents the programmer from modifying a value that normally would be read-only.
+In this course, we won't be using `const` keyword. `const` is a language-specific keyword (i.e. it doesn't have any impact on the code generated) which prevents the programmer from modifying a value that normally would be read-only. As we said above, it's strictly about our own habit.
 
 ~~~~~~~ C++ 
 int const BytesPerPixel = 4;

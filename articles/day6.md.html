@@ -5,15 +5,940 @@
 
 _Video Length (includig Q&A): [1h37](https://hero.handmade.network/episode/code/day006/)_
 
+Welcome back! Last time we mostly reviewed the work done so far, allowing us to set the groundwork for the new and exciting discoveries. And what discoveries await us! In our quest to build a game from scratch, we will be focusing on getting the user input working. Not that we have much of a plan, but we'd really like to have this done. 
+
+# XInput
+
+We want to focus specifically on the input from the _gamepad_ today. If you have an Xbox 360, Xbox One, a Playstation 4 controller, or another "XInput"-compatible device that you can plug into your pc, we'd like our game to detect that device and use it for the input. We'll also be getting input from the keyboard, so if you don't have a controller you can still control the game. 
+
+The [XInput Game Controller API][] is the controller API designed specifically for the Xbox controllers in mind. It evolved from the [DirectInput][] API and is still largely compatible with it (albeit with some major limitations). By now every game using a controller implements this API. 
+
+!!!
+    XInput is not the only controller API provided by Windows. The aforementioned [DirectInput][] API is still cosidered one of the most popular, as well as the joystick-specific [Joystickapi][] and the [Raw Input][] API.
+
+    As we've seen with the GDI blit, ultimately it comes down to picking the right tool for the job. In the world of tons of legacy API, you might not even pick the best one the first time around; luckily you can always come back and change!
+
+Thankfully, the API is super simple: 
+
+1. You loop over all the controllers that the system has found. 
+2. You get the _state_ of each controller (pass a structure that is filled out by the function). 
+3. That's it! You can use with this state whatever you want. 
+
+In order to get started with XInput, you simply `#include <xinput.h>` into your code: 
+
+~~~~~~~ C++
+#include <windows.h>
+#include <stdint.h>
+~~~~~~~ C++ add
+#include <xinput.h>
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Including `xinput.h`]
+
+## Expand Our Game Loop
+
+We have a very simple game loop already; it's not doing much at the moment, more of a beginning of one, but a game loop nontheless. We go in, process our window messages, do our rendering and then display the rendering on the screen. 
+
+XInput is a [polling][]-based API, which means that it reads the state of the controller when we actually ask for it (as opposed to actively notifying of state changes).
+
+!!!
+    You can read more about Interrupt-based or Polling-based scheme in subsection [Reading Input Devices State].
+
+We have to start polling at some point, and this point is going to be right after the message processing loop. This is because the keyboard messages are coming through message the loop, and we want to capture those.
+
+If you open [XInput API homepage][xinput], you will notice that it's not a very big one (compare it, for example, to [winuser API][winuser] which we worked with earlier). And that's a pretty good thing, that's what you want. As of writing, it is composed of only six structures and eight functions.
+
+At the core, we're going to use [XInputGetState][] function. You'll notice that it takes two parameters: 
+
+* `dwUserIndex` is the index of the controller, from `0` to whatever `XUSER_MAX_COUNT` is. XInput API currently only supports 4 connected controllers at a time but you never know if this number can increase.
+* `pState` is the pointer to the [XINPUTSTATE][] structure where the state will be reported.
+
+~~~~~~~ C++
+DWORD XInputGetState(
+  DWORD        dwUserIndex,
+  XINPUT_STATE *pState
+);
+~~~~~~~
+[<file>[MSDN]</file> `XInputGetState` signature.]
+
+In practice, this means that we need to cycle through four indices and call `XInputGetState`. The latter will check if there is a connected controller on the given index and, if so, to poll it.
+
+~~~~~~~ C++
+MSG Message;
+while (PeekMessageA(...))
+{
+    // ...
+}
+~~~~~~~ C++ add
+for (DWORD ControllerIndex = 0;
+    ControllerIndex < XUSER_MAX_COUNT;
+    ++ControllerIndex)
+{
+    XINPUT_STATE ControllerState;
+    XInputGetState(ControllerIndex, &ControllerState);
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Setting up XInput loop]
+
+Now that we potentially have controller state data, we can store and process it on our side. But first, we need to make sure that the controller we're checking is connected. `XInputGetState` will return whether or not a controller is connected to a given index, through the values `ERROR_SUCCESS` (weird name but ok) or `ERROR_DEVICE_NOT_CONNECTED`. We can easily check on this:
+
+~~~~~~~ C++
+for (DWORD ControllerIndex = 0;
+    ControllerIndex < XUSER_MAX_COUNT;
+    ++ControllerIndex)
+{
+    XINPUT_STATE ControllerState;
+~~~~~~~ C++ edit
+    if (XInputGetState(ControllerIndex, &ControllerState) == ERROR_SUCCESS)
+~~~~~~~ C++ add
+    {
+        // NOTE(casey): This controller is plugged in
+    }
+    else
+    {
+        // NOTE(casey): This controller is not available.
+    }
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Verifying the controller is connected.]
+
+We might potentially use the "not available" state if, for example, we want to show to the user that the controller has been unplugged, or if we want to take any other action here. Contrary to `WindowClass` or `Window` initialization, this is not necessarily an error case. 
+
+Anyhow, right now we're rather interested in what we do if the controller is actually connected, so today we'll focus on that. In the future, we may want to handle the other case, as well.
+
+To recap: We go through several potential "slots" (`ControllerIndex`) to which a controller might be connected. If so, `ControllerState` gets filled out for us, and we may proceed.
+
+## Mark Down Some Future Considerations
+
+Let's have a better look at the `XINPUT_STATE` that we're filling out. What do we get?
+
+~~~~~~~ C++
+typedef struct _XINPUT_STATE {
+  DWORD          dwPacketNumber;
+  XINPUT_GAMEPAD Gamepad;
+} XINPUT_STATE, *PXINPUT_STATE;
+~~~~~~~
+[<file>[MSDN]</file> `XINPUT_STATE` definition.]
+
+As we can see, `XINPUT_STATE` holds two values: [XINPUT_GAMEPAD][] structure, that we will look at in a second, and `dwPacketNumber`, the state _packet_ number.
+
+Let's pause on the latter for a second. Packet number allows us to see if there has been any change in the state (a button was pressed, a stick was moved, etc.) since the last update. If the number increments, changes happened. These increments are handled between the controller and the driver, so if we missed a few... those are user inputs that we lost. 
+
+Eventually we might want to have a hard look at this packet number and decide, whether or not we want to make more frequent state updates. XInput might or might not want us to poll it more often. It might well be that the sampling happens at a higher rate without a significant change at each update. We'll need to have a deeper investigation once we're done with the first round of implementation of our game. 
+
+Since we're aiming to have a 60 frame-per-second game loop, it might be more than enough, or it may not be. Let's put a couple `TODO`s to actually do it later: 
+
+~~~~~~~ C++ add
+// TODO(casey): Should we poll this more frequently? 
+~~~~~~~ C++
+for (DWORD ControllerIndex = 0;...)
+{
+    XINPUT_STATE ControllerState;
+    if(XInputGetState(...))
+    {
+~~~~~~~ C++ add
+        // TODO(casey): See if ControllerState.dwPacketNumber increments too rapidly
+~~~~~~~ C++
+    }
+    // ...
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Leave a TODO for a future you.]
+
+## Process the Controller State
+
+Now, let's look at the actual controller state. It's captured in the [XINPUT_GAMEPAD][] structure:
+
+~~~~~~~ C++
+typedef struct _XINPUT_GAMEPAD {
+  WORD  wButtons;
+  BYTE  bLeftTrigger;
+  BYTE  bRightTrigger;
+  SHORT sThumbLX;
+  SHORT sThumbLY;
+  SHORT sThumbRX;
+  SHORT sThumbRY;
+} XINPUT_GAMEPAD, *PXINPUT_GAMEPAD;
+~~~~~~~
+[<file>[MSDN]</file> `XINPUT_GAMEPAD` definition.]
+
+Seems pretty straightforward. This struct maps directly to an Xbox controller. However, the way this information is packaged is pretty interesting. The struct is very small: altogether it adds to 12 bytes. This, of course, is to allow fast uplink from the gamepad to the application. Thus: 
+
+* `wButtons`: a single 16-bit `WORD` packages the state of all the buttons in a _bit field_. 
+    * If you check the [documentation][XINPUT_GAMEPAD], you will quickly realize that the space is quite tight: 14 out of 16 bits are mapped to a button! 
+    * If the button is currently being pressed, that bit is set, if not, it's unset.
+* The triggers and the thumbstics provide _analogue_ values. 
+    * The left and right trigger's values (`sThumbLX` and `sThumbLY`) take a `BYTE` each (8 bit unsigned), so their values range between `0` and `255`.
+    * The thumbsticks, on the other hand, offer a much more precise control. `SHORT` is a signed 16-bit value, so the readings in X-Y direction range between between `-32768` and `32767`.
+
+
+![Figure [x]: Xbox 360 controller. ([Wikimedia](https://commons.wikimedia.org/wiki/File:360_controller.svg))](../media/day6/360_controller.svg)
+
+!!!
+    You'll notice that the central "Xbox" button is not mapped. Its usage is reserved by the operating system.
+
+Now, which values do we need? Our game is pretty oldschool, so we might not necessarily use everything a gamepad has to offer. From `wButtons` we'll take most of the button states but we'll not have any use for the triggers. As for the thumbsticks... We might support at least one, for the character movement. 
+
+Right now we don't really have anywhere to store these values in, so for now let's simply mark up the things we're interested in. We will also grab a pointer to the struct so that it's easier to type and read. 
+
+But how would you _read_ values from a bit field? So far we've only passed coded bits _to_ the system, but never from. Well, while we were using the bitwise OR `|` operator to chain the values together, you can see if a byte is set by masking it out with the bitwise AND `&`.
+
+~~~~~~~ C++
+XINPUT_STATE ControllerState;
+if(XInputGetState(...))
+{
+    // TODO(casey): See if ControllerState.dwPacketNumber increments too rapidly
+~~~~~~~ C++ add
+    XINPUT_GAMEPAD *Pad = &ControllerState.Gamepad;
+                        
+    bool Up            = Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP;
+    bool Down          = Pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN;
+    bool Left          = Pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT;
+    bool Right         = Pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT;
+    bool Start         = Pad->wButtons & XINPUT_GAMEPAD_START;
+    bool Back          = Pad->wButtons & XINPUT_GAMEPAD_BACK;
+    bool LeftShoulder  = Pad->wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER;
+    bool RightShoulder = Pad->wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER;
+    bool A             = Pad->wButtons & XINPUT_GAMEPAD_A;
+    bool B             = Pad->wButtons & XINPUT_GAMEPAD_B;
+    bool X             = Pad->wButtons & XINPUT_GAMEPAD_X;
+    bool Y             = Pad->wButtons & XINPUT_GAMEPAD_Y;
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Decoding the button states.]
+
+As for the analog values, we can get a signed 16-bit (`s16`) integer and store there the `X` and `Y` coordinates of the left thumbstick.
+
+~~~~~~~ C++
+XINPUT_GAMEPAD *Pad = &ControllerState.Gamepad;
+
+// ... 
+
+~~~~~~~ C++ add
+s16 StickX = Pad->sThumbLX;
+s16 StickY = Pad->sThumbLY;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Capturing the stick movement.]
+
+This is pretty much it all the values that we'll need to capture.
+
+## Compile With XInput Complication
+
+If you try to compile now, you will see a familiar error: 
+
+~~~~~~~ batch
+win32_handmade.obj : error LNK2019: unresolved external symbol XInputGetState referenced in function WinMain
+win32_handmade.exe : fatal error LNK1120: 1 unresolved externals
+~~~~~~~
+
+The problem looks simple enough, we simply need to link our `XInputGetState` with a library. The solution, however, is more complicated than anything we've seen before. 
+
+Usually you would simply look at the bottom of the [MSDN][] page of the function to find the library you need to link against. The problem here is that there're _two_ libraries, and the `Platform Requirements` line (which up until now was a simple `Windows 2000`) is a bit sketchy:
+
+~~~~~~~ 
+Platform Requirements
+
+Windows 8 (XInput 1.4), DirectX SDK (XInput 1.3), Windows Vista (XInput 9.1.0) 
+~~~~~~~
+
+We need one of the following: 
+
+* `Windows 8` or later to use XInput version 1.4
+    * Even in 2020, this is still not the case for everyone. Many people still comfortably use Windows 7.
+* `DirectX SDK` to use XInput version 1.3
+    * We don't really know what that means and what version do they mean, or if the user even has it installed.
+    * We didn't use DirectX SDK yet, and if we ever are going to use one we're going to use a very early version of it. 
+* `Windows Vista` or later to use XInput version 9.1.0
+    * Technically, by now Windows XP or earlier shouldn't be of any concern for us... But you never know.
+
+All this said, we cannot _guarantee_ that the user's machine will have the necessary `.dll`s installed when they will run the game. We cannot simply link with `Xinput.lib` and hope for the best, because if the program can't find one of these `.dll`s on the system, our game just won't load. 
+
+It will simply won't load. 
+
+And that's kind of annoying because you don't _need_ a gamepad to play this game, we're going to allow at least keyboard to play the game. 
+
+So what do we do? Let's talk about direct loading of functions.
+
+# Direct Library Loading
+
+What we're going to discuss here is a concept of loading the Windows functions ourselves, without a need of an Import Library. 
+
+You might remember [day 1](day1.md.html) when we discussed the role of the Import Libraries in the program execution. The Import Libraries serve to put specific markers into the code which, upon the program's loading, will be found by Windows and patched with the actual functions running in memory.
+
+We will get the code to skip just this step. Our executable will look for a Windows binding, then look up the function pointers so that we can call the function directly, thus eliminating the middle man.
+
+This is actually a pretty simple process, especially considering we have such a small number of functions that we need to deal with. From the "huge" XInput API we'll probably only ever going to need two functions: `XInputGetState` and potentially `XInputSetState` to set some vibrations.
+
+## Inspect `xinput.h`
+
+If you use [VScode][], you can hit `F12` while your cursor is under `<xinput.h>` include filename to quickly open `xinput.h` (if not, you can open [Visual Studio][msvc] and do the same thing).
+
+What you can see inside that file are the DLLs that we want to link against depending on the version, and then all the defines and declarations that we can also find in [MSDN][]. Among other things, the file contains declarations of the functions we care about: `XInputGetState` and `XInputSetState`: 
+
+~~~~~~~ C++ 
+DWORD WINAPI XInputGetState
+(
+    _In_  DWORD         dwUserIndex,  // Index of the gamer associated with the device
+    _Out_ XINPUT_STATE* pState        // Receives the current state
+);
+
+DWORD WINAPI XInputSetState
+(
+    _In_ DWORD             dwUserIndex,  // Index of the gamer associated with the device
+    _In_ XINPUT_VIBRATION* pVibration    // The vibration information to send to the controller
+);
+
+~~~~~~~
+[<file>[xinput.h]</file>]
+
+We're going to flat-out get these ourselves. We'll try to load these functions without the Windows Executable Loader to do any of it. 
+
+## Type Definition of the Functions
+
+We're going to copy-paste the function signatures we're interested in to our `win32_handmade.cpp` file, maybe clean them up first:
+
+~~~~~~~ C++
+global_variable win32_offscreen_buffer GlobalBackbuffer;
+~~~~~~~ C++ add
+DWORD WINAPI XInputGetState(DWORD dwUserIndex, XINPUT_STATE *pState);
+DWORD WINAPI XInputSetState(DWORD dwUserIndex, XINPUT_VIBRATION *pVibration);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Adding XInput function signatures.]
+
+Usually, leaving them at that would simply tell the compiler: "there's an external function called this and that that you can bind against during the linker stage". This doesn't really help us: that's exactly what we had in `xinput.h` to begin with. 
+
+However, if we change these into a `typedef`, we suddenly say: "there is a function of this type, and I want to start declaring variables that are pointers to it". Think of our `Win32MainWindowCallback`: when we registered our `WindowClass`, we passed to it the _pointer_ to this function as a _variable_ (so that Windows could call us at a later stage). 
+
+Because we don't want conflicts with the existing naming, we'll rename this type to something else, let's say `x_input_get_state` and `x_input_set_state`, respectively.
+
+~~~~~~~ C++ edit
+// Define a type of a function
+typedef DWORD WINAPI x_input_get_state(DWORD dwUserIndex, XINPUT_STATE *pState);
+typedef DWORD WINAPI x_input_set_state(DWORD dwUserIndex, XINPUT_VIBRATION *pVibration);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Transforming signatures into types.]
+
+We can declare variables of type `x_input_get_state` almost in the same manner you can declare an `u32`. But instead of `uint32_t`, the type of this thing is a function with that specific signature. OK, maybe in C you can't simply declare a variable `x_input_get_state GetState;`. That's illegal. But a pointer? No problem. (`x_input_get_state *GetState;`). And that's totally legal and is exactly what we want. 
+
+So we can go ahead and declare a couple of these pointers, one per type: 
+
+~~~~~~~ C++ 
+// Define a type of a function
+typedef DWORD WINAPI x_input_get_state(DWORD dwUserIndex, XINPUT_STATE *pState);
+typedef DWORD WINAPI x_input_set_state(DWORD dwUserIndex, XINPUT_VIBRATION *pVibration);
+~~~~~~~ C++ add
+// Create a pointer to function of this type
+global_variable x_input_get_state *XInputGetState; 
+global_variable x_input_set_state *XInputSetState; 
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Transforming signatures into types.]
+
+Unfortunately we run straight into the same problem as when we were `typedef`ing the functions: If we name something with the same name as in `xinput.h` header, the compiler is going to complain. So we have a few options: 
+
+* Name the global variables with something completely unique: `DynamicXInputGetState`, `HandmadeXInputGetState`.
+* Go full-on C++ and set a different `namespace` for our program
+* Simply remove the `xinput.h` header. This will force us however to copy over the struct definitions, as well. Might as well use this at some point.
+* Or we could cheese our way into preserving the same name anyway. 
+
+Let's go crazy and try the last option. In order for this trick to work, this is what we need to do: 
+1. Give our global variable a random name. `global... XInputGetState_`.
+2. `#define` the name we want to use. `#define XInputGetState XInputGetState_`.
+3. At the compile time, preprocessor will translate any `XInputGetState` it encounters into `XInputGetState_`. 
+4. Repeat the same for `x_input_set_state`.
+
+Thus we have no naming conflict and we don't run the risk of calling the function we don't want by mistake. 
+
+~~~~~~~ C++ 
+// Define a type of a function
+typedef DWORD WINAPI x_input_get_state(DWORD dwUserIndex, XINPUT_STATE *pState);
+typedef DWORD WINAPI x_input_set_state(DWORD dwUserIndex, XINPUT_VIBRATION *pVibration);
+~~~~~~~ C++ edit
+// Create a pointer to function of this type
+global_variable x_input_get_state *XInputGetState_; 
+global_variable x_input_set_state *XInputSetState_; 
+~~~~~~~ C++ add
+// Create an "alias" to be able to call it with its old name
+#define XInputGetState XInputGetState_ 
+#define XInputSetState XInputSetState_ 
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Cheesing our way to using the name we want.]
+
+## Create Stub Functions
+
+Now you should be able to compile your program. Action we've taken will resolve the linker error, even if the `XInputGetState` call in `WinMain` never went anywhere. That function is now actually `#define`d to be `XInputGetState_`, and it will call a function pointer. 
+
+However, if we try to run, we will get an Access Execution Violation while trying to run `XInputGetState`(`_`). 
+
+We've discussed Access Violations in the [previous chapter](day5.md.html). These happen when we try to read from a pointer addressing invalid (unaccessible) memory. Access Execution Violation is different in that not only it tries to read (or write) a page, but also to _call the code_ on it.
+
+We defined `XInputGetState` and `SetState` as global variable function pointers. And being a `static` global variable, they are cleared to `0`, so in fact by calling `XInputGetState` we try to access and execute a function located at the address `0`. And that's very much illegal. 
+
+Now let's think for a moment. We started this whole process to make sure that our program _doesn't_ crash if it fails to load XInput `.dll`. And, as we're right now, we will crash anyway unless we load the correct function. Therefore, we need to define a dummy, a stub function to call if we can't load the correct one. For this to work, our stub has to have the same _function signature_ as the real thing. 
+
+!!!
+    You can read about how the function signatures actually defined in subsection [Function Signatures].
+
+We can simply copy and paste the same `DWORD WINAPI blablabla` but it's ugly and prone to error. Also, if we ever want to update that signature, we need to update it in all locations. Alternatively, we can step up our compiler preprocessor game even further, and `#define` a function of this exact signature. 
+
+If you use the form `#define NAME(param)` you can use one or more `param`s you `#define` inside your macro. In the example we've seen, `#define Square(number)` allows us to define a macro like `(number * number)`. It's almost like a function, but not. 
+
+!!! Warning Warning
+    That said, do not use `#define` when a function can do the same job!
+
+We [talked about it](day3.md.html#programmingbasics/definedirective) before but never really saw it in action. let's do this now! Let's create a `#define` which would create a new function with that return type, provided `name`, and specific signature each time we call that macro. Remember _not_ to put the semicolon at the end!
+
+We will then define our `typedef` in terms of that macro. 
+
+~~~~~~~ C++ add
+// Define a function macro
+#define X_INPUT_GET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_STATE *pState)
+#define X_INPUT_SET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_VIBRATION *pVibration)
+~~~~~~~ C++ edit
+// Define a type of a function
+typedef X_INPUT_GET_STATE(x_input_get_state);
+typedef X_INPUT_SET_STATE(x_input_set_state);
+~~~~~~~ C++ 
+global_variable ...
+#define ...
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Defining a function prototype.]
+
+Now we can also create our stub function! It does nothing and simply returns `0`. We will name our functions `XInputGetStateStub` and `XInputSetStateStub`, respectively. We will also assign these stubs as the default value of the global variables.
+
+~~~~~~~ C++ 
+#define X_INPUT_SET_STATE(name) ...
+typedef X_INPUT_SET_STATE... 
+~~~~~~~ C++ add
+X_INPUT_GET_STATE(XInputGetStateStub) 
+{ 
+    return (0); 
+}
+X_INPUT_SET_STATE(XInputSetStateStub) 
+{ 
+    return (0); 
+}
+~~~~~~~ C++ edit
+global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub; 
+global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub; 
+~~~~~~~ C++ 
+#define ...
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Defining function stubs.]
+
+We hope that you can see what we did there. For each of our two calls: 
+1. We defined a function prototype. 
+2. Defined a type of that, so that you can use it from now on as a pointer. 
+3. Created a stub function to use in case we fail to properly load the actual functions.
+4. Set up a permanent reference for the function of that type in a global variable. By default it points to the stub function.
+5. Defined the same name as the original function for that variable.
+
+To make things a bit clearer, let's group the two calls together to map exactly to these steps: 
+
+~~~~~~~ C++ edit
+// NOTE(casey): XInputGetInputState
+#define X_INPUT_GET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_STATE *pState)
+typedef X_INPUT_GET_STATE(x_input_get_state);
+X_INPUT_GET_STATE(XInputGetStateStub) 
+{ 
+    return (0); 
+}
+global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub;
+#define XInputGetState XInputGetState_
+
+// NOTE(casey): XInputSetInputState
+#define X_INPUT_SET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_VIBRATION *pVibration)
+typedef X_INPUT_SET_STATE(x_input_set_state);
+X_INPUT_SET_STATE(XInputSetStateStub) 
+{  
+    return (0); 
+}
+global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
+#define XInputSetState XInputSetState_
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Regrouping the supports per function.]
+
+Now, if you compile and run, you should _not_ crash and just do what you used to do. Furthermore, if you step into `XInputGetState` inside your `WinMain`, you will jump into your stub function, return `0` and continue. 
+
+!!! Note
+    All this is a good practice to initialize function pointers in general. By pointing to a stub, if you never end up initializing them, you'll still be able to continue your program's execution where possible. 
+
+## Load XInput Library
+
+We laid down the groundwork, now let's do the thing! We will try to get XInput. If we succeed, we'll change our function pointers, if we don't, we simply proceed with the stubs. Let's start off with defining a new function. We don't expect to need anything nor return anything for it.
+
+~~~~~~~ C++ 
+// XInput function definitions above
+
+~~~~~~~ C++ add
+internal void
+Win32LoadXInput()
+{
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Initializing the library-loading function.]
+
+Inside `Win32LoadXInput`, We are going to essentially do the same steps that the Windows [loader][loaders] does. As the first step, it will mean calling [LoadLibraryA][], which loads the loads a `.dll`, the thing that Windows uses when it gives us functions. 
+
+`LoadLibrary` takes only a filename, which is the name of the `.dll` we're trying to load, and that's going to give us back a module, simply a handle to our code not dissimilar to what `HINSTANCE` was. This will be our `XInputLibrary`.
+
+Assuming that we get back a valid library (that is, a non-zero handle), we're going to load functions out of it, `XInputGetState` and `XInputSetState`. The function that will take care of that is called [GetProcAddress][], and we'll see how it works in a second.
+
+~~~~~~~ C++ 
+internal void
+Win32LoadXInput()
+{
+    HMODULE XInputLibrary = LoadLibraryA(""); 
+~~~~~~~ C++ add
+    if(XInputLibrary)
+    {
+        XInputGetState = GetProcAddress();
+        XInputSetState = GetProcAddress();
+    }
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Drafting out `Win32LoadXInput`]
+
+Now, to filling out the details. As the [documentation][XInputGetState] for `XInputGetState` says, we need one of the following libraries: "Xinput1_3.dll", "Xinput1_4.dll" or "Xinput9_1_0.dll". You can see more details on [MSDN][https://docs.microsoft.com/en-us/windows/win32/xinput/xinput-versions].
+
+Since "Xinput1_3.dll" should be available on most machines, let's start with it. `LoadLibraryA` will go through a series of steps to try and find the `.dll` you requested it and, if found, will try to load it.
+
+!!! 
+    To learn more about how the system looks for a `.dll`, check out the [Dynamic-Link Library Search Order][] article on MSDN.
+
+If the library is loaded and we get a valid handle, we'll pass it into the `GetProcAddress`. 
+
+`GetProcAddress`, on the other hand, requires a module handle and the name of a function to get. This function does exactly what it says to do: it returns the address of a procedure (function). We're trying to get `XInputGetState` and `XInputSetState`, so we pass these along.
+
+~~~~~~~ C++ 
+internal void
+Win32LoadXInput()
+{
+~~~~~~~ C++ edit
+    HMODULE XInputLibrary = LoadLibraryA("Xinput1_3.dll"); 
+~~~~~~~ C++
+    if(XInputLibrary)
+    {
+~~~~~~~ C++ edit
+        XInputGetState = GetProcAddress(XInputLibrary, "XInputGetState");
+        XInputSetState = GetProcAddress(XInputLibrary, "XInputSetState");
+~~~~~~~ C++
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Loading functions to our variables, draft]
+
+If you try and compile now, you will notice that the compiler will throw errors at you. This is because `GetProcAddres` doesn't know which function signature it's loading. It can load anything, and returns what basically is a `void *`, a pointer to memory. So we need to _cast_ the return of this to the type that we actually want. Luckily we know exactly what type do we want, so it's pretty easy. 
+
+~~~~~~~ C++ 
+internal void
+Win32LoadXInput()
+{
+    HMODULE XInputLibrary = LoadLibraryA("Xinput1_3.dll"); 
+    if(XInputLibrary)
+    {
+~~~~~~~ C++ edit
+        XInputGetState = (x_input_get_state *)GetProcAddress(XInputLibrary, "XInputGetState");
+        XInputSetState = (x_input_set_state *)GetProcAddress(XInputLibrary, "XInputSetState");
+~~~~~~~ C++
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Fixing the compiler errors.]
+
+We now compile, but we won't even attempt to load the file unless you ask it to! Simply add the call to `Win32LoadXInput` somewhere on top of your `WinMain`: 
+
+~~~~~~~ C++ 
+int CALLBACK
+WinMain(...)
+{
+~~~~~~~ C++ add
+    Win32LoadXInput();
+~~~~~~~ C++ 
+    // ... 
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Fixing the compiler errors.]
+
+## Inspect Library Loading
+
+Let's inspect if what we did works correctly. Compile another time, open your debugger and set a breakpoint at the start of `Win32LoadXInput`. Hit `F5` to get until your breakpoint and start debugging: 
+
+1. We attempt to load the library `xinput1_3.dll`. 
+2. If you have it on your machine (and it loaded correctly), you start loading the function pointers.
+3. If they load correctly, you will see in the Watch window the address to change from your stub function to the correct one. 
+    * Additionally, in Visual Studio debugger you will even see that these functions are loaded from `xinput1_3.dll`.
+    * Remember that, in the debugger, `#define`s are not captured! You'll need to search for `XInputGetState_` and `XInputSetState_` variables.
+
+## Add Interactivity
+
+Assuming you have a controller connected to your machine, at each loop the game will try to read the controller state. Let's do something fun and use the controller state to move our gradient! For instance, we can move it upwards each time you press the `A` button on your controller. 
+
+~~~~~~~ C++ 
+// Assigning input reads to various variables
+s16 StickY = Pad->sThumbLY;
+~~~~~~~ C++ add
+if (AButton)
+{
+    YOffset += 2;
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Adding some interactivity.]
+
+If you compile and test now, each time you push the `A` button on your controller the grid moves up! 
+
+We can go even full crazy and bind the movement of our grid directly to the stick. We just need to tone it down _quite_ significantly by shifting the stick value down.
+
+~~~~~~~ C++ 
+// Assigning input reads to various variables
+s16 StickY = Pad->sThumbLY;
+~~~~~~~ C++ edit
+XOffset += StickX >> 12;
+YOffset += StickY >> 12;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Adding more interactivity.]
+
+Look at code you've just written, and you'll see there's not a lot of it. Even further than that, we went the hard way and fetched all the functions ourselves.
+
+That's a benefit of a good API. XInput has a few annoying things about itself, but look how easy it is to program it!
+
+## Test Vibration
+
+Let's go and quickly make sure that the vibration works properly, as well. `XInputSetState` takes the controller ID and a pointer to the `XINPUT_VIBRATION` struct. The latter is simply two `WORD`s (unsigned 16-bit integers) which allows to set the left and right motor speed.
+
+Add the following code just outside your controller loop:
+
+~~~~~~~ C++ 
+for (DWORD ControllerIndex = 0; ...)
+{
+    // ...
+}
+~~~~~~~ C++ add
+XINPUT_VIBRATION Vibration;
+Vibration.wLeftMotorSpeed = 60000;
+Vibration.wRightMotorSpeed = 60000;
+XInputSetState(0, &Vibration);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Adding rumble.]
+
+# Keyboard Input
+
+In our game, we'd like to handle keyboard input as well, not only a controller. Not everyone has a controller! 
+
+Luckily, handling basic keyboard messages is even simpler than XInput. There is a thing called [Raw Input][] which allows to fetch more advanced input, multiple keyboards, etc. It's definitely something much more complex, and we'll handle it much later down the line. In the meantime, let's focus on the simple thing. 
+
+Unlike XInput, keyboard is handled directly in the `Win32MainWindowCallback`, alongside the other messages. You don't need to register anything, it _just happens_. 
+
+The messages that we're looking for are `WM_SYSKEYDOWN, WM_SYSKEYUP, WM_KEYDOWN` and `WM_KEYUP`. Before they were eaten up by `DefWindowProc`, but now we'll start handling them. Since we'll be handling them all together, we can "stack" them one on top the other so that they will all handle the same `switch` block.
+
+~~~~~~~ C++ add
+case WM_SYSKEYDOWN:
+case WM_SYSKEYUP:
+case WM_KEYDOWN:
+case WM_KEYUP:
+{
+    // Handle keyboard messages here
+}
+~~~~~~~ C++
+case WM_PAINT: 
+{
+    //... 
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> Adding a case for keyboard messages processing.]
+
+## Virtual-Key Codes
+
+In order to process our message, we need to make use of the `WParam` and `LParam` values. This is the first case when we will make use of the mysterious `WParam` or `LParam` that we get alongside our message, so let's dive a bit into them. 
+
+The names `WParam` and `LParam`, as it is usual on Windows, have historic reason. Very simply, `WParam` was a `WORD` long (16 bits), while the `LParam` was a `LONG` long (32 bits). Now there's no practical distinction. Both of these are now pointer long (so 64 bit on 64-bit systems), albeit `LParam` being signed while the `WParam` isn't, and are used in a variety of ways, depending on the message. 
+
+Both of these will be useful for the purposes of translating our keyboard message, so let's look at the `WParam` first. 
+
+`WParam` represents the _Virtual-Key Code_ of the key pressed. We can actually capture store it as `VKCode` for clarity. Testing if the key is one of the letters is super simple - every (standard latin) letter maps direclty to the correspondent capital letter in ASCII. 
+
+Let's quickly throw down a test for `W, A, S` and `D`. We will simply check if the code corresponds to a character and, if so, output it to the console. Note that we must use single quotes (`'`) to get a single `char` value, while to `OutputDebugStringA` we pass a C string, in double quotes (`"`).
+
+~~~~~~~ C++
+case WM_SYSKEYDOWN:
+case WM_SYSKEYUP:
+case WM_KEYDOWN:
+case WM_KEYUP:
+{
+~~~~~~~ C++ add
+    u32 VKCode = WParam;
+
+    if (VKCode == 'W')
+    {
+        OutputDebugStringA("W\n");
+    } 
+    else if (VKCode == 'A')
+    {
+        OutputDebugStringA("A\n");
+    } 
+    else if (VKCode == 'S')
+    {
+        OutputDebugStringA("S\n");
+    } 
+    else if (VKCode == 'D')
+    {
+        OutputDebugStringA("D\n");
+    } 
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> Testing input from letters.]
+
+If you compile and run, you should see the corresponding messages appear in the `Output` console when you hit the keys! Make sure your program is in focus (and not the debugger).
+
+!!! 
+    Keep in mind that, if you use a non-latin keyboard (for instance, Russian), the ASCII keys codes will be mapped to the ANSI Keyboard Layout.
+
+    ![Figure [x]: ANSI Keyboard Layout Diagram. Percentages and relevant values of keys denote the presence of keys at common keyboard sizes. ([Wikimedia](https://commons.wikimedia.org/wiki/File:ANSI_Keyboard_Layout_Diagram_with_Form_Factor.svg))](../media/day6/ansi_keyboard.svg)
+
+    However, if you use an AZERTY, QWERTZ or another non-ANSI latin-script keyboard layout, your key position will correspond to the key location in your layout. 
+
+As for the non-letter characters (the arrows, spacebar, etc.), each of those has a corresponding virtual code symbol defined. You will find these [on MSDN][virtualkeys]. 
+
+We can imagine that, for now, we'll want our game to handle the following keys: `W`, `A`, `S`, `D`, `Q`, `E`, `VK_UP`, `VK_DOWN`, `VK_LEFT`, `VK_RIGHT`, `VK_ESCAPE` and `VK_SPACE`.
+
+Let's quickly stub these into our program. We won't do anything with them today as it's a topic for another day. Let's also remove our test strings for now.
+
+~~~~~~~ C++ 
+u32 VKCode = WParam;
+
+if (VKCode == 'W')
+{
+~~~~~~~ C++ delete
+    OutputDebugStringA("W\n");
+~~~~~~~ C++
+} 
+else if (VKCode == 'A')
+{
+~~~~~~~ C++ delete
+    OutputDebugStringA("A\n");
+~~~~~~~ C++ 
+} 
+else if (VKCode == 'S')
+{
+~~~~~~~ C++ delete
+    OutputDebugStringA("S\n");
+~~~~~~~ C++ 
+} 
+else if (VKCode == 'D')
+{
+~~~~~~~ C++ delete
+    OutputDebugStringA("D\n");
+~~~~~~~ C++ 
+} 
+~~~~~~~ C++ add
+else if (VKCode == 'Q')
+{
+} 
+else if (VKCode == 'E')
+{
+} 
+else if (VKCode == VK_UP)
+{
+} 
+else if (VKCode == VK_DOWN)
+{
+} 
+else if (VKCode == VK_LEFT)
+{
+} 
+else if (VKCode == VK_RIGHT)
+{
+} 
+else if (VKCode == VK_ESCAPE)
+{
+} 
+else if (VKCode == VK_SPACE)
+{
+} 
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> Stubbing keyboard messages of our interest.]
+
+## Dissect LParam
+
+Now, if you noticed, each time you pressed a `W` on your keyboard, you got two `W` messages to your console. This is because Windows sends us (and we capture) both the messages when the key was pressed, and when a key was released. That's perfect for our purposes. However, we can also check if the button was already down before the message fired. For that, we can use our `LParam`.
+
+If you look the documentation for [WM_KEYDOWN][], you will see that the 32 bits of the `LParam` pack a lot of information. It's also a bit field. The first 16 bits are used to count how many repetions there were, the 24th bit is set if the "Extended" key has been hit (right-hand `ALT` or `CTRL`), etc. 
+
+At this moment, we want to check if the _30th bit_ is set. This bit corresponds exactly to the state of the button before the message fired: if set to 1, the key was down before the message was sent, if zero, the key was up. We might do the same thing we did earlier above for the gamepad buttons, and `&` it against some value provided by Windows. Unfortunatley, Windows does not provide a define for the 30th bit of the keyboard `LParam`, so we need to do some bit shifting:
+
+We've seen bit shifting on [Day 4](day4.md.html), when we were shifting the red, green and blue bytes to their place inside the pixel. Our task is the following:
+
+1. Shift a `1` by 30 to the "left": `(1 << 30)`
+2. Use it to bitwise AND the `LParam`: `LParam & (1 << 30)`
+3. If the resulting value is `0`, the bit #30 wasn't set.
+4. We can store this value in a `bool`: `bool WasDown = LParam & (1 << 30)`.
+
+We can leave it at that, but if `WasDown` is not `0` it will not be `1` but `1 << 30` (`0x4000000` or `1073741824`). If we want a `0-1` pair, we can further check if that result is not equal to `0`: `bool WasDown = ((LParam & (1 << 30)) != 0)`.
+
+Let's add this line at the beginning of our key processing section:
+
+~~~~~~~ C++ add
+bool WasDown = ((LParam & (1 << 30)) != 0);
+~~~~~~~ C++
+u32 VKCode = WParam;
+// ... 
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> Checking if the key was down.]
+
+Similarly, we want to check if the key _is_ down right now, at the moment of the message submission. This is the "Transition state", specified in the bit 31. However, contrary to the "Previous key state", if the key is down, this bit will _not_ be set. So we must check if the bit in the `LParam` IS `0`:
+
+~~~~~~~ C++ add
+bool IsDown = ((LParam & (1 << 31)) == 0);
+~~~~~~~ C++
+bool WasDown = ((LParam & (1 << 30)) != 0);
+u32 VKCode = WParam;
+// ... 
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> Checking if the key is down.]
+
+As a quick test, let's add a few strings of text depending on whether or not the `VK_ESCAPE` key was pressed: 
+
+~~~~~~~ C++ 
+// Other key codes
+~~~~~~~ C++ add
+else if (VKCode == VK_ESCAPE)
+{
+    OutputDebugStringA("ESCAPE: ");
+    if (IsDown)
+    {
+        OutputDebugStringA("IsDown ");
+    }
+    if (WasDown)
+    {
+        OutputDebugStringA("WasDown");
+    }
+    OutputDebugStringA("\n");
+}
+~~~~~~~ C++
+// ... 
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> Checking if the key is down.]
+
+!!! Tip
+    You might have noticed the `\n` symbol already. This is simply the "new line" character which tells the console to return to the new line.
+
+If you compile and run, you'll notice a pattern similar to this:
+~~~~~~~ batch
+ESCAPE: IsDown
+ESCAPE: WasDown
+ESCAPE: IsDown
+ESCAPE: WasDown
+ESCAPE: IsDown
+ESCAPE: WasDown
+ESCAPE: IsDown WasDown
+ESCAPE: IsDown WasDown
+ESCAPE: IsDown WasDown
+ESCAPE: WasDown
+~~~~~~~
+
+If you quickly hit and release `Escape` button, Windows will send two separate messages. One will have `IsDown` when the button is hit, and the other `WasDown` is released. However, if you hold `Escape` for a few seconds, Windows will start sending the `VK_ESCAPE` message again. It will remind you that the key is currently pressed, and was pressed the last time Windows has checked. Once you release the key, a final message with `WasDown` will be sent.
+
+Now, we're not interested in the repeat messages. We want to prevent a situation when a button press is sent more than once, so we can just check if `WasDown` and `IsDown` are both `true`, and only proceed if they are not.
+
+Now that we've captured them both, it's trivial: 
+
+~~~~~~~ C++
+bool IsDown = ((LParam & (1 << 31)) == 0);
+bool WasDown = ((LParam & (1 << 30)) != 0);
+u32 VKCode = WParam;
+~~~~~~~ C++ add
+if (IsDown != WasDown)
+{
+    // Deal with the key codes
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> Skipping the duplicate messages.]
+
+If you recompile and run your program now, you will notice that it now only sends `IsDown` and `WasDown` messages separately, even if you hold `Escape` button for a few seconds.
 
 # Recap
 
+And this is it! We're now capturing the input from keyboard and controllers. We aren't doing anything with it, for now, everything that we're doing is just sketching out our future territory.
+
+Tomorrow we will embark on the journey of getting the sound working. It will be a tougher nut to crack than anything we've dealt with so far!
+
 # Exercises
 
-# Programming Basics
+## Convert Keyboard Key Processing to a `switch` Statement
+
+You will notice that our key code processing uses quite a long `if` chain. Try to convert it to a `switch` statement similar to our message processing! No need to have a `default` case here.
+
+## Try to do something with the keybord input
+
+Experiment with the keyboard buttons available! Maybe hitting a button will affect your gradient? Something else? It'll be a bit more complicated than using XInput since it's not captured in your `WinMain`! 
+
+# Programming Notions
+
+## Function Signatures
+
+What is a function signature? We've talked about it a lot but never in detail. 
+
+In C, a function signature is defined simply by the type of the parameters that function takes in. It serves as a validation (a signature, in fact), that the name defined outside and the call happening inside the code refer to the same entity. 
+
+Why is this important? Well, among other things, to make sure that the parameters passed to the function correspond to the space allocated for them on the stack. 
+
+It also enables defining functions as a type and passing them around. You don't even need the parameter names! For a function `int CalculateArea (int Width, int Height)`, it's signature is simply `(int,int)`. 
+
+In C++, more factors come into play when defining a function signature, but the base definition used in C also works.
+
+_(Back to subsection [Create Stub Functions])_
+
+## Reading Input Devices State
+
+There are two main ways of reading input from an input device (controller, mouse, keyboard, etc.). There's [Interrupt][] and there's [Polling][]. 
+
+### Interrupt
+
+An interrupt-based scheme is driven by the external device itself. Whenever the device needs to tell you that something happened (a button got pressed, a stick wiggled), it will send the processor a _trigger signal_. This, depending on the type of the interrupt, might or might not result in actually blocking whatever the processor was doing and reacting to that interrupt. 
+
+Eventually the operating system is notified, which communicates the interrupt to the interested application/s and therefore to the user. We've seen these under the form of Windows Messages.
+
+The big thing about the interrupts that they are useful only when in low quantity. The more interrupts the system receives, the more time the system gets to cycle through all of them, eventually arriving to a so-called [Interrupt storm](https://en.wikipedia.org/wiki/Interrupt_storm) where the processor ends up spending most of its time processing all the interrupts.
+
+Interrupts were used a lot more historically, and is still used to push mouse or keyboard input. A modern adaptation of the hardware interrupt system are the data interrupts, when the data is packaged and sent through, for instance, Ethernet. However, rather being an actual hardware interrupts, these packets get buffered up and become a _stream_ of data which you read, rather than be interrupted by a single event. 
+
+### Polling
+
+A polling operation is a synchronous activity, where the program "syncs up" and checks the state of the input hardware at that particular moment. Whereby the interrupt is triggered by the input device, polling is initialized by the application, usually at regular intervals. This results in _sampling_ of the state of the device over time.
+
+The disadvantage of polling is somewhat inverse to that of the interrupts. Interrupts allow for having many "relatively quiet" devices connected to it, while potentially suffering from their activity. Polling allows to have an extremely busy device (think of all the button mashing on a game controller) while potentially suffering if the system has many devices to poll.
+
+_(Back to subsection [Expanding Our Game Loop])_
 
 # Side Considerations
 
+## About Premature Optimization
+
+When we say "Premature Optimization" we intend thinking about optimization at a low level. While again it's up to you, we discourage looking into optmizing on low level until you're actually doing it across the whole program. The reason for it is that probably you're wasting your time. Optimizing at low level is actually very difficult and very specific. Often, when you are making some decisions assuming that it's faster... you don't really know if it is. Sometimes you might make things actually worse, assuming that you're helping but you're actually hurting, and you don't know it.
+
+So we are trying to emphasize programming in a way that _obviously_ doesn't create disastrously bad things, and you'll think about refining once you've set everything in stone. You want to be coding nice and clean and simple, because that is what will be easier to optimize later. You should be thinking about that, rather than crazy little optimizations. You should be writing code in a way that makes it easier for you to read and understand it. 
+
+For instance, while you were working on the keyboard input, you could have compressed `LParam`, i.e. transform, for example, `IsDown` to `(LParam >> 31)` but that's just plainly a bad idea. You'd rather want to create a `#define` for the `(1 << 31)` and `(1 << 30)` as 
+
+~~~~~~~ C++
+#define KeyMessageWasDownBit (1 << 30)
+#define KeyMessageIsDownBit (1 << 31)
+~~~~~~~
+
+and then use it in code as 
+
+~~~~~~~ C++
+bool WasDown = ((LParam & KeyMessageWasDownBit) != 0);
+bool IsDown = ((LParam & KeyMessageIsDownBit) == 0);
+~~~~~~~
+
+Because this makes your life easier and makes you understand the code better when you return to it later. Optimizations like the other one shouldn't be done at this stage of the code. It's quite probable that a) compiler will be smart enough to understand what you want from it and optimize things no matter what you write on that line and b) rather than _guessing_ what will be the right thing to do, you should look at the assemly, verify that the machine code generated is faster (or not), and then you'll _know_.
+
+Besides, if you're in the exploration phase, all of the code you're writing is probably going to be thrown away, so all the minute optimizations won't really matter. 
+
+To recap, you'll need to know what you want to be doing, to know what the CPU will do, but between you and the CPU there's always the compiler which will not always do the optimal things, and you might to pick your battles whether or not you want to wrestle with it. 
 
 # Navigation
 

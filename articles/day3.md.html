@@ -881,8 +881,7 @@ x = Square(x); // Compiler sees it as "x = (x * x);"
 
 ~~~~~~~
 
-!!! Warning
-    `#define` might lead to unexpected results, so make sure to use this feature sporadically. In this case, we use it in a way similar to a `typedef`, and only because you cannot `typedef` a `static` keyword.
+As a preprocessor directive, `#define` is translated before the rest of the code. This enables us to do various tricks to achieve our goals.
 
 _(Back to Section [different meanings of static])_
 
