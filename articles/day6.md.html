@@ -404,7 +404,7 @@ global_variable ...
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Defining a function prototype.]
 
-Now we can also create our stub function! It does nothing and simply returns `0`. We will name our functions `XInputGetStateStub` and `XInputSetStateStub`, respectively. We will also assign these stubs as the default value of the global variables.
+Now we can also create our stub function! It does nothing and simply returns `ERROR_DEVICE_NOT_CONNECTED`. We will name our functions `XInputGetStateStub` and `XInputSetStateStub`, respectively. We will also assign these stubs as the default value of the global variables.
 
 ~~~~~~~ C++ 
 #define X_INPUT_SET_STATE(name) ...
@@ -412,11 +412,11 @@ typedef X_INPUT_SET_STATE...
 ~~~~~~~ C++ add
 X_INPUT_GET_STATE(XInputGetStateStub) 
 { 
-    return (0); 
+    return (ERROR_DEVICE_NOT_CONNECTED); 
 }
 X_INPUT_SET_STATE(XInputSetStateStub) 
 { 
-    return (0); 
+    return (ERROR_DEVICE_NOT_CONNECTED); 
 }
 ~~~~~~~ C++ edit
 global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub; 
@@ -441,7 +441,7 @@ To make things a bit clearer, let's group the two calls together to map exactly 
 typedef X_INPUT_GET_STATE(x_input_get_state);
 X_INPUT_GET_STATE(XInputGetStateStub) 
 { 
-    return (0); 
+    return (ERROR_DEVICE_NOT_CONNECTED); 
 }
 global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub;
 #define XInputGetState XInputGetState_
@@ -451,14 +451,14 @@ global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub;
 typedef X_INPUT_SET_STATE(x_input_set_state);
 X_INPUT_SET_STATE(XInputSetStateStub) 
 {  
-    return (0); 
+    return (ERROR_DEVICE_NOT_CONNECTED); 
 }
 global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 #define XInputSetState XInputSetState_
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Regrouping the supports per function.]
 
-Now, if you compile and run, you should _not_ crash and just do what you used to do. Furthermore, if you step into `XInputGetState` inside your `WinMain`, you will jump into your stub function, return `0` and continue. 
+Now, if you compile and run, you should _not_ crash and just do what you used to do. Furthermore, if you step into `XInputGetState` inside your `WinMain`, you will jump into your stub function, return your error and continue. 
 
 !!! Note
     All this is a good practice to initialize function pointers in general. By pointing to a stub, if you never end up initializing them, you'll still be able to continue your program's execution where possible. 
@@ -547,7 +547,35 @@ Win32LoadXInput()
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Fixing the compiler errors.]
 
-We now compile, but we won't even attempt to load the file unless you ask it to! Simply add the call to `Win32LoadXInput` somewhere on top of your `WinMain`: 
+Now, someone's machine might not have one `Xinput` version but have another. So we could attempt to load one `.dll`, if it fails try to load another... until finally there're no `.dll`s that we're aware of. This gives us more chances to load _anything_. Let's start from the most recent version (`1_4`) and go down through `1_3` and `9_1_0`:
+
+~~~~~~~ C++ 
+internal void
+Win32LoadXInput()
+{
+~~~~~~~ C++ edit
+    HMODULE XInputLibrary = LoadLibraryA("Xinput1_4.dll"); 
+~~~~~~~ C++ add
+    if (!XInputLibrary)
+    {
+        XInputLibrary = LoadLibraryA("Xinput1_3.dll"); 
+    }
+    if (!XInputLibrary)
+    {
+        XInputLibrary = LoadLibraryA("Xinput9_1_0.dll"); 
+    }
+~~~~~~~ C++
+
+    if(XInputLibrary)
+    {
+        XInputGetState = (x_input_get_state *)GetProcAddress(XInputLibrary, "XInputGetState");
+        XInputSetState = (x_input_set_state *)GetProcAddress(XInputLibrary, "XInputSetState");
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Checking for multiple versions]
+
+We are now compiling, but we won't even attempt to load the file unless you ask it to! Simply add the call to `Win32LoadXInput` somewhere on top of your `WinMain`: 
 
 ~~~~~~~ C++ 
 int CALLBACK
@@ -787,6 +815,9 @@ u32 VKCode = WParam;
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> Checking if the key was down.]
 
+!!!
+    All these parenthesis matter! Read more about the operator precedence in subsection [Operator Precedence]
+
 Similarly, we want to check if the key _is_ down right now, at the moment of the message submission. This is the "Transition state", specified in the bit 31. However, contrary to the "Previous key state", if the key is down, this bit will _not_ be set. So we must check if the bit in the `LParam` IS `0`:
 
 ~~~~~~~ C++ add
@@ -858,9 +889,75 @@ if (IsDown != WasDown)
 
 If you recompile and run your program now, you will notice that it now only sends `IsDown` and `WasDown` messages separately, even if you hold `Escape` button for a few seconds.
 
+## Add Some Functionality
+
+To add some actual functionality, let's try to close our window with the usual `Alt-F4` combination. We can achieve it by simply setting `GlobalRunning` to false. But now a new question arises: how can we test for two keys at once? 
+
+Let's say we primarily test for `VK_F4` key and get `Alt` value from somewhere else and stored in `AltKeyWasDown`:
+
+if (IsDown != WasDown)
+{
+    // ...
+    else if (VKCode == VK_SPACE)
+    {
+    }
+    
+    bool AltKeyWasDown = ???;
+    if((VKCode == VK_F4) && AltKeyWasDown)
+    {
+        GlobalRunning = false;
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> Skipping the duplicate messages.]
+
+How do we get the value of `Alt`? Well for a [WM_SYSKEYDOWN][] message, such as `F4`, it's actually much simpler since it sets the 29th bit of `LParam`, and we know how to extract that!
+
+~~~~~~~ C++ edit
+bool AltKeyWasDown = ((LParam & (1 << 29)) != 0);
+~~~~~~~ C++
+if((VKCode == VK_F4) && AltKeyWasDown)
+{
+    GlobalRunning = false;
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> Skipping the duplicate messages.]
+
+## Introduce `b32` type Instead of `bool`
+
+In C++, `bool` is defined with some odd semantics. It should be either `0` or `1` while remaining a 32-bit value. This is why, if you noticed, we had to go through the additional checks `!= 0` for our `LParam` bit extraction. 
+
+If you were to remove it and compile with additional warnings enabled (`-Wall` in `cl` line of the `build.bat`), you would get a "performance warning".
+
+Truth is, quite often we don't care if the value is `1` or anything else rather than zero. Sure, for `IsDown` and `WasDown` we do, because we compare the two values right after, but in many places, like in `AltKeyWasDown` we won't. So we're actually wasting some time to do the comparison and properly convert to `bool`.
+
+So what we'd do typically is to simply `typedef` our own type `b32` in the same vein we defined our integer types. This would be a simple `s32`, which in turn, as a reminder, is signed 32-bit integer. Let's add it just below the other ones: 
+
+~~~~~~~ C++
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+
+typedef int8_t s8;
+typedef int16_t s16;
+typedef int32_t s32;
+typedef int64_t s64;
+
+~~~~~~~ C++ add
+typedef s32 b32;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Adding a new `b32` type.]
+
+By using this type, we basically say: "I want this value to be 0 or non-zero". This means we can change our `AltKeyWasDown` to this: 
+
+~~~~~~~ C++ edit
+b32 AltKeyWasDown = (LParam & (1 << 29));
+~~~~~~~
+
 # Recap
 
-And this is it! We're now capturing the input from keyboard and controllers. We aren't doing anything with it, for now, everything that we're doing is just sketching out our future territory.
+And this is it! We're now capturing the input from keyboard and controllers. We aren't doing anything with it, besides closing our window. Everything that we're doing is just sketching out our future territory.
 
 Tomorrow we will embark on the journey of getting the sound working. It will be a tougher nut to crack than anything we've dealt with so far!
 
@@ -911,6 +1008,18 @@ A polling operation is a synchronous activity, where the program "syncs up" and 
 The disadvantage of polling is somewhat inverse to that of the interrupts. Interrupts allow for having many "relatively quiet" devices connected to it, while potentially suffering from their activity. Polling allows to have an extremely busy device (think of all the button mashing on a game controller) while potentially suffering if the system has many devices to poll.
 
 _(Back to subsection [Expanding Our Game Loop])_
+
+### Operator Precedence
+
+As in basic arithmetics, in C certain operators will take precendence over the other. Thus, multiplication happens before addition, division before substraction.... Well, the same is true for any other operator in C and C++. If we look at the code
+
+`LParam & 1 << 30 != 0;`
+
+we see the operators `&`, `<<` and `!=`, and they all are executed in a certain order. Same as in arithmetics, in order to prevent any ambiguity on what comes first, wrapping things in parenthesis prevents this issue altogether. 
+
+`((LParam & (1 << 30)) != 0);`
+
+_(Back to subsection [Dissect LParam])_
 
 # Side Considerations
 
