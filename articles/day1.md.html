@@ -54,13 +54,13 @@ Once you are done, you can quickly test if everything was installed correctly by
 
 This tool may be used to write, compile and debug all code. While some developers use this interface to make their projects, in this course we will use other means. Feel free to try to use Visual Studio editor tools to develop your code though!
 
-Other than that, depending on your choice of debugger (see Subsection [Debugging in RemedyBG and Visual Studio]), you might only access this IDE for debugging purposes. As for compilation, we will do it through the <b>C</b>ommand <b>L</b>ine <b>I</b>nterface (CLI).
+Other than that, depending on your choice of debugger (see Subsection [Debugging in RemedyBG or Visual Studio]), you might only access this IDE for debugging purposes. As for compilation, we will do it through the <b>C</b>ommand <b>L</b>ine <b>I</b>nterface (CLI).
 
 ## Command Line in Windows
 
 In 2020 world, the command line is getting somewhat of a comeback on Windows. Still, while on Linux the command line is omnipresent, it's still possible that you have used Windows without ever accessing it. 
 
-To open a command line, simply search in your Start Menu for `Command Prompt`. If you open it, you will be presented with a simple text window:
+To open a command line, simply search in your Windows `Start` Menu for `Command Prompt`. If you open it, you will be presented with a simple text window:
 
 ![Figure [X]: Default Command Prompt Window](../media/day1/1.2-cmd.png)
 
@@ -72,14 +72,16 @@ This text window allows you to have dialogue with your computer the old-fashione
 !!!
     In this book, we will be using the terms "Command Line", "Command Prompt", "CLI" and "Terminal" interchangeably.
 
-![Figure [X]: Command Prompt window properties](../media/day1/1.3-cmd-prop.png) 
-
-The default way the Command Prompt window looks is pretty basic, and you might want to customize its font, colors, layout, etc. To do that, you should first make the shortcut to the Command Prompt on your desktop.
+The default way the Command Prompt window looks is pretty basic, and you might want to customize its font, colors, layout, etc. To do that, close the Command Prompt and copy the shortcut to the Command Prompt on your desktop.
 
 !!! Note Copying shortcuts from Windows 10 Start Menu
-    Please note that, if you are using your default Windows 10 theme, you might not be able to `Ctrl-Click and Drag` the shortcut to copy it. Instead, you should right-click on the shortcut in the Start Menu, select `Open File Location`, and from there you can make the copy. 
+    Please note that, if you are using your default Windows 10 theme, you cannot `Click and Drag` the shortcut to copy it. Instead:
+        1. Search for Command Prompt in the Start Menu
+        2. Right-click on the shortcut -> `Open File Location`
+        3. In the Explorer window that opens, find the link to Command Prompt and copy it to desktop. 
 
 If you now right-click and select `Properties` window, you will be able to customize a world of settings. For instance, you can specify the starting location for your terminal. By default, it starts in your user folder, which isn't very helpful if you keep your codebase somewhere else.
+
 
 To set up your starting location: 
 
@@ -99,7 +101,18 @@ For your convenience, these are the preferences we're using:
     * Screen Text: Red 140, Green 114, Blue 9
     * Screen Background: Red 16, Green 16, Blue 16
 
-As the first action in your terminal, let's create a directory for our project! If your codebase is located on a different drive than the one you start in, you'll need to switch the drives first. Below we assume that your codebase is located at the `D:\Documents\Codebase`:
+![Figure [X]: Command Prompt window properties](../media/day1/1.3-cmd-prop.png) 
+
+As the first action in your new terminal, let's create a directory for our project! 
+
+As a refresher, Command Prompt works... by processing commands. Anything you type into it is considered a command, a name of a program or a _script_. Each command is executed from a _directory_ which is represented before the `>` symbol. The first word is the command, and then usually follow _parameters_ that this command may or may not recognize. 
+
+For instance, if we type `cd ..` we send a command "Change Directory" with parameter `..` ("Previous folder in the structure"). If we type `dir`, we send the command "Show contents of the directory" with no parameter (meaning "of the current directory"). 
+
+!!! Tip
+    Again, if you're completely unfamiliar with the command lines, check out a handy command list [on Wikipedia](https://en.wikipedia.org/wiki/Cmd.exe#Windows_NT_family).
+
+If your codebase is located on a different drive than the one you start in, you'll need to "switch" the drives first. This means typing the drive's letter followed by the colon (like `D:` if you want to switch to drive D). Below we assume that your codebase is located at the `D:\Documents\Codebase`.
 
 ~~~~~~~ batch input
 C:\Users\Yakvi> D: 
@@ -151,7 +164,9 @@ You can also add 4coder shortcut script, we'll look into it in Set Up Environmen
 
 Visual Studio Code is a free editor by Microsoft. One of its main advantages is a high availability of user-made and official extensions, however because it's using Chromium it might become rather memory-intensive. 
 
-You can download VSCode and get started with it [here](https://code.visualstudio.com/). If you choose this editor as the editor of your choice, here are some recommended extensions you might want to add to your environment (listed in alphabetical order). Many of these are of personal preference!
+You can download VSCode and get started with it [here](https://code.visualstudio.com/). If you choose this editor as the editor of your choice, here are some recommended extensions you might want to add to your environment (listed in alphabetical order). 
+
+Keep in mind many of these are of personal preference!
 
 * C/C++
 * C/C++ Snippets
@@ -177,6 +192,8 @@ You can download VSCode and get started with it [here](https://code.visualstudio
 Overall, however, you might want ot disable anything else that would distract you from development: Minimap, Menu bar, Side bar and the terminal (when you aren't using them).
 
 ![Figure [X]: Visual Studio Code](../media/day1/1.7-vscode.png)
+
+You can also **enable autosaving** by clicking File -> AutoSave. Default is autosave after 1 second of inactivity, but you can change autosave options in the preferences.
 
 If you're using IntelliSense, you might want to consider to tinker with you C/C++ Configurations: 
 
@@ -286,7 +303,7 @@ W:\handmade> _
 
 The reason for it is that every command is being looked up in the system _Path_. If we type `cl` we can't find it because it's not in the Path. The basic way of doing it would be running a particular script that will set up our command line for us. 
 
-The file we're looking for is called `vcvars64.bat`. It's located deep inside the Visual Studio install folder. Head over to your `Program Files (x86)`, find the folder `Microsoft Visual Studio`, and then go down until you find folders `VC` -> `Auxiliary` -> `Build`.
+The file we're looking for is called `vcvars64.bat`. It's located deep inside the Visual Studio install folder. In Windows Explorer, head over to your `Program Files (x86)`, find the folder `Microsoft Visual Studio`, and then go down until you find folders `VC` -> `Auxiliary` -> `Build`.
 
 For Visual Studio 2019 Community edition, this path would therefore be `C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat`. 
 
@@ -509,7 +526,7 @@ cl -Zi ..\code\win32_handmade.cpp
 
     To quickly build in 4coder, simply press `Alt-M` shortcut or `F1` if you loaded your project. `Alt-Comma` closes the compile window.
 
-# Debugging in RemedyBG and Visual Studio
+# Debugging in RemedyBG or Visual Studio
 
 We now have a working Win32 program build by the Command Line using our own batch file. If we now want to step into that, we should start the debugger. 
 
@@ -563,7 +580,10 @@ devenv build\win32_handmade.exe
 ~~~~~~~
 [Listing [X]: <file>[debug.bat]</file> Launching debugging in Visual Studio]
 
-Visual studio will load a dummy solution. You can then right-click on the `win32_handmade` in Solution Explorer -> `Properties` to change your `Working Directory` to `w:\handmade\data`. Click `File` -> `Save win32_handmade` to save your solution as `misc\handmade.sln`, then modify your `debug.bat` file to load the solution directly.
+If you run `debug` from your command prompt now, Visual studio will load a dummy solution. You can then right-click on the `win32_handmade` in Solution Explorer -> `Properties` to change your `Working Directory` to `w:\handmade\data`. Click `File` -> `Save win32_handmade` to save your solution as `handmade.sln` in `misc` folder, then modify your `debug.bat` file to load the solution directly.
+
+!!! 
+    If you don't see the `Save As...` dialog popping up, simply close the window. Visual Studio will ask you if you want to save your solution. Say yes, and save it.
 
 ~~~~~~~ batch
 @echo off
@@ -581,6 +601,8 @@ start devenv misc\handmade.sln
     This is one of the reasons why you should try out RemedyBG. ;)
 
 ## Debugging Your Program
+
+Since we specified our working directory to be `Data`, you should create this folder before we get going. Place it inside your `handmade` directory.
 
 Once you completed your setup, while in the debugger, hit `F11` on your keyboard or `Control -> Step Into (Line)` (RemedyBG) / `Debug -> Step Into` (Visual Studio). You will see your source file appear on the screen, and a yellow arrow indicating the start of your `WinMain` function body. This arrow represents your current position in the program execution. If you hit `F11` a couple more times, it will go out of the program and into the disassembly (This is C runtime wrapping up your program exit). Hit `Shift-F5` to stop the debug process.
 
@@ -621,7 +643,7 @@ In conclusion, if we _really_ want to see where the code starts when Windows cal
 
 Let's have some fun. We worked so hard for this lesson, so let's just make something functional: a message box! This will also serve us as a test that our program is running properly.
 
-In order to pop up a message box, we call the Windows function [MessageBox][MessageBox]. Let's open the link to see its syntax and copy paste in our program: 
+In order to pop up a message box, we call the Windows function [MessageBox][MessageBox]. Let's open the link to see its syntax and copy paste in our program. Make sure to paste it inside the curly braces of your `WinMain` but before the `return`! 
 
 ~~~~~~~ C++ add
     int MessageBox(
@@ -650,7 +672,7 @@ Then, this function takes the following _parameters_:
 
 Combining all these things together and putting them on one line, we get our Message Box call:
 
-~~~~~~~ C++ add
+~~~~~~~ C++ edit
     MessageBox(0, 
                "This is Handmade Hero.", 
                "Handmade Hero", 
@@ -663,7 +685,7 @@ Combining all these things together and putting them on one line, we get our Mes
 
 We can even go further and compress it on one line: 
 
-~~~~~~~ C++ add
+~~~~~~~ C++ edit
     MessageBox(0, "This is Handmade Hero.", "Handmade Hero", MB_ICONINFORMATION | MB_OK);
 ~~~~~~~ C++
     return (0);
@@ -819,7 +841,7 @@ If you're coming from Subsection [command line in windows], you can continue by 
 
 # Navigation
 
-Up Next: [Day 2. Opening a Win32 Window](day2.md.html)
+Up Next: [Day 2. Opening a Win32 Window][day 2]
 
 [Back to Index](../index.md.html)
 
