@@ -5,21 +5,567 @@
 
 _Video Length (includig Q&A): [1h32](https://hero.handmade.network/episode/code/day007/)_
 
+Welcome to day 7 of Handmade Hero! 
+
+It's hard to believe we've already gone through _7 days_ done. We now have our own window rendering, we managed to make our input working on gamepad and keyboard, and today we'll start working on the sound. It will take us a while, so let's jump straight into it!
+
+# Introduction to Sound Programming for Games
+
+There are many sound APIs. Shocking, right? And the one we're about to implement is not necessarily the best the lowest-level available, or even the fastest. We're going to be using DirectSound so it will have as much compatibility as possible with the older systems. Sure, the number of users on these older systems is practically zero at this point, but there's not a lot of cost for us to have it running, at least for the majority of the code so far. 
+
+Alternatives for DirectSound are many, and none of them are particularly good. Thing is, audio is _complicated_. You've seen so far intro to video handling, input handling, and really, if you look back there's not that much code in it to make each individual piece of it work. Sound is difficult because it can never stop, and should always be as close to perfect as possible. 
+
+A workflow using DirectSound starts with allocating a _buffer_ of sound. And this buffer is _circular_: each time sound reproduction arrives to the end, it loops around to the beginning, so that it constantly goes around that buffer in circles. In other words, a [circular buffer][].
+
+Let's say we allocate a pretty long buffer, 2 seconds for instance. 
+
+*******************************************
+*                                         *
+*    .-------------------------------.    *
+*   |                                 |   *
+*   v                                 |   *
+*     ------------------------------>     *
+*   |                                 |   *
+*   +---------------------------------+   *
+*   |                                 |   *
+*   0                                 2s  *
+*******************************************
+[Figure [diagram]: Sound Memory Buffer.]
+
+As you might know, these days its pretty common to have 48 kHz which means that there're 48000 _samples_ per second, so our 2 second buffer would contain 96000 of the sound samples. This means that, at any given point in time, sound hardware is reading a chunk of our memory in order to reproduce the sound. This can be represented by a cursor on this buffer.
+
+*******************************************
+*                                         *
+*   |                                 |   *
+*   +------*--------------------------+   *
+*   |      ^ -------> read direction  |   *
+*   0      |                              *
+*                                     2s  *
+*******************************************
+[Figure [diagram]: Hardware cursor.]
+
+If our game is running at 60 frames per second, we should be producing 800 samples _per frame_ in order to line up our audio to the video. And we can't really write straight under the cursor as we risk to produce bad data as a result. This means that we need to write a bit ahead of the cursor. Let's say it's our _game cursor_. We will be writing there our sound frames, and when hardware cursor will catch up, new sounds will be played. 
+
+*******************************************
+*                                         *
+*                     |                   *
+*   |                 v                |  *
+*   +------*----------*----------------+  *
+*   |      ^                           |  *
+*   0      |                              *
+*                                     2s  *
+*******************************************
+[Figure [diagram]: Hardware cursor and game cursor.]
+
+But not too much! Otherwise the sound _lag_ would be too noticeable to ignore. 
+
+In conclusion, our objective is always be a little bit ahead of the hardware cursor. 
+
+Why two seconds buffer? If we're playing the game at 60 frames per second, a 16 ms buffer should be enough! We're doing it to prevent possible "frame drops". There are two possible approaches here: 
+
+* We'll be writing waaay ahead from where we are right now. This however implies a lot of potential data overwriting.
+* Writing only one frame ahead of us. This would imply that we stick to 16 frames per second, and if we take too long to draw the next frame, we skip. This is the solution we're going for.
+
+Here is where the long buffer comes into play. Normally, if you ever heard a program go "drrrrr" on a sound that was playing, that was because the buffer was too small, and the program was infinitely repeating it. If you have a two second buffer? You can simply stop sending samples, and the contents of the buffer (whatever happened in the past two seconds) will be playing instead. Of course, if the frame delay happens when there's a big explosion happening, you might hear that sudden jump, but the sound still will be smooth, there's a lot of sound to be playing until you come back. 
+
+Having such a giant buffer proves quite effective. Even if your game for some reason is struck by some disaster, the sound will still be fine. 
+
+Now there're other considerations that we'll need to take into account, like where will we put our "page flip"? How to keep the video and audio feed synchronized? Etc. These are all the considerations that we will _not_ deal with today. 
+
+We will focus solely on simple matters like: 
+
+1. Open a handle to DirectSound. 
+2. Get this buffer up and running, where DirectSound would have its infinite loop on, and place the same sound over and over and over.
+
+At the end, this is just some memory that we're writing to. As we did with the bitmap, we write sound bits to a buffer, and DirectSound fetches those bits to reproduce the sound to the speakers.
+
+# Initialize DirectSound Overview
+
+To get started, let's `#include` DirectSound header file, `dsound.h`:
+
+~~~~~~~ C++
+#include <windows.h>
+#include <stdint.h>
+#include <xinput.h>
+~~~~~~~ C++ add
+#include <dsound.h>
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Adding DirectSound headers.]
+
+If you remember, we initialized XInput at the very beginning of our `WinMain`. Unfortunately, we cannot do this for DirectSound as it requires a window handle. So right after we make sure that our `Window` is a vaild handle, we'll start initializing DirectSound. Let's simply throw in function call `Win32InitDSound`:
+
+~~~~~~~ C++
+if (Window)
+{
+    HDC DeviceContext = GetDC(Window);
+    Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
+~~~~~~~ C++ add
+    Win32InitDSound();
+~~~~~~~ C++
+
+    // ...
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Calling `Win32InitDSound`.]
+
+Now, we don't have `Win32InitDSound` function yet, we'll need to create it. For now it won't have any return and won't have any parameters, but we can always modify the signature later if we need it. Let' define `Win32InitDSound` right after `Win32LoadXInput`.
+
+What do we need to do inside this function? Well, we'll need to:
+
+* Load the library 
+    * As with the controller, absence of sound shouldn't necessarily be showstopper
+* "Create" a DirectSound object
+    * The way DirectSound is implemented is having the so-called "objects". Object model was a popular programming paradigm for Windows API for some time.
+* Set cooperative level
+    * We need to bind the object with our window and set up specific sound settings
+* "Create" a primary buffer
+    * At this point, this is a holdover from the time when you were writing directly to the sound card. You can't access the sound card any more, but you still need to create the primary buffer so that you can set the "mode" of things. 
+    * We will only ever use it to set our wave format.
+* "Create" a secondary buffer
+    * This is the buffer we're going to write our samples to.
+* Start it playing! 
+
+We'll take care of the "playing" part in another call. As for the initialization, let's put our steps in the function:
+
+~~~~~~~ C++
+internal void
+Win32LoadXInput()
+{
+    // ...
+}
+
+~~~~~~~ C++ add
+internal void
+Win32InitDSound()
+{
+    // NOTE(casey): Load the library 
+    // NOTE(casey): Create a DirectSound object 
+    // NOTE(casey): Set cooperative level
+    // NOTE(casey): "Create" a primary buffer
+    // NOTE(casey): "Create" a secondary buffer     
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Drafting `Win32InitDSound`.]
+
+In theory, this would give us sound on Windows. 
+
+You'll notice that DirectSound is not as clean as XInput, which only took us a few calls to get running, and a few more to get running without crashing. Granted, sound is more complicated than a controller with a defined button set, but still.
+
+## Load the Library 
+
+Loading the library is the same as we did with XInput. We try to load from a `.dll` and if we succeed we do the rest. 
+
+In this case, the library we're after is called `dsound.dll`. 
+
+~~~~~~~ C++
+// NOTE(casey): Load the library 
+~~~~~~~ C++ add
+HMODULE DSoundLibrary = LoadLibraryA("dsound.dll");
+
+if(DSoundLibrary)
+{
+~~~~~~~ C++
+    // NOTE(casey): Create a DirectSound object 
+    // NOTE(casey): Set cooperative level
+    // NOTE(casey): "Create" a primary buffer
+    // NOTE(casey): "Create" a secondary buffer     
+~~~~~~~ C++ add
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32InitDSound]</file> Loading the library.]
+
+## Create a DirectSound Object
+
+In order to create a DirectSound object we need to call [DirectSoundCreate][]. Again, to avoid loading a `.dll` that the user might not have, we'll need to do the same abstraction maneuver as we did last time with the XInput functions. If you remember, we did the following for the functions we wanted to retrieve: 
+
+1. `#define` a function prototype with the signature we want. 
+2. Make a `typedef` of that, so that you can use it as a variable.
+3. Create a stub function in case we fail to properly load the actual functions.
+4. Set up a global variable for that function pointer. By default it will point to the stub function.
+5. `#define` the same name as the original function for that variable.
+
+And then, in the init code:
+
+6. `GetProcAddress` of the function we're interested in, and store it in the global variable.
+7. If the function pointer is not valid (i.e. `0`), revert back to the stub function.
+
+And this will finally yield a function that we can call.
+
+This would be the plan.. except it would be a bit of overkill for our purposes. We're only ever calling this function once, immediately after fetching its "ProcAddress". So really, we can get rid of steps 3-5 and define the variable locally.
+
+Let's look at the [DirectSoundCreate][] function syntax:
+
+~~~~~~~ C++
+HRESULT WINAPI DirectSoundCreate(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter);
+~~~~~~~ 
+[<file>[MSDN]</file>]
+
+Let's go ahead and implement the plan above. Immediately after the analagous blocks we made for XInput, we can lay down the following: 
+
+~~~~~~~ C++
+// NOTE(yakvi): XInputSetInputState
+#define X_INPUT_SET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_VIBRATION *pVibration)
+typedef X_INPUT_SET_STATE(x_input_set_state);
+X_INPUT_SET_STATE(XInputSetStateStub) { return (ERROR_DEVICE_NOT_CONNECTED); }
+global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
+#define XInputSetState XInputSetState_
+~~~~~~~ C++ add
+// NOTE(yakvi): DirectSoundCreate
+#define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
+typedef DIRECT_SOUND_CREATE(direct_sound_create);
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Creating function prototype.]
+
+We then can try and load the function, and if it's loaded, try to call it. `DirectSoundCreate` takes the following parameters.
+
+* `pcGuidDevice`: The id of the sound card we're trying to open. Since we don't care which device will be outputting the sound, we'll leave it at `0`.
+* `ppDS`: Pointer to the pointer to a `IDirectSound` structure. We will provide it, and the function will fill in the address of this structure, similar to what we did when we were peeking messages in our `WinMain`. 
+* `pUnkOuter`: Should always be `0`.
+
+`DirectSoundCreate` returns an `HRESULT` which must be processed with `SUCCEEDED` macro which then can return `true` or `false`. 
+
+If you are confused by the above, that's totally fine. Suffice to say that we need to wrap `DirectSoundCreate()` call in `SUCCEEDED`. 
+
+!!! 
+    As of writing, `SUCCEEDED` is defined as a check whether or not the result is greater or equal to `0`.
+
+We could separately check for `if (DirectSoundCreate)` and then `if (SUCCEEDED(DirectSoundCreate(...))), or we could do it all in one go, using logical AND operator (double `&&`), not to be confused with the bitwise AND (single `&`)!
+
+~~~~~~~ C++
+// NOTE(casey): Load the library 
+// ...
+if(DSoundLibrary)
+{
+    // NOTE(casey): Get a DirectSound object 
+~~~~~~~ C++ add
+    direct_sound_create *DirectSoundCreate = (direct_sound_create*)
+                                    GetProcAddress(DSoundLibrary, "DirectSoundCreate");
+    IDirectSound *DirectSound;
+    if(DirectSoundCreate && SUCCEEDED(DirectSoundCreate(0, &DirectSound, 0)))
+    {
+~~~~~~~ C++
+        // NOTE(casey): Set cooperative level
+        // NOTE(casey): "Create" a primary buffer
+        // NOTE(casey): "Create" a secondary buffer         
+~~~~~~~ C++ add
+    }
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32InitDSound]</file> Getting a DirectSound Object.]
+
+## Set Cooperative Level
+
+We now need to configure the DirectSound "object" we've got. This is enabled by setting its "cooperative level". 
+
+The function we're going to call is called [SetCooperativeLevel][]. However, we aren't calling it from Windows directly. Instead, the pointer to this function is stored inside our `DirectSound`. The call takes the following parameters: 
+
+* `hwnd`: Handle to our window
+* `dwLevel`: Priority level we request. Since we'd like to set up custom sound format, we need to set `DSSCL_PRIORITY`. 
+
+Again, we'll need to check whether we `SUCCEDEED` in our call. If we do, we aren't going to actually set any settings just yet. We'll return to it in our next lesson, for now let's add a todo. 
+
+~~~~~~~ C++
+direct_sound_create *DirectSoundCreate = (direct_sound_create*)
+                                GetProcAddress(DSoundLibrary, "DirectSoundCreate");
+IDirectSound *DirectSound;
+if(DirectSoundCreate && SUCCEEDED(DirectSoundCreate(0, &DirectSound, 0)))
+{
+    // NOTE(casey): Set cooperative level
+~~~~~~~ C++ add
+    if (SUCCEEDED(DirectSound->SetCooperativeLevel(Window, DSSCL_PRIORITY)))
+    {
+        // NOTE(casey): "Create" a primary buffer
+    }
+~~~~~~~ C++
+    // NOTE(casey): "Create" a secondary buffer     
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32InitDSound]</file> Setting Cooperative Level.]
+
+## Create a Primary Buffer
+
+Next, we're going to call [CreateSoundBuffer][] to get our primary buffer. As a reminder, initially this was supposed to be the actual buffer on the sound card. Now, it will simply provide us a pointer to `DirectSoundBuffer` "object" from which our audio samples will be read. We want to set up a primary buffer explicitly because we'll thus make sure that our audio is not upsampled or downsampled by the system. It probably won't do much on newer operating systems but we'll do it just in case anyway.
+
+`CreateSoundBuffer` takes the following parameters:
+
+* `lpcDSBufferDesc`: A pointer to the [DSBUFFERDESC][] structure.
+* `lplpDirectSoundBuffer`: A pointer to the pointer to an `IDirectSoundBuffer` object.
+* `pUnkOuter`: We must pass `0` here
+
+You'll notice that the parameters are almost identical to `DirectSoundCreate`. The latter two shouldn't present any problem, let's look better at the `DSBUFFERDESC` structure in a second.
+
+Again, this should be wrapped inside `SUCCEEDED` macro, and again, it's the function that we call from `DirectSound` "object". 
+
+~~~~~~~ C++
+// NOTE(casey): Set cooperative level
+if (SUCCEEDED(DirectSound->SetCooperativeLevel(Window, DSSCL_PRIORITY)))
+{
+    // NOTE(casey): "Create" a primary buffer
+~~~~~~~ C++ add
+    DSBUFFERDESC BufferDescription = ; 
+
+    IDirectSoundBuffer *PrimaryBuffer; 
+    if(SUCCEEDED(DirectSound->CreateSoundBuffer(&BufferDescription, &PrimaryBuffer, 0)))
+    {
+        // Set up primary buffer
+    }
+~~~~~~~ C++
+}
+// NOTE(casey): "Create" a secondary buffer 
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32InitDSound]</file> Creating primary buffer.]
+
+Now, back to our `DSBUFFERDESC` structure. 
+
+First thing of note is that it must be cleared to zero, whatever its size it. We already did it in the past, using `= {}`, so let's do it here as well. 
+
+[Let's see][DSBUFFERDESC] what else we need to set: 
+
+* `dwSize`: The size of the whole `DSBUFFERDESC` structure. We set it to `sizeof(BufferDescription)`.
+* `dwFlags`: a bit field. Acceptable flags are specified [here][DSBCAPS]. Of all listed we might potentially need `DSBCAPS_GLOBALFOCUS`, but we definitely need `DSBCAPS_PRIMARYBUFFER` since it identifies the buffer as primary. 
+* `dwBufferSize`: The size of the buffer that we're interested in, in bytes. Usually this would be where we specify the size, but since it's a primary buffer we pass `0`. 
+    * Since we're on the topic, let's quickly think about the secondary buffer size. While this should be a straightforward calculation, we can make this part even simpler: whoever calls `Win32InitDSound`, decides what the desired buffer size is. 
+* `dwReserved`: Pass `0`
+* `lpwfxFormat`: Pass `0` if it's a primary buffer... 
+* `guid3DAlgorithm`: settings for 3d sound emulation. we don't need it, so pass `0` to it as well. 
+
+Since all the fields are cleared to zero using `= {}`, this leaves us with only two settings that we need to set ourselves:
+
+~~~~~~~ C++
+if (SUCCEEDED(DirectSound->SetCooperativeLevel(Window, DSSCL_PRIORITY)))
+{  
+    // NOTE(casey): "Create" a primary buffer
+~~~~~~~ C++ edit
+    DSBUFFERDESC BufferDescription = {};
+~~~~~~~ C++ add
+    BufferDescription.dwSize = sizeof(BufferDescription);
+    BufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
+~~~~~~~ C++
+    IDirectSoundBuffer *PrimaryBuffer;
+    if(SUCCEEDED(DirectSound->CreateSoundBuffer(&BufferDescription, &PrimaryBuffer, 0)))
+    {
+        // Set up primary buffer
+    }
+}
+// NOTE(casey): "Create" a secondary buffer
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32InitDSound]</file> Specifying buffer description.]
+
+We're still not out of the woods yet. In order to finalize our primary buffer setup, we need to set the wave format using the [SetFormat][] function. This function is a bit different, in that it's called from the buffer instead of `DirectSound`. 
+
+As its only parameter, `SetFormat` takes a pointer to a [WAVEFORMATEX][] structure. It has the following syntax: 
+
+~~~~~~~ C++
+typedef struct tWAVEFORMATEX {
+  WORD  wFormatTag;
+  WORD  nChannels;
+  DWORD nSamplesPerSec;
+  DWORD nAvgBytesPerSec;
+  WORD  nBlockAlign;
+  WORD  wBitsPerSample;
+  WORD  cbSize;
+} WAVEFORMATEX, *PWAVEFORMATEX, *NPWAVEFORMATEX, *LPWAVEFORMATEX;
+~~~~~~~ 
+[<file>[MSDN]</file> `WAVEFORMATEX` structure.]
+
+Unfortunately, this structure has the members which depend upon each other, so it's imperative that we set them in a different order from how they appear here.
+
+* `wFormatTag`: The format of the waveform-audio. We're going to be working with the PCM method (i.e. Pulse-Code Modulation), so the format tag would be `WAVE_FORMAT_PCM`. 
+* `nChannels`: We want stereo sound, so we pass `2`. 
+* `nSamplesPerSecond`: We're going to have it passed as a parameter to our function
+* `wBitsPerSample`: We want `16` bits per sample (CD quality), so that's what we're going to pass. 
+* `nBlockAlign`: How many _bytes_ are there per _unit_ of samples. 
+    * Since we pass two channels in Left-Right sequence, we can simply compute `nChannels` times `wBitsPerSample`, divided by the number of bits in a byte (8). 
+* `nAvgBytesPerSec`: How many _bytes_ will the samples occupy in one second. We can calculate it by multiplying `nSamplesPerSecond` for `nBlockAlign`. 
+* `cbSize`: Size of any extra information we might want to pass. We don't have any, so just leave it at `0`.
+
+Pay attention at the order these things are defined! Make sure you don't use things before actually defining them. Compiler will not complain, but your sound will not be what you expect it to be.
+
+!!! Tip
+    If you're creating an API, don't do this. When designing an API, you want to avoid creating structures that should be filled in in order, or with elements which depend on each other, as well as usage of uninitialized member variables.
+
+    Take for instance `nBlockAlign`. This information is redundant as you can easily calculate this value inside your call directly, without introducing a potential failure point for the user, if they forgets to initialize the dependant values first. 
+
+    If you really have to do this, you want the variables to be initialized in the same order they are are positioned on the struct. Help the user succeed and prevent bugs for them!
+
+    Set the users up for success, don't set them up for failure.
+
+    We mentioned "API" a lot. If you're unfamiliar what exactly this means, head over to subsection [API]. 
+
+Since we'll use it for both of our buffers, we can place the `WAVEFORMATEX` structure outside, right after we get our `DirectSound` "object".
+
+Finally, we call `SetFormat` function and, after we've done everything, our function will look roughly in the following way:
+
+~~~~~~~ C++
+internal void
+~~~~~~~ C++ edit
+Win32InitDSound(HWND Window, s32 SamplesPerSecond, s32 BufferSize)
+~~~~~~~ C++ 
+{
+    // NOTE(casey): Load the library
+    HMODULE DSoundLibrary = LoadLibraryA("dsound.dll");
+    if(DSoundLibrary)
+    {
+        // NOTE(casey): Get a DirectSound object
+        direct_sound_create *DirectSoundCreate = (direct_sound_create*)GetProcAddress(DSoundLibrary, "DirectSoundCreate");
+        IDirectSound *DirectSound;
+        if(DirectSoundCreate && SUCCEEDED(DirectSoundCreate(0, &DirectSound, 0)))
+        {
+            ~~~~~~~ C++ add
+            WAVEFORMATEX WaveFormat = {};
+            WaveFormat.wFormatTag = WAVE_FORMAT_PCM;
+            WaveFormat.nChannels = 2;
+            WaveFormat.nSamplesPerSec = SamplesPerSecond;
+            WaveFormat.wBitsPerSample = 16;
+            WaveFormat.nBlockAlign = (WaveFormat.nChannels * WaveFormat.wBitsPerSample) / 8; // 4 under current settings
+            WaveFormat.nAvgBytesPerSec = WaveFormat.nSamplesPerSec * WaveFormat.nBlockAlign;
+            ~~~~~~~
+
+            if (SUCCEEDED(DirectSound->SetCooperativeLevel(Window, DSSCL_PRIORITY)))
+            {
+                // NOTE(casey): "Create" a primary buffer
+                DSBUFFERDESC BufferDescription = {};
+                BufferDescription.dwSize = sizeof(BufferDescription);
+                BufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
+                
+                IDirectSoundBuffer *PrimaryBuffer;
+                if(SUCCEEDED(DirectSound->CreateSoundBuffer(&BufferDescription, &PrimaryBuffer, 0)))
+                {
+~~~~~~~ C++ add
+                    if (SUCCEEDED(PrimaryBuffer->SetFormat(&WaveFormat)))
+                    {
+                        // NOTE(casey): We have finally set the format of the primary buffer!
+                    }
+~~~~~~~ C++
+                }
+            }
+            // NOTE(casey): "Create" a secondary buffer
+            
+        }
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Specifying buffer description.]
+
+## Create a Secondary Buffer
+
+Last step for `Win32InitDSound` before we can play the sound is to set up secondary buffer. We'll need to fill out a new `BufferDescription` and pass a few more parameters to it, but largely the process remains the same. We'll use the secondary buffer to write the sound samples. 
+
+The code for the secondary buffer remains largely the same as for the primary buffer, we'll only need to have a different buffer description. 
+
+* `dwFlags`: since we don't really need anything, we'll just leave it at `0`.
+* `dwBufferBytes`: `BufferSize` that we'll be getting from whoever calls this function.
+* `lpwfxFormat`: We don't need to set format of our wave again, we can use the one we have already, so simply pass pass the address to `WaveFormat` here.
+
+~~~~~~~ C++
+if (SUCCEEDED(DirectSound->SetCooperativeLevel(Window, DSSCL_PRIORITY)))
+{
+    // ... 
+}
+~~~~~~~ C++ add
+// NOTE(casey): "Create" a secondary buffer
+DSBUFFERDESC BufferDescription = {};
+BufferDescription.dwSize = sizeof(BufferDescription);      
+BufferDescription.dwBufferBytes = BufferSize;
+BufferDescription.lpwfxFormat = &WaveFormat;
+
+IDirectSoundBuffer *SecondaryBuffer;
+if(SUCCEEDED(DirectSound->CreateSoundBuffer(&BufferDescription, &SecondaryBuffer, 0)))
+{
+    // NOTE(casey): All good, secondary buffer works as intended
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Creating Secondary Buffer.]
+
+!!! Note Failure diagnostics
+    You'll notice we check quite a few times for `SUCCEEDED` so far. But what if you don't succeed? Usually there would be some sort of logging system in place reporting error messages. Currently we don't have any diagnostics system in place, but we might as well leave a few TODO's for the future. We leave it as the exercise for the reader.
+
+    You'll quickly notice that there're many potential failure points. In a good API, you aim to reduce the failure points as much as possible, so this is something you can keep in mind for the future.
+
+As a final touch, let's print out a diagnostic just to see that the Primary and Secondary buffers are up and running:
+
+~~~~~~~ C++
+if (SUCCEEDED(PrimaryBuffer->SetFormat(&WaveFormat)))
+{
+~~~~~~~ C++ add
+    OutputDebugStringA("Primary buffer format was set.\n");
+~~~~~~~ C++
+}
+// ... 
+if(SUCCEEDED(DirectSound->CreateSoundBuffer(&BufferDescription, &SecondaryBuffer, 0)))
+{
+~~~~~~~ C++ add
+    OutputDebugStringA("Secondary buffer created Successfully.\n");
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32InitDSound]</file> Adding a couple debug strings.]
+
+If you try to compile now, the compiler should let you know that you're missing parameters in your `Win32InitDSound` call. Let's fix that. 
+
+* `Window`: Pass the handle to our `Window`. 
+* `SamplesPerSecond`: We've said that we want 48000 Hz frequency, so we'll pass just that.
+* `BufferSize`: We said that we wanted a two second `BufferSize`. Since we said we wanted 16 bit samples (`sizeof(s16)`), playing in `2` channels, for `2` seconds, on `48000` frequency, the size should be the multiple all this mulitiplied together.
+
+~~~~~~~ C++
+if (Window)
+{
+    HDC DeviceContext = GetDC(Window);
+    Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
+    
+~~~~~~~ C++
+    Win32InitDSound(Window, 48000, sizeof(s16) * 2 * 2 * 48000);
+~~~~~~~ C++
+    // ...
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Updating `Win32InitDSound` call.]
+
 
 # Recap
 
-# Exercises
+DirectSound is not a great API. However, in your programming life you will encounter all sorts of API. Some will be good, others not so much. You'll need to learn to read, understand and implement documentation. But even still, you can fit the whole function on one screen. It's not that many lines of code, and once you're done with it, you're done. 
 
-# Programming Basics
+Sure, writing platform code takes a couple weeks of work, but you shouldn't be afraid of doing it. The benefits of being able to quickly maintain it moving forwards are immense. 
+
+Today, we've laid foundation for our sound processing. Even if we can't reproduce any sounds yet, we have DirectSound initialization out of the way. Tomorrow, we'll try to output some basic sounds using it.
+
+# Programming Notions
+
+## API
+
+The acronym "API" literally stands for <b>A</b>pplication <b>P</b>rogramming <b>I</b>nterface. It can be used between different parts of the same program, between different programs, even between different operating systems and computers. 
+
+If we talk about one program, you can imagine an API as a point of contact between clearly distinct different parts of code, _modules_, where one side is the producer, and the other is the consumer. In some cases, both sides exchange the roles of producer and consumer. 
+
+We've seen quite a few Windows API already: `Win32` API allows creation of windows and handling of messages, `GDI` permits device-indipendent handling of graphics, `Memory` takes care of, well, memory. `XInput`, `DirectSound`... and so on. These are sets of functions, structures, workflows that you must follow if you want to achieve your goals. 
+
+We've also seen that not all API are created equal. Some allow a much bigger degree of freedom for the user, while the others are much more concise (and, in some ways, restrictive). Some introduce multiple failure points while the others have only a couple of things that can fail. Some follow very strict procedures while the others only are a couple function calls. 
+
+An important part of every API is its documentation. So far we've only seen `MSDN` as the documentation source, but for each API there should be some docs teaching a potential user how to use it.
+
+When we'll get to designing our API, several objectives might be pursued: to _expose_ some specific functionality (provide a way to access something that's normally closed), to _simplify_ something, or to _communicate_. 
+
+We'll strive to have as little in the way as possible. An ideal API is only one struct to be filled out by the user; can we achieve that?
+
+_(Continue to subsection [Create a Secondary Buffer])_
 
 # Side Considerations
 
+## About Game Optimization
+
+In game development, game optimization matters _a lot_. It's either you optimize your game, or you write on top of the game engine that was optimized for you. 
+
+If you try to run the original "Binding of Isaac" (when it was the Flash game), it will still struggle on the laptop. This is because it was built on top of something that wasn't optimized to be a game engine. 
+
+You really should care about optimization. Of course, some code doesn't have to be optimized, but it should be executed fast enough to not create _bottlenecks_. And while things like graphics and sound should always be optimized, sometimes even higher level game code can be responsible for the slowdowns.
 
 # Navigation
 
 Previous: [Day 6. Gamepad and Keyboard Input][day 6]
 
-<!--Up Next: [Day 8. ][day 8]-->
+<!-- Up Next: [Day 8. ][day 8] -->
 
 
 [Back to Index](../index.md.html)
