@@ -29,6 +29,7 @@ body#md {
 .md .longTOC .level1 {
     font-weight: 300;
     margin-bottom: -30px;
+    padding: 12px 0;
 }
 
 .md div.title, .md div.subtitle, .md h1, .md h2, .md h3, .md h4, .md h5, .md h6,

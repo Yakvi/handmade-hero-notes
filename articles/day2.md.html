@@ -889,7 +889,7 @@ So where we can get the `x, y, w` and `h`? We have our `PAINTSTRUCT` with plenty
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> `PatBlt`]
 
-We compile... and get a `LNK2019` error: `unresolved external symbol ....PatBlt`. If you remember [Day1](day1.md.html#addsomethingtodofortheprogram/importalibrary) you should have the exact solution for it in mind.
+We compile... and get a `LNK2019` error: `unresolved external symbol ....PatBlt`. If you remember [Day1](day1.html#addsomethingtodofortheprogram/importalibrary) you should have the exact solution for it in mind.
 
 !!! Tip
     Take a second looking for solution yourself before scrolling further down!
@@ -927,7 +927,7 @@ EndPaint(Window, &Paint);
 [Listing [x]: <file>[win32_handmade.cpp]</file> Extracting operation to a variable.]
 
 !!! Note `static` keyword and the _scope_
-    In C/C++, `static` is actually quite a confusing keyword: it has three meanings depending on the context. We will return to its definitions more in detailed [in the next chapter](day3.md.html#differentmeaningsofstatic). 
+    In C/C++, `static` is actually quite a confusing keyword: it has three meanings depending on the context. We will return to its definitions more in detailed [in the next chapter](day3.html#differentmeaningsofstatic). 
 
     In this particular case, by marking `Operation` as `static`, it will be declared only once for the whole duration of the program. Only on the first time you step into `WM_PAINT` the `Operation` will be initialized, after that the application will skip the initialization step and will remember its previous value.
 
@@ -972,11 +972,11 @@ Next time, we will be defining the `MainWindowCallback` messages a bit more appr
 
 ------------
 
-[^AWnotation]: We briefly touched on `...A` and `...W` notation in [Day 1](day1.md.html#addsomethingtodofortheprogram/importalibrary). To recap, any function that takes a string as input has an <b>A</b>nsi and a <b>W</b>ide (Unicode) version, and a macro decides which function to call. Here, you can use the macro `WNDCLASS` or the ANSI/Wide version, as you prefer. 
+[^AWnotation]: We briefly touched on `...A` and `...W` notation in [Day 1](day1.html#addsomethingtodofortheprogram/importalibrary). To recap, any function that takes a string as input has an <b>A</b>nsi and a <b>W</b>ide (Unicode) version, and a macro decides which function to call. Here, you can use the macro `WNDCLASS` or the ANSI/Wide version, as you prefer. 
 
 [^align]: It's not entirely true though, depending on the sizing of the elements in the struct some additional _padding_ may be introduced to preserve memory _alignment_. We will look into the alignment later down the line. 
 
-[^bitwiseOr]: See also some additional methods to pass parameters to function [here](day1.md.html#addsomethingtodofortheprogram).
+[^bitwiseOr]: See also some additional methods to pass parameters to function [here](day1.html#addsomethingtodofortheprogram).
 
 [^winapi]: The only difference between the two is their _calling convention_. For MSVC calling conventions, you can read more [here](https://docs.microsoft.com/en-us/cpp/cpp/argument-passing-and-naming-conventions).
 
@@ -1162,7 +1162,7 @@ Up Next: [Day 3. Allocating a Back Buffer][day 3]
 <style class="fallback">
   body {
     visibility: hidden;
-    font-family: monospace;
+    font-family: sans-serif;
   }
 </style>
 <!-- Markdeep: https://casual-effects.com/markdeep/ -->

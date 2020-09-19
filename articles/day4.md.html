@@ -154,7 +154,7 @@ LPVOID VirtualAlloc(
 ~~~~~~~
 [<file>[MSDN]</file> VirtualAlloc Syntax.]
 
-As you can see, it returns a simple `void *` (we've seen what void pointers are [last time](day3.md.html#implementlogic/createdibsectionimplementation)). This pointer represents the base of the newly allocated memory, and its parameters are:
+As you can see, it returns a simple `void *` (we've seen what void pointers are [last time](day3.html#implementlogic/createdibsectionimplementation)). This pointer represents the base of the newly allocated memory, and its parameters are:
 
 * `lpAddress`: The starting address inside the the Virtual Address Space. We don't care where our buffer memory will reside so we'll leave it at `0`.
 * `dwSize`: The size of the region to allocate in bytes. Since `VirtualAlloc` only returns full pages, this size will be rounded up to the next page boundary (which is perfect for us). This is where we pass our `BitmapMemorySize`.
@@ -495,7 +495,7 @@ Win32UpdateWindow(HDC DeviceContext, RECT *ClientRect)
 
 # Draw Pixels to the Bitmap
 
-Now we should be compilable. Let's quickly build and run our program, our window should result nice and black as before. You can also check it for the memory leaks like we did it [last time](day3.md.html#inspectyourwork), just to be sure. 
+Now we should be compilable. Let's quickly build and run our program, our window should result nice and black as before. You can also check it for the memory leaks like we did it [last time](day3.html#inspectyourwork), just to be sure. 
 
 We're finally ready to draw some pixels! Let's go ahead and do it. 
 
@@ -1061,7 +1061,7 @@ Compile, run... looks fine!
 
 ## Prepare the Main Window Loop for Continuous Animation
 
-One thing that prevents us from running a smooth animation right away is our message loop. You might remember from [Day 2](day2.md.html#createwindow/windowmessagequeue) that `GetMessage` function inside our `WinMain` will sit and wait for new messages forever if there aren't any. (actually, Windows will simply halt our process and use the CPU power for some other process). We don't want to wait for Windows to give us work, we're a game which is animating even if there're no messages. So we need to change this call to something that keeps running even if we didn't receive any messages.
+One thing that prevents us from running a smooth animation right away is our message loop. You might remember from [Day 2](day2.html#createwindow/windowmessagequeue) that `GetMessage` function inside our `WinMain` will sit and wait for new messages forever if there aren't any. (actually, Windows will simply halt our process and use the CPU power for some other process). We don't want to wait for Windows to give us work, we're a game which is animating even if there're no messages. So we need to change this call to something that keeps running even if we didn't receive any messages.
 
 We need to implement [PeekMessageA][] instead of `GetMessage`. 
 
@@ -1485,7 +1485,7 @@ Up Next: [Day 5. Windows Graphics Review][day 5]
 <style class="fallback">
   body {
     visibility: hidden;
-    font-family: monospace;
+    font-family: sans-serif;
   }
 </style>
 <!-- Markdeep: https://casual-effects.com/markdeep/ -->

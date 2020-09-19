@@ -522,6 +522,138 @@ if (Window)
 ~~~~~~~ 
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Updating `Win32InitDSound` call.]
 
+Now, compile, run and make sure your implementation works correctly. Step into the code and make sure the values are valid. Verify that the Output messages are printed out as intended, and you're good to go.
+
+# Deep Dive: DirectSound Objects
+
+We said at the beginning that DirectSound works as an object. We never called it an object because it doesn't use C++ object programming models. Instead, it implements something called "COM Interface". 
+
+When we call into `DirectSoundCreate` what we really get is an object with a Virtual Function Table, or _vtable_ for short. Vtables are usually something one associates with C++, and we won't be covering much of that. But a short introduction is in place to understand what really goes on here. 
+
+## Methods
+
+Normally, if you define a struct, you simply put some data in it: 
+
+~~~~~~~ C++
+struct some_struct
+{
+    s32 X;
+    s16 Y;
+};
+
+// ...
+
+some_struct Foo;
+Foo.x = 0; etc.
+~~~~~~~
+
+This signals to the compiler that it needs to prepare some memory. The things that are in the struct will come together (possibly with some padding in between them) in the order in which the occur and in the sizes that they occur. In the example above, we have a 64-byte struct: 32 bits for `X`, 16 bits for `Y` and 16 bits for padding (so that the memory is aligned to 4-byte boundary).
+
+C++ allows you to do some other things inside a struct. For instance, you can do a _method declaration_ inside the struct as follows: 
+
+~~~~~~~ C++
+struct some_struct
+{
+    s32 X;
+    s16 Y;
+
+~~~~~~~ C++ add
+    void DoSomething();
+~~~~~~~ C++
+};
+~~~~~~~
+
+This would enable you to call that function (which in this context is called "method") in the same way you access another piece of data (e.g. our `Foo` could make a call `Foo.DoSomething()`). It works as any function: you can pass parameters to it, return values, etc. Let's, for example, add an `int C` parameter to it.
+
+The only difference would be syntactic: instead of defining a function as we usually did, you'll need to use the "scoping operator" `::`.
+
+~~~~~~~ C++
+struct some_struct
+{
+    s32 X;
+    s16 Y;
+
+~~~~~~~ C++ edit
+    void DoSomething(int C);
+~~~~~~~ C++
+};
+
+void some_struct::
+DoSomething(int C)
+{
+    // function definiton...
+}
+~~~~~~~
+
+Thus the function, instead of being declared at the file scope, is declared in the `some_struct` object. So you can't just call it like `DoSomething`, you should always call it from one of its "instances". 
+
+Under the hood, compiler rewrites this function. Among other things, the compiler will insert a pointer to the struct which contains the function. The actual signature would be thus `void some_struct::DoSomething(some_struct *this, int C)`. `this` pointer will be used to reference anything that implicitly happens within the method. So like in a normal function, you can reference `C`, initialize new variables normally... but if you reference, for instance, `X`, compiler would automatically convert it to `this->X`. In any other function, `X` would be undefined, but since we declared it in our `some_struct`, we can reference it in our method. 
+
+There a few other differences (again, totally syntactic) which we'll not dive deeper into since we'll not be using these. However what we described above is key to understanding what's happening with DirectSound here, as well as how the COM interfaces work in general.
+
+## Virtual Function Tables
+
+If we go one step further, we can declare our `DoSomething` method as `virtual`:
+
+~~~~~~~ C++
+struct some_struct
+{
+    s32 X;
+    s16 Y;
+
+~~~~~~~ C++ edit
+    virtual void DoSomething(int C);
+~~~~~~~ C++
+};
+~~~~~~~
+
+Suddenly, `DoSomething` becomes more complicated than a regular function or even method. It's not just a syntactic thing any more, there's more than that. When compiler sees `virtual` keyword, it will insert something called "vtable pointer" at the top of the struct definition. At the same time, outside of the `some_struct` the compiler will create a _virtual function table_, or _vtable_ for `some_struct`. 
+
+The vtable contains several function pointers that should be called when you are using `some_struct`. So now, when you call `Foo.DoSomething()`, the program will _look up_ the address to `DoSomething` inside the vtable: 
+
+1. Get the pointer on top of `some_struct` (that the compiler silently inserted)
+2. Access the vtable for `some_struct`. 
+3. Look at the index of vtable to which `DoSomething` corresponds. 
+4. Jump to the address `DoSomething` points to. 
+5. Actually call `DoSomething`. 
+
+Sounds familiar? It's pretty much what we did when we were loading XInput functions. We declared our own function pointers, assigned variables and jumped to them, so that we could call them. virtual functions work in a same manner except that, instead of single global pointers, there're global _tables_ (one per struct using virtual functions), and the only way to access the correct table is to look up the pointer inside the struct pointing to them. 
+
+If it sounds complicated and a lot of extra work, it's because it is. There's double indirection going on here before the final dispatch. This leads to the fact that virtual functions come at a cost in performance which sometimes might be critical. Of course, this cost might vary based on how the compiler optimizes all this, but it's still much different than calling a regular function or method. It's not a "zero-cost abstraction". 
+
+## COM Interfaces
+
+<b>C</b>omponent <b>O</b>bject <b>M</b>odel, or COM, is a "binary interface" standard introduced by Microsoft in the early '90s. What it does is just implementing _vtables_.
+
+When calling into `DirectSoundCreate`, it will return us an object with that vtable _in it_. That's why we only had to use `GetProcAddress` only once: all the functions are already defined by windows and packaged in these objects, in a non dissimilar way from how we approached it ourselves. This allows us calling the functions off the actual objects that we got back, and the vtable allows us to call these functions. 
+
+Now, where exactly is this vtable located in memory? It actually got mapped in memory when we loaded the `dsound.dll`! So the `.dll` itself had a vtable in it when it got loaded, and we're pointing to it from our `DirectSound` object, calling from that jump table inside the object.
+
+## Deep Dive into the Disassembly
+
+Let's go inside the debugger to see what's going on. It doesn't really matter what language you program in: CPU has to do everything, so no matter how fancy stuff looks to the language, CPU will have to do whatever work is required to make that happen. Languages sometimes make things simpler to the programmer but not necessarily to the CPU. 
+
+1. Set a breakpoint on a call of a function we've defined and start debugging.
+2. Once the breakpoint hits, open Disassembly. 
+    * In Visual Studio, you can right-click the line and select "Go to Disassembly" or press `Alt-G`.
+
+![Figure [x]: Accessing Disassembly window in Visual Studio.](../media/day7/disassembly.jpg)
+
+You will see the `Disassembly` window. It might look complicated at first but it simply represents all the machine code that each line of your code generates. There's the _instruction_ address, the actual instruction (`mov`, `push`, `call`, etc.), and the parameters passed to the processor with that instruction. These can be addresses, _memory registers_, raw values. You can further customize your Disassembly experience by right-clicking anywhere on disassembly and enabling or disabling the flags of your choice. 
+
+Anyway, back to our function. If you look, for instance, at `Win32LoadXInput`, you will notice that our call corresponds to one instruction: a direct `call` of our function. It was the linker that, during the linking phase of compiler, put the address of the function directly in the code. Once we step into it, we go straight in our function. 
+
+Now, every time you use a virtual function, you're incurring in much more overhead than that. If you set a breakpoint at `DirectSound->SetCooperativeLevel` call and inspect the Disassembly, you will see that it generated a more instructions. 
+
+* `mov rax, ptr [some memory location]`: First indirection, load `DirectSound`.
+* `mov rax, ptr [rax]`: Second indirection, load the vtable.
+* `mov r8d, 2`: Start packing the parameters (probably?)
+* `mov rdx, ptr [Window]`: set register `rdx` to the value of our `Window` pointer.
+* `mov rcx, ptr [some memory location]`: set register `rcx` to probably the `DSSCL_PRIORITY`'s value.
+* `call ptr [rax]`: Call `SetCooperativeLevel` function pointer from the vtable.
+* `test`, `jl`: test for `SUCCEEDED` and skip to another part of code if the result is `false`. 
+
+You don't really have to be an expert in the assembly language to see that it's more work than our simply function call. Sure, there're additional things like loading the parameters into the registers and testing for the result, but even the call itself goes through three steps before it actually happens. Maybe in the optimized mode these instructions would be simplified, but that is the idea. 
 
 # Recap
 
@@ -530,6 +662,20 @@ DirectSound is not a great API. However, in your programming life you will encou
 Sure, writing platform code takes a couple weeks of work, but you shouldn't be afraid of doing it. The benefits of being able to quickly maintain it moving forwards are immense. 
 
 Today, we've laid foundation for our sound processing. Even if we can't reproduce any sounds yet, we have DirectSound initialization out of the way. Tomorrow, we'll try to output some basic sounds using it.
+
+# Exercises
+
+## Read on Other Audio APIs
+
+As we said, DirectSound is an old API. Newer API are avaialable to do the same job. Read more about them here:
+
+* [Core Audio API][].
+* [Multimedia API][].
+* [XAudio2 API][].
+
+## Implement Another Audio API
+
+Pick one of the above and try to implement the same code that we did (audio system initialization) in that system. 
 
 # Programming Notions
 
@@ -585,7 +731,7 @@ Previous: [Day 6. Gamepad and Keyboard Input][day 6]
 <style class="fallback">
   body {
     visibility: hidden;
-    font-family: monospace;
+    font-family: sans-serif;
   }
 </style>
 <!-- Markdeep: https://casual-effects.com/markdeep/ -->

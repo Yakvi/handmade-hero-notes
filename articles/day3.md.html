@@ -27,7 +27,7 @@ In our `MainWindowCallback`, we left out a couple of things to fix. One thing is
 
 To handle `WM_CLOSE` message properly there're a few things that we can do. 
 
-First, let's look at our message loop inside the `WinMain`. As you might remember from the [previous chapter](day2.md.html#createwindow/windowmessagequeue), if `GetMessage` receives `WM_QUIT` message, its result is `0` (and if the window handle provided is invalid, the result is `-1`). That is why we're checking if the message result is greater than `0`: 
+First, let's look at our message loop inside the `WinMain`. As you might remember from the [previous chapter](day2.html#createwindow/windowmessagequeue), if `GetMessage` receives `WM_QUIT` message, its result is `0` (and if the window handle provided is invalid, the result is `-1`). That is why we're checking if the message result is greater than `0`: 
 
 ~~~~~~~ C++
 for(;;)
@@ -177,7 +177,7 @@ WinMain(...)
 
 Let's make a small detour here. 
 
-We [already encountered](day2.md.html#drawingsomethingtoourwindow/“animating”thewindow) the `static` keyword. We mentioned that `static` has three meanings in C, depending on where you put it (we used it to identify a "locally persistent" variable inside our `WM_PAINT`), so let's define it as three different keywords. We'll add them at the top of `win32_handmade.cpp`: 
+We [already encountered](day2.html#drawingsomethingtoourwindow/“animating”thewindow) the `static` keyword. We mentioned that `static` has three meanings in C, depending on where you put it (we used it to identify a "locally persistent" variable inside our `WM_PAINT`), so let's define it as three different keywords. We'll add them at the top of `win32_handmade.cpp`: 
 
 ~~~~~~~ C++
 #include <windows.h>
@@ -222,7 +222,7 @@ global_variable bool Running;
 
 ## local_persist
 
-Locally persistent `static` variable stays around similar to a `global_variable` but it's locally scoped.This is the way we used it [last time](day2.md.html#drawingsomethingtoourwindow/“animating”thewindow). 
+Locally persistent `static` variable stays around similar to a `global_variable` but it's locally scoped.This is the way we used it [last time](day2.html#drawingsomethingtoourwindow/“animating”thewindow). 
 
 Normally, whenever you enter a _scope_, area designated by braces (`{}`), variables declared inside it live until you go out of it. Then that memory is cleared, variable becomes undefined and, if there was already a variable with the same name declared further "above", the latter's value is returned to the variable.
 
@@ -935,7 +935,7 @@ Up Next: [Day 4. Animating the Back buffer][day 4]
 <style class="fallback">
   body {
     visibility: hidden;
-    font-family: monospace;
+    font-family: sans-serif;
   }
 </style>
 <!-- Markdeep: https://casual-effects.com/markdeep/ -->
