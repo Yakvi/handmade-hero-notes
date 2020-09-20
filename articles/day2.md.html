@@ -2,7 +2,6 @@
 <link rel="stylesheet" href="../css/style.css"/>
 
 **Day 2. Opening a Win32 Window**
-
 _Video Length: [1h00](https://hero.handmade.network/episode/code/day002/)_
 
 [Last time][day 1], we set up our dev environment allowing us to launch our text editor (we showcased [4coder][] and [Visual Studio Code][vscode]). We then created a simple Win32 application launching a modest message box. We made a "make file" for it, just batch file compiling something directly into the `build` directory. We then learned how to launch the debugger ([RemedyBG][] or Visual Studio), with some simple actions like stepping into our code. 
@@ -16,7 +15,7 @@ The window that we are going to open is a basic Windows one. All the programs go
 
 # Window Class
 
-From the earliest days of Windows, to start out opening your windows you had to declare and register a Window Class (i.e. `WNDCLASS`). If we open up [MSDN][], we can quickly find the relevant article (in this case, we need a simple [WNDCLASSA][] structure[^AWnotation]). 
+From the earliest days of Windows, to start out opening your windows you had to declare and register a Window Class (i.e. `WNDCLASS`). If we open up [MSDN][], we can quickly find the relevant article (in this case, we need a simple [WNDCLASSA][] structure[^AWnotation]). This is how it looks: 
 
 ~~~~~~~ C++
 typedef struct tagWNDCLASSA {
@@ -1168,4 +1167,3 @@ Up Next: [Day 3. Allocating a Back Buffer][day 3]
 <!-- Markdeep: https://casual-effects.com/markdeep/ -->
 <script>markdeepOptions = { tocStyle: 'long' }; window.alreadyProcessedMarkdeep || (document.body.style.visibility = 'visible');</script>
 <script src="../js/markdeep.min.js" charset="utf-8"></script>
-<script src="https://morgan3d.github.io/markdeep/latest/markdeep.min.js" charset="utf-8"></script>
