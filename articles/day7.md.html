@@ -229,7 +229,7 @@ If you are confused by the above, that's totally fine. Suffice to say that we ne
 !!! 
     As of writing, `SUCCEEDED` is defined as a check whether or not the result is greater or equal to `0`.
 
-We could separately check for `if (DirectSoundCreate)` and then `if (SUCCEEDED(DirectSoundCreate(...))), or we could do it all in one go, using logical AND operator (double `&&`), not to be confused with the bitwise AND (single `&`)!
+We could separately check for `if (DirectSoundCreate)` and then `if (SUCCEEDED(DirectSoundCreate(...)))`, or we could do it all in one go, using logical AND operator (double `&&`), not to be confused with the bitwise AND (single `&`)!
 
 ~~~~~~~ C++
 // NOTE(casey): Load the library 
