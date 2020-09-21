@@ -3,6 +3,39 @@
 
 **Day 8. Writing a Square Wave to DirectSound**
 _Video Length (includig Q&A): [1h33](https://hero.handmade.network/episode/code/day008/)_
+!!! 
+    "Handmade Hero Notes" contains code from [Handmade Hero][]. Preorder the game on [handmadehero.org][handmade hero], and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
+    
+We are currently in the middle of setting up our sound support. Last time, we pretty much finished setting up DirectSound and the buffers. Today, we're going to focus on outputting the sound. For this purpose, we're also going to write a simple square wave sound to make sure the system works properly.
+
+# DirectSound Init Review
+
+Our `Win32InitDSound` function currently does the following things: 
+
+1. Load `dsound.dll` library. 
+2. Get the address of the function `DirectSoundCreate`. 
+    * This is the only function that we need to pull directly from `dsound.dll`.
+3. Create `DirectSound` object. 
+4. Set up the sound format. Variable frequency aside, we know that our sound will have the following properties:
+    * Stereo (2 channels)
+    * 16 bits per sample (Audio CD quality)
+    * We also calculate other things required by the API
+    * We requested the sound to be of 48kHz because this seems to be the most common native format for sound output. You can also set it to be 44.1kHz, another common format and the one used in Audio CDs.
+5. Set the "cooperative level" of our window to be priority. 
+    * This will allow us to later set up the format of the primary buffer.
+6. Create Primary Buffer.
+    * In order to do that, we need to _describe_ our buffer in the `DSBUFFERDESC` structure.
+7. Set the format of the buffer based on the `WAVEFORMATEX` structure we defined in step 4.
+    * We really only needed to create primary buffer for this. 
+    * In theory, you could skip steps 5-7, but then you don't have guarantee that your sound wouldn't be up/downsampled by Windows.
+8. Create Secondary Buffer. 
+    * We need a buffer description here as well. Among other things we pass a buffer size. We want our buffer to be 2 seconds long to avoid bad jumps on skipped frames.
+    * We don't need to set the format separately here, as it can be passed directly inside `BufferDescription`.
+
+And... that's it! The secondary buffer is the only thing that we'll be using from here on. We can't write to the primary buffer anymore as you used to be able in the early days of Windows. Nowadays Windows doesn't give exclusive privileges to write to the sound card: one has to write in the secondary buffer, and the kernel will take all the programs writing to their secondary buffers, mix them together and output to the sound card. 
+
+Since we're going to use this secondary buffer, we will elevate it to our globals. Again, we could eventually remove it as it's not a good idea having too many globals. In a _platform layer_ it's usually not that big of a deal because the code is kind of isolated from the rest of your program. At the same time, you want to be aware of it, as the globals can be modified by anyone, and sometimes it creates a bit of a _stringiness_ in your code (or spaghettinnes, if you prefer). Be aware of you do global, make sure to understand why it's global and that, if it should stay global, there should be only one of them. 
+
 
 
 
