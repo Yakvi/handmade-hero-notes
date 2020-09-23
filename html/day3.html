@@ -242,7 +242,7 @@ In total, this will result in the following set of changes:
 <span class="line"><span class="hljs-title">WinMain</span><span class="hljs-params">(...)</span></span>
 <span class="line"></span>{</span>
 <span class="line">    <span class="hljs-comment">//... </span></span>
-<span class="line">    <span class="hljs-keyword">if</span> (Window) {</span><div class=" add"><span class="line">        Running = <span class="hljs-literal">true</span>;</span></div><div class=" edit"><span class="line">        <span class="hljs-keyword">while</span> (Running)</span></div><span class="line">        {</span>
+<span class="line">    <span class="hljs-keyword">if</span> (Window) {</span><div class=" add"><span class="line">        Running = <span class="hljs-literal">true</span>;</span></div><div class=" edit"><span class="line">        <span class="hljs-keyword">while</span> (Running) <span class="hljs-comment">// Replaces "for" loop</span></span></div><span class="line">        {</span>
 <span class="line">            <span class="hljs-comment">//...</span></span>
 <span class="line">        }</span>
 <span class="line">    }</span>
@@ -530,7 +530,7 @@ Let's introduce a function which we will call <code>Win32UpdateWindow</code>. Fo
 <span class="line"><span class="hljs-title">Win32ResizeDIBSection</span><span class="hljs-params">(<span class="hljs-keyword">int</span> Width, <span class="hljs-keyword">int</span> Height)</span></span>
 <span class="line"></span>{</span>
 <span class="line">}</span><div class=" add"><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
-<span class="line"><span class="hljs-title">Win32UpdateWindow</span><span class="hljs-params">(HDC DeviceContext, <span class="hljs-keyword">int</span> Width, <span class="hljs-keyword">int</span> Height)</span></span>
+<span class="line"><span class="hljs-title">Win32UpdateWindow</span><span class="hljs-params">(HDC DeviceContext, <span class="hljs-keyword">int</span> X, <span class="hljs-keyword">int</span> Y, <span class="hljs-keyword">int</span> Width, <span class="hljs-keyword">int</span> Height)</span></span>
 <span class="line"></span>{</span>
 <span class="line">}</span></div><span class="line"></span>
 <span class="line"><span class="hljs-comment">// Win32MainWindowCalback</span></span>
@@ -598,7 +598,7 @@ As you can see, the function takes quite a few parameters, but most of them are 
 <li class="asterisk"><code>rop</code>: raster operation code. This code allows to specify what do we want to do with the destination on bitwise level. We only want to copy from <code>Src</code>, so let's use <code>SRCCOPY</code> constant.</li></ul>
 
 </p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
-<span class="line"><span class="hljs-title">Win32UpdateWindow</span><span class="hljs-params">(HDC DeviceContext, <span class="hljs-keyword">int</span> Width, <span class="hljs-keyword">int</span> Height)</span></span>
+<span class="line"><span class="hljs-title">Win32UpdateWindow</span><span class="hljs-params">(HDC DeviceContext, <span class="hljs-keyword">int</span> X, <span class="hljs-keyword">int</span> Y, <span class="hljs-keyword">int</span> Width, <span class="hljs-keyword">int</span> Height)</span></span>
 <span class="line"></span>{</span><div class=" add"><span class="line">    StretchDIBits(DeviceContext, </span>
 <span class="line">                  X, Y, Width, Height,</span>
 <span class="line">                  X, Y, Width, Height,</span>
@@ -896,7 +896,7 @@ For consistency, let's also rename it to <code>BitmapDeviceContext</code>:
 We now have everything in place on one side - let's hook it up to the other side. Fill out the remaining couple parameters in <code>StretchDIBits</code> with the values we put as global. Remember that we need to pass the <code>pointer</code> (address using <code>&amp;</code>) to our BitmapInfo!
 
 </p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
-<span class="line"><span class="hljs-title">Win32UpdateWindow</span><span class="hljs-params">(HDC DeviceContext, <span class="hljs-keyword">int</span> Width, <span class="hljs-keyword">int</span> Height)</span></span>
+<span class="line"><span class="hljs-title">Win32UpdateWindow</span><span class="hljs-params">(HDC DeviceContext, <span class="hljs-keyword">int</span> X, <span class="hljs-keyword">int</span> Y, <span class="hljs-keyword">int</span> Width, <span class="hljs-keyword">int</span> Height)</span></span>
 <span class="line"></span>{</span>
 <span class="line">    StretchDIBits(DeviceContext, </span>
 <span class="line">                  X, Y, Width, Height,</span>
