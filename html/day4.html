@@ -38,9 +38,7 @@ Now, we shall finish the back buffer setup and do a simple animation to it.
 
 </p>
 <div class="longTOC"><div class="tocHeader">Contents</div><p><a href="#" class="tocTop">(Top)</a><br/>
-<a href="#adeeperreviewofthebufferfunctions" class="level1"><span class="tocNumber">1&nbsp; </span>A Deeper Review of the Buffer Functions</a><br/>
-&nbsp;&nbsp;<a href="#adeeperreviewofthebufferfunctions/win32apideepdive:bitblt" class="level2"><span class="tocNumber">1.1&nbsp; </span>Win32 API Deep Dive: <code>BitBlt</code></a><br/>
-&nbsp;&nbsp;<a href="#adeeperreviewofthebufferfunctions/simplifythefunctions" class="level2"><span class="tocNumber">1.2&nbsp; </span>Simplify the Functions</a><br/>
+<a href="#reviewandsimplifybuffer-relatedfunctions" class="level1"><span class="tocNumber">1&nbsp; </span>Review and Simplify Buffer-related Functions</a><br/>
 <a href="#ourcustombitmapmemoryallocator" class="level1"><span class="tocNumber">2&nbsp; </span>Our Custom Bitmap Memory Allocator</a><br/>
 &nbsp;&nbsp;<a href="#ourcustombitmapmemoryallocator/allocatethebitmapmemory" class="level2"><span class="tocNumber">2.1&nbsp; </span>Allocate the Bitmap Memory</a><br/>
 &nbsp;&nbsp;<a href="#ourcustombitmapmemoryallocator/cleanup" class="level2"><span class="tocNumber">2.2&nbsp; </span>Cleanup</a><br/>
@@ -78,12 +76,13 @@ Now, we shall finish the back buffer setup and do a simple animation to it.
 &nbsp;&nbsp;<a href="#sideconsiderations/build.bat:requestmsvctogivefullpaths" class="level2"><span class="tocNumber">9.1&nbsp; </span><code>build.bat</code>: Request MSVC to Give Full Paths</a><br/>
 &nbsp;&nbsp;<a href="#sideconsiderations/introductiontoalignment" class="level2"><span class="tocNumber">9.2&nbsp; </span>Introduction to Alignment</a><br/>
 &nbsp;&nbsp;<a href="#sideconsiderations/raii" class="level2"><span class="tocNumber">9.3&nbsp; </span>RAII</a><br/>
+&nbsp;&nbsp;<a href="#sideconsiderations/bitblit" class="level2"><span class="tocNumber">9.4&nbsp; </span>Bit Blit</a><br/>
 <a href="#navigation" class="level1"><span class="tocNumber">10&nbsp; </span>Navigation</a><br/>
-</p></div><a class="target" name="adeeperreviewofthebufferfunctions">&nbsp;</a><a class="target" name="adeeperreviewofthebufferfunctions">&nbsp;</a><a class="target" name="toc1">&nbsp;</a><h1>A Deeper Review of the Buffer Functions</h1>
+</p></div><a class="target" name="reviewandsimplifybuffer-relatedfunctions">&nbsp;</a><a class="target" name="reviewandsimplifybuffer-relatedfunctions">&nbsp;</a><a class="target" name="toc1">&nbsp;</a><h1>Review and Simplify Buffer-related Functions</h1>
 <p>
 
 
-Before we get going, let's look back at the two functions we defined. We went a bit fast with implementing our plan, so there might be something we missed along the way.
+Before we get going, let's look back at the two functions we defined last time. We went a bit fast with implementing our plan, so there might be something we missed along the way.
 
 </p><p>
 
@@ -115,66 +114,17 @@ Before we get going, let's look back at the two functions we defined. We went a 
 
 There's a bit more to it than meets the eye.
 
-</p>
-<a class="target" name="win32apideepdive:bitblt">&nbsp;</a><a class="target" name="adeeperreviewofthebufferfunctions/win32apideepdive:bitblt">&nbsp;</a><a class="target" name="toc1.1">&nbsp;</a><h2>Win32 API Deep Dive: <code>BitBlt</code></h2>
-<p>
+</p><p>
 
-
-Windows is an old platform. Over years, various tools were created to solve similar problems. One of these problems was outputting a bitmap image to screen or, taken more broadly, from one bitmap to another. Remember that, for the operating system, there's no major difference drawing to your window, a .bmp image file or the whole screen! The process which oversees it is generally called <em class="underscore">bit blit</em>.
+Windows is an old platform. Over years, various tools were created to solve similar problems. One of these problems was outputting a bitmap image to screen or, taken more broadly, from one bitmap to another. Remember that, for the operating system, there's no major difference drawing to your window, a .bmp image file or the whole screen! The process which oversees it is generally called <em class="underscore">bit blit</em>. 
 
 </p><p>
 
-There's a function which does just that, called <code>BitBlt</code>. <a href="https://docs.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-bitblt">BitBlt</a> was born around Windows 3.x in the early '90s, with an API <a href="https://en.wikipedia.org/wiki/WinG">WinG</a> created to write &ldquo;directly to display memory&rdquo; from a bitmap, which resulted in much faster game rendering times. Of course, at this point it largely makes no difference, but <em class="underscore">it is</em> marginably faster than <code>StretchDIBits</code>, simply because there's no resizing required, it's a straight DC to DC copy.
+<div class="admonition ">If you'd like to experiment a bit with <code>BitBlt</code>, head out to subsection  <a href="#toc9.4">9.4</a>.</div>
 
 </p><p>
 
-<div class="admonition ">Specifically for Windows, it's <b>D</b>evice <b>C</b>ontexts (DC) all the way down until we hit the <em class="underscore">drivers</em>.</div>
-
-</p><p>
-
-As our program is written right now, it's a matter of a personal taste which blitting method to use. Our plan is anyway to transition away from GDI and to the hardware-accelerated rendering anyway, so whichever you pick is fine. We will stick to <code>StretchDIBits</code> but, if you'd like to transition to <code>BitBlt</code>, keep in mind the following: 
-
-</p><p>
-
-<ul>
-<li class="asterisk">Bitmap Info doesn't need to be stored globally, we can have it as a local variable inside <code>Win32ResizeDIBSection</code>.
-</li>
-<li class="asterisk">You need to <em class="underscore">select</em> your bitmap before drawing it. You can do it by using <code>SelectObject</code> function (<a href="https://docs.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-selectobject">MSDN</a>).</li></ul>
-
-</p><p>
-
-This is how a potential refactoring would look like: 
-
-</p><pre class="listing tilde"><code><div class=" delete"><span class="line">    StretchDIBits(DeviceContext,</span>
-<span class="line">                  X, Y, Width, Height,</span>
-<span class="line">                  X, Y, Width, Height,</span>
-<span class="line">                  BitmapMemory,</span>
-<span class="line">                  &amp;BitmapInfo,</span>
-<span class="line">                  DIB_RGB_COLORS, SRCCOPY);</span></div><div class=" add"><span class="line">    SelectObject(BitmapDeviceContext, BitmapHandle);</span>
-<span class="line">    BitBlt(DeviceContext,</span>
-<span class="line">           X, Y, Width, Height,</span>
-<span class="line">           BitmapDeviceContext, X, Y, SRCCOPY);</span></div></code></pre><center><div class="listingcaption tilde"><file>[Hypothetic win32_handmade.cpp > Win32UpdateWindow]</file> A possible <code>BitBlt</code> implementation.</div></center>
-<p>
-
-
-
-
-<div class="admonition trivia"><div class="admonition-title"> Why so many similar calls? </div>
-
-</p><p>
-
-    It's easy to sit in 2020 and wonder why would someone need multiple blit calls in 1994. But the reality at the time was that <code>BitBlt</code> was objectively faster at the time, and allowed the DOS games to run on Windows <em class="underscore">almost</em> at the same framerate as on DOS. Since Windows could do the allocation of memory and had the correct device context already selected, it was a faster path than going through <code>StretchDIBits</code>. 
-
-</p><p>
-
-    For the original discussion on this point, check out <a href="https://twitter.com/checker/status/535316695330873344">this tweet</a> by <a href="https://en.wikipedia.org/wiki/Chris_Hecker">Chris Hecker</a>, the creator of WinG. For more some more info regarding the bitmap functions, <a href="https://hero.handmade.network/forums/code-discussion/t/3444-bitmap_functions">check out this discussion</a> on Handmade.Network.</div>
-
-</p>
-<a class="target" name="simplifythefunctions">&nbsp;</a><a class="target" name="adeeperreviewofthebufferfunctions/simplifythefunctions">&nbsp;</a><a class="target" name="toc1.2">&nbsp;</a><h2>Simplify the Functions</h2>
-<p>
-
-
-Since we're going with <code>StretchDIBits</code>, we can make a number of simplifications:
+Since we're displaying our bitmap on screen using <code>StretchDIBits</code>, we can make a number of simplifications:
 
 </p><p>
 
@@ -267,7 +217,7 @@ We could use <a href="https://docs.microsoft.com/en-us/windows/win32/api/memorya
 
 </p><p>
 
-    Many operating systems, including Windows, subdivide available memory in regions known as &ldquo;pages&rdquo;. These are the regions of at least 4KiB (4096 bytes), sometimes they can be 64KiB (a.k.a. LARGE_PAGE)... Page sizes vary. Overall it's a handy way of thinking about the memory since, if transfer between hard disk and the main memory is required, it will happen in these Pages.
+    Many operating systems, including Windows, subdivide available memory in regions known as &ldquo;pages&rdquo;. These are the regions of at least 4KiB (4096 bytes), sometimes they can be 64KiB (a.k.a. <code>LARGE_PAGE</code>)... Page sizes vary. Overall it's a handy way of thinking about the memory since, if transfer between hard disk and the main memory is required, it will happen in these Pages.
 
 </p><p>
 
@@ -308,15 +258,11 @@ As you can see, it returns a simple <code>void *</code> (we've seen what void po
 <p>
 
 
-What does it all mean in practice? If we have a significant <code>void * Mem</code> returned (non-zero), it means we can access any location within the <code>dwSize</code> we provided, as well as read and write data to it. So we can access the location <code>Mem</code>, <code>Mem + 1</code>, <code>Mem + dwSize</code>... and even a bit more (but you shouldn't count on it!), but we can't access the memory <code>Mem - 1</code> as it's outside of the &ldquo;authorized&rdquo; boundaries.
+What does it all mean in practice? If we have a significant <code>Memory</code> returned (non-zero), it means we can access any location within the <code>dwSize</code> we provided, as well as read and write data to it. So we can access the location <code>Memory</code>, <code>Memory + 1</code>, <code>Memory + dwSize</code>... and even a bit more (but you shouldn't count on it!), but we can't access the memory <code>Memory - 1</code> as it's outside of the &ldquo;authorized&rdquo; boundaries.
 
 </p><p>
 
-<div class="admonition note"><div class="admonition-title"> </div>
-
-</p><p>
-
-    <code>VirtualAlloc</code> has <code>Virtual</code> in it because we're reserving <em class="underscore">virtual</em> memory. If you're unfamiliar with the concept of virtual memory, read more in the <a href="#virtualmemoryvs.physicalmemory">Virtual Memory vs. Physical Memory</a> subsection.</div>
+<div class="admonition tip"><code>VirtualAlloc</code> has <code>Virtual</code> in it because we're reserving <em class="underscore">virtual</em> memory. If you're unfamiliar with the concept of virtual memory, read more in the <a href="#virtualmemoryvs.physicalmemory">Virtual Memory vs. Physical Memory</a> subsection.</div>
 
 </p>
 <a class="target" name="cleanup">&nbsp;</a><a class="target" name="ourcustombitmapmemoryallocator/cleanup">&nbsp;</a><a class="target" name="toc2.2">&nbsp;</a><h2>Cleanup</h2>
@@ -1949,6 +1895,61 @@ If you would like to try RAII (Resource Acquisition Is Initialization), Subsecti
 <span class="line">    } <span class="hljs-comment">// No need to call destructor, it will be called automatically when exiting the block</span></span></div><span class="line">}</span></code></pre><p>
 
 Every programming pattern, feature or system has its place; it's the dogma that catches you. Try not to get into the dogma because you don't want to go the same route all the time, you need to know <em class="underscore">when</em> to use things. 
+
+</p>
+<a class="target" name="bitblit">&nbsp;</a><a class="target" name="sideconsiderations/bitblit">&nbsp;</a><a class="target" name="toc9.4">&nbsp;</a><h2>Bit Blit</h2>
+<p>
+
+
+There's a function which does direct blitting to the screen, called <code>BitBlt</code>. <a href="https://docs.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-bitblt">BitBlt</a> was born around Windows 3.x in the early '90s, with an API <a href="https://en.wikipedia.org/wiki/WinG">WinG</a> created to write &ldquo;directly to display memory&rdquo; from a bitmap, which resulted in much faster game rendering times. Of course, at this point it largely makes no difference, but <em class="underscore">it is</em> marginably faster than <code>StretchDIBits</code>, simply because there's no resizing required, it's a straight DC to DC copy.
+
+</p><p>
+
+<div class="admonition ">Specifically for Windows, it's <b>D</b>evice <b>C</b>ontexts (DC) all the way down until we hit the <em class="underscore">drivers</em>.</div>
+
+</p><p>
+
+As our program is written right now, it's a matter of a personal taste which blitting method to use. Our plan is anyway to transition away from GDI and to the hardware-accelerated rendering anyway, so whichever you pick is fine. We will stick to <code>StretchDIBits</code> but, if you'd like to transition to <code>BitBlt</code>, keep in mind the following: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">Bitmap Info doesn't need to be stored globally, we can have it as a local variable inside <code>Win32ResizeDIBSection</code>.
+</li>
+<li class="asterisk">You need to <em class="underscore">select</em> your bitmap before drawing it. You can do it by using <code>SelectObject</code> function (<a href="https://docs.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-selectobject">MSDN</a>).</li></ul>
+
+</p><p>
+
+This is how a potential refactoring would look like: 
+
+</p><p>
+
+<div class="admonition warning"><div class="admonition-title"> </div>
+
+</p><p>
+
+    Keep in mind that you will then need to still keep track of Windows-specific DeviceContext, Bitmap Handle! The following section would not necessarily apply to you then, and additional ramifications might appear to your code in the future.</div>
+
+</p><pre class="listing tilde"><code><div class=" delete"><span class="line">    SelectObject(BitmapDeviceContext, BitmapHandle);</span>
+<span class="line">    BitBlt(DeviceContext,</span>
+<span class="line">           X, Y, Width, Height,</span>
+<span class="line">           BitmapDeviceContext, X, Y, SRCCOPY);</span></div></code></pre><center><div class="listingcaption tilde"><file>[Hypothetic win32_handmade.cpp > Win32UpdateWindow]</file> A possible <code>BitBlt</code> implementation.</div></center>
+<p>
+
+
+
+
+
+
+<div class="admonition trivia"><div class="admonition-title"> Why so many similar calls? </div>
+
+</p><p>
+
+    It's easy to sit in 2020 and wonder why would someone need multiple blit calls in 1994. But the reality at the time was that <code>BitBlt</code> was objectively faster at the time, and allowed the DOS games to run on Windows <em class="underscore">almost</em> at the same framerate as on DOS. Since Windows could do the allocation of memory and had the correct device context already selected, it was a faster path than going through <code>StretchDIBits</code>. 
+
+</p><p>
+
+    For the original discussion on this point, check out <a href="https://twitter.com/checker/status/535316695330873344">this tweet</a> by <a href="https://en.wikipedia.org/wiki/Chris_Hecker">Chris Hecker</a>, the creator of WinG. For more some more info regarding the bitmap functions, <a href="https://hero.handmade.network/forums/code-discussion/t/3444-bitmap_functions">check out this discussion</a> on Handmade.Network.</div>
 
 </p>
 <a class="target" name="navigation">&nbsp;</a><a class="target" name="navigation">&nbsp;</a><a class="target" name="toc10">&nbsp;</a><h1>Navigation</h1>

@@ -3,18 +3,17 @@
 
 **Day 4. Animating the Back Buffer**
 _Video Length: [1h02](https://hero.handmade.network/episode/code/day004/) (before Q&A)_
-!!! 
-    "Handmade Hero Notes" contains code from [Handmade Hero][]. Preorder the game on [handmadehero.org][handmade hero], and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
 
--------------
+(insert intro.md.html here)
+
 
 Welcome to _Day 4_ of Handmade Hero Notes. Last time, we started laying out the ground work for our back buffer, a place to which we will render our game. In a few words, we drafted two functions: `Win32ResizeDIBSection` and `Win32UpdateWindow`. We use the first one when processing `WM_SIZE` window message, and the other when processing `WM_PAINT`.
 
 Now, we shall finish the back buffer setup and do a simple animation to it.
 
-# A Deeper Review of the Buffer Functions
+# Review and Simplify Buffer-related Functions
 
-Before we get going, let's look back at the two functions we defined. We went a bit fast with implementing our plan, so there might be something we missed along the way.
+Before we get going, let's look back at the two functions we defined last time. We went a bit fast with implementing our plan, so there might be something we missed along the way.
 
 * `Win32ResizeDIBSection` would serve to initialize and, if necessary, to resize the buffer.
     * This function would take a width and a height of our client area rectangle.
@@ -30,45 +29,12 @@ Before we get going, let's look back at the two functions we defined. We went a 
 
 There's a bit more to it than meets the eye.
 
-## Win32 API Deep Dive: `BitBlt`
+Windows is an old platform. Over years, various tools were created to solve similar problems. One of these problems was outputting a bitmap image to screen or, taken more broadly, from one bitmap to another. Remember that, for the operating system, there's no major difference drawing to your window, a .bmp image file or the whole screen! The process which oversees it is generally called _bit blit_. 
 
-Windows is an old platform. Over years, various tools were created to solve similar problems. One of these problems was outputting a bitmap image to screen or, taken more broadly, from one bitmap to another. Remember that, for the operating system, there's no major difference drawing to your window, a .bmp image file or the whole screen! The process which oversees it is generally called _bit blit_.
+!!! 
+    If you'd like to experiment a bit with `BitBlt`, head out to subsection [bit blit].
 
-There's a function which does just that, called `BitBlt`. [BitBlt][] was born around Windows 3.x in the early '90s, with an API [WinG](https://en.wikipedia.org/wiki/WinG) created to write "directly to display memory" from a bitmap, which resulted in much faster game rendering times. Of course, at this point it largely makes no difference, but _it is_ marginably faster than `StretchDIBits`, simply because there's no resizing required, it's a straight DC to DC copy.
-
-!!!
-    Specifically for Windows, it's <b>D</b>evice <b>C</b>ontexts (DC) all the way down until we hit the _drivers_.
-
-As our program is written right now, it's a matter of a personal taste which blitting method to use. Our plan is anyway to transition away from GDI and to the hardware-accelerated rendering anyway, so whichever you pick is fine. We will stick to `StretchDIBits` but, if you'd like to transition to `BitBlt`, keep in mind the following: 
-
-* Bitmap Info doesn't need to be stored globally, we can have it as a local variable inside `Win32ResizeDIBSection`.
-* You need to _select_ your bitmap before drawing it. You can do it by using `SelectObject` function ([MSDN][SelectObject]).
-
-This is how a potential refactoring would look like: 
-
-~~~~~~~ C++ delete
-    StretchDIBits(DeviceContext,
-                  X, Y, Width, Height,
-                  X, Y, Width, Height,
-                  BitmapMemory,
-                  &BitmapInfo,
-                  DIB_RGB_COLORS, SRCCOPY);
-~~~~~~~ C++ add
-    SelectObject(BitmapDeviceContext, BitmapHandle);
-    BitBlt(DeviceContext,
-           X, Y, Width, Height,
-           BitmapDeviceContext, X, Y, SRCCOPY);
-~~~~~~~
-[<file>[Hypothetic win32_handmade.cpp > Win32UpdateWindow]</file> A possible `BitBlt` implementation.]
-
-!!! Trivia Why so many similar calls? 
-    It's easy to sit in 2020 and wonder why would someone need multiple blit calls in 1994. But the reality at the time was that `BitBlt` was objectively faster at the time, and allowed the DOS games to run on Windows _almost_ at the same framerate as on DOS. Since Windows could do the allocation of memory and had the correct device context already selected, it was a faster path than going through `StretchDIBits`. 
-
-    For the original discussion on this point, check out [this tweet](https://twitter.com/checker/status/535316695330873344) by [Chris Hecker](https://en.wikipedia.org/wiki/Chris_Hecker), the creator of WinG. For more some more info regarding the bitmap functions, [check out this discussion](https://hero.handmade.network/forums/code-discussion/t/3444-bitmap_functions) on Handmade.Network.
-
-## Simplify the Functions
-
-Since we're going with `StretchDIBits`, we can make a number of simplifications:
+Since we're displaying our bitmap on screen using `StretchDIBits`, we can make a number of simplifications:
 * We don't need a bitmap handle or bitmap DC, these can go away. 
 * We don't even need a DIB section! Bitmap Memory can be allocated directly by us.
     * Yeah, it's actually a simplification. We have all the control that we want over this allocation process. 
@@ -141,7 +107,7 @@ We could use [VirtualAlloc][] or [HeapAlloc][]:
 * `HeapAlloc` is a higher-level function. It allows for sub-allocating smaller amounts of memory from a system page or calls `VirtualAlloc` when the amount requested is significant. 
 
 !!! Note Memory Pages
-    Many operating systems, including Windows, subdivide available memory in regions known as "pages". These are the regions of at least 4KiB (4096 bytes), sometimes they can be 64KiB (a.k.a. LARGE_PAGE)... Page sizes vary. Overall it's a handy way of thinking about the memory since, if transfer between hard disk and the main memory is required, it will happen in these Pages.
+    Many operating systems, including Windows, subdivide available memory in regions known as "pages". These are the regions of at least 4KiB (4096 bytes), sometimes they can be 64KiB (a.k.a. `LARGE_PAGE`)... Page sizes vary. Overall it's a handy way of thinking about the memory since, if transfer between hard disk and the main memory is required, it will happen in these Pages.
 
     For more information about Pages on Windows, check out [this article][Pages].
 
@@ -174,9 +140,9 @@ BitmapMemory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Allocating Bitmap Memory.]
 
-What does it all mean in practice? If we have a significant `void * Mem` returned (non-zero), it means we can access any location within the `dwSize` we provided, as well as read and write data to it. So we can access the location `Mem`, `Mem + 1`, `Mem + dwSize`... and even a bit more (but you shouldn't count on it!), but we can't access the memory `Mem - 1` as it's outside of the "authorized" boundaries.
+What does it all mean in practice? If we have a significant `Memory` returned (non-zero), it means we can access any location within the `dwSize` we provided, as well as read and write data to it. So we can access the location `Memory`, `Memory + 1`, `Memory + dwSize`... and even a bit more (but you shouldn't count on it!), but we can't access the memory `Memory - 1` as it's outside of the "authorized" boundaries.
 
-!!! Note 
+!!! Tip
     `VirtualAlloc` has `Virtual` in it because we're reserving _virtual_ memory. If you're unfamiliar with the concept of virtual memory, read more in the Virtual Memory vs. Physical Memory subsection.
 
 ## Cleanup
@@ -1464,6 +1430,37 @@ WinMain(...)
 
 Every programming pattern, feature or system has its place; it's the dogma that catches you. Try not to get into the dogma because you don't want to go the same route all the time, you need to know _when_ to use things. 
 
+## Bit Blit
+
+There's a function which does direct blitting to the screen, called `BitBlt`. [BitBlt][] was born around Windows 3.x in the early '90s, with an API [WinG](https://en.wikipedia.org/wiki/WinG) created to write "directly to display memory" from a bitmap, which resulted in much faster game rendering times. Of course, at this point it largely makes no difference, but _it is_ marginably faster than `StretchDIBits`, simply because there's no resizing required, it's a straight DC to DC copy.
+
+!!!
+    Specifically for Windows, it's <b>D</b>evice <b>C</b>ontexts (DC) all the way down until we hit the _drivers_.
+
+As our program is written right now, it's a matter of a personal taste which blitting method to use. Our plan is anyway to transition away from GDI and to the hardware-accelerated rendering anyway, so whichever you pick is fine. We will stick to `StretchDIBits` but, if you'd like to transition to `BitBlt`, keep in mind the following: 
+
+* Bitmap Info doesn't need to be stored globally, we can have it as a local variable inside `Win32ResizeDIBSection`.
+* You need to _select_ your bitmap before drawing it. You can do it by using `SelectObject` function ([MSDN][SelectObject]).
+
+This is how a potential refactoring would look like: 
+
+!!! Warning 
+    Keep in mind that you will then need to still keep track of Windows-specific DeviceContext, Bitmap Handle! The following section would not necessarily apply to you then, and additional ramifications might appear to your code in the future.
+
+~~~~~~~ C++ delete
+    SelectObject(BitmapDeviceContext, BitmapHandle);
+    BitBlt(DeviceContext,
+           X, Y, Width, Height,
+           BitmapDeviceContext, X, Y, SRCCOPY);
+~~~~~~~
+[<file>[Hypothetic win32_handmade.cpp > Win32UpdateWindow]</file> A possible `BitBlt` implementation.]
+
+
+
+!!! Trivia Why so many similar calls? 
+    It's easy to sit in 2020 and wonder why would someone need multiple blit calls in 1994. But the reality at the time was that `BitBlt` was objectively faster at the time, and allowed the DOS games to run on Windows _almost_ at the same framerate as on DOS. Since Windows could do the allocation of memory and had the correct device context already selected, it was a faster path than going through `StretchDIBits`. 
+
+    For the original discussion on this point, check out [this tweet](https://twitter.com/checker/status/535316695330873344) by [Chris Hecker](https://en.wikipedia.org/wiki/Chris_Hecker), the creator of WinG. For more some more info regarding the bitmap functions, [check out this discussion](https://hero.handmade.network/forums/code-discussion/t/3444-bitmap_functions) on Handmade.Network.
 
 # Navigation
 
