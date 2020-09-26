@@ -33,7 +33,13 @@ counter-increment: h6;margin-right:10px}</style><style>.hljs{display:block;overf
 We are currently in the middle of setting up our sound support. Last time, we pretty much finished setting up DirectSound and the buffers. Today, we're going to focus on outputting the sound. For this purpose, we're also going to write a simple square wave sound to make sure the system works properly.
 
 </p>
-<div class="longTOC"><div class="tocHeader">Contents</div><p><a href="#" class="tocTop">(Top)</a><br/>
+<div class="longTOC">
+    <p align="center">
+        <span align="left"><a href="day7.html">Day 7</a></span>
+        <img src = "../media/logo.png">
+        <!-- <span align="right"><a href="day9.html">Day 9</a></span> -->
+    </p>
+    <p><a href="#" class="tocTop">(Top)</a><br/>
 <a href="#directsoundinitreview" class="level1"><span class="tocNumber">1&nbsp; </span>DirectSound Init Review</a><br/>
 <a href="#planthesoundoutput" class="level1"><span class="tocNumber">2&nbsp; </span>Plan the Sound Output</a><br/>
 &nbsp;&nbsp;<a href="#planthesoundoutput/determinethesoundtooutput" class="level2"><span class="tocNumber">2.1&nbsp; </span>Determine the Sound to Output</a><br/>
@@ -217,28 +223,19 @@ For instance, if we write our square wave to the buffer, this how it would look 
 
 <svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="176" width="480" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
 <path d="M 24,64 L 24,96 " style="fill:none;"/>
-<path d="M 48,48 L 48,72 " style="fill:none;"/>
-<path d="M 48,88 L 48,112 " style="fill:none;"/>
-<path d="M 72,48 L 72,72 " style="fill:none;"/>
-<path d="M 72,88 L 72,112 " style="fill:none;"/>
+<path d="M 48,48 L 48,112 " style="fill:none;"/>
+<path d="M 72,48 L 72,112 " style="fill:none;"/>
 <path d="M 80,112 L 80,128 " style="fill:none;"/>
-<path d="M 96,48 L 96,72 " style="fill:none;"/>
-<path d="M 96,88 L 96,112 " style="fill:none;"/>
-<path d="M 120,48 L 120,72 " style="fill:none;"/>
-<path d="M 120,88 L 120,112 " style="fill:none;"/>
-<path d="M 144,48 L 144,72 " style="fill:none;"/>
-<path d="M 144,88 L 144,112 " style="fill:none;"/>
+<path d="M 96,48 L 96,112 " style="fill:none;"/>
+<path d="M 120,48 L 120,112 " style="fill:none;"/>
+<path d="M 144,48 L 144,112 " style="fill:none;"/>
 <path d="M 168,32 L 168,112 " style="fill:none;"/>
 <path d="M 304,64 L 304,96 " style="fill:none;"/>
 <path d="M 352,0 L 352,128 " style="fill:none;"/>
-<path d="M 368,48 L 368,72 " style="fill:none;"/>
-<path d="M 368,88 L 368,112 " style="fill:none;"/>
-<path d="M 392,48 L 392,72 " style="fill:none;"/>
-<path d="M 392,88 L 392,112 " style="fill:none;"/>
-<path d="M 416,48 L 416,72 " style="fill:none;"/>
-<path d="M 416,88 L 416,112 " style="fill:none;"/>
+<path d="M 368,48 L 368,112 " style="fill:none;"/>
+<path d="M 392,48 L 392,112 " style="fill:none;"/>
+<path d="M 416,48 L 416,112 " style="fill:none;"/>
 <path d="M 440,32 L 440,112 " style="fill:none;"/>
-<path d="M 32,48 L 48,48 " style="fill:none;"/>
 <path d="M 72,48 L 96,48 " style="fill:none;"/>
 <path d="M 120,48 L 144,48 " style="fill:none;"/>
 <path d="M 352,48 L 368,48 " style="fill:none;"/>
@@ -246,7 +243,6 @@ For instance, if we write our square wave to the buffer, this how it would look 
 <path d="M 24,80 L 72,80 " style="fill:none;"/>
 <path d="M 88,80 L 160,80 " style="fill:none;"/>
 <path d="M 176,80 L 304,80 " style="fill:none;"/>
-<path d="M 360,80 L 432,80 " style="fill:none;"/>
 <path d="M 48,112 L 72,112 " style="fill:none;"/>
 <path d="M 96,112 L 120,112 " style="fill:none;"/>
 <path d="M 144,112 L 168,112 " style="fill:none;"/>
@@ -256,7 +252,7 @@ For instance, if we write our square wave to the buffer, this how it would look 
 <polygon points="360,128 348,122.4 348,133.6 "  style="stroke:none" transform="rotate(90,352,128 )"/>
 <polygon points="176,56 164,50.4 164,61.6 "  style="stroke:none" transform="rotate(90,168,56 )"/>
 <polygon points="88,128 76,122.4 76,133.6 "  style="stroke:none" transform="rotate(90,80,128 )"/>
-<circle cx="80" cy="80" r="6" class="closeddot"/><circle cx="168" cy="80" r="6" class="closeddot"/><circle cx="352" cy="80" r="6" class="closeddot"/><circle cx="440" cy="80" r="6" class="closeddot"/><g transform="translate(0,0)"><text text-anchor="middle" x="16" y="20">b</text><text text-anchor="middle" x="24" y="20">u</text><text text-anchor="middle" x="32" y="20">f</text><text text-anchor="middle" x="40" y="20">f</text><text text-anchor="middle" x="48" y="20">e</text><text text-anchor="middle" x="56" y="20">r</text><text text-anchor="middle" x="168" y="20">🎼</text><text text-anchor="middle" x="280" y="20">b</text><text text-anchor="middle" x="288" y="20">u</text><text text-anchor="middle" x="296" y="20">f</text><text text-anchor="middle" x="304" y="20">f</text><text text-anchor="middle" x="312" y="20">e</text><text text-anchor="middle" x="320" y="20">r</text><text text-anchor="middle" x="440" y="20">🎼</text><text text-anchor="middle" x="16" y="36">s</text><text text-anchor="middle" x="24" y="36">t</text><text text-anchor="middle" x="32" y="36">a</text><text text-anchor="middle" x="40" y="36">r</text><text text-anchor="middle" x="48" y="36">t</text><text text-anchor="middle" x="288" y="36">e</text><text text-anchor="middle" x="296" y="36">n</text><text text-anchor="middle" x="304" y="36">d</text><text text-anchor="middle" x="176" y="52">┄</text><text text-anchor="middle" x="184" y="52">┄</text><text text-anchor="middle" x="192" y="52">.</text><text text-anchor="middle" x="216" y="52">.</text><text text-anchor="middle" x="224" y="52">┄</text><text text-anchor="middle" x="232" y="52">┄</text><text text-anchor="middle" x="240" y="52">.</text><text text-anchor="middle" x="264" y="52">.</text><text text-anchor="middle" x="272" y="52">┄</text><text text-anchor="middle" x="280" y="52">┄</text><text text-anchor="middle" x="288" y="52">.</text><text text-anchor="middle" x="312" y="52">.</text><text text-anchor="middle" x="320" y="52">┄</text><text text-anchor="middle" x="328" y="52">┄</text><text text-anchor="middle" x="336" y="52">.</text><text text-anchor="middle" x="192" y="68">┊</text><text text-anchor="middle" x="216" y="68">┊</text><text text-anchor="middle" x="240" y="68">┊</text><text text-anchor="middle" x="264" y="68">┊</text><text text-anchor="middle" x="288" y="68">┊</text><text text-anchor="middle" x="312" y="68">┊</text><text text-anchor="middle" x="336" y="68">┊</text><text text-anchor="middle" x="312" y="84">┄</text><text text-anchor="middle" x="320" y="84">┄</text><text text-anchor="middle" x="328" y="84">┄</text><text text-anchor="middle" x="336" y="84">┄</text><text text-anchor="middle" x="344" y="84">┄</text><text text-anchor="middle" x="448" y="84">.</text><text text-anchor="middle" x="456" y="84">.</text><text text-anchor="middle" x="464" y="84">.</text><text text-anchor="middle" x="192" y="100">┊</text><text text-anchor="middle" x="216" y="100">┊</text><text text-anchor="middle" x="240" y="100">┊</text><text text-anchor="middle" x="264" y="100">┊</text><text text-anchor="middle" x="288" y="100">┊</text><text text-anchor="middle" x="312" y="100">┊</text><text text-anchor="middle" x="336" y="100">┊</text><text text-anchor="middle" x="192" y="116">'</text><text text-anchor="middle" x="200" y="116">┄</text><text text-anchor="middle" x="208" y="116">┄</text><text text-anchor="middle" x="216" y="116">'</text><text text-anchor="middle" x="240" y="116">'</text><text text-anchor="middle" x="248" y="116">┄</text><text text-anchor="middle" x="256" y="116">┄</text><text text-anchor="middle" x="264" y="116">'</text><text text-anchor="middle" x="288" y="116">'</text><text text-anchor="middle" x="296" y="116">┄</text><text text-anchor="middle" x="304" y="116">┄</text><text text-anchor="middle" x="312" y="116">'</text><text text-anchor="middle" x="336" y="116">'</text><text text-anchor="middle" x="344" y="116">┄</text><text text-anchor="middle" x="24" y="148">0</text><text text-anchor="middle" x="80" y="148">🔊</text><text text-anchor="middle" x="296" y="148">2</text><text text-anchor="middle" x="304" y="148">s</text><text text-anchor="middle" x="352" y="148">🔊</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_unwrapped">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;3:</b> Square wave inside an &ldquo;unwrapped&rdquo; circular buffer. Don't write past the Play cursor!</div></center>
+<circle cx="80" cy="80" r="6" class="closeddot"/><circle cx="168" cy="80" r="6" class="closeddot"/><circle cx="352" cy="80" r="6" class="closeddot"/><circle cx="440" cy="80" r="6" class="closeddot"/><g transform="translate(0,0)"><text text-anchor="middle" x="16" y="20">b</text><text text-anchor="middle" x="24" y="20">u</text><text text-anchor="middle" x="32" y="20">f</text><text text-anchor="middle" x="40" y="20">f</text><text text-anchor="middle" x="48" y="20">e</text><text text-anchor="middle" x="56" y="20">r</text><text text-anchor="middle" x="168" y="20">🎼</text><text text-anchor="middle" x="280" y="20">b</text><text text-anchor="middle" x="288" y="20">u</text><text text-anchor="middle" x="296" y="20">f</text><text text-anchor="middle" x="304" y="20">f</text><text text-anchor="middle" x="312" y="20">e</text><text text-anchor="middle" x="320" y="20">r</text><text text-anchor="middle" x="440" y="20">🎼</text><text text-anchor="middle" x="16" y="36">s</text><text text-anchor="middle" x="24" y="36">t</text><text text-anchor="middle" x="32" y="36">a</text><text text-anchor="middle" x="40" y="36">r</text><text text-anchor="middle" x="48" y="36">t</text><text text-anchor="middle" x="288" y="36">e</text><text text-anchor="middle" x="296" y="36">n</text><text text-anchor="middle" x="304" y="36">d</text><text text-anchor="middle" x="176" y="52">┄</text><text text-anchor="middle" x="184" y="52">┄</text><text text-anchor="middle" x="192" y="52">.</text><text text-anchor="middle" x="216" y="52">.</text><text text-anchor="middle" x="224" y="52">┄</text><text text-anchor="middle" x="232" y="52">┄</text><text text-anchor="middle" x="240" y="52">.</text><text text-anchor="middle" x="264" y="52">.</text><text text-anchor="middle" x="272" y="52">┄</text><text text-anchor="middle" x="280" y="52">┄</text><text text-anchor="middle" x="288" y="52">.</text><text text-anchor="middle" x="312" y="52">.</text><text text-anchor="middle" x="320" y="52">┄</text><text text-anchor="middle" x="328" y="52">┄</text><text text-anchor="middle" x="336" y="52">.</text><text text-anchor="middle" x="192" y="68">┊</text><text text-anchor="middle" x="216" y="68">┊</text><text text-anchor="middle" x="240" y="68">┊</text><text text-anchor="middle" x="264" y="68">┊</text><text text-anchor="middle" x="288" y="68">┊</text><text text-anchor="middle" x="312" y="68">┊</text><text text-anchor="middle" x="336" y="68">┊</text><text text-anchor="middle" x="312" y="84">┄</text><text text-anchor="middle" x="320" y="84">┄</text><text text-anchor="middle" x="328" y="84">┄</text><text text-anchor="middle" x="336" y="84">┄</text><text text-anchor="middle" x="344" y="84">┄</text><text text-anchor="middle" x="360" y="84">┄</text><text text-anchor="middle" x="376" y="84">┄</text><text text-anchor="middle" x="384" y="84">┄</text><text text-anchor="middle" x="400" y="84">┄</text><text text-anchor="middle" x="408" y="84">┄</text><text text-anchor="middle" x="424" y="84">┄</text><text text-anchor="middle" x="432" y="84">┄</text><text text-anchor="middle" x="448" y="84">.</text><text text-anchor="middle" x="456" y="84">.</text><text text-anchor="middle" x="464" y="84">.</text><text text-anchor="middle" x="192" y="100">┊</text><text text-anchor="middle" x="216" y="100">┊</text><text text-anchor="middle" x="240" y="100">┊</text><text text-anchor="middle" x="264" y="100">┊</text><text text-anchor="middle" x="288" y="100">┊</text><text text-anchor="middle" x="312" y="100">┊</text><text text-anchor="middle" x="336" y="100">┊</text><text text-anchor="middle" x="192" y="116">'</text><text text-anchor="middle" x="200" y="116">┄</text><text text-anchor="middle" x="208" y="116">┄</text><text text-anchor="middle" x="216" y="116">'</text><text text-anchor="middle" x="240" y="116">'</text><text text-anchor="middle" x="248" y="116">┄</text><text text-anchor="middle" x="256" y="116">┄</text><text text-anchor="middle" x="264" y="116">'</text><text text-anchor="middle" x="288" y="116">'</text><text text-anchor="middle" x="296" y="116">┄</text><text text-anchor="middle" x="304" y="116">┄</text><text text-anchor="middle" x="312" y="116">'</text><text text-anchor="middle" x="336" y="116">'</text><text text-anchor="middle" x="344" y="116">┄</text><text text-anchor="middle" x="24" y="148">0</text><text text-anchor="middle" x="80" y="148">🔊</text><text text-anchor="middle" x="296" y="148">2</text><text text-anchor="middle" x="304" y="148">s</text><text text-anchor="middle" x="352" y="148">🔊</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_unwrapped">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;3:</b> Square wave inside an &ldquo;unwrapped&rdquo; circular buffer. Don't write past the Play cursor!</div></center>
 
 </p><p>
 
@@ -538,7 +534,11 @@ So when <code>Region1Size</code> or <code>Region2Size</code> come back, they'd b
 
 </p><p>
 
-<div class="admonition ">This would be a good place to <em class="underscore">assert</em> that this assumption is <em class="underscore">always</em> true. However, we will put back the talk about assertions until a later date, so for now we can leave a TODO for future us:
+<div class="admonition ">This would be a good place to <em class="underscore">assert</em> that this assumption is <em class="underscore">always</em> true.
+
+</p><p>
+
+    We will skip the talk about assertions for now, because it's a pretty important topic and must be handled separately. For now we can leave a TODO for future us:
 
 </p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-keyword">if</span> (SUCCEEDED(GlobalSecondaryBuffer-&gt;Lock(...)))</span>
 <span class="line">{</span>
@@ -549,9 +549,6 @@ So when <code>Region1Size</code> or <code>Region2Size</code> come back, they'd b
 <p>
 
 
-    We will skip the talk about assertions for now, because it's a pretty important topic and must be handled separately. 
-
-</p><p>
 
 So, now that we know how to think about this next part, let's implement it. There're many ways approaching it, let's do the most explicit one. 
 
@@ -1151,5 +1148,4 @@ Previous: <a href="day7.html">Day 7. Initializing DirectSound</a>
 
 </p><p>
 
-<script src="https://morgan3d.github.io/markdeep/latest/markdeep.min.js" charset="utf-8"></script>
 </p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.10&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.6/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>

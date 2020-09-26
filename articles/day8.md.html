@@ -111,9 +111,9 @@ For instance, if we write our square wave to the buffer, this how it would look 
 *                                            |              *
 *  buffer             🎼             buffer   |          🎼   *
 *  start              |              end     |          |   *
-*    --.  .--.  .--.  v┄┄.  .┄┄.  .┄┄.  .┄┄. +-.  .--.  v   *
+*      .  .--.  .--.  v┄┄.  .┄┄.  .┄┄.  .┄┄. +-.  .--.  v   *
 *   |  |  |  |  |  |  |  ┊  ┊  ┊  ┊  ┊ |┊  ┊ | |  |  |  |   *
-*   +------*----------*----------------+┄┄┄┄┄*----------*...*
+*   +--+--+*-+--+--+--*--+--+--+--+--+-+┄┄┄┄┄*┄|┄┄|┄┄|┄┄*...*
 *   |  |  |  |  |  |  |  ┊  ┊  ┊  ┊  ┊ |┊  ┊ | |  |  |  |   *
 *      '--'| '--'  '--'  '┄┄'  '┄┄'  '┄┄'  '┄| '--'  '--'   *
 *          v                                 v              *
@@ -291,7 +291,9 @@ We can also say with certainty that our cursor and `BytesToWrite` will always be
 So when `Region1Size` or `Region2Size` come back, they'd better be even multiple of a Sample size as well. Because if it's not the case, something weird has happened. 
 
 !!! 
-    This would be a good place to _assert_ that this assumption is _always_ true. However, we will put back the talk about assertions until a later date, so for now we can leave a TODO for future us:
+    This would be a good place to _assert_ that this assumption is _always_ true.
+    
+    We will skip the talk about assertions for now, because it's a pretty important topic and must be handled separately. For now we can leave a TODO for future us:
 
     ~~~~~~~ C++ 
     if (SUCCEEDED(GlobalSecondaryBuffer->Lock(...)))
@@ -304,7 +306,6 @@ So when `Region1Size` or `Region2Size` come back, they'd better be even multiple
     ~~~~~~~ 
     [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Thinking about the future.]
 
-    We will skip the talk about assertions for now, because it's a pretty important topic and must be handled separately. 
 
 So, now that we know how to think about this next part, let's implement it. There're many ways approaching it, let's do the most explicit one. 
 
@@ -806,4 +807,3 @@ Previous: [Day 7. Initializing DirectSound][day 7]
 <!-- Markdeep: https://casual-effects.com/markdeep/ -->
 <script>markdeepOptions = { tocStyle: 'long' }; window.alreadyProcessedMarkdeep || (document.body.style.visibility = 'visible');</script>
 <script src="../js/markdeep.min.js" charset="utf-8"></script>
-<script src="https://morgan3d.github.io/markdeep/latest/markdeep.min.js" charset="utf-8"></script>
