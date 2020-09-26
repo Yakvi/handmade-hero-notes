@@ -3,10 +3,8 @@
 
 **Day 7. Initializing DirectSound**
 _Video Length (includig Q&A): [1h32](https://hero.handmade.network/episode/code/day007/)_
-!!! 
-    "Handmade Hero Notes" contains code from [Handmade Hero][]. Preorder the game on [handmadehero.org][handmade hero], and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
 
--------------
+(insert intro.md.html here)
 
 Welcome to day 7 of Handmade Hero! 
 
@@ -508,17 +506,22 @@ if(SUCCEEDED(DirectSound->CreateSoundBuffer(&BufferDescription, &SecondaryBuffer
 If you try to compile now, the compiler should let you know that you're missing parameters in your `Win32InitDSound` call. Let's fix that. 
 
 * `Window`: Pass the handle to our `Window`. 
-* `SamplesPerSecond`: We've said that we want 48000 Hz frequency, so we'll pass just that.
-* `BufferSize`: We said that we wanted a two second `BufferSize`. Since we said we wanted 16 bit samples (`sizeof(s16)`), playing in `2` channels, for `2` seconds, on `48000` frequency, the size should be the multiple all this mulitiplied together.
+* `SamplesPerSecond`: We've said that we want 48000 Hz frequency, so we'll pass just that. 
+    * For clarity, we'll extract it to `SamplesPerSecond` variable.
+* `BufferSize`: We said that we wanted a two second `BufferSize`. Since we said we wanted 16-bit samples (`sizeof(s16)`), playing in `2` channels, for `2` seconds, on `48000` frequency, the size should be the multiple all this mulitiplied together. 
+    * Let's extract part of it to the `BytesPerSample` and `SecondaryBufferSize` variables, again for clarity.
 
 ~~~~~~~ C++
 if (Window)
 {
-    HDC DeviceContext = GetDC(Window);
-    Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
+    int XOffset = 0;
+    int YOffset = 0;
+~~~~~~~ C++ add
+    int SamplesPerSecond = 48000;
+    int BytesPerSample = sizeof(s16) * 2;
+    int SecondaryBufferSize = 2 * SamplesPerSecond * BytesPerSample;
     
-~~~~~~~ C++
-    Win32InitDSound(Window, 48000, sizeof(s16) * 2 * 2 * 48000);
+    Win32InitDSound(Window, SamplesPerSecond, SecondaryBufferSize);
 ~~~~~~~ C++
     // ...
 }

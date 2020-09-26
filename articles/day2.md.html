@@ -3,10 +3,8 @@
 
 **Day 2. Opening a Win32 Window**
 _Video Length: [1h00](https://hero.handmade.network/episode/code/day002/)_
-!!! 
-    "Handmade Hero Notes" contains code from [Handmade Hero][]. Preorder the game on [handmadehero.org][handmade hero], and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
 
--------------
+(insert intro.md.html here)
 
 [Last time][day 1], we set up our dev environment allowing us to launch our text editor (we showcased [4coder][] and [Visual Studio Code][vscode]). We then created a simple Win32 application launching a modest message box. We made a "make file" for it, just batch file compiling something directly into the `build` directory. We then learned how to launch the debugger ([RemedyBG][] or Visual Studio), with some simple actions like stepping into our code. 
 
@@ -15,7 +13,7 @@ But a message box is not a very useful thing for a game to pop up; in fact, if y
 The window that we are going to open is a basic Windows one. All the programs go through a specific path for opening a window, and we're going to follow that path as well, for a while. But shortly after we are going to create a special _buffer_ in memory which we can write to ourselves, do all the rendering into and, once we're ready, display in the window.
 
 !!!
-    This is not exactly how a modern game would start up. Modern games pretty much exclusively let the graphics card do their work for them. While we will eventually get there, it's not a very good start for educational purposes. Unfortunately, the GPU is a pretty opacque resourse where we have a very limited insight into what it's doing to render graphics for our game. 
+    This is not exactly how a modern game would start up. Modern games pretty much exclusively let the graphics card do their work for them. While we will eventually get there, it's not a very good start for educational purposes. Unfortunately, the GPU is a pretty opacque resource where we have a very limited insight into what it's doing to render graphics for our game. 
 
 # Window Class
 

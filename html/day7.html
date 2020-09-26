@@ -664,15 +664,22 @@ If you try to compile now, the compiler should let you know that you're missing 
 <ul>
 <li class="asterisk"><code>Window</code>: Pass the handle to our <code>Window</code>. 
 </li>
-<li class="asterisk"><code>SamplesPerSecond</code>: We've said that we want 48000 Hz frequency, so we'll pass just that.
-</li>
-<li class="asterisk"><code>BufferSize</code>: We said that we wanted a two second <code>BufferSize</code>. Since we said we wanted 16 bit samples (<code>sizeof(s16)</code>), playing in <code>2</code> channels, for <code>2</code> seconds, on <code>48000</code> frequency, the size should be the multiple all this mulitiplied together.</li></ul>
+<li class="asterisk"><code>SamplesPerSecond</code>: We've said that we want 48000 Hz frequency, so we'll pass just that. 
+<ul>
+    <li class="asterisk">For clarity, we'll extract it to <code>SamplesPerSecond</code> variable.
+</li></ul>
+<li class="asterisk"><code>BufferSize</code>: We said that we wanted a two second <code>BufferSize</code>. Since we said we wanted 16-bit samples (<code>sizeof(s16)</code>), playing in <code>2</code> channels, for <code>2</code> seconds, on <code>48000</code> frequency, the size should be the multiple all this mulitiplied together. 
+<ul>
+    <li class="asterisk">Let's extract part of it to the <code>BytesPerSample</code> and <code>SecondaryBufferSize</code> variables, again for clarity.</li></ul></li></ul>
 
 </p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span> (Window)</span>
 <span class="line">{</span>
-<span class="line">    HDC DeviceContext = GetDC(Window);</span>
-<span class="line">    Win32ResizeDIBSection(&amp;GlobalBackbuffer, <span class="hljs-number">1280</span>, <span class="hljs-number">720</span>);</span>
-<span class="line">    </span><span class="line">    Win32InitDSound(Window, <span class="hljs-number">48000</span>, <span class="hljs-keyword">sizeof</span>(s16) * <span class="hljs-number">2</span> * <span class="hljs-number">2</span> * <span class="hljs-number">48000</span>);</span><span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">    <span class="hljs-keyword">int</span> XOffset = <span class="hljs-number">0</span>;</span>
+<span class="line">    <span class="hljs-keyword">int</span> YOffset = <span class="hljs-number">0</span>;</span><div class=" add"><span class="line">    <span class="hljs-keyword">int</span> SamplesPerSecond = <span class="hljs-number">48000</span>;</span>
+<span class="line">    <span class="hljs-keyword">int</span> BytesPerSample = <span class="hljs-keyword">sizeof</span>(s16) * <span class="hljs-number">2</span>;</span>
+<span class="line">    <span class="hljs-keyword">int</span> SecondaryBufferSize = <span class="hljs-number">2</span> * SamplesPerSecond * BytesPerSample;</span>
+<span class="line">    </span>
+<span class="line">    Win32InitDSound(Window, SamplesPerSecond, SecondaryBufferSize);</span></div><span class="line">    <span class="hljs-comment">// ...</span></span>
 <span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;13:</b> <file>[win32_handmade.cpp > WinMain]</file> Updating <code>Win32InitDSound</code> call.</div></center>
 <p>
 

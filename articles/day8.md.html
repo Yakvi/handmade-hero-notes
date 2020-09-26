@@ -3,9 +3,9 @@
 
 **Day 8. Writing a Square Wave to DirectSound**
 _Video Length (includig Q&A): [1h33](https://hero.handmade.network/episode/code/day008/)_
-!!! 
-    "Handmade Hero Notes" contains code from [Handmade Hero][]. Preorder the game on [handmadehero.org][handmade hero], and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
-    
+
+(insert intro.md.html here)
+
 We are currently in the middle of setting up our sound support. Last time, we pretty much finished setting up DirectSound and the buffers. Today, we're going to focus on outputting the sound. For this purpose, we're also going to write a simple square wave sound to make sure the system works properly.
 
 # DirectSound Init Review
@@ -34,16 +34,744 @@ Our `Win32InitDSound` function currently does the following things:
 
 And... that's it! The secondary buffer is the only thing that we'll be using from here on. We can't write to the primary buffer anymore as you used to be able in the early days of Windows. Nowadays Windows doesn't give exclusive privileges to write to the sound card: one has to write in the secondary buffer, and the kernel will take all the programs writing to their secondary buffers, mix them together and output to the sound card. 
 
-Since we're going to use this secondary buffer, we will elevate it to our globals. Again, we could eventually remove it as it's not a good idea having too many globals. In a _platform layer_ it's usually not that big of a deal because the code is kind of isolated from the rest of your program. At the same time, you want to be aware of it, as the globals can be modified by anyone, and sometimes it creates a bit of a _stringiness_ in your code (or spaghettinnes, if you prefer). Be aware of you do global, make sure to understand why it's global and that, if it should stay global, there should be only one of them. 
+Since we're going to use this secondary buffer, we will elevate it to our globals. Let's cut it out from `Win32InitDSound` and paste it as a `global_variable` next to its peers. We will also add it a `Global` prefix to its name, in line with the other globals.
+
+~~~~~~~ C++
+global_variable bool GlobalRunning;
+global_variable win32_offscreen_buffer GlobalBackbuffer;
+~~~~~~~ C++ add
+global_variable IDirectSoundBuffer *GlobalSecondaryBuffer;
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file>]
+~~~~~~~ C++ delete
+IDirectSoundBuffer *SecondaryBuffer;
+~~~~~~~ C++ edit
+if(SUCCEEDED(DirectSound->CreateSoundBuffer(&BufferDescription, &GlobalSecondaryBuffer, 0)))
+~~~~~~~ C++
+{
+    OutputDebugStringA("Secondary buffer created successfully.\n");
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > Win32InitDSound]</file> "Globalizing" the Secondary Buffer pointer.]
+
+Again, we could eventually remove it as it's not a good idea having too many globals. In a _platform layer_ it's usually not that big of a deal because the code is kind of isolated from the rest of your program. At the same time, you want to be aware of it, as the globals can be modified by anyone, and sometimes it creates a bit of a _stringiness_ in your code (or spaghettinnes, if you prefer). Be aware of what you do global, make sure to understand a) why it's global, b) if it should stay global, and c) if there should be only one of these globals around. If any of these things aren't true, don't do it.
+
+# Plan the Sound Output
+
+You might have noticed by now that we always try to lay out what we're about to do. If you so prefer, you can skim through this part, do the implementation, and return later to fully understand why we took the decisions we took.
+
+That said, you should try and avoid thinking too much ahead. During the implementation new things that you might not have thought through will appear, and if your plan was too tight, it will fall apart or become very ugly very quickly.
+
+## Determine the Sound to Output
+
+Once we get our buffer, we will be able to output sound from it. In order to do that, we only need to ask where the `write` cursor is and fill in some memory with the sound.
+
+Now, which sound do we want to reproduce? We can't load audio `.wav` files just yet, so we're going to generate a sound on the fly. It's going to be a really annoying sound, called [Square wave][]. It is however the simplest sound we can generate, so it will do. Its name comes from a very characteristic waveform in which the high, positive signal is immediately followed by a low, negative signal, with nothing inbetween. It looks something like that.
+
+***************************************
+*  .---.   .---.   .---.   .---.   .--*
+*  |   |   |   |   |   |   |   |   |  *
+*- | - | - | - | - | - | - | - | - | -*
+*  |   |   |   |   |   |   |   |   |  *
+*--'   '---'   '---'   '---'   '---'  *
+***************************************
+[Figure [x]: Square wave.]
+
+## Visualize Circular Buffer
+
+Let's review what our buffer actually represents. We said last time that the sound buffer we initialized is a _circular buffer_. If our remember our rendering backbuffer, it was a simple chunk of memory that we agreed was a 2D representation of a bitmap. We would fill the entire buffer, and then pass it to be rendered on screen, again in its entirety. Rinse and repeat. 
+
+We decided not to do it with the sound buffer. Instead, we agreed that our sound buffer would be a 2-second stream of data that we will be constantly updating to make sure the most up to date sounds are played. And, instead of filling it from the beginning to the end, we will write only from a specific point for a while using a "cursor" which will constantly run from the beginning to the end of the buffer. 
+
+Behind our writing cursor, another one will be running. Like a vacuum cleaner picking up the dust we drop in front of it, it will be reading our bytes and passing them to the sound card for playing. 
+
+Play and Write cursor, in a constant chase of cat and mouse around the buffer.
+
+*******************************************
+*    .-------------------------------.    *
+*   |                                 |   *
+*   v    cursor movement direction    |   *
+*     ------------------------------>     *
+*                                         *
+*  buffer             🎼            buffer *
+*  start              |             end   *
+*   |                 v                |  *
+*   +------*----------*----------------+  *
+*   |      |                           |  *
+*   0      v                              *
+*          🔊                          2s  *
+*******************************************
+[Figure [circular]: Play and Write cursors moving through the circular buffer.]
+
+You could imagine this buffer as if you were infinitely adding a new buffer to the end of the existing one. Thing is, you can't really write ahead infinitely. Once you hit the Play cursor's position right now, you should stop, otherwise the newly written sounds will overwrite whatever the Play cursor wants to read on the current iteration.
+
+For instance, if we write our square wave to the buffer, this how it would look in an "unwrapped" state:
+
+*************************************************************
+*                                            |              *
+*  buffer             🎼             buffer   |          🎼   *
+*  start              |              end     |          |   *
+*    --.  .--.  .--.  v┄┄.  .┄┄.  .┄┄.  .┄┄. +-.  .--.  v   *
+*   |  |  |  |  |  |  |  ┊  ┊  ┊  ┊  ┊ |┊  ┊ | |  |  |  |   *
+*   +------*----------*----------------+┄┄┄┄┄*----------*...*
+*   |  |  |  |  |  |  |  ┊  ┊  ┊  ┊  ┊ |┊  ┊ | |  |  |  |   *
+*      '--'| '--'  '--'  '┄┄'  '┄┄'  '┄┄'  '┄| '--'  '--'   *
+*          v                                 v              *
+*   0      🔊                          2s     🔊              *
+*************************************************************
+[Figure [unwrapped]: Square wave inside an "unwrapped" circular buffer. Don't write past the Play cursor!]
+
+In summary, once the Play cursor passes an area, it becomes available to write new sounds to it. On the other hand, the Write cursor marks the minimum _safe_ area. Anything before that risks to produce distorted sounds.
+
+Now, before writing to the buffer, we will need to lock an area that we will specify. We will get in return either one or two regions. Looking at the Figure [unwrapped] again, it's easy to see why: you either get one region if all the desired size fits before the end of the buffer, or two regions if it doesn't. 
+
+************************************************************************
+*  .--------------.                                                    *
+*  |Requested size|                                                    *
+*  |fits in buffer|     desired size                                   *
+*  '--------------'           |                                        *
+*                  .---------' '---------.                             *
+*                 |                       |                            *
+*  buffer         🎼                       ┊          buffer            *
+*  start          |                       ┊           end              *
+*   |             v                       ┊            |               *
+*   +-------------*------------------------------------+               *
+*                 ┊                       ┊                            *
+*                 |                       |                            *
+*                  '---------. .---------'                             *
+*                             |                                        *
+*                         region 1                                     *
+*                                                                      *
+*  .--------------.                                                    *
+*  |Requested size|                             desired size           *
+*  | doesn't fit  |                                   |                *
+*  '--------------'                        .---------' '---------.     *
+*                                         |                       |    *
+*  buffer                                 🎼          buffer       ┊    *
+*  start                                  |           end         ┊    *
+*   |                                     v            |          ┊    *
+*   +----------+--------------------------*------------+┄┄┄┄┄┄┄┄┄┄┄┄┄..*
+*   ┊          ┊                          ┊            ┊          ┊    *
+*   |          |                          |            |          |    *
+*    '--. .---'                            '----. .---' '--. .---'     *
+*        |                                       |          |          *
+*     region 2                               region 1       |          *
+*        ^                                                  |          *
+*        |                                                  |          *
+*         '------------------------------------------------'           *
+************************************************************************
+[Figure [regions]: Locking one or two regions of the buffer. Note that the desired size and the buffer size are the same, what changes is only the Write cursor position at the moment of lock (represented by 🎼), thus impacting the produced regions.]
+
+This is the gist of it. Now, let's think about a few other details before we're ready to make it happen: 
+
+* We will write to our `GlobalSecondaryBuffer` so we will use this _object_ to call its _methods_.
+* We want to get the Play cursor position.
+* We will ignore the actual Write cursor position. Instead, we will calculate ourselves the point from which to lock our region/s.
+* Windows wants to know when we're start and stop writing to our sound buffer. This is done by `Lock`ing and `Unlock`ing the sound buffer.
+* The amount of bytes to write will correspond to the distance from our byte to lock to the Read cursor (wrapping around if necessary).
+* We will presume that the sound buffer is unwrapped. This can be achieved by getting a running sample index which will always increase, modulate our position against the secondary buffer size and thus calculating byte to lock.
+* Last, we should of course start playing our sound.
+
+Now, luckily DirectSound knows that its buffers are often used in a circular manner, so it accounts for the probability that we can receive in return up to _two_ regions. The internal logic of the API in that case is the following:
+
+1. Receive a request to lock a region of a specific size, bigger than the remaining space in the buffer (from the write cursor position to the end).
+2. Calculate how much extra space is required.
+    * Cannot return the memory outside the buffer!
+3. Lock the overrun amount at the beginning of the buffer.
+4. Return the two regions to us.
+
+Of course, this doesn't always happen. The whole region we've requested might fit well within the borders of the borders of the buffer.
+
+We should be prepared to handle both of these cases, whether we get the requested memory in one block, or two. It's easy to do, but it's important to understand the idea before implementing it.
+
+# Fill the Buffer
+
+Let's get to coding this down. Inside our `WinMain`, we'll clear some space and get ready to output our buffer, say, right after we render our gradient:
+
+~~~~~~~ C++ 
+// ...
+RenderWeirdGradient(&GlobalBackbuffer, XOffset, YOffset);
+                
+~~~~~~~ C++ add
+// NOTE(casey): DirectSound output test
+~~~~~~~ C++ 
+
+win32_window_dimension Dimension = Win32GetWindowDimension(Window);
+Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext, Dimension.Width, Dimension.Height);
+// ...
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Finding a suitable place for our code to live.]
+
+Locking is achieved by calling [Lock][] method from our `GlobalSecondaryBuffer` object (if you recall, we call methods any functions which are retrieved from objects, as opposed to straight from the source file). This is what the `Lock`'s signature looks like: 
+
+~~~~~~~ C++
+HRESULT Lock( 
+  DWORD   dwWriteCursor,   // Input 
+  DWORD   dwWriteBytes,    // Input
+  LPVOID  lplpvAudioPtr1,  // Output
+  LPDWORD lpdwAudioBytes1, // Output 
+  LPVOID  lplpvAudioPtr2,  // Output
+  LPDWORD lpdwAudioBytes2, // Output 
+  DWORD   dwFlags          // Input
+);
+~~~~~~~
+[<file>[MSDN]</file> `IDirectSoundBuffer::Lock` method syntax.]
+
+There're a few interesting things to note. First, the method returns an `HRESULT` which, as we remember from the [last time][day 7], can (and really, should) be tested with `SUCCEEDED` macro. As for its parameters, we have a big amount of output values which roughly correspond to what we said. 
+
+* `dwWriteCursor`: The starting address of our write pointer. Let's say we will have a certain `ByteToLock` which we will lock. We'll return to it a bit later.
+* `dwWriteBytes`: How many bytes we intend to write to, i.e. our "desired size". Let's say we're going to write some `BytesToWrite` value that we will come up with later.
+* `lplpvAudioPtr1`, `lpdwAudioBytes1`: Address of a pointer and a size variable for the first region you will receive back.
+* `lplpvAudioPtr2`, `lpdwAudioBytes2`: Address of a pointer and a size variable for the potential second region, if any. 
+* `dwFlags`: There a couple flags that we could pass here. We don't really need them, so just pass `0`. 
+
+~~~~~~~ C++ 
+// NOTE(casey): DirectSound output test
+~~~~~~~ C++ add
+DWORD ByteToLock = ;   // TODO!
+DWORD BytesToWrite = ; // TODO!
+
+VOID *Region1;
+DWORD Region1Size;
+VOID *Region2;
+DWORD Region2Size;
+if (SUCCEEDED(GlobalSecondaryBuffer->Lock(ByteToLock, BytesToWrite,
+                                          &Region1, &Region1Size,
+                                          &Region2, &Region2Size, 
+                                          0)))
+{
+    // All good, we can write to the buffer
+}
+
+~~~~~~~ C++ 
+// ... 
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Locking our buffer for writing.]
+
+`Region1, Region1Size, Region2` and `Region2Size` will be filled out by the buffer, so we can leave them as that. As for `ByteToLock` and `BytesToWrite`, these will need to come from _somewhere_. We'll return to them in a minute, for now lets move on.
+
+## Fill the buffer regions
+
+Now that we have our buffer ready and willing to accept our samples, let's think about how exactly will we write to it. our graphics backbuffer was accepting 32-bit Pixels in a specific format. Similarly, we'll be writing sound in Samples, each 16-bit sample alternating between two channels. 
+
+********************************************************
+*                                                      *
+*    LEFT  | RIGHT | LEFT  | RIGHT | LEFT  | RIGHT     *
+*  .-------+-------+-------+-------+-------+--------...*
+*     s16  |  s16  |  s16  |  s16  |  s16  |  s16      *
+*                                                      *
+*  .---+---+---+---+---+---+---+---+---+---+---+---.   *
+*  |   |   |   |   |   |   |   |   |   |   |   |   |...*
+*  '---+---+---+---+---+---+---+---+---+---+---+---'   *
+*                                                      *
+*  |   |                                               *
+*  '---'                                               *
+*  1 byte                                              *
+********************************************************
+[Figure [x]: The structure of our sound output in memory.]
+
+You can quickly realize that it will be simpler for us to think about samples in terms of a single `Left-Right` unit, instead of `Left` or `Right` separate things. There's no sense in writing to the `Left` channel if we aren't writing to the `Right` channel, and vice versa. Therefore, we could abstract this even further and think of a `Left-Right` pair as a single, 32-bit wide, `Sample`. The name might be confusing with the individual `Left` or `Right` samples, but we'll be calling those `Channels` from here on.
+
+********************************************************
+*        Sample          Sample          Sample        *
+*          |               |               |           *
+*   .-----' '-----. .-----' '-----. .-----' '-----.    *
+*  | LEFT    RIGHT | LEFT    RIGHT | LEFT    RIGHT |   *
+*  .-------+-------+-------+-------+-------+--------...*
+*     s16  |  s16  |  s16  |  s16  |  s16  |  s16      *
+*                                                      *
+*  .---+---+---+---+---+---+---+---+---+---+---+---.   *
+*  |   |   |   |   |   |   |   |   |   |   |   |   |...*
+*  '---+---+---+---+---+---+---+---+---+---+---+---'   *
+********************************************************
+[Figure [x]: Abstracting Stereo Channels.]
+
+We can also say with certainty that our cursor and `BytesToWrite` will always be an even multiple of a Sample size (which is, under this logic, 4 bytes long). We can't really output less than that because it wouldn't make sense for our stereo sound. 
+
+So when `Region1Size` or `Region2Size` come back, they'd better be even multiple of a Sample size as well. Because if it's not the case, something weird has happened. 
+
+!!! 
+    This would be a good place to _assert_ that this assumption is _always_ true. However, we will put back the talk about assertions until a later date, so for now we can leave a TODO for future us:
+
+    ~~~~~~~ C++ 
+    if (SUCCEEDED(GlobalSecondaryBuffer->Lock(...)))
+    {
+    // All good, we can write to the buffer
+    ~~~~~~~ C++ add
+    // TODO(casey): assert that Region1Size/Region2Size are valid 
+    ~~~~~~~ C++
+    }
+    ~~~~~~~ 
+    [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Thinking about the future.]
+
+    We will skip the talk about assertions for now, because it's a pretty important topic and must be handled separately. 
+
+So, now that we know how to think about this next part, let's implement it. There're many ways approaching it, let's do the most explicit one. 
+
+As with our rendering, we'll throw in a couple of `for` loops. First, we will iterate over `Region1` and then, if `Region2Size` is anything greater than `0`, over `Region2`. Since we get `0` in `Region2Size` if the `Region2` isn't necessary, we don't need to put any extra `if` statements: the second loop will simply not go off.
+
+We will be iterating over a value called `SampleCount` for regions 1 and 2. This will be our actual region size divided by the `BytesPerSample` value we calculated last time.
+
+~~~~~~~ C++ 
+GlobalSecondaryBuffer->Lock(...);
+// TODO(casey): assert that Region1Size/Region2Size are valid 
+~~~~~~~ C++ add
+DWORD Region1SampleCount = Region1Size / BytesPerSample;
+for (DWORD SampleIndex = 0;
+     SampleIndex < Region1SampleCount;
+     ++SampleIndex)
+{
+}
+DWORD Region2SampleCount = Region2Size / BytesPerSample;
+for (DWORD SampleIndex = 0;
+     SampleIndex < Region2SampleCount;
+     ++SampleIndex)
+{
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Iterating over buffer regions.]
+
+Please note that contrary to the "2D" render buffer loop we only need to iterate once inside each "1D" sound buffer loop. The two different loops we typed in are consecutive for two different regions that we might get. 
+
+As with `Pixel`, we'll have our `SampleOut`. We'll make it the sound of a single channel (16 bit) and use to iterate over our regions. This means that we initialize it pointing at the region beginning, and will be slowly advancing it as we write down our samples. 
+
+~~~~~~~ C++ 
+if (SUCCEEDED(GlobalSecondaryBuffer->Lock(...)))
+{
+    // TODO(casey): assert that Region1Size/Region2Size are valid 
+~~~~~~~ C++ add
+    s16 *SampleOut = (s16 *)Region1;
+~~~~~~~ C++
+    DWORD Region1SampleCount = Region1Size / BytesPerSample;
+    for (DWORD SampleIndex = 0;
+        SampleIndex < Region1SampleCount;
+        ++SampleIndex)
+    {
+~~~~~~~ C++ add
+*SampleOut++ = LEFT;
+*SampleOut++ = RIGHT;
+~~~~~~~ C++
+    }
+
+~~~~~~~ C++ add
+    SampleOut = (s16 *)Region2;
+~~~~~~~ C++
+    DWORD Region2SampleCount = Region2Size / BytesPerSample;
+    for (DWORD SampleIndex = 0;
+         SampleIndex < Region2SampleCount;
+        ++SampleIndex)
+    {
+~~~~~~~ C++ add
+    *SampleOut++ = LEFT;
+    *SampleOut++ = RIGHT;
+~~~~~~~ C++
+    }
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> SampleOut.]
+
+## Implement the Square Wave
+
+We assume that you have some basic knowledge how digital sound sampling works. If not, check out subsection [intro to digital sound theory]. 
+
+Now, square wave is super simple (that's why we're implementing it). Its samples are either at their maximum or their minimum, with no inbetween. So in practice we should only know when flip the sign, and what the "maximum" and "minimum" values are. It's calculated in the following way:
+
+A few things can be precalculated before we enter our main loop: 
+1. Determine our tone, in Hertz, that we want our square wave to have.
+    * Supposedly, we want a value around "Middle C", i.e. 261Hz. 
+    * Let's round it down to 256. 
+2. Determine the wave period or _wavelength_ of our wave, `SquareWavePeriod`.
+    * Simply take our `SamplesPerSecond` and divide it by desired `ToneHz`. 
+3. Take a half of that `SquareWavePeriod`. 
+4. Set up sound pitch (i.e. Tone Volume) to be, let's say, 3000. We can always adjust it later on.
+5. Set up a sample counter. 
+    * Each time the sample counter reaches zero, we'll reset it back to `SquareWavePeriod`. 
+    * At the end of each sample iteration, decrease sample counter by 1.
+
+The actual wave sampling will of course happen inside the main loop: 
+6. Calculate `SampleValue`. If our `SquareWaveCounter` is greater than our `HalfSquareWavePeriod`, it will be `SoundPitch`. If not, `-SoundPitch`.
+    * In other words, half of the wave will be positive, the other one will be negative
+7. Write the `SampleValue` to the left and right channels.
+
+Try to implement it all yourself! You will find our implementation below: 
+
+~~~~~~~ C++ add
+// NOTE(casey): Sound test constants
+~~~~~~~ C++
+int SamplesPerSecond = 48000;
+int BytesPerSample = sizeof(s16) * 2;
+int SecondaryBufferSize = 2 * SamplesPerSecond * BytesPerSample;
+~~~~~~~ C++ add
+int ToneHz = 256; 
+int SquareWavePeriod = SamplesPerSecond / ToneHz; 
+int HalfSquareWavePeriod = SquareWavePeriod / 2; 
+int ToneVolume = 3000;
+int SquareWaveCounter = 0;
+~~~~~~~ C++
+
+GlobalRunning = true;
+while (GlobalRunning)
+{
+    // Main game loop
+    // ... 
+    // NOTE(casey): DirectSound output test
+    // ... 
+    s16 *SampleOut = (s16 *)Region1;
+    DWORD Region1SampleCount = Region1Size / BytesPerSample;
+    for (DWORD SampleIndex = 0;
+         SampleIndex < Region1SampleCount;
+         ++SampleIndex)
+    {
+~~~~~~~ C++ add
+        if(!SquareWaveCounter)
+        {
+            SquareWaveCounter = SquareWavePeriod;
+        }
+        s16 SampleValue = (SquareWaveCounter > HalfSquareWavePeriod) ? ToneVolume : -ToneVolume;
+~~~~~~~ C++ edit
+        *SampleOut++ = SampleValue;
+        *SampleOut++ = SampleValue;
+~~~~~~~ C++ add
+        --SquareWaveCounter;
+~~~~~~~ C++ 
+
+    }
+    SampleOut = (s16 *)Region2;
+    DWORD Region2SampleCount = Region2Size / BytesPerSample;
+    for (DWORD SampleIndex = 0;
+         SampleIndex < Region2SampleCount;
+         ++SampleIndex)
+    {
+~~~~~~~ C++ add
+        if(!SquareWaveCounter)
+        {
+            SquareWaveCounter = SquareWavePeriod;
+        }
+        s16 SampleValue = (SquareWaveCounter > HalfSquareWavePeriod) ? ToneVolume : -ToneVolume;
+~~~~~~~ C++ edit
+        *SampleOut++ = SampleValue;
+        *SampleOut++ = SampleValue;
+~~~~~~~ C++ add
+        --SquareWaveCounter;
+~~~~~~~ C++ 
+    }
+    // ...
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Implementing the Square Wave.]
+
+!!! Note Ternary Operator
+    You will notice the following line in our implementation:
+
+    ~~~~~~~ C++
+    s16 SampleValue = (SquareWaveCounter > HalfSquareWavePeriod) ? ToneVolume : -ToneVolume;
+    ~~~~~~~
+    
+    Simply put, it's an assignment based on a test. It's a shortand for the following: 
+
+    ~~~~~~~ C++
+    s16 SampleValue;
+    if (SquareWaveCounter > HalfSquareWavePeriod)
+    {
+        SampleValue = ToneVolume;
+    }
+    else
+    {
+        SampleValue = -ToneVolume;
+    }     
+    ~~~~~~~
+
+    The syntax for Ternary Operator is `variable = condition ? value_if_true : value_if_false;`.
+
+## Get Cursor Position and Region Size
+
+If you try and build now, you should remain with only have two errors remaining. (Plus remember, we'll also need to unlock the buffer once we are done with it, and start playing!) 
+
+If you recall, we left `ByteToLock` and `BytesToWrite` as stubs, now let's think where we can get them from. `ByteToLock` will tell DirectSound where to start writing from, while `BytesToWrite` will specify the size of our desired region. 
+
+As we said at the beginning, in order to calculate `ByteToLock` we need to "unwrap" our buffer. We will do it by introducing an _unsigned_ integer which will keep track of the Samples we write. We will then calculate `ByteToLock` by multiplying the running sample index by the `BytesPerSample` and getting the remainder of division by the secondary buffer size. The latter can be easily produced by using the _modulo operator_ (`%`).
+
+***************************************************************************
+* .-------------------------------------.                                 *
+* | RunningSampleIndex · BytesPerSample |       RunningSampleIndex        *
+* | ----------------------------------- |   +-------+-------+-------+->...*
+* |        SecondaryBufferSize          |   ┊       ┊       ┊       ┊     *
+* '-------------------------------------'   |   0   |   1   |   2   |  ...*
+*                        Full buffers ----> |       |       |       |     *
+*                      (we don't care)      +---+---+---+---+---+---+     *
+*                                                  /         \            *
+*                                                 /           \           *
+* .---------------------------------------.      / ByteToLock  \          *
+* | (RunningSampleIndex · BytesPerSample) |     /    | (we need)\         *
+* |                % SecondaryBufferSize  |     |    v          |         *
+* '---------------------------------------'     '----*----------'         *
+*                                               |               |         *
+*                                                '-----. .-----'          *
+*                                                       |                 *
+*                                              SecondaryBufferSize        *
+***************************************************************************
+[Figure [bufferindex]: Division vs. Remainder calculation. We multiply by `BytesPerSample` because we test how many full samples fit (or don't) inside our buffer.]
 
 
+!!! Note Integer overflow
+    Why Unsigned Integer? It has to do with the number overflow. 
+    
+    A 32-bit signed integer goes from $−2,147,483,648 (−2^{31})$ through $2,147,483,647 (2^{31} − 1)$, while unsigned 32-bit goes from $0$ through $4,294,967,295 (2^{32} − 1)$. That's simply how much 32 binary digits can store. 
 
+    If you go one past the maximum value, the number _overflows_, i.e. restarts from the minimum number. However, while for unsigned integers this means restarting from $0$, for signed integers it means start from the lowest negative number ($−2,147,483,648$ for 32-bit integers). We'd really rather not have it here.
 
-# Recap
+As for the `BytesToWrite`, we don't want to write immediately past the Play cursor, so we need to know whether it's before or after the byte we're locking. 
+
+To do that, we should find the position of the Play cursor, and we can do it by calling another buffer method, [GetCurrentPosition][]. `GetCurrentPosition` returns an `HRESULT` and takes two pointers. These will be returned by the method as _the offsets in bytes_ to the `PlayCursor` and `WriteCursor` _from the beginning of the buffer_. Again, we need to test whether or not this method `SUCCEEDED`. If `SUCCEEDED`, this means that something bad happened, and we should not try to output sounds to it. Let's _wrap_ the whole sound output code block that we've written, and only execute it if we got current position correctly.
+
+~~~~~~~ C++
+int SamplesPerSecond = 48000;
+int BytesPerSample = sizeof(s16) * 2;
+int SecondaryBufferSize = 2 * SamplesPerSecond * BytesPerSample;
+~~~~~~~ C++ add
+u32 RunningSampleIndex = 0;
+~~~~~~~ C++
+int ToneHz = 256; 
+int SquareWavePeriod = SamplesPerSecond / ToneHz; 
+int ToneVolume = 3000;
+int SquareWaveCounter = 0;
+// ... 
+GlobalRunning = true;
+while (GlobalRunning)
+{
+    // Main game loop
+    // ... 
+    // NOTE(casey): DirectSound output test
+~~~~~~~ C++ add
+    DWORD PlayCursor;
+    DWORD WriteCursor;
+    if(SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
+    {
+~~~~~~~ C++ edit
+        DWORD ByteToLock = RunningSampleIndex * BytesPerSample % SecondaryBufferSize;
+~~~~~~~ C++
+        DWORD BytesToWrite = ;
+
+        VOID *Region1;
+        DWORD Region1Size;
+        VOID *Region2;
+        DWORD Region2Size;
+        if(SUCCEEDED(GlobalSecondaryBuffer->Lock(...)))
+        {
+           // ... 
+           
+    
+        }
+~~~~~~~ C++ add
+    }
+~~~~~~~ C++
+    // ... 
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Getting `PlayCursor` position and calculating `ByteToLock`. As we said previously, we won't really need the `WriteCursor` even if it's given to us here for free.]
+
+If you recall Figure [regions], we need to account for two scenarios: if the `PlayCursor` is after `ByteToLock` (requested size will fit in the buffer), and if it's before (we'll need to add second region at the beginning). What we don't know is our "desired size", and that's what `BytesToWrite` will represent.
+
+Since both the `PlayCursor` and `ByteToLock` are expressed in _bytes_, calculation of the bytes to write will be pretty straightforward. 
+
+~~~~~~~ C++
+DWORD ByteToLock = RunningSampleIndex * BytesPerSample % SecondaryBufferSize;
+~~~~~~~ C++ edit
+DWORD BytesToWrite;
+~~~~~~~ C++ add
+if(ByteToLock > PlayCursor)
+{
+    // Play cursor is behind
+    BytesToWrite = SecondaryBufferSize - ByteToLock; // region 1
+    BytesToWrite += PlayCursor;                      // region 2
+}
+else
+{
+    // Play cursor is in front
+    BytesToWrite = PlayCursor - ByteToLock;          // region 1
+}
+~~~~~~~ C++ 
+
+VOID *Region1;
+DWORD Region1Size;
+VOID *Region2;
+DWORD Region2Size;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Calculating `BytesToWrite`. You could use ternary operator as well here!]
+
+## Simplify Square Wave
+
+Now that we have our running buffer index, we can simplify our square wave significantly. We no longer need the `SquareWaveCounter`, as we can derive the position of the wave from the `RunningSampleIndex`. 
+
+To do that, instead of comparing `SquareWaveCounter` with `HalfSquareWavePeriod`, we will divide our `RunningSampleIndex` by `HalfSquareWavePeriod`, and get the remainder of division by `2` ("modulo 2", or `% 2`). This will give us `0` or `1` which we can use to determine whether we're on a positive pitch, or negative one.
+
+In other words, `SquareWaveCounter > HalfSquareWavePeriod` becomes `(RunningSampleIndex / HalfSquareWavePeriod) % 2`. We also want to advance our `RunningSampleIndex` (so, you know, it keeps running), se we can increment it in the same line, as well. 
+
+**************************************************************************
+*                                                                        *
+* RunningSampleIndex ----> +-------+-------+-------+-------+-------+->...*
+* ------------------       ┊       ┊       ┊       ┊       ┊       ┊     *
+*  SquareWavePeriod        |   0   |   1   |   2   |   3   |   4   |  ...*
+*                          |       |       |       |       |       |     *
+*                          +---+---+---+---+---+---+---+---+---+---+     *
+*                          |   |   |   |   |   |   |   |   |   |   |     *
+* HalfSquareWavePeriod     | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |  ...*
+*                          |   |   |   |   |   |   |   |   |   |   |     *
+*                          +---+---+---+---+---+---+---+---+---+---+     *
+*                          |   |   |   |   |   |   |   |   |   |   |     *
+* HalfSquareWavePeriod % 2 | 0 | 1 | 0 | 1 | 0 | 1 | 0 | 1 | 0 | 1 |  ...*
+*                          |   |   |   |   |   |   |   |   |   |   |     *
+*                          ┊   ┊   ┊   ┊   ┊   ┊   ┊   ┊   ┊   ┊   ┊     *
+*  ToneVolume ---------->  ┊   .---.   .---.   .---.   .---.   .---.     *
+*                          ┊   |   |   |   |   |   |   |   |   |   |     *
+*                      0 - ┊ - | - | - | - | - | - | - | - | - | - | -   *
+*                          ┊   |   |   |   |   |   |   |   |   |   |     *
+* -ToneVolume ---------->  ----'   '---'   '---'   '---'   '---'   '--...*
+*                                                                        *
+**************************************************************************
+[Figure [runningindex]: Calculating period based on the running sample index. Note that the `RunningSampleIndex` is the only variable that changes here, the rest are constants.]
+
+~~~~~~~ C++ delete
+int SquareWaveCounter = 0;
+~~~~~~~ C++
+// ... 
+s16 *SampleOut = (s16 *)Region1;
+DWORD Region1SampleCount = Region1Size / BytesPerSample;
+for (DWORD SampleIndex = 0;
+        SampleIndex < Region1SampleCount;
+        ++SampleIndex)
+{
+~~~~~~~ C++ delete
+        if(!SquareWaveCounter)
+        {
+            SquareWaveCounter = SquareWavePeriod;
+        }
+~~~~~~~ C++ edit
+        s16 SampleValue = ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ? ToneVolume : -ToneVolume;
+~~~~~~~ C++
+        *SampleOut++ = SampleValue;
+        *SampleOut++ = SampleValue;
+~~~~~~~ C++ delete
+        --SquareWaveCounter;
+~~~~~~~ C++ 
+}
+SampleOut = (s16 *)Region2;
+DWORD Region2SampleCount = Region2Size / BytesPerSample;
+for (DWORD SampleIndex = 0;
+        SampleIndex < Region2SampleCount;
+        ++SampleIndex)
+{
+~~~~~~~ C++ delete
+        if(!SquareWaveCounter)
+        {
+            SquareWaveCounter = SquareWavePeriod;
+        }
+~~~~~~~ C++ edit
+        s16 SampleValue = ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ? ToneVolume : -ToneVolume;
+~~~~~~~ C++
+        *SampleOut++ = SampleValue;
+        *SampleOut++ = SampleValue;
+~~~~~~~ C++ delete
+        --SquareWaveCounter;
+~~~~~~~ C++ 
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Simplifying the Square Wave.]
+
+## Lock and Start Playing
+
+We need to clean up a couple of things before we're ready to reproduce our beautiful square wave. First, we need to unlock the buffer so that Windows can read again from it. The method we're after is simply [Unlock][], and we pass to it the same `Region`s and `RegionSize`s that we received from `Lock`:
+
+~~~~~~~ C++
+if(SUCCEEDED(GlobalSecondaryBuffer->Lock(ByteToLock, BytesToWrite,
+                                         &Region1, &Region1Size,
+                                         &Region2, &Region2Size,
+                                         0)))
+{
+    // ...
+    // Write all our samples
+    // ...
+    
+~~~~~~~ C++ add
+    GlobalSecondaryBuffer->Unlock(Region1, Region1Size, Region2, Region2Size);
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Unlocking the buffer.]
+
+We also need to start playing. You do it by calling [Play][] method of the buffer. Usually you want to start playing only after initially filling out the buffer; for the sake of our test, for now we'll do it immediately after we initialized the buffer.
+
+As parameters for `Play`, we really don't have many options. As you can see from the [documentation][Play], both the first and second parameter can only be `0`, while `dwFlags` allows us to seet up looping of the buffer. That's what we're interested in, so we'll pass the `DSBPLAY_LOOPING` flag along: 
+
+~~~~~~~ C++
+Win32InitDSound(Window, SamplesPerSecond, SamplesPerSecond * 2 * BytesPerSample);
+~~~~~~~ C++ add
+GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Start playing.]
+
+Compile, set your speakers to a low volume and listen to the beauty of your work! If you've done everything right, you should hear a continuous, uninterrupted sound, without any noticeable "clicking".
+
+![1000Hz Square Wave example from [Wikipedia](https://en.wikipedia.org/wiki/File:Square_wave_1000.ogg). If you change your `ToneHz` to the same frequency, you should hear the same sound.](https://upload.wikimedia.org/wikipedia/commons/9/92/Square_wave_1000.ogg)
+
+# Recap 
+
+Today, we've written most of DirectSound-related code. It will largely remain the same, ready to output whatever samples we'll pass to it.
+
+The code we've written today will definitely contain some bugs. Compressing a "flat" linear buffer into a circular one is always somewhat complex. Next time, we are going to challenge it more, by implementing some more advanced wave types. We will also look at the buffer and verify that it looks like it should.
+
+We hope that you enjoyed following along in the beautiful world of circular buffer coding. If you struggle with some parts, take regular breaks and return to the code when you are ready to rumble!
 
 # Exercises
 
-# Programming Basics
+## Practice RAII on Sound Buffer
+
+If you remember, "Resource Acquisition Is Initialization" is a practice to acquire and release resources in one command. C++ allows to do it via Constructors and Destructors. We've discussed RAII in [day 4][]. 
+
+Practice your RAII by dynamically locking and unlocking the sound buffer! 
+
+## Extract Your Sound Functions
+
+You might have noticed that we're writing our sound code directly in `WinMain`. Try _extracting_ this code to a separate function, say `Win32UpdateDSound`, and passing the constants we defined above as its parameters.
+
+# Programming Notions 
+
+## Intro to Digital Sound Theory
+
+Let's quickly go over what we need for our sound to be played. [Sound][] is produced by receiving a vibration of an "acoustic wave". In our case, such a wave is produced by speakers or headphones. As a wave, it has a specific _frequency_ (i.e. how many times does it repeats in a second), which determines a sound's _pitch_, and _amplitude_, which determines its intensity and therefore loudness (volume).
+
+The frequency is measured in Hertz (㎐), i.e. cycles per second. A cycle is how long it takes for a wave to go from a position (e.g. a peak) to the next iteration of the same position (next peak).
+
+*************************************************************
+*                                                           *
+*       .-+-.               .-+-.               .---.       *
+*      /  ┊  \             /  ┊  \             /     \      *
+*     /   ┊   \           /   ┊   \           /       \     *
+* ---/----┊----\---------/----┊----\---------/---------\--- *
+*         ┊     \       /     ┊     \       /               *
+*         ┊      \     /      ┊      \     /                *
+*         ┊       '---'       ┊       '---'                 *
+*         |                   |                             *
+*         '-------------------'                             *
+*                1 cycle                                    *
+*************************************************************
+[Figure [x]: Wave cycles.]
+
+In other words, a wave oscillating between maximum and minimum values at a certain amplitude and frequency produces sound. The frequency should be within a specific range (~20Hz to ~20kHz) and propagate through suitable media (e.g. air) to be perceived by the human ear.
+
+We write our sound by "sampling" it many many many times (48000 times per second as of right now), and telling the DirectSound what the value of our wave at that sample point is. These samples are then used to reconstruct the actual waves as the sound output device emits vibrations corresponding to the value of each sample.
+
+![Figure [x]: Sound wave sampling, also known as "Pulse Code Modulation". The vertical lines correspond to individual samples. ([Wikimedia](https://en.wikipedia.org/wiki/File:Pcm.svg))](../media/day8/pcm.svg)
+
+_(Back to subsection [intro to digital sound theory])_
+
+## Compression-Oriented Programming
+
+You will notice that today we wrote something that we though was good, then went in and it turned out we could write it better. This is what we call "compression-oriented programming". When you write down some code which is somewhat complicated and finnicky, you first keep writing whatever the simpler thing is. You then start pulling things out that are common.
+
+Eventually, a pattern emerges, and you start seeing where this code even go eventually! For instance, our two region loops are the same, so that can probably be boiled down. 
+
+This is the best way to end up with nice working code that does exactly what you want it to do. 
 
 # Side Considerations
 
