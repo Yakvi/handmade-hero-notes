@@ -828,9 +828,9 @@ Right now we're tentively testing arrangement `RR GG BB XX`. To test which value
 for (int X...)
 {
 ~~~~~~~ C++ edit
-    /*
-      Pixel in memory: RR GG BB XX
-    */
+    //
+    //Pixel in memory: RR GG BB XX
+    //
 
     // Byte 0, red?
     *Pixel = 255;
@@ -885,9 +885,9 @@ So this is the correct arrangement of the colors, and if we want to have our scr
 for (int X...)
 {
 ~~~~~~~ C++ edit
-    /*
-      Pixel in memory: BB GG RR XX
-    */
+    //
+    //Pixel in memory: BB GG RR XX
+    //
 
     // Byte 0, blue
     *Pixel = 0;
@@ -1200,9 +1200,9 @@ for (int Y...)
     ~~~~~~~ C++ 
     for (int X...)
     {
-        /*
-        Pixel in memory: BB GG RR XX
-        */
+        // 
+        // Pixel in memory: BB GG RR XX
+        // 
     ~~~~~~~ C++ delete
         // Byte 0, blue
         *Pixel = (u8)(X + XOffset);
