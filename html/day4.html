@@ -22,11 +22,7 @@ counter-increment: h6;margin-right:10px}</style><style>.hljs{display:block;overf
 
 </p><p>
 
-<div class="admonition ">&ldquo;Handmade Hero Notes&rdquo; contains code from <a href="https://handmadehero.org/">Handmade Hero</a>. Preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.</div>
-
-</p><p>
-
-<hr/>
+Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with now external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
 
 </p><p>
 
@@ -40,7 +36,7 @@ Now, we shall finish the back buffer setup and do a simple animation to it.
 <div class="longTOC">
     <p align="center">
         <span align="left"><a href="day3.html">Day 3</a></span>
-        <img src = "../media/logo.png">
+        <a href="../index.html"><img src = "../media/logo.png"></a>
         <span align="right"><a href="day5.html">Day 5</a></span>
     </p><p><a href="#" class="tocTop">(Top)</a><br/>
 <a href="#reviewandsimplifybuffer-relatedfunctions" class="level1"><span class="tocNumber">1&nbsp; </span>Review and Simplify Buffer-related Functions</a><br/>
@@ -1240,9 +1236,9 @@ To better illustrate this, let's actually change our pixel to an 8-bit pointer (
 Right now we're tentively testing arrangement <code>RR GG BB XX</code>. To test which value is which we need something called <em class="underscore">Structured Art</em> which is always a good thing to do when debugging/experimenting. We want to see if we're writing to this thing properly. So we're just going to write to (what we believe to be) the red channel, leave the green and blue channels black for now, and see if it produces the results we expected. This translates in writing the maximum value you can give an <code>unsigned char</code> to red (<code>255</code>), and <code>0</code> to the rest.
 
 </p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> X...)</span>
-<span class="line">{</span></div><div class=" edit"><span class="line">    <span class="hljs-comment">/*</span>
-<span class="line">      Pixel in memory: RR GG BB XX</span>
-<span class="line">    */</span></span>
+<span class="line">{</span></div><div class=" edit"><span class="line">    <span class="hljs-comment">//</span></span>
+<span class="line">    <span class="hljs-comment">//Pixel in memory: RR GG BB XX</span></span>
+<span class="line">    <span class="hljs-comment">//</span></span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// Byte 0, red?</span></span>
 <span class="line">    *Pixel = <span class="hljs-number">255</span>;</span>
@@ -1318,9 +1314,9 @@ In our case, this means that, when we load <code>RR GG BB XX</code> into memory,
 So this is the correct arrangement of the colors, and if we want to have our screen to be red, we should refactor our program as follows: 
 
 </p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> X...)</span>
-<span class="line">{</span></div><div class=" edit"><span class="line">    <span class="hljs-comment">/*</span>
-<span class="line">      Pixel in memory: BB GG RR XX</span>
-<span class="line">    */</span></span>
+<span class="line">{</span></div><div class=" edit"><span class="line">    <span class="hljs-comment">//</span></span>
+<span class="line">    <span class="hljs-comment">//Pixel in memory: BB GG RR XX</span></span>
+<span class="line">    <span class="hljs-comment">//</span></span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// Byte 0, blue</span></span>
 <span class="line">    *Pixel = <span class="hljs-number">0</span>;</span>
@@ -1607,30 +1603,40 @@ Compile, fix all your errors and run and... we finally have our animation!
 
 Last quick refactoring for today. If you remember, in Subsection  <a href="#toc4.4">4.4</a> we first set up the <code>Pixel</code> to be a 32-bit value. Now that we know what the color arrangement in memory is, we can return to write 32 bits at a time (this is much faster). We will pack the pixel values on the fly when we'll be writing to the pixel
 
-</p><pre class="listing tilde"><code><div class=" edit"><span class="line">u32* Pixel = (u32*)Row;</span></div><div class=" C++ "><span class="line">for (int X...)</span>
-<span class="line">{</span>
-<span class="line">    /*</span>
-<span class="line">      Pixel in memory: BB GG RR XX</span>
-<span class="line">    */</span></div><div class=" delete"><span class="line">    <span class="hljs-comment">// Byte 0, blue</span></span>
-<span class="line">    *Pixel = (u8)(X + XOffset);</span>
+</p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-built_in">u8</span>* Row = (<span class="hljs-built_in">u8</span>*)BitmapMemory;</span>
+<span class="line"><span class="hljs-keyword">for</span> (int Y...)</span>
+<span class="line">{</span></div><div class=" edit"><span class="line">    u32* Pixel = (u32*)Row;</span></div><div class=" C++ "><span class="line">~~~~~~~ C++ </span></div><div class=" C++ "><span class="line">    for (int X...)</span>
+<span class="line">    {</span>
+<span class="line">        // </span>
+<span class="line">        // Pixel in memory: BB GG RR XX</span>
+<span class="line">        // </span></div><div class=" delete"><span class="line">        <span class="hljs-comment">// Byte 0, blue</span></span>
+<span class="line">        *Pixel = (u8)(X + XOffset);</span>
+<span class="line">        ++Pixel;  </span>
 <span class="line">    ++Pixel;  </span>
+<span class="line">        ++Pixel;  </span>
 <span class="line"></span>
-<span class="line">    <span class="hljs-comment">// Byte 1, green</span></span>
-<span class="line">    *Pixel = (u8)(Y + YOffset);</span>
+<span class="line">        <span class="hljs-comment">// Byte 1, green</span></span>
+<span class="line">        *Pixel = (u8)(Y + YOffset);</span>
+<span class="line">        ++Pixel;  </span>
 <span class="line">    ++Pixel;  </span>
+<span class="line">        ++Pixel;  </span>
 <span class="line"></span>
-<span class="line">    <span class="hljs-comment">// Byte 2, red</span></span>
-<span class="line">    *Pixel = <span class="hljs-number">0</span>;</span>
+<span class="line">        <span class="hljs-comment">// Byte 2, red</span></span>
+<span class="line">        *Pixel = <span class="hljs-number">0</span>;</span>
+<span class="line">        ++Pixel;  </span>
 <span class="line">    ++Pixel;  </span>
+<span class="line">        ++Pixel;  </span>
 <span class="line"></span>
-<span class="line">    <span class="hljs-comment">// Byte 3, pad</span></span>
-<span class="line">    *Pixel = <span class="hljs-number">0</span>;</span>
-<span class="line">    ++Pixel;  </span></div><div class=" add"><span class="line">    u8 Red = <span class="hljs-number">0</span>;</span>
-<span class="line">    u8 Green = (u8)(Y + YOffset);</span>
-<span class="line">    u8 Blue = (u8)(X + XOffset);</span>
+<span class="line">        <span class="hljs-comment">// Byte 3, pad</span></span>
+<span class="line">        *Pixel = <span class="hljs-number">0</span>;</span>
+<span class="line">        ++Pixel;  </span>
+<span class="line">    ++Pixel;  </span>
+<span class="line">        ++Pixel;  </span></div><div class=" add"><span class="line">        u8 Red = <span class="hljs-number">0</span>;</span>
+<span class="line">        u8 Green = (u8)(Y + YOffset);</span>
+<span class="line">        u8 Blue = (u8)(X + XOffset);</span>
 <span class="line"></span>
-<span class="line">    *Pixel++ = ; <span class="hljs-comment">// TODO</span></span>
-<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;35:</b> <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Compressing the pixel</div></center>
+<span class="line">        *Pixel++ = ; <span class="hljs-comment">// TODO</span></span></div><span class="line">    }</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;35:</b> <file>[win32_handmade.cpp > RenderWeirdGradient]</file> Compressing the pixel</div></center>
 <p>
 
 
@@ -1662,8 +1668,10 @@ If you look at the memory layout in the figure above, we will know exactly by ho
 </p><pre class="listing tilde"><code><span class="line">u8 Red = <span class="hljs-number">0</span>;</span>
 <span class="line">u8 Green = (u8)(Y + YOffset);</span>
 <span class="line">u8 Blue = (u8)(X + XOffset);</span>
-<span class="line"></span><div class=" edit"><span class="line">*Pixel++ = Red &lt;&lt; <span class="hljs-number">16</span> | Green &lt;&lt; <span class="hljs-number">8</span> | Blue; <span class="hljs-comment">// &lt;&lt; 0</span></span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;36:</b> <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Compressing the pixel</div></center>
+<span class="line"></span><div class=" edit"><span class="line">~~~~~~~ C++ edit</span></div></code></pre><p>
+~~~~~~~
 
+</p>
 <a class="target" name="recap">&nbsp;</a><a class="target" name="recap">&nbsp;</a><a class="target" name="toc6">&nbsp;</a><h1>Recap</h1>
 <p>
 
@@ -1821,7 +1829,7 @@ Now, if you use <a href="https://4coder.itch.io/4coder">4coder</a>, you have an 
 <span class="line">mkdir build</span>
 <span class="line">pushd build</span>
 <span class="line"></span><div class=" edit"><span class="line">cl -FC -Zi ..\code\win32_handmade.cpp user32.lib gdi32.lib</span></div><span class="line"></span>
-<span class="line">popd</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;37:</b> <file>[build.bat]</file> Adding -FC compiler option.</div></center>
+<span class="line">popd</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;36:</b> <file>[build.bat]</file> Adding -FC compiler option.</div></center>
 <p>
 
 
@@ -1841,7 +1849,7 @@ Let's review our Bitmap Info Header:
 <span class="line">BitmapInfo.bmiHeader.biHeight = Height;</span>
 <span class="line">BitmapInfo.bmiHeader.biPlanes = <span class="hljs-number">1</span>;</span>
 <span class="line">BitmapInfo.bmiHeader.biBitCount = <span class="hljs-number">32</span>;</span>
-<span class="line">BitmapInfo.bmiHeader.biCompression = BI_RGB;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;38:</b> <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> BitmapInfo header structure.</div></center>
+<span class="line">BitmapInfo.bmiHeader.biCompression = BI_RGB;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;37:</b> <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> BitmapInfo header structure.</div></center>
 <p>
 
 

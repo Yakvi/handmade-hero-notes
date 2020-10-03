@@ -22,11 +22,7 @@ counter-increment: h6;margin-right:10px}</style><style>.hljs{display:block;overf
 
 </p><p>
 
-<div class="admonition ">&ldquo;Handmade Hero Notes&rdquo; contains code from <a href="https://handmadehero.org/">Handmade Hero</a>. Preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.</div>
-
-</p><p>
-
-<hr/>
+Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with now external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
 
 </p><p>
 
@@ -36,7 +32,7 @@ We are currently in the middle of setting up our sound support. Last time, we pr
 <div class="longTOC">
     <p align="center">
         <span align="left"><a href="day7.html">Day 7</a></span>
-        <img src = "../media/logo.png">
+        <a href="../index.html"><img src = "../media/logo.png"></a>
         <span align="right"><a href="day9.html">Day 9</a></span>
     </p>
     <p><a href="#" class="tocTop">(Top)</a><br/>
@@ -954,7 +950,7 @@ We also need to start playing. You do it by calling <a href="https://docs.micros
 
 As parameters for <code>Play</code>, we really don't have many options. As you can see from the <a href="https://docs.microsoft.com/en-us/previous-versions/windows/desktop/mt708933(v=vs.85)">documentation</a>, both the first and second parameter can only be <code>0</code>, while <code>dwFlags</code> allows us to seet up looping of the buffer. That's what we're interested in, so we'll pass the <code>DSBPLAY_LOOPING</code> flag along: 
 
-</p><pre class="listing tilde"><code><span class="line">Win32InitDSound(Window, SamplesPerSecond, SamplesPerSecond * <span class="hljs-number">2</span> * BytesPerSample);</span><div class=" add"><span class="line">GlobalSecondaryBuffer-&gt;Play(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, DSBPLAY_LOOPING);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;13:</b> <file>[win32_handmade.cpp > WinMain]</file> Start playing.</div></center>
+</p><pre class="listing tilde"><code><span class="line">Win32InitDSound(Window, SamplesPerSecond, SecondaryBufferSize);</span><div class=" add"><span class="line">GlobalSecondaryBuffer-&gt;Play(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, DSBPLAY_LOOPING);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;13:</b> <file>[win32_handmade.cpp > WinMain]</file> Start playing.</div></center>
 <p>
 
 
@@ -962,7 +958,7 @@ Compile, set your speakers to a low volume and listen to the beauty of your work
 
 </p><p>
 
-<center><div class="image" style=""><audio class="markdeep" controls ><source src="https://upload.wikimedia.org/wikipedia/commons/9/92/Square_wave_1000.ogg"></audio><center><span class="imagecaption">1000Hz Square Wave example from <a href="https://en.wikipedia.org/wiki/File:Square_wave_1000.ogg">Wikipedia</a>. If you change your <code>ToneHz</code> to the same frequency, you should hear the same sound.</span></center></div></center>
+<center><div class="image" style=""><audio class="markdeep" controls ><source src="../media/day8/Square_wave_1000.ogg"></audio><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;9:</b> 1000Hz Square Wave example from <a href="https://en.wikipedia.org/wiki/File:Square_wave_1000.ogg">Wikipedia</a>. If you change your <code>ToneHz</code> to the same frequency, you should hear a similar sound.</span></center></div></center>
 
 </p>
 <a class="target" name="recap">&nbsp;</a><a class="target" name="recap">&nbsp;</a><a class="target" name="toc4">&nbsp;</a><h1>Recap</h1>
@@ -1038,7 +1034,7 @@ The frequency is measured in Hertz (㎐), i.e. cycles per second. A cycle is how
 <path d="M 32,64 L 56,16 " style="fill:none;"/>
 <path d="M 168,112 L 216,16 " style="fill:none;"/>
 <path d="M 328,112 L 376,16 " style="fill:none;"/>
-<g transform="translate(0,0)"><text text-anchor="middle" x="72" y="36">┊</text><text text-anchor="middle" x="232" y="36">┊</text><text text-anchor="middle" x="72" y="52">┊</text><text text-anchor="middle" x="232" y="52">┊</text><text text-anchor="middle" x="72" y="68">┊</text><text text-anchor="middle" x="232" y="68">┊</text><text text-anchor="middle" x="72" y="84">┊</text><text text-anchor="middle" x="232" y="84">┊</text><text text-anchor="middle" x="72" y="100">┊</text><text text-anchor="middle" x="232" y="100">┊</text><text text-anchor="middle" x="72" y="116">┊</text><text text-anchor="middle" x="232" y="116">┊</text><text text-anchor="middle" x="128" y="164">1</text><text text-anchor="middle" x="144" y="164">c</text><text text-anchor="middle" x="152" y="164">y</text><text text-anchor="middle" x="160" y="164">c</text><text text-anchor="middle" x="168" y="164">l</text><text text-anchor="middle" x="176" y="164">e</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;9:</b> Wave cycles.</div></center>
+<g transform="translate(0,0)"><text text-anchor="middle" x="72" y="36">┊</text><text text-anchor="middle" x="232" y="36">┊</text><text text-anchor="middle" x="72" y="52">┊</text><text text-anchor="middle" x="232" y="52">┊</text><text text-anchor="middle" x="72" y="68">┊</text><text text-anchor="middle" x="232" y="68">┊</text><text text-anchor="middle" x="72" y="84">┊</text><text text-anchor="middle" x="232" y="84">┊</text><text text-anchor="middle" x="72" y="100">┊</text><text text-anchor="middle" x="232" y="100">┊</text><text text-anchor="middle" x="72" y="116">┊</text><text text-anchor="middle" x="232" y="116">┊</text><text text-anchor="middle" x="128" y="164">1</text><text text-anchor="middle" x="144" y="164">c</text><text text-anchor="middle" x="152" y="164">y</text><text text-anchor="middle" x="160" y="164">c</text><text text-anchor="middle" x="168" y="164">l</text><text text-anchor="middle" x="176" y="164">e</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;10:</b> Wave cycles.</div></center>
 
 </p><p>
 
@@ -1050,7 +1046,7 @@ We write our sound by &ldquo;sampling&rdquo; it many many many times (48000 time
 
 </p><p>
 
-<center><div class="image" style=""><a href="../media/day8/pcm.svg" target="_blank"><img class="markdeep" src="../media/day8/pcm.svg" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;10:</b> Sound wave sampling, also known as &ldquo;Pulse Code Modulation&rdquo;. The vertical lines correspond to individual samples. (<a href="https://en.wikipedia.org/wiki/File:Pcm.svg">Wikimedia</a>)</span></center></div></center>
+<center><div class="image" style=""><a href="../media/day8/pcm.svg" target="_blank"><img class="markdeep" src="../media/day8/pcm.svg" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;11:</b> Sound wave sampling, also known as &ldquo;Pulse Code Modulation&rdquo;. The vertical lines correspond to individual samples. (<a href="https://en.wikipedia.org/wiki/File:Pcm.svg">Wikimedia</a>)</span></center></div></center>
 
 </p><p>
 
