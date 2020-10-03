@@ -1189,39 +1189,55 @@ Compile, fix all your errors and run and... we finally have our animation!
 
 Last quick refactoring for today. If you remember, in Subsection [calculate row and pixel positions] we first set up the `Pixel` to be a 32-bit value. Now that we know what the color arrangement in memory is, we can return to write 32 bits at a time (this is much faster). We will pack the pixel values on the fly when we'll be writing to the pixel
 
-~~~~~~~ C++ edit
-u32* Pixel = (u32*)Row;
 ~~~~~~~ C++ 
-for (int X...)
+u8* Row = (u8*)BitmapMemory;
+for (int Y...)
 {
-    /*
-      Pixel in memory: BB GG RR XX
-    */
-~~~~~~~ C++ delete
-    // Byte 0, blue
-    *Pixel = (u8)(X + XOffset);
+    ~~~~~~~ C++ edit
+    u32* Pixel = (u32*)Row;
+    ~~~~~~~ C++ 
+~~~~~~~ C++ 
+    ~~~~~~~ C++ 
+    for (int X...)
+    {
+        /*
+        Pixel in memory: BB GG RR XX
+        */
+    ~~~~~~~ C++ delete
+        // Byte 0, blue
+        *Pixel = (u8)(X + XOffset);
+        ++Pixel;  
     ++Pixel;  
+        ++Pixel;  
 
-    // Byte 1, green
-    *Pixel = (u8)(Y + YOffset);
+        // Byte 1, green
+        *Pixel = (u8)(Y + YOffset);
+        ++Pixel;  
     ++Pixel;  
+        ++Pixel;  
 
-    // Byte 2, red
-    *Pixel = 0;
+        // Byte 2, red
+        *Pixel = 0;
+        ++Pixel;  
     ++Pixel;  
+        ++Pixel;  
 
-    // Byte 3, pad
-    *Pixel = 0;
+        // Byte 3, pad
+        *Pixel = 0;
+        ++Pixel;  
     ++Pixel;  
-~~~~~~~ C++ add
-    u8 Red = 0;
-    u8 Green = (u8)(Y + YOffset);
-    u8 Blue = (u8)(X + XOffset);
+        ++Pixel;  
+    ~~~~~~~ C++ add
+        u8 Red = 0;
+        u8 Green = (u8)(Y + YOffset);
+        u8 Blue = (u8)(X + XOffset);
 
-    *Pixel++ = ; // TODO
+        *Pixel++ = ; // TODO
+~~~~~~~ C++
+    }
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Compressing the pixel]
+[Listing [x]: <file>[win32_handmade.cpp > RenderWeirdGradient]</file> Compressing the pixel]
 
 We will need to do some _bit shifting_. Using the `<<` or `>>` operator we can actually move the bits left or right in the memory by the amount of bits specified. Now, we know that our `Pixel`'s bits are arranged in the following manner: 
 
@@ -1245,9 +1261,9 @@ u8 Green = (u8)(Y + YOffset);
 u8 Blue = (u8)(X + XOffset);
 
 ~~~~~~~ C++ edit
-*Pixel++ = Red << 16 | Green << 8 | Blue; // << 0
+~~~~~~~ C++ edit
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Compressing the pixel]
+~~~~~~~
 
 # Recap
 

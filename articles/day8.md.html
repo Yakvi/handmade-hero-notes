@@ -705,7 +705,7 @@ We also need to start playing. You do it by calling [Play][] method of the buffe
 As parameters for `Play`, we really don't have many options. As you can see from the [documentation][Play], both the first and second parameter can only be `0`, while `dwFlags` allows us to seet up looping of the buffer. That's what we're interested in, so we'll pass the `DSBPLAY_LOOPING` flag along: 
 
 ~~~~~~~ C++
-Win32InitDSound(Window, SamplesPerSecond, SamplesPerSecond * 2 * BytesPerSample);
+Win32InitDSound(Window, SamplesPerSecond, SecondaryBufferSize);
 ~~~~~~~ C++ add
 GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
 ~~~~~~~
@@ -713,7 +713,7 @@ GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
 
 Compile, set your speakers to a low volume and listen to the beauty of your work! If you've done everything right, you should hear a continuous, uninterrupted sound, without any noticeable "clicking".
 
-![1000Hz Square Wave example from [Wikipedia](https://en.wikipedia.org/wiki/File:Square_wave_1000.ogg). If you change your `ToneHz` to the same frequency, you should hear the same sound.](https://upload.wikimedia.org/wikipedia/commons/9/92/Square_wave_1000.ogg)
+![Figure [x]: 1000Hz Square Wave example from [Wikipedia](https://en.wikipedia.org/wiki/File:Square_wave_1000.ogg). If you change your `ToneHz` to the same frequency, you should hear a similar sound.](../media/day8/Square_wave_1000.ogg)
 
 # Recap 
 
@@ -773,9 +773,6 @@ You will notice that today we wrote something that we though was good, then went
 Eventually, a pattern emerges, and you start seeing where this code even go eventually! For instance, our two region loops are the same, so that can probably be boiled down. 
 
 This is the best way to end up with nice working code that does exactly what you want it to do. 
-
-# Side Considerations
-
 
 # Navigation
 
