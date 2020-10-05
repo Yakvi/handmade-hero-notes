@@ -384,7 +384,7 @@ Unfortunately, this structure has the members which depend upon each other, so i
 Pay attention at the order these things are defined! Make sure you don't use things before actually defining them. Compiler will not complain, but your sound will not be what you expect it to be.
 
 !!! Tip
-    If you're creating an API, don't do this. When designing an API, you want to avoid creating structures that should be filled in in order, or with elements which depend on each other, as well as usage of uninitialized member variables.
+    If you're creating an API, don't do this. When designing an API, you want to avoid creating structures that should be filled in order, or with elements which depend on each other, as well as usage of uninitialized member variables.
 
     Take for instance `nBlockAlign`. This information is redundant as you can easily calculate this value inside your call directly, without introducing a potential failure point for the user, if they forgets to initialize the dependant values first. 
 
