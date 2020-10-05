@@ -181,6 +181,21 @@ struct win32_offscreen_buffer
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Shortening the variables names.]
 
+Now we don't need most of the globals any more. Instead, we can introduce a single one called, let's say, `GlobalBackbuffer`:
+
+~~~~~~~ C++
+global_variable bool Running;
+~~~~~~~ C++ delete
+global_variable BITMAPINFO BitmapInfo;
+global_variable void *BitmapMemory;
+global_variable int BitmapWidth;
+global_variable int BitmapHeight;
+global_variable int BytesPerPixel;
+~~~~~~~ C++ add
+global_variable win32_offscreen_buffer GlobalBackbuffer;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Replacing buffer-related globals.]
+
 Last thing that we can do is to comment on the convention we're using for our buffer. This might come handy if you ever forget it: 
 
 ~~~~~~~ C++

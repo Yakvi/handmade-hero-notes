@@ -252,6 +252,14 @@ We can go ahead and shorten these variables' names since we know they will all b
 <span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;8:</b> <file>[win32_handmade.cpp]</file> Shortening the variables names.</div></center>
 <p>
 
+Now we don't need most of the globals any more. Instead, we can introduce a single one called, let's say, <code>GlobalBackbuffer</code>:
+
+</p><pre class="listing tilde"><code><span class="line">global_variable <span class="hljs-keyword">bool</span> Running;</span><div class=" delete"><span class="line">global_variable BITMAPINFO BitmapInfo;</span>
+<span class="line">global_variable <span class="hljs-keyword">void</span> *BitmapMemory;</span>
+<span class="line">global_variable <span class="hljs-keyword">int</span> BitmapWidth;</span>
+<span class="line">global_variable <span class="hljs-keyword">int</span> BitmapHeight;</span>
+<span class="line">global_variable <span class="hljs-keyword">int</span> BytesPerPixel;</span></div><div class=" add"><span class="line">global_variable win32_offscreen_buffer GlobalBackbuffer;</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;9:</b> <file>[win32_handmade.cpp]</file> Replacing buffer-related globals.</div></center>
+<p>
 
 Last thing that we can do is to comment on the convention we're using for our buffer. This might come handy if you ever forget it: 
 
