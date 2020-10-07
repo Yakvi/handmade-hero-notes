@@ -20,7 +20,7 @@ counter-increment: h6;margin-right:10px}</style><style>.hljs{display:block;overf
 
 </p><p>
 
-Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with now external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
+Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with no external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
 
 </p><p>
 
@@ -111,11 +111,11 @@ Let's go with the second option and leave <code>CS_OWNDC</code>; we can always c
 <div class="admonition ">If you implemented a RAII approach in the previous chapter, this would mean either dismantling your solution or removing the destructor. As we said before, we don't need to do the clean up after we exit our program since Windows will do it for us.</div>
 
 </p>
-<a class="target" name="cs_hrderaw/cs_vredraw">&nbsp;</a><a class="target" name="revisitwndclassstyle/cs_hrderaw/cs_vredraw">&nbsp;</a><a class="target" name="toc1.2">&nbsp;</a><h2>CS_HRDERAW / CS_VREDRAW</h2>
+<a class="target" name="cs_hrderaw/cs_vredraw">&nbsp;</a><a class="target" name="revisitwndclassstyle/cs_hrderaw/cs_vredraw">&nbsp;</a><a class="target" name="toc1.2">&nbsp;</a><h2>CS_HREDRAW / CS_VREDRAW</h2>
 <p>
 
 
-For what it might concern <code>CS_HREDRAW</code> and <code>CS_VREDRAW</code>, we can confirm their usefulness. These options come into play when resizing the window, and force the <em class="underscore">whole</em> window to be repainted right away, and not just the chunks we resize. You can easily test it if you disable it (comment out or delete the line altogether), recompile, run, and try to resize the window. If you re-enable these style options you'll notice that the whole window is being blacked out as soon as you start resizing it.
+For what it might concern <code>CS_HREDRAW</code> and <code>CS_VREDRAW</code>, we can confirm their usefulness. These options come into play when resizing the window (<b>H</b>orizontally or <b>V</b>ertically), and force the <em class="underscore">whole</em> window to be repainted right away, and not just the chunks we resize. You can easily test it if you disable it (comment out or delete the line altogether), recompile, run, and try to resize the window. If you re-enable these style options you'll notice that the whole window is being blacked out as soon as you start resizing it.
 
 </p><p>
 
@@ -378,7 +378,7 @@ Now let's also look at the calls to these functions. We call them from our <code
 
 </p><p>
 
-Now, because these functions are called by Windows indipendently, the simplest thing for now would be to return one global variable holding our back buffer. We will then use it to pass it where it's currently required: 
+Now, because these functions are called by Windows independently, the simplest thing for now would be to return one global variable holding our back buffer. We will then use it to pass it where it's currently required: 
 
 </p><p>
 

@@ -20,7 +20,7 @@ counter-increment: h6;margin-right:10px}</style><style>.hljs{display:block;overf
 
 </p><p>
 
-Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with now external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
+Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with no external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
 
 </p><p>
 
@@ -36,7 +36,7 @@ The window that we are going to open is a basic Windows one. All the programs go
 
 </p><p>
 
-<div class="admonition ">This is not exactly how a modern game would start up. Modern games pretty much exclusively let the graphics card do their work for them. While we will eventually get there, it's not a very good start for educational purposes. Unfortunately, the GPU is a pretty opacque resource where we have a very limited insight into what it's doing to render graphics for our game.</div>
+<div class="admonition ">This is not exactly how a modern game would start up. Modern games pretty much exclusively let the graphics card do their work for them. While we will eventually get there, it's not a very good start for educational purposes. Unfortunately, the GPU is a pretty opaque resource where we have a very limited insight into what it's doing to render graphics for our game.</div>
 
 </p>
 <div class="longTOC">
@@ -378,7 +378,7 @@ Let's look at the parameters we're getting for our <code>MainWindowCallback</cod
 </p><p>
 
 <ul>
-<li class="asterisk"><code>HWND</code>: A handle to the window. This is an opacque (to us) piece of data that we can pass back to Windows to identify a window. It's like Windows says: &ldquo;Hey, here's the handle to your window. If you need to talk to me about the window, pass it back, and I'll know what you mean&rdquo;.
+<li class="asterisk"><code>HWND</code>: A handle to the window. This is an opaque (to us) piece of data that we can pass back to Windows to identify a window. It's like Windows says: &ldquo;Hey, here's the handle to your window. If you need to talk to me about the window, pass it back, and I'll know what you mean&rdquo;.
 </li>
 <li class="asterisk"><code>UINT</code>: The message. This is the coded message that Windows is asking us to handle in the callback. The messages vary greately, and you can find many lists on <a href="https://docs.microsoft.com/en-us/windows/win32/winmsg/about-messages-and-message-queues#system-defined-messages">MSDN</a>. As you can see, over the ages the number of messages has grown to become <em class="underscore">absurdly</em> huge, the number of messages you can receive.</li></ul>
 

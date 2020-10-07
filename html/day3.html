@@ -20,7 +20,7 @@ counter-increment: h6;margin-right:10px}</style><style>.hljs{display:block;overf
 
 </p><p>
 
-Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with now external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
+Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with no external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
 
 </p><p>
 
@@ -86,7 +86,7 @@ In the previous chapter, we finished setting up our window and getting ready of 
 
 </p><p>
 
-    We have our message queue which we pull messages from, why can't we process them at the same place, without going through setting up an opacque message dispatch system? 
+    We have our message queue which we pull messages from, why can't we process them at the same place, without going through setting up an opaque message dispatch system? 
 
 </p><p>
 
@@ -435,7 +435,7 @@ We fixed the only problem with our application that we had: that we couldn't clo
 <p>
 
 
-In practice, we are going to introduce the function called <code>ResizeDIBSection</code>. It will serve to reisze (or initialize if it doesn't exist) a <b>Device</b> <b>Indipendent</b> <b>Bitmap</b> (DIB). This is the name Windows gives to the bitmaps that we can display using GDI. We will call it every time we get a <code>WM_SIZE</code> message. 
+In practice, we are going to introduce the function called <code>ResizeDIBSection</code>. It will serve to resize (or initialize if it doesn't exist) a <b>Device</b> <b>independent</b> <b>Bitmap</b> (DIB). This is the name Windows gives to the bitmaps that we can display using GDI. We will call it every time we get a <code>WM_SIZE</code> message. 
 
 </p><pre class="listing tilde"><code><span class="line">global_variable <span class="hljs-keyword">bool</span> Running;</span>
 <span class="line"></span><div class=" add"><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
@@ -1080,7 +1080,7 @@ A <code>void</code> is a very special type in C.
 </li>
 <li class="asterisk">Finally, a <code>void *</code> (&ldquo;void pointer&rdquo;) variable is a pointer to raw memory, without any &ldquo;type&rdquo; associated with it. Compiler doesn't care what type of data does this pointer points to, any address is fine. 
 <ul>
-    <li class="asterisk">This is useful when you don't know the format of the data you're getting, for example from some opacque API which ends up consuming the same pointer later on. 
+    <li class="asterisk">This is useful when you don't know the format of the data you're getting, for example from some opaque API which ends up consuming the same pointer later on. 
 </li>
     <li class="asterisk">Alternatively, if you know what data does it point to, you can <em class="underscore">cast</em> it to the type of your choice. In our case, we will use the <code>BitmapMemory</code> to cast it as several different types, depending on the operation we're doing.</li></ul></li></ul>
 
