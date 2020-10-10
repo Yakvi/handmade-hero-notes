@@ -1,0 +1,884 @@
+<meta charset="UTF-8"><meta http-equiv="content-type" content="text/html;charset=UTF-8"><meta name="viewport" content="width=600, initial-scale=1"><style>body{max-width:680px;margin:auto;padding:20px;text-align:justify;line-height:140%; -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-smoothing:antialiased;color:#222;font-family:Palatino,Georgia,"Times New Roman",serif}</style><style>@media print{*{-webkit-print-color-adjust:exact;text-shadow:none !important}}body{counter-reset: h1 h2 h3 h4 h5 h6 paragraph}@page{margin:0;size:auto}#mdContextMenu{position:absolute;background:#383838;cursor:default;border:1px solid #999;color:#fff;padding:4px 0px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,"Helvetica Neue",sans-serif;font-size:85%;font-weight:600;border-radius:4px;box-shadow:0px 3px 10px rgba(0,0,0,35%)}#mdContextMenu div{padding:0px 20px}#mdContextMenu div:hover{background:#1659d1}.md code,.md pre{font-family:Menlo,Consolas,monospace;font-size:98%;text-align:left;line-height:140%}.md .mediumToc code,.md longToc code,.md .shortToc code,.md h1 code,.md h2 code,.md h3 code,.md h4 code,.md h5 code,.md h6 code{font-size:unset}.md div.title{font-size:26px;font-weight:800;line-height:120%;text-align:center}.md div.afterTitles{height:10px}.md div.subtitle{text-align:center}.md iframe.textinsert, .md object.textinsert,.md iframe:not(.markdeep){display:block;margin-top:10px;margin-bottom:10px;width:100%;height:75vh;border:1px solid #000;border-radius:4px;background:#f5f5f4}.md .image{display:inline-block}.md img{max-width:100%;page-break-inside:avoid}.md li{text-align:left;text-indent:0}.md pre.listing {width:100%;tab-size:4;-moz-tab-size:4;-o-tab-size:4;counter-reset:line;overflow-x:auto;resize:horizontal}.md pre.listing .linenumbers span.line:before{width:30px;margin-left:-28px;font-size:80%;text-align:right;counter-increment:line;content:counter(line);display:inline-block;padding-right:13px;margin-right:8px;color:#ccc}.md div.tilde{margin:20px 0 -10px;text-align:center}.md .imagecaption,.md .tablecaption,.md .listingcaption{display:inline-block;margin:7px 5px 12px;text-align:justify;font-style:italic}.md img.pixel{image-rendering:-moz-crisp-edges;image-rendering:pixelated}.md blockquote.fancyquote{margin:25px 0 25px;text-align:left;line-height:160%}.md blockquote.fancyquote::before{content:"“";color:#DDD;font-family:Times New Roman;font-size:45px;line-height:0;margin-right:6px;vertical-align:-0.3em}.md span.fancyquote{font-size:118%;color:#777;font-style:italic}.md span.fancyquote::after{content:"”";font-style:normal;color:#DDD;font-family:Times New Roman;font-size:45px;line-height:0;margin-left:6px;vertical-align:-0.3em}.md blockquote.fancyquote .author{width:100%;margin-top:10px;display:inline-block;text-align:right}.md small{font-size:60%}.md big{font-size:150%}.md div.title,contents,.md .tocHeader,.md h1,.md h2,.md h3,.md h4,.md h5,.md h6,.md .shortTOC,.md .mediumTOC,.nonumberh1,.nonumberh2,.nonumberh3,.nonumberh4,.nonumberh5,.nonumberh6{font-family:Verdana,Helvetica,Arial,sans-serif;margin:13.4px 0 13.4px;padding:15px 0 3px;border-top:none;clear:both}.md .tocTop {display:none}.md h1,.md h2,.md h3,.md h4,.md h5,.md h6,.md .nonumberh1,.md .nonumberh2,.md .nonumberh3,.md .nonumberh4,.md .nonumberh5,.md .nonumberh6{page-break-after:avoid;break-after:avoid}.md svg.diagram{display:block;font-family:Menlo,Consolas,monospace;font-size:98%;text-align:center;stroke-linecap:round;stroke-width:2px;page-break-inside:avoid;stroke:#000;fill:#000}.md svg.diagram .opendot{fill:#fff}.md svg.diagram .shadeddot{fill:#CCC}.md svg.diagram .dotteddot{stroke:#000;stroke-dasharray:4;fill:none}.md svg.diagram text{stroke:none}@media print{@page{margin:1in 5mm;transform: scale(150%)}}@media print{.md .pagebreak{page-break-after:always;visibility:hidden}}.md a{font-family:Georgia,Palatino,'Times New Roman'}.md h1,.md .tocHeader,.md .nonumberh1{border-bottom:3px solid;font-size:20px;font-weight:bold;}.md h1,.md .nonumberh1{counter-reset: h2 h3 h4 h5 h6}.md h2,.md .nonumberh2{counter-reset: h3 h4 h5 h6;border-bottom:2px solid #999;color:#555;font-weight:bold;font-size:18px;}.md h3,.md h4,.md h5,.md h6,.md .nonumberh3,.md .nonumberh4,.md .nonumberh5,.md .nonumberh6{font-family:Verdana,Helvetica,Arial,sans-serif;color:#555;font-size:16px;}.md h3{counter-reset:h4 h5 h6}.md h4{counter-reset:h5 h6}.md h5{counter-reset:h6}.md div.table{margin:16px 0 16px 0}.md table{border-collapse:collapse;line-height:140%;page-break-inside:avoid}.md table.table{margin:auto}.md table.calendar{width:100%;margin:auto;font-size:11px;font-family:Verdana,Helvetica,Arial,sans-serif}.md table.calendar th{font-size:16px}.md .today{background:#ECF8FA}.md .calendar .parenthesized{color:#999;font-style:italic}.md table.table th{color:#FFF;background-color:#AAA;border:1px solid #888;padding:8px 15px 8px 15px}.md table.table td{padding:5px 15px 5px 15px;border:1px solid #888}.md table.table tr:nth-child(even){background:#EEE}.md pre.tilde{border-top: 1px solid #CCC;border-bottom: 1px solid #CCC;padding: 5px 0 5px 20px;margin:0 0 0 0;background:#FCFCFC;page-break-inside:avoid}.md a.target{width:0px;height:0px;visibility:hidden;font-size:0px;display:inline-block}.md a:link, .md a:visited{color:#38A;text-decoration:none}.md a:link:hover{text-decoration:underline}.md dt{font-weight:700}.md dl>dd{margin-top:-8px; margin-bottom:8px}.md dl>table{margin:35px 0 30px}.md code{page-break-inside:avoid;} @media print{.md .listing code{white-space:pre-wrap}}.md .endnote{font-size:13px;line-height:15px;padding-left:10px;text-indent:-10px}.md .bib{padding-left:80px;text-indent:-80px;text-align:left}.markdeepFooter{font-size:9px;text-align:right;padding-top:80px;color:#999}.md .mediumTOC{float:right;font-size:12px;line-height:15px;border-left:1px solid #CCC;padding-left:15px;margin:15px 0px 15px 25px}.md .mediumTOC .level1{font-weight:600}.md .longTOC .level1{font-weight:600;display:block;padding-top:12px;margin:0 0 -20px}.md .shortTOC{text-align:center;font-weight:bold;margin-top:15px;font-size:14px}.md .admonition{position:relative;margin:1em 0;padding:.4rem 1rem;border-radius:.2rem;border-left:2.5rem solid rgba(68,138,255,.4);background-color:rgba(68,138,255,.15);}.md .admonition-title{font-weight:bold;border-bottom:solid 1px rgba(68,138,255,.4);padding-bottom:4px;margin-bottom:4px;margin-left: -1rem;padding-left:1rem;margin-right:-1rem;border-color:rgba(68,138,255,.4)}.md .admonition.tip{border-left:2.5rem solid rgba(50,255,90,.4);background-color:rgba(50,255,90,.15)}.md .admonition.tip::before{content:"\24d8";font-weight:bold;font-size:150%;position:relative;top:3px;color:rgba(26,128,46,.8);left:-2.95rem;display:block;width:0;height:0}.md .admonition.tip>.admonition-title{border-color:rgba(50,255,90,.4)}.md .admonition.warn,.md .admonition.warning{border-left:2.5rem solid rgba(255,145,0,.4);background-color:rgba(255,145,0,.15)}.md .admonition.warn::before,.md .admonition.warning::before{content:"\26A0";font-weight:bold;font-size:150%;position:relative;top:2px;color:rgba(128,73,0,.8);left:-2.95rem;display:block;width:0;height:0}.md .admonition.warn>.admonition-title,.md .admonition.warning>.admonition-title{border-color:rgba(255,145,0,.4)}.md .admonition.error{border-left: 2.5rem solid rgba(255,23,68,.4);background-color:rgba(255,23,68,.15)}.md .admonition.error>.admonition-title{border-color:rgba(255,23,68,.4)}.md .admonition.error::before{content: "\2612";font-family:"Arial";font-size:200%;position:relative;color:rgba(128,12,34,.8);top:-2px;left:-3rem;display:block;width:0;height:0}.md .admonition p:last-child{margin-bottom:0}.md li.checked,.md li.unchecked{list-style:none;overflow:visible;text-indent:-1.2em}.md li.checked:before,.md li.unchecked:before{content:"\2611";display:block;float:left;width:1em;font-size:120%}.md li.unchecked:before{content:"\2610"}</style><style>.md h1::before {
+content:counter(h1) " ";
+counter-increment: h1;margin-right:10px}.md h2::before {
+content:counter(h1) "."counter(h2) " ";
+counter-increment: h2;margin-right:10px}.md h3::before {
+content:counter(h1) "."counter(h2) "."counter(h3) " ";
+counter-increment: h3;margin-right:10px}.md h4::before {
+content:counter(h1) "."counter(h2) "."counter(h3) "."counter(h4) " ";
+counter-increment: h4;margin-right:10px}.md h5::before {
+content:counter(h1) "."counter(h2) "."counter(h3) "."counter(h4) "."counter(h5) " ";
+counter-increment: h5;margin-right:10px}.md h6::before {
+content:counter(h1) "."counter(h2) "."counter(h3) "."counter(h4) "."counter(h5) "."counter(h6) " ";
+counter-increment: h6;margin-right:10px}</style><style>.hljs{display:block;overflow-x:auto;padding:0.5em;background:#fff;color:#000;-webkit-text-size-adjust:none}.hljs-comment{color:#006a00}.hljs-keyword{color:#02E}.hljs-literal,.nginx .hljs-title{color:#aa0d91}.method,.hljs-list .hljs-title,.hljs-tag .hljs-title,.setting .hljs-value,.hljs-winutils,.tex .hljs-command,.http .hljs-title,.hljs-request,.hljs-status,.hljs-name{color:#008}.hljs-envvar,.tex .hljs-special{color:#660}.hljs-string{color:#c41a16}.hljs-tag .hljs-value,.hljs-cdata,.hljs-filter .hljs-argument,.hljs-attr_selector,.apache .hljs-cbracket,.hljs-date,.hljs-regexp{color:#080}.hljs-sub .hljs-identifier,.hljs-pi,.hljs-tag,.hljs-tag .hljs-keyword,.hljs-decorator,.ini .hljs-title,.hljs-shebang,.hljs-prompt,.hljs-hexcolor,.hljs-rule .hljs-value,.hljs-symbol,.hljs-symbol .hljs-string,.hljs-number,.css .hljs-function,.hljs-function .hljs-title,.coffeescript .hljs-attribute{color:#A0C}.hljs-function .hljs-title{font-weight:bold;color:#000}.hljs-class .hljs-title,.smalltalk .hljs-class,.hljs-type,.hljs-typename,.hljs-tag .hljs-attribute,.hljs-doctype,.hljs-class .hljs-id,.hljs-built_in,.setting,.hljs-params,.clojure .hljs-attribute{color:#5c2699}.hljs-variable{color:#3f6e74}.css .hljs-tag,.hljs-rule .hljs-property,.hljs-pseudo,.hljs-subst{color:#000}.css .hljs-class,.css .hljs-id{color:#9b703f}.hljs-value .hljs-important{color:#ff7700;font-weight:bold}.hljs-rule .hljs-keyword{color:#c5af75}.hljs-annotation,.apache .hljs-sqbracket,.nginx .hljs-built_in{color:#9b859d}.hljs-preprocessor,.hljs-preprocessor *,.hljs-pragma{color:#643820}.tex .hljs-formula{background-color:#eee;font-style:italic}.diff .hljs-header,.hljs-chunk{color:#808080;font-weight:bold}.diff .hljs-change{background-color:#bccff9}.hljs-addition{background-color:#baeeba}.hljs-deletion{background-color:#ffc8bd}.hljs-comment .hljs-doctag{font-weight:bold}.method .hljs-id{color:#000}</style><style>div.title { padding-top: 40px; } div.afterTitles { height: 15px; }</style><meta charset="utf-8">
+<link rel="stylesheet" href="../css/style.css">
+<script type="text/x-mathjax-config">
+MathJax.Hub.Register.StartupHook("TeX Jax Ready",function () {
+  MathJax.Hub.Insert(MathJax.InputJax.TeX.Definitions.macros,{
+    cancel: ["Extension","cancel"],
+    bcancel: ["Extension","cancel"],
+  });
+});
+</script>
+
+<script type="text/x-mathjax-config">MathJax.Hub.Config({ TeX: { equationNumbers: {autoNumber: "AMS"} } });</script><span style="display:none">$$\newcommand{\n}{\hat{n}}\newcommand{\thetai}{\theta_\mathrm{i}}\newcommand{\thetao}{\theta_\mathrm{o}}\newcommand{\d}[1]{\mathrm{d}#1}\newcommand{\w}{\hat{\omega}}\newcommand{\wi}{\w_\mathrm{i}}\newcommand{\wo}{\w_\mathrm{o}}\newcommand{\wh}{\w_\mathrm{h}}\newcommand{\Li}{L_\mathrm{i}}\newcommand{\Lo}{L_\mathrm{o}}\newcommand{\Le}{L_\mathrm{e}}\newcommand{\Lr}{L_\mathrm{r}}\newcommand{\Lt}{L_\mathrm{t}}\newcommand{\O}{\mathrm{O}}\newcommand{\degrees}{{^{\large\circ}}}\newcommand{\T}{\mathsf{T}}\newcommand{\mathset}[1]{\mathbb{#1}}\newcommand{\Real}{\mathset{R}}\newcommand{\Integer}{\mathset{Z}}\newcommand{\Boolean}{\mathset{B}}\newcommand{\Complex}{\mathset{C}}\newcommand{\un}[1]{\,\mathrm{#1}}$$
+</span>
+<span class="md"><p><title>Day 10. QueryPerformanceCounter and RDTSC</title><div class="title"> Day 10. QueryPerformanceCounter and RDTSC </div>
+
+<div class="afterTitles"></div>
+<em class="underscore">Video Length (includig Q&A): <a href="https://hero.handmade.network/episode/code/day010/">1h59</a></em>
+
+</p><p>
+
+Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with no external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
+
+</p><p>
+
+It's Day 10 already! Last time, we finally finished our sound (for now) and are ready to move on to new and exciting things. Today, we're going to focus on <em class="underscore">timing</em>. 
+
+</p><p>
+
+It's not as simple as it sounds. Sure, there's the concept of <a href="https://en.wikipedia.org/wiki/Clock_signal">clock</a> in the computer, but it's not something that gives you <em class="underscore">time</em>. Rather, a clock is something that makes a computer <em class="underscore">tick</em>. So what happens if we want to <em class="underscore">time</em> something? Well, this is where things start getting interesting....
+
+</p>
+<div class="longTOC"><p align="center">
+    <span align="right"><a href="day9.html">Day 9</a></span>
+    <a href="../index.html"><img src = "../media/logo.png"></a>
+    <!--<span align="left"><a href="day11.html">Day 11</a></span>-->
+</p><p><a href="#" class="tocTop">(Top)</a><br/>
+<a href="#toolsfortimetracking" class="level1"><span class="tocNumber">1&nbsp; </span>Tools for Time Tracking</a><br/>
+&nbsp;&nbsp;<a href="#toolsfortimetracking/rdtsc" class="level2"><span class="tocNumber">1.1&nbsp; </span>RDTSC</a><br/>
+&nbsp;&nbsp;<a href="#toolsfortimetracking/queryperformancecounter" class="level2"><span class="tocNumber">1.2&nbsp; </span>QueryPerformanceCounter</a><br/>
+<a href="#timetheframes" class="level1"><span class="tocNumber">2&nbsp; </span>Time the Frames</a><br/>
+&nbsp;&nbsp;<a href="#timetheframes/convertcountersintotime" class="level2"><span class="tocNumber">2.1&nbsp; </span>Convert Counters into Time</a><br/>
+&nbsp;&nbsp;<a href="#timetheframes/printoutavalue" class="level2"><span class="tocNumber">2.2&nbsp; </span>Print out a Value</a><br/>
+&nbsp;&nbsp;<a href="#timetheframes/calculateanddisplayframespersecond" class="level2"><span class="tocNumber">2.3&nbsp; </span>Calculate and Display FPS</a><br/>
+&nbsp;&nbsp;<a href="#timetheframes/countthecycles" class="level2"><span class="tocNumber">2.4&nbsp; </span>Count the Cycles</a><br/>
+<a href="#improvetheoutput" class="level1"><span class="tocNumber">3&nbsp; </span>Improve the Output</a><br/>
+&nbsp;&nbsp;<a href="#improvetheoutput/printcountersinfloatingpoint" class="level2"><span class="tocNumber">3.1&nbsp; </span>Print Counters in Floating Point</a><br/>
+&nbsp;&nbsp;<a href="#improvetheoutput/doubleprecision" class="level2"><span class="tocNumber">3.2&nbsp; </span>Double Precision</a><br/>
+<a href="#recap" class="level1"><span class="tocNumber">4&nbsp; </span>Recap</a><br/>
+<a href="#exercises" class="level1"><span class="tocNumber">5&nbsp; </span>Exercises</a><br/>
+&nbsp;&nbsp;<a href="#exercises/introduceandusemidcounter" class="level2"><span class="tocNumber">5.1&nbsp; </span>Introduce and Use <code>MidCounter</code></a><br/>
+<a href="#programmingnotions" class="level1"><span class="tocNumber">6&nbsp; </span>Programming Notions</a><br/>
+&nbsp;&nbsp;<a href="#programmingnotions/unions" class="level2"><span class="tocNumber">6.1&nbsp; </span>Unions</a><br/>
+&nbsp;&nbsp;<a href="#programmingnotions/introtointrinsics" class="level2"><span class="tocNumber">6.2&nbsp; </span>Intro to Intrinsics</a><br/>
+&nbsp;&nbsp;<a href="#programmingnotions/dimensionalanalysis" class="level2"><span class="tocNumber">6.3&nbsp; </span>Dimensional Analysis</a><br/>
+&nbsp;&nbsp;<a href="#programmingnotions/divisioninc" class="level2"><span class="tocNumber">6.4&nbsp; </span>Division in C</a><br/>
+<a href="#sideconsiderations" class="level1"><span class="tocNumber">7&nbsp; </span>Side Considerations</a><br/>
+&nbsp;&nbsp;<a href="#sideconsiderations/theintelarchitecturereferencemanual" class="level2"><span class="tocNumber">7.1&nbsp; </span>Intel Architecture Reference</a><br/>
+<a href="#recap" class="level1"><span class="tocNumber">8&nbsp; </span>Recap</a><br/>
+<a href="#navigation" class="level1"><span class="tocNumber">9&nbsp; </span>Navigation</a><br/>
+</p></div><a class="target" name="toolsfortimetracking">&nbsp;</a><a class="target" name="toolsfortimetracking">&nbsp;</a><a class="target" name="toc1">&nbsp;</a><h1>Tools for Time Tracking</h1>
+<p>
+
+
+Today, we're going take a look at two tools to measure cycles and how much time has passed. 
+
+</p><p>
+
+Processors operate in cycles. Each cycle something happens, things shift, transistors flip some values, and you get computer magic. You know how processors tell their frequency, things like &ldquo;3.2GHz&rdquo;? This is 3.2 <em class="underscore">billion</em> cycles <em class="underscore">per second</em>. In other words, 3.2 operations per <em class="underscore">nanosecond</em>. It's like... very fast. You know how fast it is? Light can travel only ~30 cm during that time. 
+
+</p><p>
+
+Today, we're going to look at two tools which help us measure these cycles: <code>RDTSC</code> and <code>QueryPerformanceCounter</code>.
+
+</p>
+<a class="target" name="rdtsc">&nbsp;</a><a class="target" name="toolsfortimetracking/rdtsc">&nbsp;</a><a class="target" name="toc1.1">&nbsp;</a><h2>RDTSC</h2>
+<p>
+
+
+Somewhere in the middle of Volume 2B (as of writing, on page 547) of the <a href="https://software.intel.com/content/www/us/en/develop/articles/intel-sdm.html">Intel Architecture Reference Manual</a> (you can learn more about it in Subsection  <a href="#toc7.1">7.1</a>). you will find the reference to an instruction called <code>RDTSC</code>. You can also find it on <a href="https://docs.microsoft.com/en-us/cpp/intrinsics/rdtsc?view=vs-2019">MSDN</a>, too! 
+
+</p><p>
+
+What is <code>RDTSC</code>? Well, it simply translates to "<b>R</b>ea<b>d</b> <b>T</b>ime-<b>Stamp</b> <b>C</b>ounter&rdquo;. <code>RDTSC</code> is a processor-<em class="underscore">intrinsic</em> way of getting to a special register keeping track on how many <em class="underscore">clock cycles</em> have passed since the machine has started. This register increments every time that the CPU retires a clock cycle.
+
+</p><p>
+
+<code>RDTSC</code> shows you the processor cycles, expressed in terms of the processor's view of time. Unlike the real time, many processors, especially on mobile or laptops, don't always have the same clocking speed. In the effort to save energy, they might slow down or speed up, pause completely if the processor is unused, etc.
+
+</p><p>
+
+How do you do the measuring? It's simple. You get the timestamp before you start doing something, you get another one once you finished doing something, and you subtract the later timestamp from the earlier one. This difference will give you a pretty good idea of how many processor cycles have elapsed during the thing that you did.
+
+</p><p>
+
+It's important to know that this measuring is not always perfect or even precise. Keep in mind that operating system does a lot of processes in parallel, and there's only so much <em class="underscore">things</em> a processor can do at the same time. So it's quite possible that, in the middle of execution of your code, you process was paused to give way to some other code so you aren't really measuring only your code's performance. Again, this behaviour depends on the operating systems and can vary greately.
+
+</p><p>
+
+So when you look at the cycle count, there is no constant meaning to these cycles, how long did that cycle take in the real world. They show you how much <em class="underscore">work</em> the processor did but not how much <em class="underscore">time</em>. 
+
+</p><p>
+
+The bottom line? RDTSC numbers aren't magic, and you need to consider carefully what you get. It is a thing however that gives you a pretty raw statistics about how many cycles passed between two points, and that is quite useful. 
+
+</p>
+<a class="target" name="queryperformancecounter">&nbsp;</a><a class="target" name="toolsfortimetracking/queryperformancecounter">&nbsp;</a><a class="target" name="toc1.2">&nbsp;</a><h2>QueryPerformanceCounter</h2>
+<p>
+
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/profileapi/nf-profileapi-queryperformancecounter">QueryPerformanceCounter</a> is a way of asking Windows &ldquo;Hey Windows, to the best of your knowledge... What time is it on the <em class="underscore">wall clock</em>?&rdquo; It is a way of experiencing time in the &ldquo;real world&rdquo;, as you and we experience it. 
+
+</p><p>
+
+<code>QueryPerformanceCounter</code> can be taken as the opposite of <code>RDTSC</code>. It gives the accurate measure of the real-world time passing by. Not cycle-accurate but (hopefully) more accurate than seconds or even milliseconds. 
+
+</p><p>
+
+You have to remember that after all, in a 60 frame-per-second game, you only have ~16.67 milliseconds for a single frame! So that's how time you have to do work for the next frame. In those situations, measuring time in 1ms just won't cut it. Windows will try to give you as granular cut of wall clock time as possible, promising a resolution of <1μs (microsecond, a thousandth of a millisecond). 
+
+</p><p>
+
+If we get a time that we can correlate with the real-world time, it helps you with your intuition. And that's important. 
+
+</p>
+<a class="target" name="timetheframes">&nbsp;</a><a class="target" name="timetheframes">&nbsp;</a><a class="target" name="toc2">&nbsp;</a><h1>Time the Frames</h1>
+<p>
+
+
+With this long introduction out of the way, let's get to coding! We will start by doing something extremely simple. We have our loop (<code>while (GlobalRunning)</code>) which, while we run, our game will sit in. Let's print out some number to see how many milliseconds it took us to generate a frame. 
+
+</p><p>
+
+To do that, we're going to call <a href="https://docs.microsoft.com/en-us/windows/win32/api/profileapi/nf-profileapi-queryperformancecounter">QueryPerformanceCounter</a>. It's another one of those Windows functions that we've seen on this stream, and it takes something to fill out, in this case a structure called <code>LARGE_INTEGER</code>. Let's create a rolling counter, so that each time a frame ends it takes the count at the end of that frame.
+
+</p><pre class="listing tilde"><code><span class="line">GlobalRunning = <span class="hljs-literal">true</span>;</span><div class=" add"><span class="line">LARGE_INTEGER LastCounter;</span>
+<span class="line">QueryPerformanceCounter(&amp;LastCounter);</span></div><span class="line"><span class="hljs-keyword">while</span> (GlobalRunning)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">    <span class="hljs-comment">// The game loop</span></span>
+<span class="line">    <span class="hljs-comment">// ...</span></span><div class=" add"><span class="line">    LARGE_INTEGER EndCounter;</span>
+<span class="line">    QueryPerformanceCounter(&amp;EndCounter);</span>
+<span class="line"></span>
+<span class="line">    <span class="hljs-comment">// TODO(casey): Display the value here</span></span>
+<span class="line"></span>
+<span class="line">    LastCounter = EndCounter;</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;1:</b> <file>[win32_handmade.cpp > WinMain]</file> Calculating timing at the end of each frame.</div></center>
+<p>
+
+? is a type of structure called a &ldquo;union&rdquo;. Its 64 bits can be split in the 32-bit <code>LowPart</code> and <code>HighPart</code>. Since we are on the 64-bit operating system, we can go straight to accessing the 64-bit <code>QuadPart</code>. 
+
+</p><p>
+
+<div class="admonition ">To learn more about the unions, check out subsection  <a href="#toc6.1">6.1</a>.</div>
+
+</p><p>
+
+The <code>QuadPart</code> is going to give us a 64-bit value that we know will somehow correspond to the wallclock time. Before assigning <code>EndCounter</code> to become the new <code>LastCounter</code>, we'll calculate the difference between the two and derive the actual elapsed milliseconds. The result will be stored as an <code>s64</code>.
+
+</p><pre class="listing tilde"><code><span class="line">LARGE_INTEGER EndCounter;</span>
+<span class="line">QueryPerformanceCounter(&amp;EndCounter);</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// TODO(casey): Display the value here</span></span><div class=" add"><span class="line">s64 CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;</span></div><span class="line"></span>
+<span class="line">LastCounter = EndCounter;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;2:</b> <file>[win32_handmade.cpp > WinMain]</file> Calculating the time difference between the end of the previous frame, and the end of the current frame.</div></center>
+<p>
+
+
+Let's look again at what we're doing here. 
+
+</p><p>
+
+<ol start=1>
+<li class="number">Before entering main loop: Declare a counter and measure the timestamp. 
+</li>
+<li class="number">Do whatever we need to do in our loop and measure the timestamp at the end.
+</li>
+<li class="number">Take the two times, subtract the later from the earlier, and get how much time elapsed. 
+</li>
+<li class="number">To repeat the cycle, we pretend that now the <code>LastCounter</code> is the counter we just measured in step 2.
+</li>
+<li class="number">Repeat 2-4 forever.</li></ol>
+
+</p><p>
+
+We could simply say <code>BeginCounter</code> at the very top and <code>EndCounter</code> at the bottom but.... technically, it doesn't capture <em class="underscore">all</em> the time. If getting back to the top of the loop takes some time (maybe process got switched out, or something else happened), we'd miss that time. This approach guarantees to never miss any time, because we have only one single place where we check the clock, and then measure the time on our last run on the same spot. 
+
+</p>
+<a class="target" name="convertcountersintotime">&nbsp;</a><a class="target" name="timetheframes/convertcountersintotime">&nbsp;</a><a class="target" name="toc2.1">&nbsp;</a><h2>Convert Counters into Time</h2>
+<p>
+
+
+We now have the <code>CounterElapsed</code> value which tells us how many &ldquo;counters&rdquo; passed. Unfortunately, we still don't know how to interpret that value. If we want to translate these counters to the human-readable wall clock time instead of machine-readable time, there's a handy function allowing us to convert one into the other. 
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/profileapi/nf-profileapi-queryperformancefrequency">QueryPerformanceFrequency</a> tells us how many increments does the clock go through in one <em class="underscore">second</em>. This frequency is not allowed to change, so we can only check it once at the beginning of our program. So let's check this frequency at the beginning, when we are doing the rest of init code. Since we don't need the whole result of the query, we can discard it and only use the <code>QuadPart</code>.
+
+</p><pre class="listing tilde"><code><div class="           "><span class="line"><span class="hljs-function"><span class="hljs-keyword">int</span> CALLBACK</span>
+<span class="line"><span class="hljs-title">WinMain</span><span class="hljs-params">(HINSTANCE Instance,</span>
+<span class="line">        HINSTANCE PrevInstance,</span>
+<span class="line">        LPSTR     CommandLine,</span>
+<span class="line">        <span class="hljs-keyword">int</span>       ShowCode)</span></span>
+<span class="line"></span>{</span></div><div class=" add"><span class="line">    LARGE_INTEGER PerfCountFrequencyResult;</span>
+<span class="line">    QueryPerformanceFrequency(&amp;PerfCountFrequencyResult);</span>
+<span class="line">    s64 PerfCountFrequency = PerfCountFrequencyResult.QuadPart;</span></div><span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;3:</b> <file>[win32_handmade.cpp > WinMain]</file> Getting the performance frequency.</div></center>
+<p>
+
+
+Now, when we get at the very end of the frame, we can say: we know how many counters have elapsed, and we know how many of them happen in a second. We can trivially apply what's called <a href="https://en.wikipedia.org/wiki/Dimensional_analysis">Dimensional Analysis</a> to know that, in order to get the seconds elapsed, we should divide the counts by counts per second.
+
+</p><p>
+
+<div class="admonition ">You can read more about the dimensional analysis in subsection  <a href="#toc6.3">6.3</a>.</div>
+
+</p><p>
+
+Now, both the <code>CounterElapsed</code> and <code>PerfCountFrequency</code> are integers, so diving one over the other will invariably give us <code>0</code> (we hope at least that our frames take less than one second to make!). So measuring in seconds is not particularly useful. We could multiply <code>CounterElapsed</code> by 1000 first so, when dividing by the frequency in seconds, we'll get milliseconds count (sort of how you would calculate a percentage of something). Also we don't need to store this value in as an <code>s64</code>, <code>s32</code> will suffice.
+
+</p><pre class="listing tilde"><code><span class="line">LARGE_INTEGER EndCounter;</span>
+<span class="line">QueryPerformanceCounter(&amp;EndCounter);</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// TODO(casey): Display the value here</span></span>
+<span class="line">s64 CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;</span><div class=" add"><span class="line">s32 MSPerFrame = (s32)((<span class="hljs-number">1000</span>*CounterElapsed) / PerfCountFrequency);</span></div><span class="line">LastCounter = EndCounter;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;4:</b> <file>[win32_handmade.cpp > WinMain]</file> Calculating milliseconds per frame.</div></center>
+
+<a class="target" name="printoutavalue">&nbsp;</a><a class="target" name="timetheframes/printoutavalue">&nbsp;</a><a class="target" name="toc2.2">&nbsp;</a><h2>Print out a Value</h2>
+<p>
+
+
+We now have a value showing how many full milliseconds it took us to make a full game cycle. This value will of course vary as the game goes, and the first frame usually takes the longest. Let's print it out to our <code>Output</code> console! 
+
+</p><p>
+
+But... how? We know there's <code>OutputDebugStringA</code> function which allows us to print a string we want, but so far we only dealt with a predefined strings. 
+
+</p><p>
+
+If you had to do with Python, JavaScript or another high level language, your first impulse would be simply type something like <code>&quot;ms/frame: &quot; + MSPerFrame</code>. This will not work in C. Once we get more of our own code up and running, we will come up with a custom solution that we'll design; for now, let's use whatever Windows provides by default.
+
+</p><p>
+
+If you want to quickly print out strings in Windows, you can use a function called <a href="https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-wsprintfa">wsprintf</a> (which comes with <code>A</code> or <code>W</code> variants). This function allows you to format and write a string to some buffer (memory). It takes the following parameters:
+
+</p><p>
+
+<ol start=1>
+<li class="number">A buffer (usually an array of <code>char</code>s of some length).
+</li>
+<li class="number">A &ldquo;format string&rdquo;, including the keywords to insert the values into.
+</li>
+<li class="number">The values you want to insert into the string.</li></ol>
+
+</p><p>
+
+In our case, this will look something like this: 
+
+</p><pre class="listing tilde"><code><span class="line">s64 CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;</span>
+<span class="line">s32 MSPerFrame = (s32)((<span class="hljs-number">1000</span>*CounterElapsed) / PerfCountFrequency);</span><div class=" add"><span class="line"><span class="hljs-keyword">char</span> Buffer[<span class="hljs-number">256</span>];</span>
+<span class="line">wsprintfA(Buffer, <span class="hljs-string">"ms/frame: %dms\n"</span>, MSPerFrame);</span>
+<span class="line">OutputDebugStringA(Buffer);</span></div><div class=" C++ "><span class="line">LastCounter = EndCounter;</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;5:</b> <file>[win32_handmade.cpp > WinMain]</file> Printing out <code>MSPerFrame</code>.</div></center>
+<p>
+
+
+The way the string formatting works comes from long ago, defined by the C standard committee and adopted by Windows, as well: 
+
+</p><p>
+
+<ol start=1>
+<li class="number">In the format string, data will be written to the <code>Buffer</code> normally until <code>%</code> sign is hit. 
+</li>
+<li class="number">After encountering <code>%</code> sign, the function will try to insert the next unused value after the comma, formatting it in the way requested (in our case, we request <code>%d</code>, i.e. format it as an integer). 
+</li>
+<li class="number">The final <code>Buffer</code> is passed to <code>OutputDebugStringA</code>.</li></ol>
+
+</p><p>
+
+<div class="admonition warning">This way of outputting strings is highly problematic. There is a number of reasons to it, mainly because of so many ways that this sort of print out can go wrong: you can pass a buffer that's too small, or the <code>%</code> things assume to line up with whataver values you're passing next, you can start reading from the stack something you never passed or even outright crash! 
+
+</p><p>
+
+    There are versions of these functions that help navigate around these problems (for instance, <code>wnsprintf</code> requests the length of the buffer to not go overboard). Still, this is not the code that you should be using in anything more than for debug purposes. You wouldn't really want to ship this code, or if you want, you really need to understand what you're doing.</div>
+
+</p><p>
+
+Let's compile and test it out in the debugger. Run your program for a few seconds and inspect the <code>Output</code> window:
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day10/counter1.jpg" target="_blank"><img class="markdeep" src="../media/day10/counter1.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;1:</b> Displaying ms/frame.</span></center></div></center>
+
+</p><p>
+
+You'll notice that the first frame was indeed pretty long (15ms) while the rest oscillated between 4ms, sometimes 5ms frames. Your framerate will be more or less stable depending on your processor, as well as how many other processes you're running.
+
+</p>
+<a class="target" name="calculateanddisplayframespersecond">&nbsp;</a><a class="target" name="timetheframes/calculateanddisplayframespersecond">&nbsp;</a><a class="target" name="toc2.3">&nbsp;</a><h2>Calculate and Display Frames per Second</h2>
+<p>
+
+
+Programmers usually think in terms of milliseconds per frame. However, you might be used to think of a game performance in terms of frames per second. Let's convert one into the other using the powers of <a href="https://en.wikipedia.org/wiki/Dimensional_analysis">Dimensional Analysis</a>!
+
+</p><p>
+
+<div class="admonition tip">Try thinking of a solution yourself before peeking below!</div>
+
+</p><p>
+
+We know that we have our \(counts\) (that in this case we can consider \(\frac{counts}{frame}\)). We need \(\frac{counts}{second}\) to get to \(\frac{frames}{second}\), and we'll also need to flip our \(\frac{counts}{frame}\).
+
+</p><p>
+
+So this is how the whole analysis looks like: 
+
+</p><p>
+
+$$1\div\frac{counts}{frame} \rightarrow \frac{frames}{count}$$
+$$\swarrow$$
+$$\frac{frames}{count} \times \frac{counts}{second} =$$
+$$\frac{frames \times counts}{count \times second} =$$
+$$\frac{frames \times \bcancel{counts}}{\bcancel{count} \times second} =$$
+$$\frac{frames \times 1}{1 \times second} =$$
+$$\frac{frames}{second}$$
+
+</p><p>
+
+Since we have our <code>CounterElapsed</code> and our <code>PerfCountFrequency</code>, in practice all we need to do is to apply the following conversion: 
+
+</p><p>
+
+$$fps = 1 \div counter \times frequency$$
+
+</p><p>
+
+This can be simplified even further by flipping the \(frequency\) in place of the \(counter\):
+
+</p><p>
+
+$$fps = frequency \div counter$$
+
+</p><p>
+
+We can now compute this down and add it to our <code>wsprintf</code>:
+
+</p><pre class="listing tilde"><code><span class="line">s64 CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;</span>
+<span class="line">s32 MSPerFrame = (s32)((<span class="hljs-number">1000</span>*CounterElapsed) / PerfCountFrequency);</span><div class=" add"><span class="line">s32 FPS = (s32)(PerfCountFrequency / CounterElapsed);</span></div><span class="line"><span class="hljs-keyword">char</span> Buffer[<span class="hljs-number">256</span>];</span><div class=" edit"><span class="line">wsprintfA(Buffer, <span class="hljs-string">"ms/frame: %dms / %dFPS\n"</span>, MSPerFrame, FPS);</span></div><div class=" C++ "><span class="line">OutputDebugStringA(Buffer);</span>
+<span class="line">LastCounter = EndCounter;</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;6:</b> <file>[win32_handmade.cpp > WinMain]</file> Calculating and printing <code>FPS</code>.</div></center>
+<p>
+
+
+If you compile and run it now, you should see the frames per second displayed alongside your ms per frame value.
+
+</p><p>
+
+Dimensional analysis is a handy tool that can come in handy if you get confused how to compute one value or another. 
+
+</p>
+<a class="target" name="countthecycles">&nbsp;</a><a class="target" name="timetheframes/countthecycles">&nbsp;</a><a class="target" name="toc2.4">&nbsp;</a><h2>Count the Cycles</h2>
+<p>
+
+
+Let's augment our debug counters by adding the cycle counts from RDTSC. Thankfully, you can use RDTSC without any libraries, as usually compiler provide <em class="underscore">intrinsic</em> functions to call these instructions. For Visual Studio compiler, this function is called <code>__rdtsc</code>(<a href="https://docs.microsoft.com/en-us/cpp/intrinsics/rdtsc?view=vs-2019">MSDN</a>).
+
+</p><p>
+
+<div class="admonition ">You can find a short introduction to intrinsics in subsection  <a href="#toc6.2">6.2</a>.</div>
+
+</p><p>
+
+Similarly to what we did with the <code>QueryPerformanceCounter</code>, we'll create a rolling counter: 
+
+</p><pre class="listing tilde"><code><span class="line">LARGE_INTEGER LastCounter;</span>
+<span class="line">QueryPerformanceCounter(&amp;LastCounter);</span><div class=" add"><span class="line">u64 LastCycleCount = __rdtsc();</span></div><span class="line">GlobalRunning = <span class="hljs-literal">true</span>;</span>
+<span class="line"><span class="hljs-keyword">while</span> (GlobalRunning)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">    <span class="hljs-comment">// The game loop</span></span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">    LARGE_INTEGER EndCounter;</span>
+<span class="line">    QueryPerformanceCounter(&amp;EndCounter);</span><div class=" add"><span class="line">    u64 EndCycleCount = __rdtsc();</span></div><span class="line">    s64 CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;</span>
+<span class="line">    s32 MSPerFrame = (s32)((<span class="hljs-number">1000</span>*CounterElapsed) / PerfCountFrequency);</span>
+<span class="line">    s32 FPS = (s32)(PerfCountFrequency / CounterElapsed);</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">char</span> Buffer[<span class="hljs-number">256</span>];</span>
+<span class="line">    wsprintfA(Buffer, <span class="hljs-string">"ms/frame: %dms, %dFPS\n"</span>, MSPerFrame, FPS);</span>
+<span class="line">    OutputDebugStringA(Buffer);</span>
+<span class="line">    </span>
+<span class="line">    LastCounter = EndCounter;</span><div class=" add"><span class="line">    LastCycleCount = EndCycleCount;</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;7:</b> <file>[win32_handmade.cpp > WinMain]</file> Creating cycle counter.</div></center>
+<p>
+
+
+You now can use this counter to report the pure cycles elapsed. However it's going to be a lot. So let's say we want to count MegaCycles, or how many million cycles happened per frame.
+
+</p><pre class="listing tilde"><code><span class="line">s64 CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;</span><div class=" add"><span class="line">s64 CyclesElapsed = EndCycleCount - LastCycleCount;</span></div><span class="line">s32 MSPerFrame = (s32)((<span class="hljs-number">1000</span>*CounterElapsed) / PerfCountFrequency);</span>
+<span class="line">s32 FPS = (s32)(PerfCountFrequency / CounterElapsed);</span><div class=" add"><span class="line">s32 MegaCyclesPerFrame = CyclesElapsed / (<span class="hljs-number">1000</span> * <span class="hljs-number">1000</span>);</span></div><span class="line"></span>
+<span class="line"><span class="hljs-keyword">char</span> Buffer[<span class="hljs-number">256</span>];</span><div class=" edit"><span class="line">wsprintfA(Buffer, <span class="hljs-string">"%dms/f, %df/s, %dMc/f \n"</span>, MSPerFrame, FPS, MegaCyclesPerFrame);</span></div><span class="line">OutputDebugStringA(Buffer);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;8:</b> <file>[win32_handmade.cpp > WinMain]</file> Using cycle counter.</div></center>
+<p>
+
+
+Now you might look at that format string and say: &ldquo;What is going on there?&rdquo; Let's look at every single piece of it again: 
+
+</p><p>
+
+<ul>
+<li class="asterisk"><code>%dms/f</code>: takes the first value (<code>MSPerFrame</code>), interprets it as a 32-bit integer, converts it to string, and adds &ldquo;ms/f&rdquo; (milliseconds/frame) at the end.
+</li>
+<li class="asterisk"><code>%df/s</code>: takes the second value (<code>FPS</code>), interprets it as a 32-bit integer, converts it to string, and adds &ldquo;f/s&rdquo; (frames/second) at the end.
+</li>
+<li class="asterisk"><code>%dMc/f</code>: takes the third value (<code>MegaCyclesPerFrame</code>), interprets it as a 32-bit integer, converts it to string, and adds &ldquo;Mc/s&rdquo; (megacycles/second) at the end.
+</li>
+<li class="asterisk"><code>\n</code>: adds a newline character.</li></ul>
+
+</p><p>
+
+If you're still confused, you can write this line as <code>%d ms/f, %d f/s, %d Mc/f \n</code> or in any other way that makes things clearer for you.
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day10/counter2.jpg" target="_blank"><img class="markdeep" src="../media/day10/counter2.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;2:</b> Your Output will look something like this.</span></center></div></center>
+
+</p>
+<a class="target" name="improvetheoutput">&nbsp;</a><a class="target" name="improvetheoutput">&nbsp;</a><a class="target" name="toc3">&nbsp;</a><h1>Improve the Output</h1>
+<p>
+
+
+If you look at the output on the figure above, you will see that our output oscillates somewhere between 14 and 21 <em class="underscore">million</em> instructions per frame. That's a lot. And if you take a calculator and try to cross-check, you'll see that by multiplying the number of frames per second with the detected cycle count, you'll get close to your processor frequency!
+
+</p><p>
+
+Can we have even more precision? Of course, by using the floating-point fractions! 
+
+</p>
+<a class="target" name="printcountersinfloatingpoint">&nbsp;</a><a class="target" name="improvetheoutput/printcountersinfloatingpoint">&nbsp;</a><a class="target" name="toc3.1">&nbsp;</a><h2>Print Counters in Floating Point</h2>
+<p>
+
+
+Working with the floating point is more complex in the <code>printf</code>-style formatting functions than with the integers. So if you inspect the documentation for <a href="https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-wsprintfa">wsprintfA</a>, you'll see that it doesn't support floating-point values. We'll need to use C Standard Library analogue for that, <code>sprintf</code>.
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/sprintf-sprintf-l-swprintf-swprintf-l-swprintf-l?view=vs-2019">sprintf</a> works in pretty much the same way as <code>wsprintf</code>. Simply change the function: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">char</span> Buffer[<span class="hljs-number">256</span>];</span><div class=" edit"><span class="line"><span class="hljs-built_in">sprintf</span>(Buffer, <span class="hljs-string">"%dms/f, %df/s, %dMc/f \n"</span>, MSPerFrame, FPS, MegaCyclesPerFrame);</span></div><span class="line">OutputDebugStringA(Buffer);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;9:</b> <file>[win32_handmade.cpp > WinMain]</file> Adding <code>sprintf</code>.</div></center>
+<p>
+
+
+Now however your program won't compile: to fix that, you'll have to simply add the <code>stdio.h</code> header file. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;windows.h&gt;</span></span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;stdint.h&gt;</span></span></span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;stdio.h&gt;</span></span></span></div><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;xinput.h&gt;</span></span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;dsound.h&gt;</span></span></span>
+<span class="line"><span class="hljs-comment">// TODO(casey): Implement sine ourselves</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;math.h&gt;</span></span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;10:</b> <file>[win32_handmade.cpp > WinMain]</file> Adding &ldquo;Standard Input-Output&rdquo; header.</div></center>
+<p>
+
+
+Now your program will compile, and you'll notice that there is effectively no difference, except now you can go and use <code>%f</code> to output floating-point values.
+
+</p><p>
+
+At its simplest, we can simply replace <code>%d</code> with <code>%f</code>, and define our values as <code>f32</code>: 
+
+</p><pre class="listing tilde"><code><span class="line">s64 CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;</span>
+<span class="line">s64 CyclesElapsed = EndCycleCount - LastCycleCount;</span><div class=" edit"><span class="line">f32 MSPerFrame = <span class="hljs-number">1000.0f</span>*(f32)CounterElapsed / (f32)PerfCountFrequency;</span>
+<span class="line">f32 FPS = (f32)PerfCountFrequency / (f32)CounterElapsed;</span>
+<span class="line">f32 MegaCyclesPerFrame = (f32)CyclesElapsed / (<span class="hljs-number">1000.0f</span> * <span class="hljs-number">1000.0f</span>);</span></div><span class="line"></span>
+<span class="line"><span class="hljs-keyword">char</span> Buffer[<span class="hljs-number">256</span>];</span><div class=" edit"><span class="line"><span class="hljs-built_in">sprintf</span>(Buffer, <span class="hljs-string">"%fms/f, %ff/s, %fMc/f\n"</span>, MSPerFrame, FPS, MegaCyclesPerFrame);</span></div><span class="line">OutputDebugStringA(Buffer);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;11:</b> <file>[win32_handmade.cpp > WinMain]</file> Using floating point instead of integers.</div></center>
+<p>
+
+
+
+
+<div class="admonition ">You'll notice that we're handling <em class="underscore">casting</em> in a little bit different way from how we treated conversion from <code>s64</code> to <code>s32</code>. If you're curious a bit how C handles division based on type, check out subsection  <a href="#toc6.4">6.4</a>.</div>
+
+</p><p>
+
+If you run the program now, you'll notice a lot of fractional precision in your numbers. It's definitely a good thing, as it allows us to accurately calculate the time spent on a frame, but it also might be quite confusing to look at. 
+
+</p><p>
+
+This is where the so-called &ldquo;format specifiers&rdquo; come into play. You might want to, for example, specify to which decimal to round the value, and the format specifiers allow you to do so. If you look on <a href="https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/sprintf-sprintf-l-swprintf-swprintf-l-swprintf-l?view=vs-2019">MSDN</a>, you will find a reference page called "<a href="https://docs.microsoft.com/en-us/cpp/c-runtime-library/format-specification-syntax-printf-and-wprintf-functions?view=vs-2019">Format Specification Syntax</a>". The page itself is long and confusing because <code>printf</code> itself has long and confusing history. You can look at all these things when you need them, as they are all the various things you can use to encode your preferences in that <code>%</code> notation. 
+
+</p><p>
+
+So for example if we say <code>%.02f</code> instead of <code>%f</code>, the values will be rounded to the second decimal point. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">char</span> Buffer[<span class="hljs-number">256</span>];</span><div class=" edit"><span class="line"><span class="hljs-built_in">sprintf</span>(Buffer, <span class="hljs-string">"%.02fms/f, %.02ff/s, %.02fMc/f\n"</span>, MSPerFrame, FPS, MegaCyclesPerFrame);</span></div><span class="line">OutputDebugStringA(Buffer);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;12:</b> <file>[win32_handmade.cpp > WinMain]</file> Rounding up the values.</div></center>
+<p>
+
+
+<center><div class="image" style=""><a href="../media/day10/counter3.jpg" target="_blank"><img class="markdeep" src="../media/day10/counter3.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;3:</b> Before and after using <code>%.02f</code>.</span></center></div></center>
+
+</p><p>
+
+We'll not ponder much longer on <code>printf</code>-like functions. It's not something that we're going to dive much deeper into, as we'll be focusing on making everything from scratch ourselves. That said, it's not a waste of time if you want to learn ins and out of the standard library. You can call them when you're trying to get the things working. Since it's a C Standard Library, it exists everywhere, and each C compiler must implement them to be standard-compliant.
+
+</p><p>
+
+That said, it's never a bad idea to use the standard library when you're only getting started in your project. There are many similar ones (<code>printf</code> outputs result to a console, <code>fprintf</code> to a file, <code>sprintf</code> to a buffer, the list goes on) and once you've learned one, you've learned them all. You need temporary pillars to lay your weight upon while you're raising up the dome of your own program. Just remember to remove them eventually. 
+
+</p>
+<a class="target" name="doubleprecision">&nbsp;</a><a class="target" name="improvetheoutput/doubleprecision">&nbsp;</a><a class="target" name="toc3.2">&nbsp;</a><h2>Double Precision</h2>
+<p>
+
+
+Let's go crazy, and increase the level of accuracy even further. Of course, with only two decimal numbers it doesn't matter, but let's assume you want really refined value. You need to remember that a floating point value has only 23 bits of accuracy in it (which translates to six-and-a-bit decimal digits of precision), but we have up to 64 bits of number coming in. Of course, technically there isn't going to be a huge number after the subtraction in this specific case, but let's assume that we time something really long, some value that a 23-bit mantissa cannot hold (like ~50,000,000,000). 
+
+</p><p>
+
+So in order to that you need to change how you cast your numbers...
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">f64 MSPerFrame = <span class="hljs-number">1000.0</span>*(f64)CounterElapsed / (f64)PerfCountFrequency;</span>
+<span class="line">f64 FPS = (f64)PerfCountFrequency / (f64)CounterElapsed;</span>
+<span class="line">f64 MegaCyclesPerFrame = (f64)CyclesElapsed / (<span class="hljs-number">1000.0</span> * <span class="hljs-number">1000.0</span>);</span></div></code></pre><p>
+
+and that's it. <code>printf</code> is already treating the numbers you pass as if they were 64-bit, so you don't need to put a new keyword to them. 
+
+</p><p>
+
+Now you aren't going to see any difference in this case because, as we said, single-precision floating point is more than enough for what we're doing. But you could do it anyway if you so prefer. That said, double precision doesn't come for free, and it's not magic (neither is <code>float</code> as well...). You can read more about it <a href="https://tomforsyth1000.github.io/blog.wiki.html#[[A%20matter%20of%20precision]]">here</a>, just be careful not to fall into a rabbit hole!
+
+</p>
+<a class="target" name="recap">&nbsp;</a><a class="target" name="recap">&nbsp;</a><a class="target" name="toc4">&nbsp;</a><h1>Recap</h1>
+<p>
+
+
+We now set the foundations for the timing in our program. In the future, we will implement platform-indipendent functions that the game will be able to take advantage of to know how much time has passed for its various purposes. We will also be able to split the frame counters in more parts, allowing us to verify how long this or that part of the game takes. 
+
+</p><p>
+
+We have set most of the outlines for the basic elements we might need in a game: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">A render buffer to draw our frame into
+</li>
+<li class="asterisk">Input from a controller or a keyboard
+</li>
+<li class="asterisk">Sound output
+</li>
+<li class="asterisk">Frame timing</li></ul>
+
+</p><p>
+
+We might only need but a single other component (something allowing us to read from and write to files) but even that is not important for the time being. Next time, we'll start thinking about how we're going to pass all this information to our game.
+
+</p>
+<a class="target" name="exercises">&nbsp;</a><a class="target" name="exercises">&nbsp;</a><a class="target" name="toc5">&nbsp;</a><h1>Exercises</h1>
+
+<a class="target" name="introduceandusemidcounter">&nbsp;</a><a class="target" name="exercises/introduceandusemidcounter">&nbsp;</a><a class="target" name="toc5.1">&nbsp;</a><h2>Introduce and Use <code>MidCounter</code></h2>
+<p>
+
+
+Try to introduce a <code>MidCounter</code>. It will sit somewhere before <code>Win32DisplayBufferInWindow</code> is called, and will show you the information about all the program up to that point. Display information about it in the output window!
+
+</p>
+<a class="target" name="programmingnotions">&nbsp;</a><a class="target" name="programmingnotions">&nbsp;</a><a class="target" name="toc6">&nbsp;</a><h1>Programming Notions</h1>
+
+<a class="target" name="unions">&nbsp;</a><a class="target" name="programmingnotions/unions">&nbsp;</a><a class="target" name="toc6.1">&nbsp;</a><h2>Unions</h2>
+<p>
+
+
+A union is a simple but powerful concept. It overlays the same memory with several types, allowing you to access said memory in multiple ways (without having to do <em class="underscore">type casting</em>). Unlike <code>struct</code>s, each member of a <code>union</code> occupies the same space in memory. 
+
+</p><p>
+
+For instance, let's take the definition of a <code>LARGE_INTEGER</code>: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">union</span> _LARGE_INTEGER {</span>
+<span class="line">  <span class="hljs-class"><span class="hljs-keyword">struct</span> {</span></span>
+<span class="line">    DWORD LowPart;</span>
+<span class="line">    LONG  HighPart;</span>
+<span class="line">  };</span>
+<span class="line">  <span class="hljs-class"><span class="hljs-keyword">struct</span> {</span></span>
+<span class="line">    DWORD LowPart;</span>
+<span class="line">    LONG  HighPart;</span>
+<span class="line">  } u;</span>
+<span class="line">  LONGLONG QuadPart;</span>
+<span class="line">} LARGE_INTEGER;</span></code></pre><center><div class="listingcaption tilde"><file>[MSDN]</file> LARGE_INTEGER union.</div></center>
+<p>
+
+
+<code>LARGE_INTEGER</code> has 3 components:
+
+</p><p>
+
+<ul>
+<li class="asterisk"><code>struct</code>: &ldquo;anonimous&rdquo; struct, composed of 2&times; 32-bit members.
+</li>
+<li class="asterisk"><code>struct u</code>: composed of 2&times; 32-bit members.
+</li>
+<li class="asterisk"><code>LONGLONG QuadPart</code>: a 64-bit type.</li></ul>
+
+</p><p>
+
+If <code>LARGE_INTEGER</code> were a struct, the size of the struct would be \(64 \times 3 = 192\) bits. However, since it's declared as a union, its size is only 64 bits, and you can access it using any of these methods: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">You can say <code>LargeInteger.QuadPart</code> to access its 64-bit component. 
+</li>
+<li class="asterisk">You can say <code>LargeInteger.LowPart</code> to access its &ldquo;low&rdquo; 32-bit component. 
+</li>
+<li class="asterisk">You can say <code>LargeInteger.HighPart</code> to access its &ldquo;high&rdquo; 32-bit component. 
+</li>
+<li class="asterisk">You can even say <code>LargeInteger.u.LowPart</code> to access a &ldquo;low&rdquo; 32-bit component of the <code>u</code> struct.</li></ul>
+
+</p><p>
+
+(provided your <code>LARGE_INTEGER</code>'s variable name is <code>LargeInteger</code>).
+
+</p><p>
+
+We'll meet unions in the future again, however not as much as structs.
+
+</p><p>
+
+<em class="underscore">(Back to Subsection ?)</em>
+
+</p>
+<a class="target" name="introtointrinsics">&nbsp;</a><a class="target" name="programmingnotions/introtointrinsics">&nbsp;</a><a class="target" name="toc6.2">&nbsp;</a><h2>Intro to Intrinsics</h2>
+<p>
+
+
+We really will touch on intrinsics later, but since we started talking about them here, a short introduction is in place. 
+
+</p><p>
+
+Intrinsics are something that look like a function call. For instance, <code>__rdtsc</code> looks like a function, behaves like a function... but isn't <em class="underscore">really</em> a function. 
+
+</p><p>
+
+In reality, it's a hint to the compiler that you want to do a specific assembly-language instruction. After seeing an intrinsic command, the compiler will be able to directly inline the necessary instructions without thinking about referincing some other piece of code. 
+
+</p><p>
+
+It's easy to see this by analyzing the disassembly at the place of the call:
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day10/intrinsic.jpg" target="_blank"><img class="markdeep" src="../media/day10/intrinsic.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;4:</b> RDTSC intrinsic in disassembly.</span></center></div></center>
+
+</p><p>
+
+Instead of generating some assembly command like <code>call</code> (actually call some function), the instruction generated was straight-up <code>rdtsc</code>. The following instructions clean up the result of <code>rdtsc</code> and store them inside the variable we requested. 
+
+</p><p>
+
+Quite handy.
+
+</p><p>
+
+<em class="underscore">(Back to Subsection  <a href="#toc2.4">2.4</a>)</em>
+
+</p>
+<a class="target" name="dimensionalanalysis">&nbsp;</a><a class="target" name="programmingnotions/dimensionalanalysis">&nbsp;</a><a class="target" name="toc6.3">&nbsp;</a><h2>Dimensional Analysis</h2>
+<p>
+
+
+If you aren't very familiar with math, the following section can get you thinking about things in a simple way. 
+
+</p><p>
+
+If you have a specific amount of \(x\ counts\) (you could also imagine \(x \ counts\) as \(\frac{x\ counts}{1}\)), and a set value of \(\frac{counts}{seconds}\), how do you find the seconds? It's simple: just look at how the units cancel out on the divide.
+
+</p><p>
+
+If we were to multiply these two things together, we'd get. 
+
+</p><p>
+
+$$\frac{x\ counts}{1}\times\frac{counts}{seconds} = \frac{counts^2}{seconds}$$
+
+</p><p>
+
+That's not what we want at all! Ok, let's try the other way. We want to <em class="underscore">cancel</em> out the \(counts\) so we're just left with \(seconds\). We also know that if you divide 1 over a value, you get an <em class="underscore">inverse</em> of it: 
+
+</p><p>
+
+$$\frac{1}{\frac{counts}{seconds}} = \frac{seconds}{counts}$$
+
+</p><p>
+
+This means we can do the following conversion: 
+
+</p><p>
+
+$$\frac{x\ counts}{1}\div\frac{counts}{seconds} = $$
+$$\frac{x\ counts}{1}\times\frac{seconds}{counts} = $$
+$$\frac{x\ counts \times seconds}{1 \times counts} = $$
+$$\frac{x \bcancel {counts} \times seconds}{ \bcancel {counts}} = $$
+$$x \ seconds$$
+
+</p><p>
+
+You can thus line up the whole string of things converting into each other. For instance, if you need to conver seconds in days, you can start thinking about it in the following way: 
+
+</p><p>
+
+<ol start=1>
+<li class="number">Cancel out seconds, knowing that one minute contains 60 seconds.
+</li>
+<li class="number">Cancel out minutes, knowing that one hour contains 60 minutes.
+</li>
+<li class="number">Cancel out days, knowing that one day contains 24 hours.</li></ol>
+
+</p><p>
+
+Just by outlining this math the result becomes immideately visible: 
+
+</p><p>
+
+$$x\ seconds \times \frac{1\ minutes}{60 seconds} \times \frac{1\ hours}{60 minutes} \times \frac{1\ days}{24 hours} = $$
+$$x\ \frac{\bcancel{seconds}}{1} \times \frac{1 \bcancel{minutes}}{60 \bcancel{seconds}} \times \frac{1 \bcancel{hours}}{60 \bcancel{minutes}} \times \frac{1\ days}{24 \bcancel{hours}} = $$
+$$ \frac{x\ seconds}{60 \times 60 \times 24} days$$
+
+</p><p>
+
+<em class="underscore">(Back to Subsection  <a href="#toc2.1">2.1</a>)</em>
+
+</p>
+<a class="target" name="divisioninc">&nbsp;</a><a class="target" name="programmingnotions/divisioninc">&nbsp;</a><a class="target" name="toc6.4">&nbsp;</a><h2>Division in C</h2>
+<p>
+
+
+C treats division differently based on the type of the items which are being divided. 
+
+</p><p>
+
+For instance, if you divide an <code>int</code> with an <code>int</code>, it will be an <code>int</code> division, even if you store the result as a <code>float</code>. So if we have an <code>int x, y;</code>, a division of these will be treated as an integer divide. Of course, the integer has no fractional part, so it's simply discarded, not even rounded. Only after the operation is complete will the number converted to a <code>float</code>.
+
+</p><p>
+
+So, in order to get a proper floating-point division, you have to tell C first that we want to treat those integers as floats. And we do it by casting both operands as <code>float</code> <em class="underscore">before</em> the division happens:
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">int</span> x, y;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">//...</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">float</span> z = (<span class="hljs-keyword">float</span>)x / (<span class="hljs-keyword">float</span>)y; </span></code></pre><p>
+
+If you do this way (or by using <code>f32</code>s we've defined last time), C understands that we're trying to do move these values into the floating point registers and do work on them there.
+
+</p><p>
+
+<em class="underscore">(Back to subsection  <a href="#toc3.1">3.1</a>)</em>
+
+</p>
+<a class="target" name="sideconsiderations">&nbsp;</a><a class="target" name="sideconsiderations">&nbsp;</a><a class="target" name="toc7">&nbsp;</a><h1>Side Considerations</h1>
+
+<a class="target" name="theintelarchitecturereferencemanual">&nbsp;</a><a class="target" name="sideconsiderations/theintelarchitecturereferencemanual">&nbsp;</a><a class="target" name="toc7.1">&nbsp;</a><h2>The Intel Architecture Reference Manual</h2>
+<p>
+
+
+You're going to need on your journey a. And, if you program for any length an x86-based architecture, you will require the <a href="https://software.intel.com/content/www/us/en/develop/articles/intel-sdm.html">Intel Architecture Reference Manual</a>. This is document, which you can download for free, does just the thing for you. Such a document goes through every little detail of their processors and, since the x86-64 architecture is shared, it also applies to AMD processors of the same type, as well. 
+
+</p><p>
+
+We're mostly going to be concerned about Volume 2 contents, but the other volumes are interesting as well! Take a look at least at the table of contents to see what's it all about. It really tells how things work inside a processor. 
+
+</p><p>
+
+Even more specifically, we want to take interest of the chapters covering the Instruction Set Reference. This reference shows all the available <em class="underscore">intrinsic</em> functions, i.e. the functions incorporated inside the processor. Why would you care about them? Intrinsics make the common tasks you might want to do, <em class="underscore">fast</em>. Blazingly fast. 
+
+</p><p>
+
+But even more than that. If you go through the disassembly, and you'd like for example know more about what that <code>mov</code> instruction, you can look at the guide and get detailed information about it.
+
+</p><p>
+
+<div class="admonition ">The same functions can also be accessed as a reference on the <a href="https://software.intel.com/sites/landingpage/IntrinsicsGuide/">Intel Intrinsics Guide</a>. We recommend you to bookmark this page!</div>
+
+</p><p>
+
+<em class="underscore">(Back to subsection  <a href="#toc1.1">1.1</a>)</em>
+
+</p>
+<a class="target" name="recap">&nbsp;</a><a class="target" name="recap">&nbsp;</a><a class="target" name="toc8">&nbsp;</a><h1>Recap</h1>
+
+<a class="target" name="navigation">&nbsp;</a><a class="target" name="navigation">&nbsp;</a><a class="target" name="toc9">&nbsp;</a><h1>Navigation</h1>
+<p>
+
+
+Previous: <a href="../html/day9.html">Day 9. Variable-Pitch Sine Wave Output</a>
+
+</p><p>
+
+<a href="../index.md.html">Back to Index</a>
+
+</p>
+<div class="nonumberh1">Glossary</div>
+<p>
+
+
+<ul>
+<li class="asterisk">Dimensional Analysis
+</li>
+<li class="asterisk">Intrinsics
+</li>
+<li class="asterisk">Processor Clock
+</li>
+<li class="asterisk">Unions
+</li>
+<li class="asterisk">Wall Clock</li></ul>
+
+</p>
+<div class="nonumberh1">References</div>
+
+<div class="nonumberh1">Resources</div>
+<p>
+
+
+<a href="https://software.intel.com/content/www/us/en/develop/articles/intel-sdm.html">Intel Architecture Reference Manual</a>
+
+</p><p>
+
+<a href="https://software.intel.com/sites/landingpage/IntrinsicsGuide/">Intel Intrinsics Guide</a>
+
+</p>
+<div class="nonumberh1">Articles</div>
+<p>
+
+
+<a href="https://tomforsyth1000.github.io/blog.wiki.html#[[A%20matter%20of%20precision]]">A matter of precision (by Tom Forsyth)</a>
+
+</p><p>
+
+<a href="https://en.wikipedia.org/wiki/Clock_signal">Clock</a>
+
+</p><p>
+
+<a href="https://en.wikipedia.org/wiki/Dimensional_analysis">Dimensional Analysis</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/cpp/c-runtime-library/format-specification-syntax-printf-and-wprintf-functions?view=vs-2019">Format Specification Syntax</a>
+
+</p>
+<div class="nonumberh1">MSDN</div>
+<p>
+
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/profileapi/nf-profileapi-queryperformancecounter">QueryPerformanceCounter</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/profileapi/nf-profileapi-queryperformancefrequency">QueryPerformanceFrequency</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/cpp/intrinsics/rdtsc?view=vs-2019">rdtsc</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/sprintf-sprintf-l-swprintf-swprintf-l-swprintf-l?view=vs-2019">sprintf</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-wsprintfa">wsprintfA</a>
+
+</p><p>
+
+<style class="fallback">
+  body {
+    visibility: hidden;
+    font-family: sans-serif;
+  }
+</style>
+
+</p><p>
+
+<script>markdeepOptions = { tocStyle: 'long' }; window.alreadyProcessedMarkdeep || (document.body.style.visibility = 'visible');</script>
+</math.h></dsound.h></xinput.h></stdio.h></stdint.h></windows.h></p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.10&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.6/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
