@@ -18,7 +18,7 @@ The first thing we're going to look at is the `style` of our Window Class. If yo
 
 ## CS_OWNDC
 
-`CS_OWNDC` allocates a device contest for every window. As of right now, we make use of a device context at every frame update, and a of a special one when `WM_PAINT` message is processed. However, as we use it now, we can simply grab and use any available DC Windows would give us. We don't really need it to keep track of the various handles, brushes, etc.
+`CS_OWNDC` allocates an _own device contest_ for every window. As of right now, we make use of a device context at every frame update, and a of a special one when `WM_PAINT` message is processed. However, as we use it now, we can simply grab and use any available DC Windows would give us. We don't really need it to keep track of the various handles, brushes, etc.
 
 So we have two options: either to remove this flag completely or to get a handle exclusively for our usage. The second option would allow only asking for it once, once we get our window, which in turn would allow us to stop asking and releasing a device context every loop. 
 
@@ -48,18 +48,21 @@ if (Window)
     }
 }
 ~~~~~~~ 
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Getting a hold off a single device context]
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Getting a hold of a single device context]
 
 !!!
     If you implemented a RAII approach in the previous chapter, this would mean either dismantling your solution or removing the destructor. As we said before, we don't need to do the clean up after we exit our program since Windows will do it for us.
 
-## CS_HRDERAW / CS_VREDRAW
+## CS_HREDRAW / CS_VREDRAW
 
-For what it might concern `CS_HREDRAW` and `CS_VREDRAW`, we can confirm their usefulness. These options come into play when resizing the window, and force the _whole_ window to be repainted right away, and not just the chunks we resize. You can easily test it if you disable it (comment out or delete the line altogether), recompile, run, and try to resize the window. If you re-enable these style options you'll notice that the whole window is being blacked out as soon as you start resizing it.
+For what it might concern `CS_HREDRAW` and `CS_VREDRAW`, we can confirm their usefulness. These options come into play when resizing the window (<b>H</b>orizontally or <b>V</b>ertically), and force the _whole_ window to be repainted right away, and not just the chunks we resize. You can easily test it if you disable it (comment out or delete the line altogether), recompile, run, and try to resize the window. If you re-enable these style options you'll notice that the whole window is being blacked out as soon as you start resizing it.
 
 ![Figure [x]: `VREDRAW | HREDRAW` disabled vs. enabled, after some resizing from the lower right corner.](../media/day5/redraw.png)
 
 # Revisit `Win32UpdateWindow` Parameters
+
+!!!
+    We will return to `Win32UpdateWindow` in a minute to completely rethink how we approach the parameters to it. Feel free to skim through this section as none of this code will matter in a short while.
 
 Let's fast forward a bit to [day 4][] where we decided to pass our `ClientRect` as a pointer. Now, it's true that `RECT` is a structure, but it's a rather small one, and stack savings are minimal. But what's more, typically nowadays you want to avoid passing pointers to functions.
 
@@ -364,7 +367,7 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 
 Now let's also look at the calls to these functions. We call them from our `Win32MainWindowCallback` and `WinMain`. 
 
-Now, because these functions are called by Windows indipendently, the simplest thing for now would be to return one global variable holding our back buffer. We will then use it to pass it where it's currently required: 
+Now, because these functions are called by Windows independently, the simplest thing for now would be to return one global variable holding our back buffer. We will then use it to pass it where it's currently required: 
 
 * `Win32MainWindowCallback`: inside the cases `WM_SIZE` and `WM_PAINT`.
 * `WinMain`: inside our loop. 

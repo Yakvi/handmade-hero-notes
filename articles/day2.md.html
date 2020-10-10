@@ -13,7 +13,7 @@ But a message box is not a very useful thing for a game to pop up; in fact, if y
 The window that we are going to open is a basic Windows one. All the programs go through a specific path for opening a window, and we're going to follow that path as well, for a while. But shortly after we are going to create a special _buffer_ in memory which we can write to ourselves, do all the rendering into and, once we're ready, display in the window.
 
 !!!
-    This is not exactly how a modern game would start up. Modern games pretty much exclusively let the graphics card do their work for them. While we will eventually get there, it's not a very good start for educational purposes. Unfortunately, the GPU is a pretty opacque resource where we have a very limited insight into what it's doing to render graphics for our game. 
+    This is not exactly how a modern game would start up. Modern games pretty much exclusively let the graphics card do their work for them. While we will eventually get there, it's not a very good start for educational purposes. Unfortunately, the GPU is a pretty opaque resource where we have a very limited insight into what it's doing to render graphics for our game. 
 
 # Window Class
 
@@ -259,7 +259,7 @@ WinMain(HINSTANCE Instance,
 
 Let's look at the parameters we're getting for our `MainWindowCallback` (don't forget about [MSDN][WindowProc]!):
 
-* `HWND`: A handle to the window. This is an opacque (to us) piece of data that we can pass back to Windows to identify a window. It's like Windows says: "Hey, here's the handle to your window. If you need to talk to me about the window, pass it back, and I'll know what you mean".
+* `HWND`: A handle to the window. This is an opaque (to us) piece of data that we can pass back to Windows to identify a window. It's like Windows says: "Hey, here's the handle to your window. If you need to talk to me about the window, pass it back, and I'll know what you mean".
 * `UINT`: The message. This is the coded message that Windows is asking us to handle in the callback. The messages vary greately, and you can find many lists on [MSDN](https://docs.microsoft.com/en-us/windows/win32/winmsg/about-messages-and-message-queues#system-defined-messages). As you can see, over the ages the number of messages has grown to become _absurdly_ huge, the number of messages you can receive. 
 
 That said, most of these messages will be irrelevant for our project, and even less so now that we're starting. "Animation Control Messages", "Combo boxes"... Since we are not going to be using Windows hardly at all (we'll be basically opening a window and then doing everything else ourselves), we mostly care about basic window operations. These all fall under the `WM` category, and we will not need much else.

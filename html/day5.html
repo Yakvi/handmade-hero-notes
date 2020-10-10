@@ -102,7 +102,7 @@ Let's go with the second option and leave <code>CS_OWNDC</code>; we can always c
 <span class="line">    HDC DeviceContext = GetDC(Window);</span></div><span class="line">    <span class="hljs-comment">// ...     </span></span>
 <span class="line">    <span class="hljs-keyword">while</span> (Running)</span>
 <span class="line">    {</span><div class=" delete"><span class="line">        HDC DeviceContext = GetDC(Window);</span></div><span class="line">        <span class="hljs-comment">// ... </span></span><div class=" delete"><span class="line">        ReleaseDC(Window, DeviceContext);</span></div><div class=" C++ "><span class="line">    }</span>
-<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;1:</b> <file>[win32_handmade.cpp > WinMain]</file> Getting a hold off a single device context</div></center>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;1:</b> <file>[win32_handmade.cpp > WinMain]</file> Getting a hold of a single device context</div></center>
 <p>
 
 
@@ -125,6 +125,9 @@ For what it might concern <code>CS_HREDRAW</code> and <code>CS_VREDRAW</code>, w
 <a class="target" name="revisitwin32updatewindowparameters">&nbsp;</a><a class="target" name="revisitwin32updatewindowparameters">&nbsp;</a><a class="target" name="toc2">&nbsp;</a><h1>Revisit <code>Win32UpdateWindow</code> Parameters</h1>
 <p>
 
+
+<div class="admonition ">We will return to <code>Win32UpdateWindow</code> in a minute to completely rethink how we approach the parameters to it. Feel free to skim through this section as none of this code will matter in a short while.</div>
+</p><p>
 
 Let's fast forward a bit to <a href="day4.html">day 4</a> where we decided to pass our <code>ClientRect</code> as a pointer. Now, it's true that <code>RECT</code> is a structure, but it's a rather small one, and stack savings are minimal. But what's more, typically nowadays you want to avoid passing pointers to functions.
 
