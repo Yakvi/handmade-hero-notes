@@ -2,13 +2,34 @@
 <link rel="stylesheet" href="../css/style.css"/>
 
 **Day 11. The Basics of Platform API Design**
-_Video Length (includig Q&A): [XhXX](https://hero.handmade.network/episode/code/day009/)_
+_Video Length (including Q&A): [XhXX](https://hero.handmade.network/episode/code/day009/)_
 
 (insert intro.md.html here)
 
+Our program has come a long way since we first begun, yet we are only getting started. Tonight we have a very interesting and important topic to look at: cross-platform setup. 
 
+Of course, for now we don't have any platform-specific code. So far we've been working to have our _bootstrap_ code up and running. 
 
+# Portability and Cross Platform-ness 
 
+Up until now, we've only been doing everything in Windows, and specifically in one source file: `win32_handmade.cpp`. If you look in your `handmade\code` directory, you'll see that it only contains the file `win32_handmade.cpp`. It's a good idea to always clearly separate and mark the code relating to a specific platform (e.g. Windows, Linux, etc.), and that's what we did here: `win32_` is a prefix to signify that this code relates strictly to Windows platform. 
+
+On the other hand, the code with no prefix is generic and would compile anywhere. Whoever tried to port something would tell you that it's always a challenge just to find the code to port in first place. Here, we're already setting them up for success: anyone trying to port the code to another platform would only need to look for files marked as the origin platform (in our case, `win32_`). 
+
+## Win32 Platform Layer So Far 
+
+Of course, for now we don't have any platform-independent code, or even platform-specific code. We've been working to have our _bootstrap_ code up and running, and one thing should be clear: all the things we've done are not final! Platform layer should be a solid foundation full of plenty a useful feature, and what we have there so far is a bare minimum to get a few things necessary to
+move away from Win32 API: 
+
+* A graphics buffer that we can write directly into. 
+* A sound buffer that we can write directly into. 
+* Rudimentary input handling with the gamepad and keyboard. 
+* Timing: knowing how long things take. 
+
+One thing that we're still planning to do here is a simple file i/o system. We'll get to it a bit later. That said, later on, once we're happy and ready to get the game to a "shippable" state, that's when we'll revisit our Win32 layer to maximize our compatibility, performance, etc. We're not going to do this now. There're 10,000 things all requiring our attention now that we need to address first, before we can go back and do some thing X properly on Windows. We could however start drafting a big TO DO list, so that we remember what we need to do for our platform code... at least. Let's start typing it _at the very top_ of our `win32_handmade.cpp` file: 
+
+~~~~~~~ C++ add 
+~~~~~~~ 
 
 
 

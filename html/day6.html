@@ -16,7 +16,7 @@ counter-increment: h6;margin-right:10px}</style><style>.hljs{display:block;overf
 <span class="md"><p><title>Day 6. Gamepad and Keyboard Input</title><div class="title"> Day 6. Gamepad and Keyboard Input </div>
 
 <div class="afterTitles"></div>
-<em class="underscore">Video Length (includig Q&A): <a href="https://hero.handmade.network/episode/code/day006/">1h37</a></em>
+<em class="underscore">Video Length (including Q&A): <a href="https://hero.handmade.network/episode/code/day006/">1h37</a></em>
 
 </p><p>
 
@@ -76,7 +76,7 @@ The <a href="https://docs.microsoft.com/en-us/windows/win32/api/xinput/">XInput 
 
 </p><p>
 
-<div class="admonition ">XInput is not the only controller API provided by Windows. The aforementioned <a href="https://docs.microsoft.com/en-us/previous-versions/windows/desktop/ee416842(v=vs.85)">DirectInput</a> API is still cosidered one of the most popular, as well as the joystick-specific <a href="https://docs.microsoft.com/en-us/windows/win32/api/joystickapi/">Joystickapi</a> and the <a href="https://docs.microsoft.com/en-us/windows/win32/inputdev/raw-input">Raw Input</a> API.
+<div class="admonition ">XInput is not the only controller API provided by Windows. The aforementioned <a href="https://docs.microsoft.com/en-us/previous-versions/windows/desktop/ee416842(v=vs.85)">DirectInput</a> API is still considered one of the most popular, as well as the joystick-specific <a href="https://docs.microsoft.com/en-us/windows/win32/api/joystickapi/">Joystickapi</a> and the <a href="https://docs.microsoft.com/en-us/windows/win32/inputdev/raw-input">Raw Input</a> API.
 
 </p><p>
 
@@ -106,7 +106,7 @@ In order to get started with XInput, you simply <code>#include &lt;xinput.h&gt;<
 <p>
 
 
-We have a very simple game loop already; it's not doing much at the moment, more of a beginning of one, but a game loop nontheless. We go in, process our window messages, do our rendering and then display the rendering on the screen. 
+We have a very simple game loop already; it's not doing much at the moment, more of a beginning of one, but a game loop nonetheless. We go in, process our window messages, do our rendering and then display the rendering on the screen. 
 
 </p><p>
 
@@ -371,7 +371,7 @@ What we're going to discuss here is a concept of loading the Windows functions o
 
 </p><p>
 
-You might remember <a href="day1.html">day 1</a> when we discussed the role of the Import Libraries in the program execution. The Import Libraries serve to put specific markers into the code which, upon the program's loading, will be found by Windows and patched with the actual functions running in memory.
+You might remember <a href="../html/day1.html">day 1</a> when we discussed the role of the Import Libraries in the program execution. The Import Libraries serve to put specific markers into the code which, upon the program's loading, will be found by Windows and patched with the actual functions running in memory.
 
 </p><p>
 
@@ -503,7 +503,7 @@ However, if we try to run, we will get an Access Execution Violation while tryin
 
 </p><p>
 
-We've discussed Access Violations in the <a href="day5.html">previous chapter</a>. These happen when we try to read from a pointer addressing invalid (unaccessible) memory. Access Execution Violation is different in that not only it tries to read (or write) a page, but also to <em class="underscore">call the code</em> on it.
+We've discussed Access Violations in the <a href="../html/day5.html">previous chapter</a>. These happen when we try to read from a pointer addressing invalid (unaccessible) memory. Access Execution Violation is different in that not only it tries to read (or write) a page, but also to <em class="underscore">call the code</em> on it.
 
 </p><p>
 
@@ -535,7 +535,7 @@ If you use the form <code>#define NAME(param)</code> you can use one or more <co
 
 </p><p>
 
-We <a href="day3.html">talked about it</a> before but never really saw it in action. let's do this now! Let's create a <code>#define</code> which would create a new function with that return type, provided <code>name</code>, and specific signature each time we call that macro. Remember <em class="underscore">not</em> to put the semicolon at the end!
+We <a href="../html/day3.html">talked about it</a> before but never really saw it in action. let's do this now! Let's create a <code>#define</code> which would create a new function with that return type, provided <code>name</code>, and specific signature each time we call that macro. Remember <em class="underscore">not</em> to put the semicolon at the end!
 
 </p><p>
 
@@ -675,7 +675,7 @@ If the library is loaded and we get a valid handle, we'll pass it into the <code
 <p>
 
 
-If you try and compile now, you will notice that the compiler will throw errors at you. This is because <code>GetProcAddres</code> doesn't know which function signature it's loading. It can load anything, and returns what basically is a <code>void *</code>, a pointer to memory. So we need to <em class="underscore">cast</em> the return of this to the type that we actually want. Luckily we know exactly what type do we want, so it's pretty easy. 
+If you try and compile now, you will notice that the compiler will throw errors at you. This is because <code>GetProcAddress</code> doesn't know which function signature it's loading. It can load anything, and returns what basically is a <code>void *</code>, a pointer to memory. So we need to <em class="underscore">cast</em> the return of this to the type that we actually want. Luckily we know exactly what type do we want, so it's pretty easy. 
 
 </p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-function"><span class="hljs-keyword">internal</span> <span class="hljs-keyword">void</span></span>
 <span class="line"><span class="hljs-title">Win32LoadXInput</span>(<span class="hljs-params"></span>)</span></span>
@@ -832,7 +832,7 @@ Both of these will be useful for the purposes of translating our keyboard messag
 
 </p><p>
 
-<code>WParam</code> represents the <em class="underscore">Virtual-Key Code</em> of the key pressed. We can actually capture store it as <code>VKCode</code> for clarity. Testing if the key is one of the letters is super simple - every (standard latin) letter maps direclty to the correspondent capital letter in ASCII. 
+<code>WParam</code> represents the <em class="underscore">Virtual-Key Code</em> of the key pressed. We can actually capture store it as <code>VKCode</code> for clarity. Testing if the key is one of the letters is super simple - every (standard latin) letter maps directly to the correspondent capital letter in ASCII. 
 
 </p><p>
 
@@ -931,15 +931,15 @@ Now, if you noticed, each time you pressed a <code>W</code> on your keyboard, yo
 
 </p><p>
 
-If you look the documentation for <a href="https://docs.microsoft.com/en-us/windows/win32/inputdev/wm-keydown">WM_KEYDOWN</a>, you will see that the 32 bits of the <code>LParam</code> pack a lot of information. It's also a bit field. The first 16 bits are used to count how many repetions there were, the 24th bit is set if the &ldquo;Extended&rdquo; key has been hit (right-hand <code>ALT</code> or <code>CTRL</code>), etc. 
+If you look the documentation for <a href="https://docs.microsoft.com/en-us/windows/win32/inputdev/wm-keydown">WM_KEYDOWN</a>, you will see that the 32 bits of the <code>LParam</code> pack a lot of information. It's also a bit field. The first 16 bits are used to count how many repetitions there were, the 24th bit is set if the &ldquo;Extended&rdquo; key has been hit (right-hand <code>ALT</code> or <code>CTRL</code>), etc. 
 
 </p><p>
 
-At this moment, we want to check if the <em class="underscore">30th bit</em> is set. This bit corresponds exactly to the state of the button before the message fired: if set to 1, the key was down before the message was sent, if zero, the key was up. We might do the same thing we did earlier above for the gamepad buttons, and <code>&amp;</code> it against some value provided by Windows. Unfortunatley, Windows does not provide a define for the 30th bit of the keyboard <code>LParam</code>, so we need to do some bit shifting:
+At this moment, we want to check if the <em class="underscore">30th bit</em> is set. This bit corresponds exactly to the state of the button before the message fired: if set to 1, the key was down before the message was sent, if zero, the key was up. We might do the same thing we did earlier above for the gamepad buttons, and <code>&amp;</code> it against some value provided by Windows. Unfortunately, Windows does not provide a define for the 30th bit of the keyboard <code>LParam</code>, so we need to do some bit shifting:
 
 </p><p>
 
-We've seen bit shifting on <a href="day4.html">Day 4</a>, when we were shifting the red, green and blue bytes to their place inside the pixel. Our task is the following:
+We've seen bit shifting on <a href="../html/day4.html">Day 4</a>, when we were shifting the red, green and blue bytes to their place inside the pixel. Our task is the following:
 
 </p><p>
 
@@ -1047,30 +1047,28 @@ To add some actual functionality, let's try to close our window with the usual <
 
 Let's say we primarily test for <code>VK_F4</code> key and get <code>Alt</code> value from somewhere else and stored in <code>AltKeyWasDown</code>:
 
-</p><p>
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span> (IsDown != WasDown)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (VKCode == VK_SPACE)</span>
+<span class="line">    {</span>
+<span class="line">    }</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">bool</span> AltKeyWasDown = ???;</span>
+<span class="line">    <span class="hljs-keyword">if</span>((VKCode == VK_F4) &amp;&amp; AltKeyWasDown)</span>
+<span class="line">    {</span>
+<span class="line">        GlobalRunning = <span class="hljs-literal">false</span>;</span>
+<span class="line">    }</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;30:</b> <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> Skipping the duplicate messages.</div></center>
+<p>
 
-if (IsDown != WasDown)
-{
-    // ...
-    else if (VKCode == VK_SPACE)
-    {
-    }
 
-</p><p>
+How do we get the value of <code>Alt</code>? Well for a <a href="https://docs.microsoft.com/en-us/windows/win32/inputdev/wm-syskeydown">WM_SYSKEYDOWN</a> message, such as <code>F4</code>, it's actually much simpler since it sets the 29th bit of <code>LParam</code>, and we know how to extract that!
 
-    bool AltKeyWasDown = ???;
-    if((VKCode == VK_F4) && AltKeyWasDown)
-    {
-        GlobalRunning = false;
-    }
-}
-</p><pre class="listing tilde"><code><span class="line">[<span class="hljs-symbol">Listing [x</span>]: <span class="hljs-link">&lt;file&gt;[win32_handmade.cpp &gt; Win32MainWindowCallback]&lt;/file&gt; Skipping the duplicate messages.]</span></span>
-<span class="line"></span>
-<span class="line">How do we get the value of <span class="hljs-code">`Alt`</span>? Well for a [<span class="hljs-string">WM_SYSKEYDOWN</span>][<span class="hljs-symbol"></span>] message, such as <span class="hljs-code">`F4`</span>, it's actually much simpler since it sets the 29th bit of <span class="hljs-code">`LParam`</span>, and we know how to extract that!</span>
-<span class="line"></span><div class=" edit"><span class="line"><span class="hljs-keyword">bool</span> AltKeyWasDown = ((LParam &amp; (<span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">29</span>)) != <span class="hljs-number">0</span>);</span></div><span class="line"><span class="hljs-keyword">if</span>((VKCode == VK_F4) &amp;&amp; AltKeyWasDown)</span>
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line"><span class="hljs-keyword">bool</span> AltKeyWasDown = ((LParam &amp; (<span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">29</span>)) != <span class="hljs-number">0</span>);</span></div><span class="line"><span class="hljs-keyword">if</span>((VKCode == VK_F4) &amp;&amp; AltKeyWasDown)</span>
 <span class="line">{</span>
 <span class="line">    GlobalRunning = <span class="hljs-literal">false</span>;</span>
-<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;30:</b> <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> Skipping the duplicate messages.</div></center>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;31:</b> <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> Skipping the duplicate messages.</div></center>
 
 <a class="target" name="introduceb32typeinsteadofbool">&nbsp;</a><a class="target" name="keyboardinput/introduceb32typeinsteadofbool">&nbsp;</a><a class="target" name="toc3.4">&nbsp;</a><h2>Introduce <code>b32</code> type Instead of <code>bool</code></h2>
 <p>
@@ -1099,7 +1097,7 @@ So what we'd do typically is to simply <code>typedef</code> our own type <code>b
 <span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">int16_t</span> s16;</span>
 <span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">int32_t</span> s32;</span>
 <span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">int64_t</span> s64;</span>
-<span class="line"></span><div class=" add"><span class="line"><span class="hljs-keyword">typedef</span> s32 b32;</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;31:</b> <file>[win32_handmade.cpp]</file> Adding a new <code>b32</code> type.</div></center>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-keyword">typedef</span> s32 b32;</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;32:</b> <file>[win32_handmade.cpp]</file> Adding a new <code>b32</code> type.</div></center>
 <p>
 
 
@@ -1265,11 +1263,11 @@ To recap, you'll need to know what you want to be doing, to know what the CPU wi
 <p>
 
 
-Previous: <a href="day5.html">Day 5. Windows Graphics Review</a>
+Previous: <a href="../html/day5.html">Day 5. Windows Graphics Review</a>
 
 </p><p>
 
-Up Next: <a href="day7.html">Day 7. Initializing DirectSound</a>
+Up Next: <a href="../html/day7.html">Day 7. Initializing DirectSound</a>
 
 </p><p>
 

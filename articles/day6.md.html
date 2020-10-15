@@ -2,7 +2,7 @@
 <link rel="stylesheet" href="../css/style.css"/>
 
 **Day 6. Gamepad and Keyboard Input**
-_Video Length (includig Q&A): [1h37](https://hero.handmade.network/episode/code/day006/)_
+_Video Length (including Q&A): [1h37](https://hero.handmade.network/episode/code/day006/)_
 
 (insert intro.md.html here)
 
@@ -15,7 +15,7 @@ We want to focus specifically on the input from the _gamepad_ today. If you have
 The [XInput Game Controller API][XInput] is the controller API designed specifically for the Xbox controllers in mind. It evolved from the [DirectInput][] API and is still largely compatible with it (albeit with some major limitations). By now every game using a controller implements this API. 
 
 !!!
-    XInput is not the only controller API provided by Windows. The aforementioned [DirectInput][] API is still cosidered one of the most popular, as well as the joystick-specific [Joystickapi][] and the [Raw Input][] API.
+    XInput is not the only controller API provided by Windows. The aforementioned [DirectInput][] API is still considered one of the most popular, as well as the joystick-specific [Joystickapi][] and the [Raw Input][] API.
 
     As we've seen with the GDI blit, ultimately it comes down to picking the right tool for the job. In the world of tons of legacy API, you might not even pick the best one the first time around; luckily you can always come back and change!
 
@@ -37,7 +37,7 @@ In order to get started with XInput, you simply `#include <xinput.h>` into your 
 
 ## Expand Our Game Loop
 
-We have a very simple game loop already; it's not doing much at the moment, more of a beginning of one, but a game loop nontheless. We go in, process our window messages, do our rendering and then display the rendering on the screen. 
+We have a very simple game loop already; it's not doing much at the moment, more of a beginning of one, but a game loop nonetheless. We go in, process our window messages, do our rendering and then display the rendering on the screen. 
 
 XInput is a [polling][]-based API, which means that it reads the state of the controller when we actually ask for it (as opposed to actively notifying of state changes).
 
@@ -530,7 +530,7 @@ Win32LoadXInput()
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Loading functions to our variables, draft]
 
-If you try and compile now, you will notice that the compiler will throw errors at you. This is because `GetProcAddres` doesn't know which function signature it's loading. It can load anything, and returns what basically is a `void *`, a pointer to memory. So we need to _cast_ the return of this to the type that we actually want. Luckily we know exactly what type do we want, so it's pretty easy. 
+If you try and compile now, you will notice that the compiler will throw errors at you. This is because `GetProcAddress` doesn't know which function signature it's loading. It can load anything, and returns what basically is a `void *`, a pointer to memory. So we need to _cast_ the return of this to the type that we actually want. Luckily we know exactly what type do we want, so it's pretty easy. 
 
 ~~~~~~~ C++ 
 internal void
@@ -685,7 +685,7 @@ The names `WParam` and `LParam`, as it is usual on Windows, have historic reason
 
 Both of these will be useful for the purposes of translating our keyboard message, so let's look at the `WParam` first. 
 
-`WParam` represents the _Virtual-Key Code_ of the key pressed. We can actually capture store it as `VKCode` for clarity. Testing if the key is one of the letters is super simple - every (standard latin) letter maps direclty to the correspondent capital letter in ASCII. 
+`WParam` represents the _Virtual-Key Code_ of the key pressed. We can actually capture store it as `VKCode` for clarity. Testing if the key is one of the letters is super simple - every (standard latin) letter maps directly to the correspondent capital letter in ASCII. 
 
 Let's quickly throw down a test for `W, A, S` and `D`. We will simply check if the code corresponds to a character and, if so, output it to the console. Note that we must use single quotes (`'`) to get a single `char` value, while to `OutputDebugStringA` we pass a C string, in double quotes (`"`).
 
@@ -793,9 +793,9 @@ else if (VKCode == VK_SPACE)
 
 Now, if you noticed, each time you pressed a `W` on your keyboard, you got two `W` messages to your console. This is because Windows sends us (and we capture) both the messages when the key was pressed, and when a key was released. That's perfect for our purposes. However, we can also check if the button was already down before the message fired. For that, we can use our `LParam`.
 
-If you look the documentation for [WM_KEYDOWN][], you will see that the 32 bits of the `LParam` pack a lot of information. It's also a bit field. The first 16 bits are used to count how many repetions there were, the 24th bit is set if the "Extended" key has been hit (right-hand `ALT` or `CTRL`), etc. 
+If you look the documentation for [WM_KEYDOWN][], you will see that the 32 bits of the `LParam` pack a lot of information. It's also a bit field. The first 16 bits are used to count how many repetitions there were, the 24th bit is set if the "Extended" key has been hit (right-hand `ALT` or `CTRL`), etc. 
 
-At this moment, we want to check if the _30th bit_ is set. This bit corresponds exactly to the state of the button before the message fired: if set to 1, the key was down before the message was sent, if zero, the key was up. We might do the same thing we did earlier above for the gamepad buttons, and `&` it against some value provided by Windows. Unfortunatley, Windows does not provide a define for the 30th bit of the keyboard `LParam`, so we need to do some bit shifting:
+At this moment, we want to check if the _30th bit_ is set. This bit corresponds exactly to the state of the button before the message fired: if set to 1, the key was down before the message was sent, if zero, the key was up. We might do the same thing we did earlier above for the gamepad buttons, and `&` it against some value provided by Windows. Unfortunately, Windows does not provide a define for the 30th bit of the keyboard `LParam`, so we need to do some bit shifting:
 
 We've seen bit shifting on [Day 4][], when we were shifting the red, green and blue bytes to their place inside the pixel. Our task is the following:
 
@@ -896,6 +896,7 @@ To add some actual functionality, let's try to close our window with the usual `
 
 Let's say we primarily test for `VK_F4` key and get `Alt` value from somewhere else and stored in `AltKeyWasDown`:
 
+~~~~~~~ C++
 if (IsDown != WasDown)
 {
     // ...

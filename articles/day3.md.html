@@ -18,7 +18,7 @@ Today, we'll need to create something that would become our _buffer_ of pixels t
 In the previous chapter, we finished setting up our window and getting ready of outputting something into it. We have our _callback function_ and a _message loop_. The latter is a way to process the _message queue_, where Windows and other programs add messages. We need to _pull_ these messages, one at a time, Translate and Dispatch them, so that they are sent to our `MainWindowCallback` function. 
 
 !!! Note Why do we need a callback function at all? 
-    We have our message queue which we pull messages from, why can't we process them at the same place, without going through setting up an opacque message dispatch system? 
+    We have our message queue which we pull messages from, why can't we process them at the same place, without going through setting up an opaque message dispatch system? 
 
     While we're those who pull the messages from our queue, we aren't the only ones who can call our callback function. Windows reserves the right to call that callback function any time it wants to. It does not have to do it inside that `DispatchMessageA`, and we have to be ready for the operating system to call us back. 
 
@@ -48,7 +48,7 @@ for(;;)
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Our message loop.]
 
-So, at the moment, if we want to exit the application, we simply need to receive a quit messsage! Luckily there's a [handy function][PostQuitMessage] that does just that:
+So, at the moment, if we want to exit the application, we simply need to receive a quit message! Luckily there's a [handy function][PostQuitMessage] that does just that:
 
 ~~~~~~~ C++
 case WM_CLOSE:
@@ -321,7 +321,7 @@ We fixed the only problem with our application that we had: that we couldn't clo
 
 ## Create / Resize DIB Section 
 
-In practice, we are going to introduce the function called `ResizeDIBSection`. It will serve to reisze (or initialize if it doesn't exist) a <b>Device</b> <b>Indipendent</b> <b>Bitmap</b> (DIB). This is the name Windows gives to the bitmaps that we can display using GDI. We will call it every time we get a `WM_SIZE` message. 
+In practice, we are going to introduce the function called `ResizeDIBSection`. It will serve to resize (or initialize if it doesn't exist) a <b>Device</b> <b>Indipendent</b> <b>Bitmap</b> (DIB). This is the name Windows gives to the bitmaps that we can display using GDI. We will call it every time we get a `WM_SIZE` message. 
 
 ~~~~~~~ C++
 global_variable bool Running;
@@ -522,7 +522,7 @@ Win32UpdateWindow(HDC DeviceContext, int X, int Y, int Width, int Height)
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > Win32UpdateWindow]</file> Filling out `StretchDIBits`.]
 
-We don't really care about the return of this function. If it succeeds, it returns a non-zero value, so we could in theory capture it to ensure it went smoothly. We leave this as an excercise for the reader.
+We don't really care about the return of this function. If it succeeds, it returns a non-zero value, so we could in theory capture it to ensure it went smoothly. We leave this as an exercise for the reader.
 
 !!! Note RGB and Palette colors
     ![Figure [x]: Color cop.](../media/day3/colorcop.png)
@@ -628,60 +628,46 @@ We don't care about the remaining parameters, so let's just _clear to zero_ the 
 BITMAPINFO BitmapInfo = {};
 ~~~~~~~ C++ add
 BitmapInfo.bmiHeader.biSize = sizeof(BitmapInfo.bmiHeader);
-BitmapInfo.bmiHeader.biWidth = Width;
-BitmapInfo.bmiHeader.biHeight = Height;
-BitmapInfo.bmiHeader.biPlanes = 1;
-BitmapInfo.bmiHeader.biBitCount = 32;
-BitmapInfo.bmiHeader.biCompression = BI_RGB;
-~~~~~~~ C++
+      BitmapInfo.bmiHeader.biWidth = Width; BitmapInfo.bmiHeader.biHeight =
+      Height; BitmapInfo.bmiHeader.biPlanes = 1; BitmapInfo.bmiHeader.biBitCount
+      = 32; BitmapInfo.bmiHeader.biCompression = BI_RGB; ~~~~~~~ C++ void
+      *BitmapMemory; HBITMAP BitmapHandle = CreateDIBSection(DeviceContext, //
+      TODO ~~~~~~~ C++ edit &BitmapInfo, ~~~~~~~ C++ DIB_RGB_COLORS,
+      &BitmapMemory, 0, 0); ~~~~~~~ [Listing [x]:
+      <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Specifying
+      `BitmapInfo`.] ### Decide on Memory Allocation Now, let's remember that we
+      will allocate a **new** buffer each time that we resize our window. This
+      can potentially be very bad as our application could explode in memory
+      consumption very quickly if we aren't careful. We need to free the memory
+      that we're getting. Now here comes a dilemma: * We could try and free a
+      DIB section each time before we create a new DIB section, or * We can wait
+      and see if we can get a new DIB section first, and if we can't, try to
+      free an already existing one. Both scenarios are not ideal, but let's go
+      for the first one. We're running a risk to find no BitmapMemory to free to
+      begin with (and we can therefore crash), but it's still better than
+      potentially creating memory leaks. Plus we can "bulletproof" this later.
+      ~~~~~~~ C++ add // TODO(casey): Bulletproof this. // Maybe don't free
+      first, free after, then free first if that fails. // TODO(casey): Free our
+      DIBSection ~~~~~~~ C++ BITMAPINFO BitmapInfo = {}; // ... void
+      *BitmapMemory; HBITMAP BitmapHandle = CreateDIBSection(DeviceContext, //
+      TODO &BitmapInfo, DIB_RGB_COLORS, &BitmapMemory, 0, 0); ~~~~~~~ [Listing
+      [x]: <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Specifying
+      `BitmapInfo`.] We'll return to this in a minute.
 
-void *BitmapMemory;
-
-HBITMAP BitmapHandle = CreateDIBSection(DeviceContext,       // TODO
-~~~~~~~ C++ edit
-                                        &BitmapInfo,
-~~~~~~~ C++
-                                        DIB_RGB_COLORS,       
-                                        &BitmapMemory, 
-                                        0, 0);
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Specifying `BitmapInfo`.]
-
-### Decide on Memory Allocation
-
-Now, let's remember that we will allocate a **new** buffer each time that we resize our window. This can potentially be very bad as our application could explode in memory consumption very quickly if we aren't careful. We need to free the memory that we're getting. Now here comes a dilemma: 
-
-* We could try and free a DIB section each time before we create a new DIB section, or
-* We can wait and see if we can get a new DIB section first, and if we can't, try to free an already existing one. 
-
-Both scenarios are not ideal, but let's go for the first one. We're running a risk to find no BitmapMemory to free to begin with (and we can therefore crash), but it's still better than potentially creating memory leaks. Plus we can "bulletproof" this later.
-
-~~~~~~~ C++ add
-// TODO(casey): Bulletproof this.
-// Maybe don't free first, free after, then free first if that fails.
-
-// TODO(casey): Free our DIBSection
-~~~~~~~ C++
-BITMAPINFO BitmapInfo = {};
-// ...
-void *BitmapMemory;
-
-HBITMAP BitmapHandle = CreateDIBSection(DeviceContext,       // TODO
-                                        &BitmapInfo,
-                                        DIB_RGB_COLORS,       
-                                        &BitmapMemory, 
-                                        0, 0);
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Specifying `BitmapInfo`.]
-
-We'll return to this in a minute.
-
-<style class="fallback">
-  body {
-    visibility: hidden;
-    font-family: sans-serif;
-  }
-</style>
-<!-- Markdeep: https://casual-effects.com/markdeep/ -->
-<script>markdeepOptions = { tocStyle: 'long' }; window.alreadyProcessedMarkdeep || (document.body.style.visibility = 'visible');</script>
-<script src="../js/markdeep.min.js" charset="utf-8"></script>
+      <style class="fallback">
+        body {
+          visibility: hidden;
+          font-family: sans-serif;
+        }
+      </style>
+      <!-- Markdeep: https://casual-effects.com/markdeep/ -->
+      <script>
+        markdeepOptions = { tocStyle: 'long' };
+        window.alreadyProcessedMarkdeep ||
+          (document.body.style.visibility = 'visible');
+      </script>
+      <script
+        src="../js/markdeep.min.js"
+        charset="utf-8"
+      ></script> </windows.h></windows.h
+></windows.h>
