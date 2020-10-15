@@ -1053,13 +1053,11 @@ Let's say we primarily test for <code>VK_F4</code> key and get <code>Alt</code> 
 <span class="line">    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (VKCode == VK_SPACE)</span>
 <span class="line">    {</span>
 <span class="line">    }</span>
-<span class="line">    </span>
-<span class="line">    <span class="hljs-keyword">bool</span> AltKeyWasDown = ???;</span>
+<span class="line">    </span><div class=" add"><span class="line">    <span class="hljs-keyword">bool</span> AltKeyWasDown = ???;</span>
 <span class="line">    <span class="hljs-keyword">if</span>((VKCode == VK_F4) &amp;&amp; AltKeyWasDown)</span>
 <span class="line">    {</span>
 <span class="line">        GlobalRunning = <span class="hljs-literal">false</span>;</span>
-<span class="line">    }</span>
-<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;30:</b> <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> Skipping the duplicate messages.</div></center>
+<span class="line">    }</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;30:</b> <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> Skipping the duplicate messages.</div></center>
 <p>
 
 
