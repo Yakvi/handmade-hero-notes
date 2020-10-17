@@ -481,7 +481,7 @@ Win32LoadXInput()
 
 Inside `Win32LoadXInput`, We are going to essentially do the same steps that the Windows [loader][loaders] does. As the first step, it will mean calling [LoadLibraryA][], which loads the loads a `.dll`, the thing that Windows uses when it gives us functions. 
 
-`LoadLibrary` takes only a filename, which is the name of the `.dll` we're trying to load, and that's going to give us back a module, simply a handle to our code not dissimilar to what `HINSTANCE` was. This will be our `XInputLibrary`.
+`LoadLibrary` takes only a filename, which is the name of the `.dll` we're trying to load, and that's going to give us back a module: a handle to our code, not dissimilar to what `HINSTANCE` was. This will be our `XInputLibrary`.
 
 Assuming that we get back a valid library (that is, a non-zero handle), we're going to load functions out of it, `XInputGetState` and `XInputSetState`. The function that will take care of that is called [GetProcAddress][], and we'll see how it works in a second.
 

@@ -2,15 +2,15 @@
 <link rel="stylesheet" href="../css/style.css"/>
 
 **Day 11. The Basics of Platform API Design**
-_Video Length (including Q&A): [XhXX](https://hero.handmade.network/episode/code/day009/)_
+_Video Length (including Q&A): [1h42](https://hero.handmade.network/episode/code/day011/)_
 
 (insert intro.md.html here)
 
 Our program has come a long way since we first begun, yet we are only getting started. Tonight we have a very interesting and important topic to look at: cross-platform setup. 
 
-Of course, for now we don't have any platform-specific code. So far we've been working to have our _bootstrap_ code up and running. 
+Of course, for now we don't have any platform-specific code. So far we've been working to have our _bootstrap_ code up and running. So we'll need to talk about how the code can be architectured first, and maybe even start making some changes.
 
-# Portability and Cross Platform-ness 
+## Source Files Naming Convention
 
 Up until now, we've only been doing everything in Windows, and specifically in one source file: `win32_handmade.cpp`. If you look in your `handmade\code` directory, you'll see that it only contains the file `win32_handmade.cpp`. It's a good idea to always clearly separate and mark the code relating to a specific platform (e.g. Windows, Linux, etc.), and that's what we did here: `win32_` is a prefix to signify that this code relates strictly to Windows platform. 
 
@@ -26,10 +26,48 @@ move away from Win32 API:
 * Rudimentary input handling with the gamepad and keyboard. 
 * Timing: knowing how long things take. 
 
-One thing that we're still planning to do here is a simple file i/o system. We'll get to it a bit later. That said, later on, once we're happy and ready to get the game to a "shippable" state, that's when we'll revisit our Win32 layer to maximize our compatibility, performance, etc. We're not going to do this now. There're 10,000 things all requiring our attention now that we need to address first, before we can go back and do some thing X properly on Windows. We could however start drafting a big TO DO list, so that we remember what we need to do for our platform code... at least. Let's start typing it _at the very top_ of our `win32_handmade.cpp` file: 
+One thing that we're still planning to do here is a simple file i/o system. We'll get to it a bit later. That said, later on, once we're happy and ready to get the game to a "shippable" state, that's when we'll revisit our Win32 layer to maximize our compatibility, performance, etc. We're not going to do this now. There're many many things all requiring our attention now that we need to address first, before we can go back and do some thing X properly on Windows. We could however start drafting a big TO DO list, so that we remember what we need to do for our platform code... at least. Let's start typing it _at the very top_ of our `win32_handmade.cpp` file: 
 
 ~~~~~~~ C++ add 
+/* 
+  TODO(casey): THIS IS NOT A FINAL PLATFORM LAYER!!!
+
+  - Saved game locations
+  - Getting a handle to our own executable file
+  - Asset loading path
+  - Multithreading (launch a thread)
+  - Raw Input (support for multiple keyboards)
+  - Sleep/timeBeginPeriod
+  - ClipCursor() (for multi-monitor support)
+  - Fullscreen support
+  - QueryCancelAutoplay
+  - WM_SETCURSOR (control cursor visibility)
+  - WM_ACTIVATEAPP (for when we are not the active application)
+  - Blit speed improvements (BitBlt)
+  - Hardware acceleration (OpenGL or Direct3D or both??)
+  - GetKeyboardLayout (for French keyboards, international WASD support)
+*/
+
+#include ... 
 ~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Creating the master To-do list for our platform layer.]
+
+Hopefully, this give you an idea of how much stuff we really need to do if we want to put the things into the complete, shipping-ready, state. For a lot of these things we don't have to worry for a long time, since for what we are doing now is a very simple layer to be able to develop the game. Later on, some of these things, like multithreading we'll actually _need_ in our development, so we'll hook them in, but the others we'll do at the very end when we're getting ready to ship the game. 
+
+# About Code Architecture
+
+Code architecture considerations are critical if you want to make your program as easy to cross-platform as possible. We want the majority of the code, as much as possible, to be platform-independent. We thus can draw two goals:
+
+1. Getting our code running at all on another platform. We've written our code on Windows and then we want to port it to e.g. Raspberry Pi, or to Linux, or to whatever. Just the act of getting it working should be as easy as possible. 
+2. Getting our code to a point on those platforms where it's performant. This means, for instance, having a reasonable framerate for what one might expect to run on that platform. So in order for the game to be running at, say, 60 frames per second, there are many optimizations to be made on that platform to be able to enable this goal. There're many ways to achieve this but we want the easiest one.
+
+The ultimate goal is therefore "How easy can we make the life for someone who has to port your code to another platform?" Of course, in this case it's going to be future us who'll be doing all those ports, so really, we're going to work to make easier our lives. In a bigger company however you might have someone expert in platform X who would be doing port to that platform, so you really want to keep that person in mind to make their life and their job easier. This applies not only to the initial implementation of the port, but also to its maintenance: if you do some changes to your source, will that require them to completely rewrite their port? What's it going to mean? 
+
+There're many things to consider here, to keep in mind and to think about. We are going to discuss the ways of both making it easier and harder today. Hopefully, by the end of this lesson you will see that certain decisions can cause problems in the long run, and why you shouldn't make those decisions and opt for things that, in the long term, will make your life a little bit easier. 
+
+## Using Preprocessor Directives: The Olden Ways
+
+
 
 
 

@@ -58,7 +58,7 @@ If our game is running at 60 frames per second, we should be producing 800 sampl
 
 But not too much! Otherwise the sound _lag_ would be too noticeable to ignore. 
 
-In conclusion, our objective is always be a little bit ahead of the hardware cursor. 
+In conclusion, our objective is to always be a little bit ahead of the hardware cursor. 
 
 Why two seconds buffer? If we're playing the game at 60 frames per second, a 16 ms buffer should be enough! We're doing it to prevent possible "frame drops". There are two possible approaches here: 
 
@@ -455,7 +455,7 @@ The code for the secondary buffer remains largely the same as for the primary bu
 
 * `dwFlags`: since we don't really need anything, we'll just leave it at `0`.
 * `dwBufferBytes`: `BufferSize` that we'll be getting from whoever calls this function.
-* `lpwfxFormat`: We don't need to set format of our wave again, we can use the one we have already, so simply pass pass the address to `WaveFormat` here.
+* `lpwfxFormat`: We don't need to set format of our wave again, we can use the one we have already, so simply pass the address to `WaveFormat` here.
 
 ~~~~~~~ C++
 if (SUCCEEDED(DirectSound->SetCooperativeLevel(Window, DSSCL_PRIORITY)))

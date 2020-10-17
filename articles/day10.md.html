@@ -461,7 +461,7 @@ typedef union _LARGE_INTEGER {
 [<file>[MSDN]</file> LARGE_INTEGER union.]
 
 `LARGE_INTEGER` has 3 components:
-* `struct`: "anonimous" struct, composed of 2x 32-bit members.
+* `struct`: "anonymous" struct, composed of 2x 32-bit members.
 * `struct u`: composed of 2x 32-bit members.
 * `LONGLONG QuadPart`: a 64-bit type.
 
@@ -483,7 +483,7 @@ We really will touch on intrinsics later, but since we started talking about the
 
 Intrinsics are something that look like a function call. For instance, `__rdtsc` looks like a function, behaves like a function... but isn't _really_ a function. 
 
-In reality, it's a hint to the compiler that you want to do a specific assembly-language instruction. After seeing an intrinsic command, the compiler will be able to directly inline the necessary instructions without thinking about referincing some other piece of code. 
+In reality, it's a hint to the compiler that you want to do a specific assembly-language instruction. After seeing an intrinsic command, the compiler will be able to directly inline the necessary instructions without thinking about referencing some other piece of code. 
 
 It's easy to see this by analyzing the disassembly at the place of the call:
 

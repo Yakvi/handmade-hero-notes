@@ -129,7 +129,7 @@ But not too much! Otherwise the sound <em class="underscore">lag</em> would be t
 
 </p><p>
 
-In conclusion, our objective is always be a little bit ahead of the hardware cursor. 
+In conclusion, our objective is to always be a little bit ahead of the hardware cursor. 
 
 </p><p>
 
@@ -611,7 +611,7 @@ The code for the secondary buffer remains largely the same as for the primary bu
 </li>
 <li class="asterisk"><code>dwBufferBytes</code>: <code>BufferSize</code> that we'll be getting from whoever calls this function.
 </li>
-<li class="asterisk"><code>lpwfxFormat</code>: We don't need to set format of our wave again, we can use the one we have already, so simply pass pass the address to <code>WaveFormat</code> here.</li></ul>
+<li class="asterisk"><code>lpwfxFormat</code>: We don't need to set format of our wave again, we can use the one we have already, so simply pass the address to <code>WaveFormat</code> here.</li></ul>
 
 </p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span> (SUCCEEDED(DirectSound-&gt;SetCooperativeLevel(Window, DSSCL_PRIORITY)))</span>
 <span class="line">{</span>
