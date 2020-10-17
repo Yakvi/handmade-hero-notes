@@ -109,30 +109,6 @@ window.screenLeft = 1912
                     window.top.window.outerWidth = 1936
 
                 } catch (e) {}
-            </script><script>Object.defineProperty(screen, "availTop", { value: 0 });
-Object.defineProperty(screen, "availLeft", { value: 0 });
-Object.defineProperty(screen, "availWidth", { value: 1920 });
-Object.defineProperty(screen, "availHeight", { value: 1080 });
-Object.defineProperty(screen, "colorDepth", { value: 24 });
-Object.defineProperty(screen, "pixelDepth", { value: 24 });
-Object.defineProperty(navigator, "hardwareConcurrency", { value: 8 });
-Object.defineProperty(navigator, "userAgent", { value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:78.0) Gecko/20100101 Firefox/78.0" });
-Object.defineProperty(navigator, "appVersion", { value: "5.0 (Windows)" });
-Object.defineProperty(navigator, "doNotTrack", { value: "unspecified" });
-window.screenY = 1072
-window.screenTop = 1072
-
-                try {
-                    window.top.window.outerHeight = 1066
-
-                } catch (e) {}
-            window.screenX = 1912
-window.screenLeft = 1912
-
-                try {
-                    window.top.window.outerWidth = 1936
-
-                } catch (e) {}
             </script><span class="md"><p><title>Day 11. The Basics of Platform API Design</title><div class="title"> Day 11. The Basics of Platform API Design </div>
 
 <div class="afterTitles"></div>
@@ -171,6 +147,7 @@ Of course, for now we don't have any platform-specific code. So far we've been w
 &nbsp;&nbsp;<a href="#programmingnotions/headerfiles" class="level2"><span class="tocNumber">5.1&nbsp; </span>Header Files</a><br/>
 <a href="#sideconsiderations" class="level1"><span class="tocNumber">6&nbsp; </span>Side Considerations</a><br/>
 &nbsp;&nbsp;<a href="#sideconsiderations/unitybuilds" class="level2"><span class="tocNumber">6.1&nbsp; </span>Unity Builds</a><br/>
+&nbsp;&nbsp;<a href="#sideconsiderations/cleanupwin32_handmade.cpp&ldquo;header&rdquo;" class="level2"><span class="tocNumber">6.2&nbsp; </span>Clean Up <code>win32_handmade.cpp</code> &ldquo;Header&rdquo;</a><br/>
 <a href="#navigation" class="level1"><span class="tocNumber">7&nbsp; </span>Navigation</a><br/>
 </p></div><a class="target" name="sourcefilesnamingconvention">&nbsp;</a><a class="target" name="/sourcefilesnamingconvention">&nbsp;</a><a class="target" name="toc0.1">&nbsp;</a><h2>Source Files Naming Convention</h2>
 <p>
@@ -1041,6 +1018,48 @@ So this mostly the end of it, this is how we're going to do our builds pretty mu
 <em class="underscore">(Continue to section  <a href="#toc2">2</a>)</em>
 
 </p>
+<a class="target" name="cleanupwin32_handmade.cpp%22header%22">&nbsp;</a><a class="target" name="sideconsiderations/cleanupwin32_handmade.cpp&ldquo;header&rdquo;">&nbsp;</a><a class="target" name="toc6.2">&nbsp;</a><h2>Clean Up <code>win32_handmade.cpp</code> &ldquo;Header&rdquo;</h2>
+<p>
+
+
+One thing that you might want to do is to clean up the <code>win32_handmade.cpp</code> header. Simply shuffle things around, so that <code>#include &lt;windows.h&gt;</code> is at the very bottom. It's a sensible thing to do if you don't trust yourself, or if you do, if you don't trust Windows code. It's not unreasonable: for instance, Windows might overwrite your macros with some of their own and you'll never know why your program doesn't work.
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;stdint.h&gt;</span></span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">int8_t</span> s8;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">int16_t</span> s16;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">int32_t</span> s32;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">int64_t</span> s64;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> s32 b32;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">uint8_t</span> u8;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">uint16_t</span> u16;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">uint32_t</span> u32;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">uint64_t</span> u64;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">float</span> f32;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">double</span> f64;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> internal static</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> local_persist static</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> global_variable static</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Pi32 3.14159265359f</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">"handmade.cpp"</span></span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;windows.h&gt;</span></span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;stdio.h&gt;</span></span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;xinput.h&gt;</span></span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;dsound.h&gt;</span></span></span>
+<span class="line"><span class="hljs-comment">// TODO(casey): Implement sine ourselves</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;math.h&gt;</span></span></span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;15:</b> <file>[win32_handmade.cpp]</file> Including the platform headers at the end.</div></center>
+<p>
+
+
+Again, we don't want our game to know anything about Windows, so including it before <code>windows.h</code> only makes sense.
+
+</p>
 <a class="target" name="navigation">&nbsp;</a><a class="target" name="navigation">&nbsp;</a><a class="target" name="toc7">&nbsp;</a><h1>Navigation</h1>
 <p>
 
@@ -1087,4 +1106,4 @@ Previous: <a href="../html/day10.html">Day 10. QueryPerformanceCounter and RDTSC
 </p><p>
 
 <script>markdeepOptions = { tocStyle: 'long' }; window.alreadyProcessedMarkdeep || (document.body.style.visibility = 'visible');</script>
-</file></windows.h></file></p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.10&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div>
+</math.h></dsound.h></xinput.h></stdio.h></windows.h></stdint.h></windows.h></file></windows.h></file></p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.10&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div>

@@ -691,6 +691,46 @@ So this mostly the end of it, this is how we're going to do our builds pretty mu
 
 _(Continue to section [Platform Usage Philosophies])_
 
+## Clean Up `win32_handmade.cpp` "Header"
+
+One thing that you might want to do is to clean up the `win32_handmade.cpp` header. Simply shuffle things around, so that `#include <windows.h>` is at the very bottom. It's a sensible thing to do if you don't trust yourself, or if you do, if you don't trust Windows code. It's not unreasonable: for instance, Windows might overwrite your macros with some of their own and you'll never know why your program doesn't work.
+
+~~~~~~~ C++ edit
+#include <stdint.h>
+
+typedef int8_t s8;
+typedef int16_t s16;
+typedef int32_t s32;
+typedef int64_t s64;
+typedef s32 b32;
+
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+
+typedef float f32;
+typedef double f64;
+
+#define internal static
+#define local_persist static
+#define global_variable static
+
+#define Pi32 3.14159265359f
+
+#include "handmade.cpp"
+
+#include <windows.h>
+#include <stdio.h>
+#include <xinput.h>
+#include <dsound.h>
+// TODO(casey): Implement sine ourselves
+#include <math.h>
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Including the platform headers at the end.]
+
+Again, we don't want our game to know anything about Windows, so including it before `windows.h` only makes sense.
+
 # Navigation
 
 Previous: [Day 10. QueryPerformanceCounter and RDTSC][day 10]
