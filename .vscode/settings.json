@@ -1,6 +1,19 @@
 {
     "cSpell.words": [
         "ACTIVATEAPP",
-        "SETCURSOR"
+        "DHANDMADE",
+        "HINSTANCE",
+        "HREDRAW",
+        "HWND",
+        "LPSTR",
+        "OVERLAPPEDWINDOW",
+        "OWNDC",
+        "SETCURSOR",
+        "USEDEFAULT",
+        "VREDRAW",
+        "WNDCLASS",
+        "lpfn",
+        "lpsz",
+        "platformness"
     ]
 }

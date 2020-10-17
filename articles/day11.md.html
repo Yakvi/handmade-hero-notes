@@ -48,6 +48,7 @@ One thing that we're still planning to do here is a simple file i/o system. We'l
   - GetKeyboardLayout (for French keyboards, international WASD support)
 */
 
+~~~~~~~ C++
 #include ... 
 ~~~~~~~ 
 [Listing [x]: <file>[win32_handmade.cpp]</file> Creating the master To-do list for our platform layer.]
@@ -65,21 +66,630 @@ The ultimate goal is therefore "How easy can we make the life for someone who ha
 
 There're many things to consider here, to keep in mind and to think about. We are going to discuss the ways of both making it easier and harder today. Hopefully, by the end of this lesson you will see that certain decisions can cause problems in the long run, and why you shouldn't make those decisions and opt for things that, in the long term, will make your life a little bit easier. 
 
-## Using Preprocessor Directives: The Olden Ways
+## Cross-Platform via Preprocessor Directives
+
+Let's start from the past. In general, the most prevalent way of doing cross-platformness in the past used to be using the preprocessor directives. 
+
+Often you used to have a file, which would be doing some work not dissimilar from what our `win32_handmade.cpp` file would be doing, until the program would hit some code for, let's say opening a window. 
+
+If you look at our code for opening the window, you will see that there was some work that we had to do to make it happen: 
+
+~~~~~~~ C++
+int CALLBACK
+WinMain(HINSTANCE Instance,
+        HINSTANCE PrevInstance,
+        LPSTR     CommandLine,
+        int       ShowCode)
+{
+    LARGE_INTEGER PerfCountFrequencyResult;
+    QueryPerformanceFrequency(&PerfCountFrequencyResult);
+    s64 PerfCountFrequency = PerfCountFrequencyResult.QuadPart;
+    
+    Win32LoadXInput();
+    
+    Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
+    
+    WNDCLASS WindowClass = {0};
+    WindowClass.style = ... ;
+    
+    if (RegisterClass(&WindowClass))
+    {
+        HWND Window = CreateWindowEx(...);
+        if (Window)
+        {
+          // We now have our window, do work in it
+          // ...
+        }
+    }
+}
+~~~~~~~ 
+[Work to open the window.]
 
 
+We've seen a few preprocessor directives already: those begin with keywords like `#include`, `#define` and ask compiler (actually its part called "preprocessor") to do some work _before_ the code interpreting (actual compiling) starts. 
 
+*************************************************
+*                                               *
+*               .-------------.                 *
+*               | Source code |                 *
+*               | (.cpp file) |                 *
+*               '------+------'  .------------. *
+*                      | <------+ Preprocessor |*
+*                      v         '------------' *
+*               .-------------.                 *
+*               | Preprocessed|                 *
+*               | Source code |                 *
+*               '------+------'  .------------. *
+*                      | <------+   Compiler   |*
+*                      v         '------------' *
+*               .-------------.                 *
+*               | Object code |                 *
+*               | (.obj file) |                 *
+* .---------.   '------+------'  .------------. *
+*| External  +-------> | <------+    Linker    |*
+*| libraries |         v         '------------' *
+* '---------'   .-------------.                 *
+*               | Executable  |                 *
+*               | (.exe file) |                 *
+*               '-------------'                 *
+*                                               *
+*************************************************
+[Figure [x]: Compilation process.]
 
+Among other things, preprocessor allows to use `#if`, `#elif` ("else if"), `#else` and `#endif` statements which would, depending on if some value is zero or not, include or not specific pieces of code into the compilation.
 
+This allows you having something like `#if _WIN32` to execute some Windows-specific code:
+
+~~~~~~~ C++
+#if _WIN32
+// Stuff in here happens when _WIN32 is not zero
+#else
+// Stuff in here happens when that thing is zero
+#endif
+~~~~~~~
+[Example.]
+
+This thing `_WIN32` would be the "macro variable" controlling certain parts of the compilation, allowing the programmer to knock out certain parts of the compilation and bring others in on certain platforms.
+
+People would `#define` these macro variables, in our case say `HANDMADE_WIN32`, to transform the code in something like this: 
+
+~~~~~~~ C++
+#if HANDMADE_WIN32
+int CALLBACK
+WinMain(HINSTANCE Instance,
+        HINSTANCE PrevInstance,
+        LPSTR     CommandLine,
+        int       ShowCode)
+#elif HANDMADE_LINUX 
+// WinMain doesn't work on Linux
+int main(int argc, int** argv)
+#elif HANDMADE_MACOSX
+// ...  
+#endif 
+{
+    //...
+}
+~~~~~~~ 
+[Work to open the window.]
+
+Thus you would slot in everything platform-specific in these directives. If you would then compile the program on Windows, you would then go into your build file and define something called a "compile-time define". Compiler allows you to put argument `-D`, after which you would "inject" the define for that specific platform:
+
+~~~~~~~ batch
+@echo off
+
+if not exist build (mkdir build)
+pushd build
+
+~~~~~~~ batch edit
+cl -DHANDMADE_WIN32=1 -FC -Zi ..\code\win32_handmade.cpp user32.lib gdi32.lib
+~~~~~~~ batch
+
+popd
+~~~~~~~ 
+[Listing [x]: <file>[build.bat]</file> Injecting `HANDMADE_WIN32` define.]
+
+If you compile it this way, you'll notice that it will compile fine. But if you for example replace `DHANDMADE_WIN32=1` with, let's say, `DHANDMADE_LINUX=1` you will start getting all sorts of errors, and the code won't work anymore. At that point you'd need to `#if` _all_ the Windows code, put `#else`s around it, so that the correct calls for Linux can be made, and so on.
+
+This way of structuring the code presents a set of problems. Sure enough, it defeats the primary objective we set above: it doesn't make the job easy for whoever needs to do the port. They would need to go through all the code looking for all the places where we use Win32 code and `#if` that code around like we showed. But then there're other issues:
+1. You can't see where the Win32 code is. You need to learn how the whole codebase operates before you can even start thinking about how to port it. 
+2. The code structured in such a way becomes very difficult to read very quickly. You would need to resort to the special editors features which would automatically collapse unrelated `#ifs` for you. 
+
+Imagine that it's not only Windows and Linux, it's every platform to which our program will be ported to, and you have `#if`s over `#if`s for any single function call. Pretty soon you will _require_ a development environment that can understand which `#if`s you have set and show you only the code related to that, otherwise you won't even be able to read that code at all! Such a functionality is hard to find in editors and, if it's there, it might be pretty _janky_ to use. 
+
+The things above are inconvenient, time-consuming and error-prone, sure, but they pale in comparison with the final consideration. Unless you absolutely have to, you don't want to write the code this way because: 
+3. It dictates that the control flow of the program must be the same for all platforms. 
+
+What does it mean? If you do cross-platform code this way, it means that the _control flow_ of your program is shared across all the platforms you will ever ship on. Specifically, you go and `#if` specific lines of code, then you end up with the same set of functions, `#if` statements, `while` loops, etc. However, because each platform has its own platform quirks, you will inevitably end up with a set of "escape mechanisms" for each platform, enabling them to go and do the thing that they wanted to do at the time that they needed to do it. 
+
+Furthermore, such an approach will become even more problematic when you start speaking about the platforms which have _conceptually different approaches_ to how they expect initialization and platform services setup. 
+
+Let's say you want to set up a background asset streaming system in your game. You want to load bitmaps out from your resource file, and do it while the game is running, without stopping or pausing the game to load. On one platform this would be maybe best accomplished with a separate thread. On another, with overlapped I/O. On another again, maybe with the memory mapped files. Who knows? Each one of these things may dictate a very different structure for how the game starts up, how it continues running, how it handles things like messages coming from the operating system, etc. 
+
+For these reasons we don't recommend writing code this way and, in general, this is no longer the way the cross-platform code is built in the industry. So we'd like you to remember that structuring your code in such a manner is _very_ inefficient. 
+
+There is a very limited space however where this trick comes in handy, and we'll see to it later. So let's revert all the changes back to where we started from (if you made any changes to your code so far) but leave the `DHANDMADE_WIN32=1` in the `build.bat` file. We won't use it in the sense described above, but there might be other occasions where this define might become useful. 
+
+## Cross-Platform via Separate Platform Files
+
+So this is the way we don't want to pursue. So which is the way? Well, nowadays there are two prevalent schools of thought that we'll see in the next section, and both revolve about the idea of having separate platform code in the separate source code files. 
+
+We have our `win32_handmade.cpp` file. We created it with the assumption that, at some point, someone will come in and create a file called `linux_handmade.cpp`. `macosx_handmade.cpp`. And so on, and so forth. 
+
+!!! 
+    That someone is probably going be us at some point, but it's really not important. In a larger project it would be the platform expert for Linux or what have you.
+
+This way, all of the Windows code will go into those `win32_` files (it doesn't need to be necessarily one file), and all the Linux code will go into `linux_` files.
+
+How will it work from here on? We will create a single shared _header_ file called `handmade.h`. Let's go ahead and create it now inside our `code` folder: 
+
+~~~~~~~ C++ add
+#if !defined(HANDMADE_H)
+
+// Contents of the header file
+
+#define HANDMADE_H
+#endif
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> Creating our first header file.]
+
+!!! 
+    To learn more about header files and what we does the code we inserted means, head over to subsection [Header Files]. 
+
+This single shared header file will include the operations that the platform layer should be able to perform on behalf of the cross-platform code. We will basically create our own platform instruction API in this header file, and all of our platform non-specific code will call into it this way.
+
+Let's say, for example, we have something that we want to load the file with. In `handmade.h` we'll have something like this:
+
+~~~~~~~ C++
+#if !defined(HANDMADE_H)
+
+~~~~~~~ C++ add
+void *PlatformLoadFile(char* Filename);// Not the actual API! Just an example
+~~~~~~~ C++
+
+#define HANDMADE_H
+#endif
+~~~~~~~
+[<file>[handmade.h]</file>]
+
+(`Platform` at the beginning marks for us that this is a platform-specific code, so we know that we ask the platform for something.)
+
+There will be only a single declaration inside here. What happens next is that in our _platform_ code (like `win32_handmade.cpp` or `linux_handmade.cpp`) we define these functions. Thus, in `win32_handmade.cpp` you'd have the following code: 
+
+~~~~~~~ C++
+void *
+PlatformLoadFile(char* Filename)
+{
+    // NOTE(casey): Implements the Win32 file loading
+    // ... 
+    return (0);
+}
+~~~~~~~
+[<file>[win32_handmade.cpp]</file>]
+
+while in `linux_handmade.cpp` you'd have code like this: 
+
+~~~~~~~ C++
+void *
+PlatformLoadFile(char* Filename)
+{
+    // NOTE(casey): Implements the Linux file loading
+    // ... 
+    return (0);
+}
+~~~~~~~
+[<file>[linux_handmade.cpp]</file>]
+
+So, in your `handmade.cpp` file (go ahead and create the file inside your `code` directory right now), you wouldn't want any code relying on Windows platform (or any platform for that matter). After including your header file, you'd simply call the file and pass it the file name:
+
+~~~~~~~ C++ add
+#include "handmade.h"
+
+void 
+MainLoop()
+{
+    void *FileContents = PlatformLoadFile("assets.bmp");
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Introducing `handmade.cpp`]
+
+You'll ask to load the file, you'll capture the contents in the `void *`, and you cannot care less what did the platform do to make it happen. 
+
+At the same time, we will `#include` this new `handmade.cpp` inside our platform file, and call `MainLoop` from some point in our program execution: 
+
+~~~~~~~ C++
+#define internal static
+#define local_persist static
+#define global_variable static
+
+#define Pi32 3.14159265359f
+~~~~~~~ C++ add
+#include "handmade.cpp"
+~~~~~~~ C++
+//...
+int CALLBACK
+WinMain(...)
+{
+    // ... 
+    while (GlobalRunning)
+    {
+        // ...
+        win32_window_dimension Dimension = Win32GetWindowDimension(Window);
+        Win32DisplayBufferInWindow(...);
+               
+~~~~~~~ C++ add
+        MainLoop();
+~~~~~~~ C++
+        // ... 
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Calling platform-independent code.]
+
+!!! Note `#include "file"` vs. `#include <file>`
+    You might have noticed that we `#include <windows.h>` but we `#include "handmade.cpp"` This is because, depending on the type of quotation marks used, the compiler will start searching for the file to include in different places. `#include "file"` will be searched for starting from the same folder as the source file that's being included, while `#include <file>` will start search from the folders in the system's include path. 
+
+    You might also notice that we decided to `#include` a `.cpp` file instead of building it separately. This is because, as our building philosophy, we use the so-called Unity Builds, i.e. building everything in one go. You can read more in the subsection [Unity Builds].
+
+This is the structure that we're going to use from now on:
+
+1. We'll be starting off in the platform-specific layer controlling the initialization process. For Win32, we'll continue doing all the Windows-startup stuff we were doing already (and more to come).
+2. When the platform is ready to do the _game_ work, we call in the platform-independent layer of our code. In here, all the rest of our code will live. 
+3. Whenever the game code gets to the point where it needs to do something that only the platform knows how to do (e.g., load a file, speak with the network, display graphics, etc.), it's going to call out to the platform layer. This will go right back in to the platform layer. The platform layer executes whatever it needs to execute to satisfy the request and returns the result back to the game.
+
+# Platform Usage Philosophies
+
+So far, we've touched on the common notions of separating different platforms in different files. Nowadays, it's generally agreed upon that this is a good way of structuring cross-platform code, preferable to `#if`s everywhere.
+
+Now, there're two different philosophical camps for how the platform code should be written, and there're heated debates on which one is better. We generally prefer the second idea, many people like the first. If you don't have an opinion yet, we recommend trying out and see which suits your personal taste.
+
+## Virtualize Platform to the Game
+
+One prevalent line of thought is that of virtualizing the platform to the game. This means that, instead of thinking of the game as an isolated entity that the platform code is working with, you end up with abstracting the specific operation of the platform to "virtual" set of functions that the game can call as if it was running an ideal operating system. 
+
+This would look like in the following manner: 
+
+* After you enter your `WinMain` (or its analog on another system) you call something called `GameMain();` (inside your `handmade.cpp` you'd have your `GameMain` function). Inside `GameMain`, you'll start calling the platform layer to do various things: 
+    * `PlatformOpenWindow`: would open you a window of a specific size and get back a handle to it. You would store the result in a generic `struct` called `platform_window` which every platform would be responsible for defining. 
+    * `PlatformOpenSoundDevice`: to get a `platform_sound_device` struct of some sort.
+* At the end you would have `GameShutdown` which would do the same things like:
+    * `PlatformCloseWindow`
+    * `PlatformCloseSoundDevice` etc.
+
+We're making all of these names up on the fly but it's basically it. You will go through and essentially tell the operating system what it needs to do. However, instead of calling the actual operating system and asking all these things, you'd go through your "virtual" operating system that you've made up and defined in some `.h` file, which would be responsible for doing the actual work on actual windows, sound devices, etc. on the real operating systems. 
+
+It's quite straightforward to do, and you probably won't run into a lot of problems if you try to do it yourself. It's not necessarily a bad approach, either, give it a try and see if you like it. 
+
+!!! Warning
+    You should always try and see for yourself all the various things you do in your programs. Only because someone said "don't do it", it doesn't necessarily mean you shouldn't. 
+
+### Example Implementation
+
+In case you want to pick this particular method, here's how you do it: 
+
+1. Inside `handmade.h`, only make the declarations of the functions you're interested in: 
+
+~~~~~~~ C++
+#if !defined(HANDMADE_H)
+
+~~~~~~~ C++ add
+struct platform_window;
+platform_window *PlatformOpenWindow(char *Title);
+void PlatformCloseWindow(platform_window * Window);
+~~~~~~~ C++
+
+#define HANDMADE_H
+#endif
+~~~~~~~
+[<file>[handmade.h]</file>]
+
+2. inside the platform-specific file, you'd define the actual struct and functions.
+
+~~~~~~~ C++
+// somewhere inside the file
+~~~~~~~ C++ add
+struct platform_window
+{
+    HWND Handle;
+};
+
+platform_window *PlatformOpenWindow(char *Title)
+{
+    platform_window Result = allocate the memory...;
+    Result->Handle = Result of create window...;
+    return(Result);
+}
+
+void PlatformCloseWindow(platform_window * Window)
+{
+    if(Window)
+    {
+        CloseWindow(Window->Handle);
+    }
+}
+~~~~~~~
+[<file>[win32_handmade.cpp]</file>]
+
+You need to remember that Win32 code will only be compile on Windows, while Linux code will only be compiled on Linux. That means we can actually have two different definitions for `platform_window` struct that don't have to be the same. So we have `HWND` inside our Win32 code, but we'll have `Window` on X (the most common window-handling platform on Linux). 
+
+The bottom line is that you create the API with high level of control on the init code, while maintaining clean separation from the actual nitty-gritty of that code. 
+
+!!! 
+    The code above was made purely for demo purposes. Remember to clean it up if you were following along!
+
+## Game a Service for the System
+
+There are a few reasons why you wouldn't want to use the approach above. For instance, such an interface is more expressive than necessary. 
+
+An operating system is designed for all sorts of applications: 
+* Applications that want more than one window.
+* Applications that don't want a window.
+* Applications that constantly open and close windows. 
+* Applications that show up in the start menu or in the taskbar. 
+* Applications that use Component Object Model. 
+* Applications that embed themselves in other applications, use object linking embedding, register themselves in the registry, integrate into the shell.....
+
+An operating system supports a _huge_ amount of flexibility and one could argue that it's _fine_, that's probably the operating system's job. But when it comes to a game, we have to ask ourselves: do we need such a flexibility? Is our game going to open multiple windows or do all these crazy things... of its own volition? Does our game need to know what a window even is? Does it care what a window is, at all? Does the game need to know about the sound devices, or it only should give us a stream of sounds? 
+
+The argument we're making here is that you don't usually need to have all this complexity unless you have to. Rather, you'd want to define things the other way around: instead of the platform layer being a series of services provided to the game (that the game constructs a running application out of), we can think of the game as services for the operating system level to produce the graphics and sound necessary to play the game. 
+
+If you look at the platform code that we've already written, there isn't much reason to abstract it and make it callable from the game level. In fact, there might be reason not to do that. Why? When we start tighten the platform code and prepare it for release, there might be a lot of very complicated logic that we need to compute in order to most carefully adhere to the standards of that platform. There may be tons of device messages like the platform telling us to move to a different monitor or something. Even further, every platform is different, and the code and edge cases you have to account for are different. So what we'd rather do is to leave all this entanglement to the platform layer, and what the game does is simply responding to a few very simple requests like: 
+
+* Here is the bitmap you want to draw to.
+* Here is the sound buffer you want to play to. 
+* Here is the user's input. 
+
+On the back channel, the game will request two very simple things such as: 
+
+* Send this out to the network for me.
+* Read or write from a file now.
+
+Not a whole lot there, so you can drastically simplify the degree by which the game inherits the complexity of the operating system, by not forcing to pass all the logic to the game and round-trip the logical operations through it. 
+
+# Implement the Game as Service System
+
+In order to implement this latter approach, we simply need to isolate a few specific locations of the code where the platform layer wants the services of the game, and other places in the game where the game wants the services from the platform layer. 
+
+Let's start from our `WinMain`. Our `GlobalRunning` loop that we wrote processes the system messages the program gets and gets input from the gamepad. This was test code, but it's not far off from the regular code that one could ship. 
+
+We have already suggested in a way what should go on: our `RenderWeirdGradient` call is our renderer! Of course, for now we have `faux-code` just sitting there and drawing a weird gradient, but that's the thing that renders for the game. 
+
+So we can say right there that here we'll call the game code be responsible for game update and render. We can also remove our `RenderWeirdGradient` call since we want to bring it to the game layer.
+
+~~~~~~~ C++ add
+GameUpdateAndRender();
+~~~~~~~ C++ delete
+RenderWeirdGradient(&GlobalBackbuffer, XOffset, YOffset);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Setting Game Update. If you added the call to `MainLoop`, remember to remove it, as well!]
+
+We can also go ahead and add it to our `handmade.h`. We could pre-suppose how our API would work and fill those parts in but this would be getting ahead of ourselves, and we don't want that. So let's just simply leave a note to the place where we _will_ store the services going the other way for now.
+
+~~~~~~~ C++
+#if !defined(HANDMADE_H)
+
+~~~~~~~ C++ add
+// TODO(casey): Services that the platform layer provides to the game.
+
+// NOTE(casey): Services that the game provides to the platform layer.
+void GameUpdateAndRender();
+~~~~~~~ C++
+
+#define HANDMADE_H
+#endif
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> Starting Platform API.]
+
+Last, we want to actually define `GameUpdateAndRender` inside `handmade.cpp` (again, if you've written test code there, remember to clean it up!):
+
+~~~~~~~ C++ add
+void
+GameUpdateAndRender()
+{
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Defining our first platform-independent function.]
+
+Last thing, let's disable the framerate output code for now, so that it doesn't spam our `Output` window. We do it by simply putting `#if 0` and `#endif` around the piece of code that we don't want to execute, but you can also comment it out or simply delete it:
+
+~~~~~~~ C++ add
+#if 0
+char Buffer[256];
+sprintf(Buffer, "%.02fms/f, %.02ff/s, %.02fMc/f\n", MSPerFrame, FPS, MegaCyclesPerFrame);
+OutputDebugStringA(Buffer);
+#endif
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Disabling timer diagnostics.]
+
+For our `GameUpdateAndRender` you'll probably want to pass the bitmap to render, the sound buffer to play the sound to, as well as the input and the frame timer. So we'll essentially need to pass it four things. This may expand in the future, the calls count may go from one to three or something.
+
+Anyway, if you compile and run the game now, you'll see that we went one step back, because we removed the `RenderWeirdGradient` call without putting it anywhere. That said, if you inspect the `RenderWeirdGradient` code, you'll notice that it's largely platform-independent code, with the sole exception of the `win32_offscreen_buffer *` that we pass to it. Let's cut it straight out of `win32_handmade.cpp` and drop it into `handmade.cpp`:
+
+~~~~~~~ C++ delete
+internal void
+RenderWeirdGradient(win32_offscreen_buffer *Buffer, int XOffset, int YOffset)
+{
+    u8 *Row = (u8 *)Buffer->Memory;
+    for (int Y = 0;
+         Y < Buffer->Height;
+         ++Y)
+    {
+        u32 *Pixel = (u32  *)Row;
+        for(int X = 0;
+            X < Buffer->Width;
+            ++X)
+        {
+            u8 Blue = (u8)(X + XOffset);
+            u8 Green = (u8)(Y + YOffset);
+            u8 Red = 0;
+            
+            *Pixel++ = Red << 16 | Green << 8 | Blue; // << 0
+        }
+        Row += Buffer->Pitch;
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file>]
+~~~~~~~ C++
+#include "handmade.h"
+
+~~~~~~~ C++ add
+internal void
+RenderWeirdGradient(win32_offscreen_buffer *Buffer, int XOffset, int YOffset)
+{
+    u8 *Row = (u8 *)Buffer->Memory;
+    for (int Y = 0;
+         Y < Buffer->Height;
+         ++Y)
+    {
+        u32 *Pixel = (u32  *)Row;
+        for(int X = 0;
+            X < Buffer->Width;
+            ++X)
+        {
+            u8 Blue = (u8)(X + XOffset);
+            u8 Green = (u8)(Y + YOffset);
+            u8 Red = 0;
+            
+            *Pixel++ = Red << 16 | Green << 8 | Blue; // << 0
+        }
+        Row += Buffer->Pitch;
+    }
+}
+
+~~~~~~~ C++
+void
+GameUpdateAndRender()
+{
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Pulling out `RenderWeirdGradient`.]
+
+!!! Tip
+    If you use `4coder`, you can quickly switch between files using `Ctrl-I` hotkey. 
+    
+    If you use `vscode, you can do the same by using `Ctrl-P` hotkey and typing the file name.
+
+Now, regarding the `win32_offscreen_buffer`, we can simply change it to something like `game_offscreen_buffer`. If you take its definition from `win32_handmade.cpp`, you'll see that it's largely platform-independent, with the sole exception of that `BITMAPINFO`. So we can simply remove it from the `game_offscreen_buffer` definition and simply pass it to our `GameUpdateAndRender` as follows:
+
+1. In `handmade.cpp`, we change the signature of `RenderWeirdGradient` and call it from `GameUpdateAndRender`. We will also use dummy values for the `XOffset` and `YOffset` for now.
+
+~~~~~~~ C++ edit
+RenderWeirdGradient(game_offscreen_buffer *Buffer, int XOffset, int YOffset)
+~~~~~~~ C++
+{
+    // ... 
+}
+
+void
+GameUpdateAndRender(game_offscreen_buffer *Buffer)
+{
+    int XOffset = 0;
+    int YOffset = 0;
+    RenderWeirdGradient(Buffer, XOffset, YOffset);
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Adding graphics back into our game, step 1.]
+
+2. In `handmade.h`, we add the definition for `GameUpdateAndRender` and introduce `game_offscreen_buffer`:
+
+~~~~~~~ C++ add
+struct game_offscreen_buffer
+{
+    void *Memory;
+    int Width;
+    int Height;
+    int Pitch;
+};
+~~~~~~~ C++
+// TODO(casey): Services that the platform layer provides to the game.
+
+// NOTE(casey): Services that the game provides to the platform layer.
+~~~~~~~ C++ edit
+void GameUpdateAndRender(game_offscreen_buffer *Buffer);
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> Adding graphics back into our game, step 2.]
+
+3. Last, in `win32_handmade.cpp` we simply create and fill out the `game_offscreen_buffer` based on our `GlobalBackbuffer`:
+
+~~~~~~~ C++ add
+game_offscreen_buffer Buffer = {}; // clear to zero!
+Buffer.Memory = GlobalBackbuffer.Memory;
+Buffer.Width = GlobalBackbuffer.Width;
+Buffer.Height = GlobalBackbuffer.Height;
+Buffer.Pitch = GlobalBackbuffer.Pitch;
+~~~~~~~ C++ edit
+GameUpdateAndRender(&Buffer);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Adding graphics back into our game, step 3.]
+
+If you have done all the steps correctly, you should now compile, run and see the good old weird gradient (albeit not moving). We're almost at the feature parity (the place where we were before)!
+
+Now, if you really want to achieve feature parity, you can pass `XOffset` and `YOffset` directly from the Win32 platform layer. We'll leave this as an exercise for the reader.
 
 # Recap
 
-# Exercises
+We hope that you can see how easy this was. It's quite straightforward, even if you're not that familiar with programming. We'll have to do a bit more and clean up the things next time, but in substance you only need to define a rigid boundary and then move the things across that boundary. Pretty soon you'll realize that all the code you write will be on the non-specific side anyway, and you won't need to write any more Windows code. 
+
+Next time, we'll continue bringing things over, and continue fulfilling the promises to the game we set above.
 
 # Programming Notions
 
+## Header Files
+
+You might have noticed that, in our `win32_handmade.cpp` file, we basically divided the code in two parts. On top, we store all our `typedef`s, `struct`s and the like. In the bottom, we have the code which actually operates on them. 
+
+C programming language has actually created a solution to separate the code part from the declarations part. It's simply another text file called "Header File" (as opposed to the "Source File" such a `.cpp`). 
+
+You've seen Header files already: we `#include`d them to speak with the various parts of the operating system. Header files usually have `.h` extension. 
+
+What do you put in the header files? Well, as with the source file we've seen so far: whatever makes your code compile and run, as well as keep yourself and your code organized. You then `#include` at the beginning of your source files as if they were always part of it.
+
+There's more to header files and the extensions that relies mainly on established conventions. For instance, usually you want to _guard_ your header file with a couple of preprocessor directives. This way, if your header file is `#include`d more than once into your code, the successive includes are ignored and there are no naming conflicts. To do that, we use the following structure: 
+
+~~~~~~~ C++
+#if !defined(Header_file_unique_name)
+
+// ...
+// ... header file contents
+// ...
+
+#define Header_file_unique_name
+#endif
+~~~~~~~ 
+
+Hopefully you can see what's going on here: We wrap the whole code inside one big `#if` directive, and only "read" it if it's the first time we read this file (when the unique name is not defined). Once we arrive to the end, we `#define` the unique name that prevents us from accessing the contents of the file again.
+
+!!!
+    You can also find that some files use `#ifndef Header_file_unique_name` preprocessor directive instead of `#if !defined(Header_file_unique_name)` which accomplishes the same thing. You can use the one at your preference.
+
+For more information on Translation Units, Function Pointers, Compilation, Linking and Execution, watch this [Handmade Hero Chat][Translation Units, Function Pointers, Compilation, Linking and Execution].
+
+_(Back to subsection [Cross-Platform via Separate Platform Files])_
+
 # Side Considerations
 
+## Unity Builds
+
+It's usual that, in your build environment you will find yourself with more than one file. And usually, what ends up happening is that you start adding those files to the `cl` line of your `build.bat`:
+
+~~~~~~~ batch
+`cl -DHANDMADE_WIN32=1 -FC -Zi ..\code\win32_handmade.cpp ..\code\handmade.cpp ..\code\file1.cpp ..\code\file2.cpp ... user32.lib gdi32.lib
+~~~~~~~
+
+Of course, this becomes quite messy quite quickly, so most people end up with complicated make systems which list various files they need, call `cl` on them multiple times, pass specific options to them... all sorts of things. We will never touch these build systems on this course, but there's a whole world to discover if that's your cup of tea!
+
+The bottom line is that, even if you used manual system like `build.bat` we use, you'd often have to come in and add more files to build. This is not something we do. One noticeable thing is that it takes longer to compile, so instead we use the approach that many people call the "Unity Build".
+
+Unity Build (not to be confused with Unity 3D, the game engine, or Unity, the Microsoft Unity Framework for C#) is the concept that you have only one _translation unit_ in your entire project (i.e. a single "file" after `#include` files were already included, and `#define` macros have been already expanded). What that means is that `win32_handmade.cpp` is the only file you'll ever compile for Win32 platform (and `linux_handmade.cpp` will be only file you'll compile on Linux). 
+
+Why is it a good thing?
+1. Compiling on a new platform is as easy as it gets. You literally only have to type the compile command and the file name, and it builds. That's it. There's nothing else that can go wrong. (Ok, it's not as easy. You might want to add some compile-time defines like we did with `-DHANDMADE_WIN32=1` and maybe some other compiler option but that's it). 
+2. You never have to _forward declare_ (let compiler know about something's existence before you define it) almost anything. Usually you really should focus on keeping your header files clean, so that you can `#include` them into this or that translation unit. In our case, `.h` files are largely optional: since everything is in the same unit, if you stack things up roughly in the order you expect them to be called, it just kinda works. This allows you to get rid of the duplicate typing of the forward declarations.
+3. It is _crazy_ fast compared to how long it takes to compile things the "traditional" way. There's a lot of startup time for the compiler, a lot of overhead to `#include` things... things that you simply don't experience if you only compile one thing. 
+
+So this mostly the end of it, this is how we're going to do our builds pretty much until the end of the project.
+
+_(Continue to section [Platform Usage Philosophies])_
 
 # Navigation
 
