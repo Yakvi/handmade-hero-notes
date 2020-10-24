@@ -656,7 +656,7 @@ SoundBuffer.Samples = Samples;
 
 This update creates another issue: we can no longer know in advance how big our `Samples` buffer should be. At this point we can simply say that the `Samples` is as big as our secondary buffer size is, and it will be used for however big `SampleCount` will tell. 
 
-It's worth also transition to doing buffer allocation in the right way so that, should buffer change, we wouldn't crash and burn and have to update all the things we set manually all over again. To do that, we could use something like `alloca` to keep allocating on the program _stack_ (more on this in subsection [alloca]), but we'll go ahead and use the already familiar `VirtualAlloc` to allocate on the _heap_ (virtual memory). Let's do it right after we initialize DirectSound:
+It's worth to start doing buffer allocation in the right way so that, should buffer size change, we wouldn't crash and burn and have to update all the things we set manually all over again. To do that, we could use something like `alloca` to keep allocating on the program _stack_ (more on this in subsection [alloca]), or go ahead and use the already familiar `VirtualAlloc` to allocate on the _heap_ (virtual memory). Let's do that, right after we initialize DirectSound:
 
 ~~~~~~~ C++
 Win32InitDSound(Window, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize);
