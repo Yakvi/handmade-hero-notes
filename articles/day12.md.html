@@ -8,15 +8,837 @@ _Video Length (including Q&A): [1h37](https://hero.handmade.network/episode/code
 
 Last time, we mainly covered the theory: the basics of the platform API design. We talked about the ability of abstract your code away, so that it's not tied to the operative system. We talked about writing mainly code that's used across all the platforms the game ships on, while using only a small thin layer that allows the game to run on said platforms. Ultimately, the complexity and efficiency of such an API boils down to how well you define the boundary between the platform-specific and the platform-independent code. 
 
-Today we're going to continue the transition towards platform-independent code that we started after we've gone through all that theory.
+We're now going to continue our transition towards platform-independent code that we started after we've gone through all that theory. We said that we want to support timing, user input, bitmap and sound buffer, and file data to come into our platform-independent layer, and we've only done the bitmap part so far. We also want to eventually allow the game to request file data on its side. 
+
+## Set the Stage for Today
+
+We left our code at _feature parity_ compared to where we started from. We draw the weird gradient the same way as before, if you've done the exercise we can even control its offset, and we can hear the tone.... Well, actually, we didn't touch this part. All the sound things still happen on the platform layer, and that's what we're going to focus on today.
+
+There's a lot of subtlety involved in how you handle the time, and it's linked with the temporal nature of sound (more on this in subsection [On temporality of sound]). Most games handle time poorly, with their game loops largely ignorant of what "advancing time" actually means. We'll try and get it correct from the get-go, albeit our model will be pretty simplistic at first (for instance, we might not always account for potential external interrupts happening from the system, or be otherwise as robust as we'd want to be... it will still be a good point to start from). 
+
+## Our Approach to API Design 
+
+We'll start from looking at `GameUpdateAndRender`, state what we want to happen, and then move from there. Why not start from other way round, you might ask? 
+
+The design approach that we're going for is: **Always write the usage code first** when designing something like an API. If you need to define what the platform layer gives you, you don't want to do it upfront. You'd rather write the _code_ that fakes using the thing a given API would provide in an ideal manner. You would then look at this usage case and try to implement something as close to it as you can. Any potential intricacies will remain "under the hood" until you can show in _usage_ that you actually need them. 
+
+<style>blockquote.fancyquote {text-align:center !important;}</style>
+> "Always Write the Usage Code First."
+>
+>      -- Casey Muratori, about API design
+
+# Move Sound Across the API Boundary
+
+## Imagine Sound Use Case
+
+Let's look at our newly-created `handmade.cpp`. Inside `GameUpdateAndRender` call, we can imagine that we want to output sound. As for the parameters for such a call, we can imagine something like this:
+
+* Actual Samples (in memory): First of all, we want to specify a sound buffer to which we would have written the sound samples: this will be our second parameter.
+* Sample count: Since we'll be writing a sound lasting a certain amount of time, we'll need to write a specific amount of sound samples. We don't know upfront how many however: this will depend on the time that we'll be receiving. This means that we'll need to pass the final sample count to the function. 
+* Sound Format: We don't really want to specify that so we'll skip it. The format we defined in the platform layer,interleaved stereo 16-bit samples, seems like a fine one to use by default for our purposes. 
+* Offset in time: This we'd want to make happen at some point. The offset would allow us to overwrite old samples or to skip ahead. We aren't going to that just yet, we want to start simple and game give us a continuos sample. So let's leave a TODO for now. 
+
+And... that seems like the whole of the call for now. This translates in the following code:
+
+~~~~~~~ C++
+internal void
+GameUpdateAndRender(game_offscreen_buffer* Buffer, int XOffset, int YOffset)
+{
+~~~~~~~ C++ add
+    // TODO(casey): Allow sample offsets here for more robust platform options
+    GameSoundOutput(SoundBuffer, SampleCountToOutput);
+~~~~~~~ C++
+    RenderWeirdGradient(Buffer, XOffset, YOffset);
+}
+~~~~~~~ 
+[Listing [x]: <file>[handmade.cpp]</file> Drafting out a possible API.]
+
+## Port Sine Wave Code
+
+Of course, we don't have a function called `GameSoundOutput` yet; Let's create one!
+
+In `win32_handmade.cpp`, we only use the sound system to output the sine wave. The code responsible for sine wave sample generation is fairly straightforward: 
+
+~~~~~~~ C++
+s16 *SampleOut = (s16 *)Region1;
+DWORD Region1SampleCount = Region1Size / SoundOutput->BytesPerSample;
+for (DWORD SampleIndex = 0;
+        SampleIndex < Region1SampleCount;
+        ++SampleIndex)
+{
+    f32 SineValue = sinf(SoundOutput->tSine);
+    s16 SampleValue = (s16)(SineValue * SoundOutput->ToneVolume);
+    
+    *SampleOut++ = SampleValue;
+    *SampleOut++ = SampleValue;
+    
+    SoundOutput->tSine += 2.0f * Pi32 * 1.0f / (f32)SoundOutput->WavePeriod;
+    ++SoundOutput->RunningSampleIndex;
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32FillSoundBuffer]</file> We're currently repeating this twice to allow sample allocation to up to two regions.]
+
+We can easily take this code and port it over to become cross-platform. Here's how we're going to approach it:
+
+1. We'll define function `GameSoundOutput` inside `handmade.cpp`. As we said, it will take a `SoundBuffer`, which for now we can define to be some `game_sound_output_buffer *` and an `int SampleCountToOutput`. Inside, we'll paste the code above.
+
+~~~~~~~ C++ add
+internal void
+GameSoundOutput(game_sound_output_buffer *SoundBuffer, int SampleCountToOutput)
+{
+    s16 *SampleOut = (s16 *)Region1;
+    DWORD Region1SampleCount = Region1Size / SoundOutput->BytesPerSample;
+    for (DWORD SampleIndex = 0;
+            SampleIndex < Region1SampleCount;
+            ++SampleIndex)
+    {
+        // f32 SineValue = sinf(SoundOutput->tSine);
+        s16 SampleValue = (s16)(SineValue * SoundOutput->ToneVolume);
+
+        *SampleOut++ = SampleValue;
+        *SampleOut++ = SampleValue;
+
+        SoundOutput->tSine += 2.0f * Pi32 * 1.0f / (f32)SoundOutput->WavePeriod;
+        ++SoundOutput->RunningSampleIndex;
+    }
+}
+~~~~~~~ C++
+
+internal void
+GameUpdateAndRender(game_offscreen_buffer* Buffer, int XOffset, int YOffset)
+{
+    GameSoundOutput(SoundBuffer, SampleCountToOutput);
+    RenderWeirdGradient(Buffer, XOffset, YOffset);
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Introducing `GameSoundOutput` and populating it with the code from `Win32FillSoundBuffer`.]
+
+2. We need to make some changes to this code to make it cross-platform. 
+    * `SampleOut` will be coming from `SoundBuffer`.
+    * `ToneVolume` can be defined as a constant variable.
+    * `tSine` can be `local_persist` (i.e. `static`) for now. We're going to pull it away shortly. 
+    * `SampleCountToOutput` will replace `Region1SampleCount`
+    * We can also get rid of `SampleRunningIndex`, since we don't care about it here.
+
+This will result in the following function:
+
+~~~~~~~ C++
+internal void
+GameSoundOutput(game_sound_output_buffer *SoundBuffer, int SampleCountToOutput)
+{
+~~~~~~~ C++ add
+    local_persist f32 tSine;
+    s16 ToneVolume = 3000;
+
+~~~~~~~ C++ edit
+    s16 *SampleOut = SoundBuffer->Samples;
+~~~~~~~ C++ delete
+    DWORD Region1SampleCount = Region1Size / SoundOutput->BytesPerSample;
+~~~~~~~ C++
+    for (DWORD SampleIndex = 0;
+~~~~~~~ C++ edit
+            SampleIndex < SampleCountToOutput;
+~~~~~~~ C++
+            ++SampleIndex)
+    {
+~~~~~~~ C++ edit
+        f32 SineValue = sinf(tSine);
+        s16 SampleValue = (s16)(SineValue * ToneVolume);
+~~~~~~~ C++
+
+        *SampleOut++ = SampleValue;
+        *SampleOut++ = SampleValue;
+
+~~~~~~~ C++ edit
+        tSine += 2.0f * Pi32 * 1.0f / (f32)SoundOutput->WavePeriod;
+~~~~~~~ C++ delete
+        ++SoundOutput->RunningSampleIndex;
+~~~~~~~ C++
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Simplifying `GameSoundOutput`.]
+
+We still have that `WavePeriod` that we were getting from the `SoundOutput` structure. Now, if you think about it, wave period is referring to our test code of the sine wave. We were calculating it in the following manner: 
+
+~~~~~~~ C++
+SoundOutput.SamplesPerSecond = 48000;
+//...
+SoundOutput.ToneHz = 256;
+// ... 
+SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file>]
+
+Now, we can safely bring over `ToneHz` in the same manner as we did with the `ToneVolume`. However, `SamplesPerSecond` is platform-specific code, it's being set and used for sound buffer initialization. And, because we don't know about `SamplePerSecond` in the platform-independent code, it should be a strong hint that the platform, by supplying us with the `game_sound_output_buffer` structure, should provide the samples per second value that we can use.
+
+~~~~~~~ C++
+local_persist f32 tSine;
+s16 ToneVolume = 3000;
+~~~~~~~ C++ add
+int ToneHz = 256;
+int WavePeriod = SoundBuffer->SamplesPerSecond / ToneHz;
+~~~~~~~ C++
+
+s16 *SampleOut = SoundBuffer->Samples;
+for (DWORD SampleIndex = 0;
+        SampleIndex < SampleCountToOutput;
+        ++SampleIndex)
+{
+    f32 SineValue = sinf(tSine);
+    s16 SampleValue = (s16)(SineValue * ToneVolume);
+    
+    *SampleOut++ = SampleValue;
+    *SampleOut++ = SampleValue;
+~~~~~~~ C++ edit
+    tSine += 2.0f * Pi32 * 1.0f / (f32)WavePeriod;
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameSoundOutput]</file> Finalizing `GameSoundOutput`.]
+
+!!! Tip
+    This is a good example of why we said we want to write the usage code first. Simply by writing the usage code you can already tell what the API should provide, and in which manner. And you don't have to guess or presuppose, you just know because that's what you need.
+
+## Start Compiling
+
+We can now start the compiling process, and let the compiling process guide you. 
+
+!!! Tip
+    As a reminder, by default you can quickly jump to compile errors using `Alt-N` in [4coder][], and `F8` if you use the build system in [VSCode][].
+
+The first error that you're going to hit is the missing `game_sound_output_buffer` identifier (duh). Let's add it to `handmade.h`. We know exactly what needs to go in there: `Samples` and `SamplesPerSecond`: 
+
+~~~~~~~ C++
+struct game_offscreen_buffer
+{
+    // ...
+};
+
+~~~~~~~ C++ add
+struct game_sound_output_buffer
+{
+    int SamplesPerSecond;
+    s16* Samples;
+};
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> Defining `game_sound_output_buffer`.]
+
+On a second thought, we can make the API even simpler by also making `SampleCountToOutput` (which we can simply call `SampleCount`) part of `game_sound_output_buffer`: 
+
+~~~~~~~ C++
+struct game_sound_output_buffer
+{
+    int SamplesPerSecond;
+~~~~~~~ C++ add
+    int SampleCount;
+~~~~~~~ C++
+    s16* Samples;
+};
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> Expanding `game_sound_output_buffer`.]
+
+~~~~~~~ C++
+internal void
+~~~~~~~ C++ edit
+GameSoundOutput(game_sound_output_buffer *SoundBuffer)
+~~~~~~~ C++
+{
+    // ... 
+    for (int SampleIndex = 0;
+~~~~~~~ C++ edit
+         SampleIndex < SoundBuffer->SampleCount;
+~~~~~~~ C++
+         ++SampleIndex)
+    {
+        // ... 
+    }
+}
+
+internal void
+GameUpdateAndRender(game_offscreen_buffer* Buffer, int XOffset, int YOffset)
+{
+~~~~~~~ C++ edit
+    GameSoundOutput(SoundBuffer);
+~~~~~~~ C++
+    RenderWeirdGradient(Buffer, XOffset, YOffset);
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> Simplifying the API.]
+
+We can update our `GameUpdateAndRender` call to actually receive the sound output buffer from the system. We need to make changes in `handmade.h` and `handmade.cpp`; we'll get to the platform code in a second. 
+
+~~~~~~~ C++
+internal void
+~~~~~~~ C++ edit
+GameUpdateAndRender(game_offscreen_buffer* Buffer, int XOffset, int YOffset, 
+                    game_sound_output_buffer* SoundBuffer)
+~~~~~~~ C++
+{
+    // ...
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file>]
+
+~~~~~~~ C++ edit
+internal void GameUpdateAndRender(game_offscreen_buffer* Buffer, int XOffset, int YOffset,
+                                  game_sound_output_buffer *SoundBuffer);
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> Receiving `SoundBuffer` from the platform.]
+
+Our next error is the missing `sinf` function, let's simply reorder the headers around:
+
+~~~~~~~ C++ add
+// TODO(casey): Implement sine ourselves
+#include <math.h>
+~~~~~~~ C++
+#include <stdint.h>
+
+typedef // ...
+
+#define internal static
+#define local_persist static
+#define global_variable static
+
+#define Pi32 3.14159265359f
+
+#include "handmade.cpp"
+
+#include <stdio.h>
+#include <xinput.h>
+#include <dsound.h>
+#include <windows.h>
+~~~~~~~ C++ delete
+// TODO(casey): Implement sine ourselves
+#include <math.h>
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Reshuffling header files.]
+
+## Fix Compiler Errors
+
+We finally arrive down to the platform layer. We've got the sound output buffer now which has to be filled by the game... and you'll notice that it's really not that big. Let's do a quick calculation. 
+
+We're aiming to have 60 frame-per-second framerate. Our sound buffer outputs 48000 samples per second, so let's make a quick calculation: 
+
+$$\frac{48000\ samples/second}{60\ frames/second} = 800\ samples/frame$$
+
+We know that each sample is 2 bytes (16 bit) long, and there're 2 of them at a time, which results in $800\times 2\times 2 = 3200 bytes$. That's _really_ not a lot. Considering modern processors are capable of moving _gigabytes_ of data per second, it's the most insignificant amount of data a modern processor has seen.
+
+So what happens here is that we've elected to suffer an extra memory buffer copy as a cost of abstracting it out and presenting a cleaner interface of writing just to a single buffer, without having to think about the DirectSound's dual ring buffer. It's a tradeoff, but we choose to go for a more expensive and cleaner solution considering that some operating systems don't even have the ring buffer systems in first place! We can always return later and introduce the added complexity if it turns out we really need those extra cycles.
+
+We'll be aiming to have a 30 fps sound buffer, because often we'll be locking the game to 30 frames per second for debug purposes. It's still only 6400 bytes, double of what we calculated above.
+
+So, let's fill out the `SoundBuffer` to pass to our game: 
+
+* `SamplesPerSecond`: We have it already, pass it as is.
+* `SampleCount`: As we said, we want 1/30<sup>th</sup> of a second worth of samples per second. It's not final shipping code by any stretch, so simply calculating it on the spot should be fine. 
+* `Samples`: We'll cheese this part as well, simply allocate a large enough buffer on stack. We want $\frac{48000\ samples}{30\ frames/second} \times 2\ channels$.
+
+~~~~~~~ C++ add
+s16 Samples[(48000/30)*2];
+game_sound_output_buffer SoundBuffer = {}; // clear to zero!
+SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
+SoundBuffer.SampleCount = SoundBuffer.SamplesPerSecond / 30;
+SoundBuffer.Samples = Samples;
+~~~~~~~ C++
+
+game_offscreen_buffer Buffer = {}; 
+//...
+
+~~~~~~~ C++ edit
+GameUpdateAndRender(&Buffer, XOffset, YOffset, &SoundBuffer);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Defining and passing the `SoundBuffer` to the game.]
+
+We hope it goes without saying: don't try this ~~at home~~ in your shipping code! This is super janky and error prone, and we'll be replacing this code in a short while already. But! We're now compilable, and should be running as before. 
+
+!!! 
+    For a quick tangent regarding _buffer overruns_, head over to subsection [Buffer Overruns].
+
+# Use Platform-Specific Sounds
+
+Right now, we're still using the sine waves generated in the platform layer. The game layer is generating the sounds for the platform, but we aren't using those in any way. Let's fix this. 
+
+## Update `Win32FillSoundBuffer`
+
+We have `Win32FillSoundBuffer` function which is currently creating the sounds. We could adapt it so it would simply write whatever sounds it will receive from our game: 
+
+~~~~~~~ C++
+if (SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
+{
+    // ... 
+~~~~~~~ C++ edit
+    Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite, &SoundBuffer);
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Passing the (filled) `SoundBuffer` to `Win32FillSoundBuffer`.]
+
+In here, we would simply take the "source samples" and write them to the "destination samples". Simple copy, nothing else: 
+
+~~~~~~~ C++
+internal void
+~~~~~~~ C++ edit
+Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD BytesToWrite,
+                     game_sound_output_buffer *SourceBuffer)
+~~~~~~~ C++
+{
+    VOID *Region1;
+    DWORD Region1Size;
+    VOID *Region2;
+    DWORD Region2Size;
+    if(SUCCEEDED(GlobalSecondaryBuffer->Lock(ByteToLock, BytesToWrite,
+                                             &Region1, &Region1Size,
+                                             &Region2, &Region2Size,
+                                             0)))
+    {
+        // TODO(casey): assert that Region1Size/Region2Size are valid
+        DWORD Region1SampleCount = Region1Size / SoundOutput->BytesPerSample;
+~~~~~~~ C++ add
+        s16 *SourceSample = SourceBuffer->Samples;
+~~~~~~~ C++ edit
+        s16 *DestSample = (s16 *)Region1;
+~~~~~~~ C++
+        for (DWORD SampleIndex = 0;
+             SampleIndex < Region1SampleCount;
+             ++SampleIndex)
+        {
+~~~~~~~ C++ delete
+            f32 SineValue = sinf(SoundOutput->tSine);
+            s16 SampleValue = (s16)(SineValue * SoundOutput->ToneVolume);
+~~~~~~~ C++
+            
+~~~~~~~ C++ edit
+            *DestSample++ = *SourceSample++;
+            *DestSample++ = *SourceSample++;
+~~~~~~~ C++
+            
+~~~~~~~ C++ delete
+            SoundOutput->tSine += 2.0f * Pi32 * 1.0f / (f32)SoundOutput->WavePeriod;
+~~~~~~~ C++
+            ++SoundOutput->RunningSampleIndex;
+        }
+        
+~~~~~~~ C++ edit
+        DestSample = (s16 *)Region2;
+~~~~~~~ C++
+        DWORD Region2SampleCount = Region2Size / SoundOutput->BytesPerSample;
+        for (DWORD SampleIndex = 0;
+             SampleIndex < Region2SampleCount;
+             ++SampleIndex)
+        {
+~~~~~~~ C++ delete
+            f32 SineValue = sinf(SoundOutput->tSine);
+            s16 SampleValue = (s16)(SineValue * SoundOutput->ToneVolume);
+~~~~~~~ C++
+            
+~~~~~~~ C++ edit
+            *DestSample++ = *SourceSample++;
+            *DestSample++ = *SourceSample++;
+~~~~~~~ C++
+            
+~~~~~~~ C++ delete
+            SoundOutput->tSine += 2.0f * Pi32 * 1.0f / (f32)SoundOutput->WavePeriod;
+~~~~~~~ C++
+            ++SoundOutput->RunningSampleIndex;
+        }
+        
+        GlobalSecondaryBuffer->Unlock(Region1, Region1Size, Region2, Region2Size);
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Simplifying `Win32FillSoundBuffer`.]
+
+## Introduce `Win32ClearBuffer`
+
+We also need to modify our startup code. The compiler will fail since we were calling `Win32FillSoundBuffer` to run the sine wave right after initializing DirectSound. That's fine, we could update it, except now we simply want to clear the whole buffer. So what we really want here is a function which simply _flushes_ the buffer with `0`s:
+
+~~~~~~~ C++
+Win32InitDSound(Window, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize);
+~~~~~~~ C++ delete
+Win32FillSoundBuffer(&SoundOutput, 0, (SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample));
+~~~~~~~ C++ add
+Win32ClearBuffer(&SoundOutput);
+~~~~~~~ C++
+GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Introducing `Win32ClearBuffer`.]
+
+As for implementing this function, it should be quite straightforward. First, we lock the secondary buffer for its entire length and unlock it at the end. We could copy the necessary code straight from `Win32FillSoundBuffer`.
+
+~~~~~~~ C++ add
+internal void
+Win32ClearBuffer(win32_sound_output *SoundOutput)
+{
+    VOID *Region1;
+    DWORD Region1Size;
+    VOID *Region2;
+    DWORD Region2Size;
+    if(SUCCEEDED(GlobalSecondaryBuffer->Lock(0, SoundOutput->SecondaryBufferSize,
+                                             &Region1, &Region1Size,
+                                             &Region2, &Region2Size,
+                                             0)))
+    {
+        // Do the work
+        GlobalSecondaryBuffer->Unlock(Region1, Region1Size, Region2, Region2Size);
+    }
+}
+~~~~~~~ C++
+internal void
+Win32FillSoundBuffer(...)
+{
+    // ... 
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Locking the buffer for writing.]
+
+After we've locked our buffer, we'll take the entirety of the region 1 and fill it with zeroes. We don't even need to operate on 16-bit samples any more, we can simply go and clear bytes one by one. 
+
+~~~~~~~ C++ add
+u8 *DestSample = (u8 *)Region1;
+for (DWORD ByteIndex = 0;
+     ByteIndex < Region1Size;
+     ++ByteIndex)
+{
+    *DestSample++ = 0;
+}
+~~~~~~~ C++
+GlobalSecondaryBuffer->Unlock(Region1, Region1Size, Region2, Region2Size);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32ClearBuffer]</file> Clearing region 1.]
+
+We don't think we'll ever need to do anything with region 2 during startup, but just to be sure, let's clear it as well:
+
+~~~~~~~ C++
+u8 *DestSample = (u8 *)Region1;
+for (DWORD ByteIndex = 0;
+     ByteIndex < Region1Size;
+     ++ByteIndex)
+{
+    *DestSample++ = 0;
+}
+~~~~~~~ C++ add
+DestSample = (u8 *)Region2;
+for (DWORD ByteIndex = 0;
+     ByteIndex < Region2Size;
+     ++ByteIndex)
+{
+    *DestSample++ = 0;
+}
+~~~~~~~ C++
+GlobalSecondaryBuffer->Unlock(Region1, Region1Size, Region2, Region2Size);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32ClearBuffer]</file> Clearing region 2.]
+
+!!! 
+    You could potentially simplify this further. There're functions in the C Standard Library (namely, [memset][]) which does this work for you, so you want need to make the iteration/clear loops yourself. 
+    
+    Since we're trying to do everything ourselves, we won't be using this function. We do encourage to try it out as an exercise for the reader.
+
+## Increase Buffer Size
+
+We should be now compilable, but you will crash immediately upon running. This is due to the fact that we still use the full buffer length (or better, from where we stopped writing previously to the cursor position) to write the sound buffer, and not the 1/30<sup>th</sup> of a second that we pass as the source. 
+
+There are many ways to fix this issue. Ideally, we'd be changing the length of `BytesToWrite` at each frame to something corresponding to how much we actually want to write. We might also update the samples _just before_ the play cursor. We'll do all these things given the time. For now however, let's do the simpler thing: output exactly the amount of samples the platform layer expects us to. 
+
+In order to do that, we face one particular issue: the code calculating `BytesToWrite` and outputting sound is below our `GameUpdateAndRender` call. This is fine for outputting sound, we want to write the samples first, and then release them to the operating system. But the code to calculate `BytesToWrite` we can simply put above our `SoundBuffer` definition. We'll use a boolean `SoundIsValid` to verify that everything went smoothly.
+
+~~~~~~~ C++ add
+DWORD PlayCursor;
+DWORD WriteCursor;
+b32 SoundIsValid = false;
+if (SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
+{
+   
+    DWORD ByteToLock = ((SoundOutput.RunningSampleIndex * SoundOutput.BytesPerSample)
+                         % SoundOutput.SecondaryBufferSize);
+    DWORD TargetCursor = ((PlayCursor +
+                             (SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample))
+                         % SoundOutput.SecondaryBufferSize);
+    DWORD BytesToWrite;
+
+    if(ByteToLock > TargetCursor)
+    {
+        BytesToWrite = SoundOutput.SecondaryBufferSize - ByteToLock;
+        BytesToWrite += TargetCursor;
+    }
+    else
+    {
+        BytesToWrite = TargetCursor - ByteToLock;
+    }
+    
+    SoundIsValid = true;
+}
+~~~~~~~ C++
+
+s16 Samples[(48000/30)*2];
+game_sound_output_buffer SoundBuffer = {};
+SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
+SoundBuffer.SampleCount = SoundBuffer.SamplesPerSecond / 30;
+SoundBuffer.Samples = Samples;
+
+// Definition of the render buffer... 
+
+GameUpdateAndRender(&Buffer, XOffset, YOffset, &SoundBuffer);
+
+~~~~~~~ C++ delete
+DWORD PlayCursor;
+DWORD WriteCursor;
+~~~~~~~ C++ edit
+if (SoundIsValid)
+~~~~~~~ C++
+{
+~~~~~~~ C++ delete
+    DWORD ByteToLock = ((SoundOutput.RunningSampleIndex * SoundOutput.BytesPerSample)
+                        % SoundOutput.SecondaryBufferSize);
+    DWORD TargetCursor = ((PlayCursor + (SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample))
+                            % SoundOutput.SecondaryBufferSize);
+    DWORD BytesToWrite;
+    
+    if(ByteToLock > TargetCursor)
+    {
+        BytesToWrite = SoundOutput.SecondaryBufferSize - ByteToLock;
+        BytesToWrite += TargetCursor;
+    }
+    else
+    {
+        BytesToWrite = TargetCursor - ByteToLock;
+    }
+
+~~~~~~~ C++ 
+    Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite, &SoundBuffer);
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Moving up output code.]
+
+We also want to extract higher the variables we define, such as `ByteToLock`, `TargetCursor` and `BytesToWrite`, so that they are accessible outside their scope. For instance, `Win32FillSoundBuffer` needs to see `ByteToLock` and `BytesToWrite`! 
+
+~~~~~~~ C++ add
+DWORD ByteToLock;
+DWORD TargetCursor;
+DWORD BytesToWrite;
+~~~~~~~ C++
+DWORD PlayCursor;
+DWORD WriteCursor;
+b32 SoundIsValid = false;
+if (SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
+{
+~~~~~~~ C++ edit
+    ByteToLock = ((SoundOutput.RunningSampleIndex * SoundOutput.BytesPerSample)
+                    % SoundOutput.SecondaryBufferSize);
+    TargetCursor = ((PlayCursor +
+                        (SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample))
+                    % SoundOutput.SecondaryBufferSize);
+~~~~~~~ C++
+    
+~~~~~~~ C++ delete
+    DWORD BytesToWrite;
+~~~~~~~ C++
+    // ...
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Enabling variable visibility in the higher scope. We don't really _need_ to extract `TargetCursor` for now, but you never know, and it keeps things organized nice and tidy.]
+
+Now that we've completed this refactoring step, we finally know how many samples do we need our game to write. It's simply `BytesToWrite` divided by the `BytesPerSample`:
+
+~~~~~~~ C++ 
+s16 Samples[(48000/30)*2];
+game_sound_output_buffer SoundBuffer = {};
+SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
+~~~~~~~ C++ edit
+SoundBuffer.SampleCount = BytesToWrite / SoundOutput.BytesPerSample;
+~~~~~~~ C++
+SoundBuffer.Samples = Samples;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Updating `SampleCount` to request from the game.]
+
+## Expand `Samples` Buffer Size
+
+This update creates another issue: we can no longer know in advance how big our `Samples` buffer should be. At this point we can simply say that the `Samples` is as big as our secondary buffer size is, and it will be used for however big `SampleCount` will tell. 
+
+It's worth also transition to doing buffer allocation in the right way so that, should buffer change, we wouldn't crash and burn and have to update all the things we set manually all over again. To do that, we could use something like `alloca` to keep allocating on the program _stack_ (more on this in subsection [alloca]), but we'll go ahead and use the already familiar `VirtualAlloc` to allocate on the _heap_ (virtual memory). Let's do it right after we initialize DirectSound:
+
+~~~~~~~ C++
+Win32InitDSound(Window, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize);
+Win32ClearBuffer(&SoundOutput);
+GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
+~~~~~~~ C++ add
+s16 *Samples = (s16 *)VirtualAlloc(0, SoundOutput.SecondaryBufferSize,
+                                    MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+~~~~~~~ C++
+// ... 
+~~~~~~~ C++ delete
+s16 Samples[(48000/30)*2];
+~~~~~~~ C++
+game_sound_output_buffer SoundBuffer = {};
+// ... 
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Dynamically Allocating `Samples` buffer on the heap.]
+
+!!! Warning
+    Make sure you allocate memory outside the main loop! Or, if you do it inside the loop, remember to free that memory once you don't need it anymore.
+
+
+That's it! This should again result in working sound. However, this time you'll notice that we have no `sinf` inside `win32_handmade.cpp`: all the sound generation is happening in our cross-platform code!
+
+## Back to Feature Parity
+
+Our refactoring went well, but we aren't at the feature parity yet! When we set off porting the sound generation to the game layer, we could control the pitch with the gamepad. Let's get this functionality back! 
+
+Since we've done so much work on sound already, let's make a quick and dirty job of it, and think of optimizing it better next time. We'll simply pass it to `GameUpdateAndRender`. Let's jump through the changes round!
+
+First, update the call inside `WinMain`: 
+
+~~~~~~~ C++
+game_offscreen_buffer Buffer = {};
+// ...
+
+~~~~~~~ C++ edit
+GameUpdateAndRender(&Buffer, XOffset, YOffset, &SoundBuffer, SoundOutput.ToneHz);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Updating `GameUpdateAndRender` call to include `ToneHz`.]
+
+Next, update the function declaration inside `handmade.h`:
+
+~~~~~~~ C++
+internal void GameUpdateAndRender(game_offscreen_buffer* Buffer, int XOffset, int YOffset,
+~~~~~~~ C++ edit
+                                  game_sound_output_buffer *SoundBuffer, int ToneHz);
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> Updating `GameUpdateAndRender` signature.]
+
+Then, receive `ToneHz` inside the actual function definition and immediately send it to `GameSoundOutput`: 
+
+~~~~~~~ C++
+internal void
+GameUpdateAndRender(game_offscreen_buffer* Buffer, int XOffset, int YOffset, 
+~~~~~~~ C++ edit
+                    game_sound_output_buffer* SoundBuffer, int ToneHz)
+~~~~~~~ C++
+{
+~~~~~~~ C++ edit
+    GameSoundOutput(SoundBuffer, ToneHz);
+~~~~~~~ C++
+    RenderWeirdGradient(Buffer, XOffset, YOffset);
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Sending `ToneHz` to the sound generating code.]
+
+Last but not least, update `GameSoundOutput` to actually use the tone!
+
+~~~~~~~ C++
+internal void
+~~~~~~~ C++ edit
+GameSoundOutput(game_sound_output_buffer *SoundBuffer, int ToneHz)
+~~~~~~~ C++
+{
+    local_persist f32 tSine;
+    s16 ToneVolume = 3000;
+~~~~~~~ C++ delete
+    int ToneHz = 256;
+~~~~~~~ C++
+    int WavePeriod = SoundBuffer->SamplesPerSecond / ToneHz;
+    // ... 
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Using `ToneHz`.]
+
+That's it! 
 
 # Recap 
 
-# Exercises 
+Sound API is difficult to get right for cross-platform use, as any minor inconsistency is immediately noticeable. We'll be doing more tuning and improving on the sound quite soon so that it's not only applicable to the sound waves; in the meantime, we can consider the first cross-platform transition of our sound complete, so next time we can focus on other things. For now however, let's close out with a TODO to keep up as busy in the future: 
+
+~~~~~~~ C++
+DWORD ByteToLock;
+DWORD TargetCursor;
+DWORD BytesToWrite;
+DWORD PlayCursor;
+DWORD WriteCursor;
+b32 SoundIsValid = false;
+~~~~~~~ C++ add
+// TODO(casey): Tighten up sound logic so that we know where we should be 
+// writing to and can anticipate the time spent in the game updates.
+~~~~~~~ C++
+if (SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
+{
+    // ... 
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Leaving some thoughts for the future.]
 
 # Programming Notions 
 
+## Alloca
+
+`alloca` looks like something you'd find in a C Standard Library. However, it does not make part of the standard: many compilers simply include a function which allows to dynamically allocate some memory on the stack. 
+
+Why allocate on stack, as opposed to the heap? As with anything, there're several advantages and disadvantages to it. 
+
+It's advantages are: 
+* It's faster. Reserving a new page of virtual memory takes time since it's a kernel call; stack allocation are, for all intents and purposes, immediate.
+* You don't need to think about freeing the memory. Once you go out of the scope of the function allocating the memory, the stack is popped back automatically, and the memory is freed. (Not the local scope, mind you! You can't run `alloca` inside a loop indefinitely!)
+
+The downside is the following: 
+* Since allocation happens on stack, it's limited by the stack size. Stack is shared with all the functions parameters, local variables, etc., and once it's gone, it's gone. There's only Stack Overflow and the inevitable program crash waiting at the end.
+
+For this reason, this is again one of those tools which might be useful for a quick task usually happening inside the debug code. 
+
+_(Back to subsection [expand samples buffer size])_
+
 # Side Considerations 
+
+## Update `build.bat`: Remove Error Message
+
+Let's quickly tweak our `build.bat` file. Right now, if we try to compile, we're usually greeted with the following message: 
+
+~~~~~~~ batch
+A subdirectory or file build already exists.
+~~~~~~~
+
+This is because we try to create a `build` directory each time we run our `build.bat`! Let's fix this since batch scripting allows us to add some logic: 
+
+~~~~~~~ batch
+@echo off
+
+~~~~~~~ batch edit
+if not exist build (mkdir build)
+~~~~~~~ batch
+pushd build
+
+cl -DHANDMADE_WIN32=1 -FC -Zi ..\code\win32_handmade.cpp user32.lib gdi32.lib
+
+popd
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> Adding a condition for command execution.]
+
+You can also write it in all caps, `IF NOT EXIST`. Both methods work fine.
+
+## On Temporality of Sound
+
+We can't think about sound without thinking about time. The thing about sound is that it's _temporal_ in nature. While video frames are prepared one at a time, and you can reason about each frame as a standalone painting, audio _always_ happens over time. Therefore, in a game it's not optional for how long a sound would be playing for: the reproduction must be continuos.
+
+Let's take an example. If you write sound for 1/16<sup>th</sup> of a second (62.5ms), and then play it for 1/8<sup>th</sup> of a second (125ms), the user will hear silence or noise for the second half of the period. 
+
+With sound, you're bound to stick with a specific sample speed or your brain will immediately pick up the error. It won't sound "slower" or "at a lower sample rate". What you'll hear is a flat-out bug: clickiness, screeching, etc. You'll need to say: the sound will start at a given point in time, and you'll need a very specific amount of it. 
+
+Contrast this with video: if you put up an image on a screen, it can stay there for as long as you want. The only thing that will be perceived if you hold it for too long is that the perceived _framerate_ will start to go down, and users might perceive the video as less smooth. That said, that single frame won't disappear or glitch out in some other way if it stays up a bit longer.
+
+That said, video frames could also be bound by time if you use some advanced rendering techniques. Some motion blur may be calculated based on the amount of time that, you anticipate, that frame will be on screen. In that case the renderer needs to know exactly this time, to properly calculate the blur between the start and end points of all the entities, otherwise there might be teleporting glitches that the user might see in the frame after. 
+
+_(Back to subsection [set the stage for today])_
+
+## Buffer Overruns
+
+If you set a buffer to less than its intended size and then try to write to it, the program will compile just fine. However, when you try to run it, it will quickly crash. Depending on the debugger you're using, you might get a window pop-up, or simply a message in the `Output` window of the debugger, informing you of a "Buffer Overrun" or "Access violation writing location 0x...."
+
+For instance, we can quickly get such an overrun if, instead of passing `(48000/30)*2` as our `Samples` buffer size, we set it to simply `(48000/30)`, i.e. half its intended size. If you compile and run, you'll see something similar in Visual Studio:
+
+![Figure [x]: Buffer Overrun in Visual Studio. In RemedyBG, the error message simply appears in the Output window.](../media/day12/vs_crash.jpg)
+
+The reason for why the program halted is because the debugger inserts some checking code to see if you overwrote some memory somewhere. This is quite helpful, even if it doesn't happen all that frequently. Many people are afraid of pointers, because "They can corrupt memory!", "They can overwrite some data" and so on. These concerns are legitimate but there're many ways to minimize the risks, and we'll introduce many of these in the future. Furthermore, if you operate in a safe environment such a debugger, there are even more safety nets already written for you, so you can find and fix all the potential errors during the development. 
+
+_(Back to subsection [fix compiler errors])_
 
 # Navigation 
 

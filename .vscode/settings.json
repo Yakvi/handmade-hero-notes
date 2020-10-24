@@ -1,19 +1,30 @@
 {
     "cSpell.words": [
         "ACTIVATEAPP",
+        "Alloc",
         "DHANDMADE",
+        "DSBPLAY",
+        "DWORD",
         "HINSTANCE",
         "HREDRAW",
         "HWND",
         "LPSTR",
+        "MSVC",
         "OVERLAPPEDWINDOW",
         "OWNDC",
+        "READWRITE",
         "SETCURSOR",
         "USEDEFAULT",
         "VREDRAW",
         "WNDCLASS",
+        "alloca",
+        "clickiness",
+        "dsound",
+        "fancyquote",
         "lpfn",
         "lpsz",
-        "platformness"
+        "memset",
+        "platformness",
+        "stdint"
     ]
 }

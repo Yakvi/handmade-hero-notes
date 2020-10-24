@@ -482,7 +482,7 @@ void GameUpdateAndRender();
 Last, we want to actually define `GameUpdateAndRender` inside `handmade.cpp` (again, if you've written test code there, remember to clean it up!):
 
 ~~~~~~~ C++ add
-void
+internal void
 GameUpdateAndRender()
 {
 }
@@ -557,7 +557,7 @@ RenderWeirdGradient(win32_offscreen_buffer *Buffer, int XOffset, int YOffset)
 }
 
 ~~~~~~~ C++
-void
+internal void
 GameUpdateAndRender()
 {
 }
@@ -580,7 +580,7 @@ RenderWeirdGradient(game_offscreen_buffer *Buffer, int XOffset, int YOffset)
     // ... 
 }
 
-void
+internal void
 GameUpdateAndRender(game_offscreen_buffer *Buffer)
 {
     int XOffset = 0;
