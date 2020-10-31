@@ -628,7 +628,10 @@ struct game_controller_input
 ~~~~~~~
 [Listing [x]: <file>[handmade.h]</file>. Improving `game_controller_input`.]
 
-It's a small change that doesn't bear any consequence on the final result, but it's a nice quality of life improvement.
+It's a small change that doesn't bear any consequence on the final result, but it's a nice quality of life improvement. 
+
+!!!
+    If you're unfamiliar with how nameless structs and unions work, check out subsection [nameless structs].
 
 ## Fix the Compiler Errors
 
@@ -799,7 +802,7 @@ Now, the way normalization works is that you simply need to divide the value by 
 f32 X;
 if(Pad->sThumbLX < 0)
 {
-    X = (f32)Pad->sThumbLX / -32768.0f;
+    X = (f32)Pad->sThumbLX / 32768.0f;
 }
 else
 {
@@ -809,7 +812,7 @@ else
 f32 Y;
 if(Pad->sThumbLY < 0)
 {
-    Y = (f32)Pad->sThumbLY / -32768.0f;
+    Y = (f32)Pad->sThumbLY / 32768.0f;
 }
 else
 {
@@ -822,13 +825,15 @@ s16 StickY = Pad->sThumbLY;
 ~~~~~~~ 
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file>. Normalizing stick X and Y values.]
 
+A question might arise: if we need to get a negative value, why are we dividing by (a positive) 32768? Thing is, if you divide a negative number (which we verified we have) by a negative number, the sign cancels out, and the number becomes positive.
+
 Now, let's supply the various values to the controller. The code below should be self-explanatory: 
 
 ~~~~~~~ C++
 f32 X;
 if(Pad->sThumbLX < 0)
 {
-    X = (f32)Pad->sThumbLX / -32768.0f;
+    X = (f32)Pad->sThumbLX / 32768.0f;
 }
 else
 {
@@ -838,7 +843,7 @@ else
 f32 Y;
 if(Pad->sThumbLY < 0)
 {
-    Y = (f32)Pad->sThumbLY / -32768.0f;
+    Y = (f32)Pad->sThumbLY / 32768.0f;
 }
 else
 {
@@ -1039,6 +1044,71 @@ Doing too much analysis and work on the code too early in the process _is bad_. 
 Premature design is one of the _most_ destructive forces in computing today, it's the thing that costs the most time and results in most problems in shipping code. Premature optimization is _awful_. Right now, we're at the _beginning_ of the design phase of this API, and we need to understand that what we're doing here are _experiments_. They might go well, they might go terribly, we don't know that yet, and we won't know until we've set most of the things in place and are ready to go back and tighten up the screws and define the final API. 
 
 _(Back to section [write the usage code first])_
+
+## Nameless Structs
+
+We've been working with the structs long enough for you to be familiar with them. We declare some `struct foo {};`, fill it out with data and then use it in a variable. It's also should be familiar to you by now that you can put structs inside the structs, like in an infinite matryoshka doll. 
+
+However, this means that you also need to put its accessor. if you put `foo Foo;` inside a struct, you'll need to go through `Foo` in order to get its members. 
+
+~~~~~~~ C++
+struct button_states
+{
+    game_button_state Up;
+    game_button_state Down;
+    game_button_state Left;
+    game_button_state Right;
+    game_button_state LeftShoulder;
+    game_button_state RightShoulder;
+};
+
+struct controller_state
+{
+    button_states Buttons;
+    // ... 
+};
+
+// ...
+
+controller_state State;
+State.Buttons.Up.WasDown = true; // OK
+State.Left.WasDown = false; // Error
+~~~~~~~
+[<file>[Example]</file>]
+
+However, if you declare that struct directly inside, you can simply access its members without typing the name.
+
+At this point, you have the option to drop all the names in the declarations altogether, and then it'll simply be a passthrough. It wouldn't really matter usually, except in cases when we use unions. 
+
+~~~~~~~ C++
+struct controller_state
+{
+    struct button_states
+    {
+        game_button_state Up;
+        game_button_state Down;
+        game_button_state Left;
+        game_button_state Right;
+        game_button_state LeftShoulder;
+        game_button_state RightShoulder;
+    } Buttons;
+
+    // ... 
+};
+
+// ...
+
+controller_state State;
+State.Buttons.Up.WasDown = true; // OK
+State.Left.WasDown = false;      // Also OK!
+~~~~~~~
+[<file>[Example]</file>]
+
+Unions allow to put two or more things in the same "place". if you declare a union `union { int X; float Y; };`, it will only take 32 bits, and you can access `X` or `Y` depending on your need. You really need to know what you're doing here, since it's effectively the same memory. It doesn't convert a float to an integer or back, but displays the _same bits_ as if they were that type. 
+
+In our case, if you get a union with a struct and an array at the same memory, you can access both of them in a way you prefer. Furthermore, you can use the same nameless item trick on the unions as well, thus allowing you to access the values you want directly. 
+
+_(Continue to subsection [fix the compiler errors])_
 
 # Navigation 
 

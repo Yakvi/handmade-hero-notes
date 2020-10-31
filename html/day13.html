@@ -217,7 +217,60 @@ counter-increment: h6;margin-right:10px}</style><style>.hljs{display:block;overf
             try {
                 window.top.window.outerWidth = window.screen.width
             } catch (e) { }
-        </script><span class="md"><p><title>Day 13. Platform-Independent User Input</title><div class="title"> Day 13. Platform-Independent User Input </div>
+        </script><script>try {
+                        Object.defineProperty(screen, "availTop", { value: 0 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availLeft", { value: 0 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availWidth", { value: 1920 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availHeight", { value: 1080 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "colorDepth", { value: 24 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "pixelDepth", { value: 24 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "hardwareConcurrency", { value: 8 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "appVersion", { value: "5.0 (Windows)" });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "doNotTrack", { value: "unspecified" });
+                    } catch (e) {}
+                    
+            try {
+                window.screenY = 1072
+            } catch (e) { }
+        
+            try {
+                window.screenTop = 1072
+            } catch (e) { }
+        
+            try {
+                window.top.window.outerHeight = window.screen.height
+            } catch (e) { }
+        
+            try {
+                window.screenX = 1912
+            } catch (e) { }
+        
+            try {
+                window.screenLeft = 1912
+            } catch (e) { }
+        
+            try {
+                window.top.window.outerWidth = window.screen.width
+            } catch (e) { }
+        </script><script type="text/x-mathjax-config">MathJax.Hub.Config({ TeX: { equationNumbers: {autoNumber: "AMS"} } });</script><span style="display:none">$$\newcommand{\n}{\hat{n}}\newcommand{\thetai}{\theta_\mathrm{i}}\newcommand{\thetao}{\theta_\mathrm{o}}\newcommand{\d}[1]{\mathrm{d}#1}\newcommand{\w}{\hat{\omega}}\newcommand{\wi}{\w_\mathrm{i}}\newcommand{\wo}{\w_\mathrm{o}}\newcommand{\wh}{\w_\mathrm{h}}\newcommand{\Li}{L_\mathrm{i}}\newcommand{\Lo}{L_\mathrm{o}}\newcommand{\Le}{L_\mathrm{e}}\newcommand{\Lr}{L_\mathrm{r}}\newcommand{\Lt}{L_\mathrm{t}}\newcommand{\O}{\mathrm{O}}\newcommand{\degrees}{{^{\large\circ}}}\newcommand{\T}{\mathsf{T}}\newcommand{\mathset}[1]{\mathbb{#1}}\newcommand{\Real}{\mathset{R}}\newcommand{\Integer}{\mathset{Z}}\newcommand{\Boolean}{\mathset{B}}\newcommand{\Complex}{\mathset{C}}\newcommand{\un}[1]{\,\mathrm{#1}}$$
+</span>
+<span class="md"><p><title>Day 13. Platform-Independent User Input</title><div class="title"> Day 13. Platform-Independent User Input </div>
 
 <div class="afterTitles"></div>
 <em class="underscore">Video Length (including Q&A): <a href="https://hero.handmade.network/episode/code/day013/">1h33</a></em> 
@@ -226,26 +279,1245 @@ counter-increment: h6;margin-right:10px}</style><style>.hljs{display:block;overf
 
 Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with no external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
 
+</p><p>
+
+We're in the middle of taking our Windows code and turning it into platform-independent code with just a little Windows layer. This will set us up to success to allow to go to lots of platforms, without having to touch the code in the main game. 
+
+</p><p>
+
+Our API is shaping up nicely, even if it's quite an early stage still. We're already supplying the platform layer with the final image and sound, and all the platform should do is simply display/queue it for the reproduction.
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="160" width="432" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 8,48 L 8,80 " style="fill:none;"/>
+<path d="M 112,48 L 112,80 " style="fill:none;"/>
+<path d="M 224,32 L 224,48 " style="fill:none;"/>
+<path d="M 224,96 L 224,128 " style="fill:none;"/>
+<path d="M 304,32 L 304,96 " style="fill:none;"/>
+<path d="M 408,32 L 408,96 " style="fill:none;"/>
+<path d="M 24,32 L 96,32 " style="fill:none;"/>
+<path d="M 304,32 L 408,32 " style="fill:none;"/>
+<path d="M 128,64 L 176,64 " style="fill:none;"/>
+<path d="M 272,64 L 288,64 " style="fill:none;"/>
+<path d="M 112,80 L 176,80 " style="fill:none;"/>
+<path d="M 272,80 L 288,80 " style="fill:none;"/>
+<path d="M 24,96 L 96,96 " style="fill:none;"/>
+<path d="M 128,96 L 136,96 " style="fill:none;"/>
+<path d="M 304,96 L 408,96 " style="fill:none;"/>
+<path d="M 120,112 L 136,112 " style="fill:none;"/>
+<path d="M 112,96 L 120,112 " style="fill:none;"/>
+<path d="M 24,32 C 7.199999999999999,32 8,48 8,48 " style="fill:none;"/>
+<path d="M 96,32 C 112.8,32 112,48 112,48 " style="fill:none;"/>
+<path d="M 128,64 C 111.2,64 112,80 112,80 " style="fill:none;"/>
+<path d="M 24,96 C 7.199999999999999,96 8,80 8,80 " style="fill:none;"/>
+<path d="M 96,96 C 112.8,96 112,80 112,80 " style="fill:none;"/>
+<path d="M 128,96 C 111.2,96 112,80 112,80 " style="fill:none;"/>
+<polygon points="280,80 268,74.4 268,85.6 "  style="stroke:none" transform="rotate(180,272,80 )"/>
+<polygon points="280,64 268,58.4 268,69.6 "  style="stroke:none" transform="rotate(180,272,64 )"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="176" y="4">C</text><text text-anchor="middle" x="184" y="4">r</text><text text-anchor="middle" x="192" y="4">o</text><text text-anchor="middle" x="200" y="4">s</text><text text-anchor="middle" x="208" y="4">s</text><text text-anchor="middle" x="216" y="4">-</text><text text-anchor="middle" x="224" y="4">p</text><text text-anchor="middle" x="232" y="4">l</text><text text-anchor="middle" x="240" y="4">a</text><text text-anchor="middle" x="248" y="4">t</text><text text-anchor="middle" x="256" y="4">f</text><text text-anchor="middle" x="264" y="4">o</text><text text-anchor="middle" x="272" y="4">r</text><text text-anchor="middle" x="280" y="4">m</text><text text-anchor="middle" x="184" y="20">A</text><text text-anchor="middle" x="192" y="20">P</text><text text-anchor="middle" x="200" y="20">I</text><text text-anchor="middle" x="216" y="20">b</text><text text-anchor="middle" x="224" y="20">o</text><text text-anchor="middle" x="232" y="20">u</text><text text-anchor="middle" x="240" y="20">n</text><text text-anchor="middle" x="248" y="20">d</text><text text-anchor="middle" x="256" y="20">a</text><text text-anchor="middle" x="264" y="20">r</text><text text-anchor="middle" x="272" y="20">y</text><text text-anchor="middle" x="32" y="68">P</text><text text-anchor="middle" x="40" y="68">l</text><text text-anchor="middle" x="48" y="68">a</text><text text-anchor="middle" x="56" y="68">t</text><text text-anchor="middle" x="64" y="68">f</text><text text-anchor="middle" x="72" y="68">o</text><text text-anchor="middle" x="80" y="68">r</text><text text-anchor="middle" x="88" y="68">m</text><text text-anchor="middle" x="200" y="68">G</text><text text-anchor="middle" x="208" y="68">r</text><text text-anchor="middle" x="216" y="68">a</text><text text-anchor="middle" x="224" y="68">p</text><text text-anchor="middle" x="232" y="68">h</text><text text-anchor="middle" x="240" y="68">i</text><text text-anchor="middle" x="248" y="68">c</text><text text-anchor="middle" x="256" y="68">s</text><text text-anchor="middle" x="344" y="68">G</text><text text-anchor="middle" x="352" y="68">a</text><text text-anchor="middle" x="360" y="68">m</text><text text-anchor="middle" x="368" y="68">e</text><text text-anchor="middle" x="208" y="84">S</text><text text-anchor="middle" x="216" y="84">o</text><text text-anchor="middle" x="224" y="84">u</text><text text-anchor="middle" x="232" y="84">n</text><text text-anchor="middle" x="240" y="84">d</text><text text-anchor="middle" x="152" y="100">I</text><text text-anchor="middle" x="160" y="100">n</text><text text-anchor="middle" x="168" y="100">p</text><text text-anchor="middle" x="176" y="100">u</text><text text-anchor="middle" x="184" y="100">t</text><text text-anchor="middle" x="152" y="116">T</text><text text-anchor="middle" x="160" y="116">i</text><text text-anchor="middle" x="168" y="116">m</text><text text-anchor="middle" x="176" y="116">e</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;1:</b> State of our program. Great things begin with the humble origin!</div></center>
+
+</p><p>
+
+In this chapter, we're going to provide our game with the user's input. 
+
 </p>
 <div class="longTOC"><p align="center">
     <span align="right"><a href="day12.html">Day 12</a></span>
     <a href="../index.html"><img src = "../media/logo.png"></a>
-    <span align="left"><a href="day14.html">Day 14</a></span>
+    <!--<span align="left"><a href="day14.html">Day 14</a></span>-->
 </p><p><a href="#" class="tocTop">(Top)</a><br/>
-<a href="#recap" class="level1"><span class="tocNumber">1&nbsp; </span>Recap</a><br/>
-<a href="#exercises" class="level1"><span class="tocNumber">2&nbsp; </span>Exercises</a><br/>
-<a href="#programmingnotions" class="level1"><span class="tocNumber">3&nbsp; </span>Programming Notions</a><br/>
-<a href="#sideconsiderations" class="level1"><span class="tocNumber">4&nbsp; </span>Side Considerations</a><br/>
-<a href="#navigation" class="level1"><span class="tocNumber">5&nbsp; </span>Navigation</a><br/>
-</p></div><a class="target" name="recap">&nbsp;</a><a class="target" name="recap">&nbsp;</a><a class="target" name="toc1">&nbsp;</a><h1>Recap</h1>
+<a href="#housekeeping" class="level1"><span class="tocNumber">1&nbsp; </span>Housekeeping</a><br/>
+&nbsp;&nbsp;<a href="#housekeeping/cleanuptheapi" class="level2"><span class="tocNumber">1.1&nbsp; </span>Clean Up the API</a><br/>
+&nbsp;&nbsp;<a href="#housekeeping/introducewin32_handmade.h" class="level2"><span class="tocNumber">1.2&nbsp; </span>Introduce <code>win32_handmade.h</code></a><br/>
+<a href="#writetheusagecodefirst" class="level1"><span class="tocNumber">2&nbsp; </span>Write the Usage Code First</a><br/>
+&nbsp;&nbsp;<a href="#writetheusagecodefirst/visualizeinputovertime" class="level2"><span class="tocNumber">2.1&nbsp; </span>Visualize Input Over Time</a><br/>
+&nbsp;&nbsp;<a href="#writetheusagecodefirst/defineawayofhandlinginput" class="level2"><span class="tocNumber">2.2&nbsp; </span>Define a Way of Handling Input</a><br/>
+<a href="#implementtheinputsystem" class="level1"><span class="tocNumber">3&nbsp; </span>Implement the Input System</a><br/>
+&nbsp;&nbsp;<a href="#implementtheinputsystem/writetheapi" class="level2"><span class="tocNumber">3.1&nbsp; </span>Write the API</a><br/>
+&nbsp;&nbsp;<a href="#implementtheinputsystem/fixthecompilererrors" class="level2"><span class="tocNumber">3.2&nbsp; </span>Fix the Compiler Errors</a><br/>
+&nbsp;&nbsp;<a href="#implementtheinputsystem/updatewindowslayer" class="level2"><span class="tocNumber">3.3&nbsp; </span>Update Windows Layer</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#implementtheinputsystem/updatewindowslayer/gamepadbuttons" class="level3"><span class="tocNumber">3.3.1&nbsp; </span>Gamepad Buttons</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#implementtheinputsystem/updatewindowslayer/arraycount" class="level3"><span class="tocNumber">3.3.2&nbsp; </span>Array Count</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#implementtheinputsystem/updatewindowslayer/gamepadstick" class="level3"><span class="tocNumber">3.3.3&nbsp; </span>Gamepad Stick</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#implementtheinputsystem/updatewindowslayer/finishingup" class="level3"><span class="tocNumber">3.3.4&nbsp; </span>Finishing Up</a><br/>
+<a href="#recap" class="level1"><span class="tocNumber">4&nbsp; </span>Recap</a><br/>
+<a href="#exercises" class="level1"><span class="tocNumber">5&nbsp; </span>Exercises</a><br/>
+&nbsp;&nbsp;<a href="#exercises/fixingcompilererrors-solution" class="level2"><span class="tocNumber">5.1&nbsp; </span>Fixing Compiler Errors - Solution</a><br/>
+<a href="#programmingnotions" class="level1"><span class="tocNumber">6&nbsp; </span>Programming Notions</a><br/>
+&nbsp;&nbsp;<a href="#programmingnotions/functionoverloading" class="level2"><span class="tocNumber">6.1&nbsp; </span>Function Overloading</a><br/>
+&nbsp;&nbsp;<a href="#programmingnotions/aboutprematuredesign" class="level2"><span class="tocNumber">6.2&nbsp; </span>About Premature Design</a><br/>
+&nbsp;&nbsp;<a href="#programmingnotions/namelessstructs" class="level2"><span class="tocNumber">6.3&nbsp; </span>Nameless Structs</a><br/>
+<a href="#navigation" class="level1"><span class="tocNumber">7&nbsp; </span>Navigation</a><br/>
+</p></div><a class="target" name="housekeeping">&nbsp;</a><a class="target" name="housekeeping">&nbsp;</a><a class="target" name="toc1">&nbsp;</a><h1>Housekeeping</h1>
+<p>
 
-<a class="target" name="exercises">&nbsp;</a><a class="target" name="exercises">&nbsp;</a><a class="target" name="toc2">&nbsp;</a><h1>Exercises</h1>
 
-<a class="target" name="programmingnotions">&nbsp;</a><a class="target" name="programmingnotions">&nbsp;</a><a class="target" name="toc3">&nbsp;</a><h1>Programming Notions</h1>
+First things first, let's clean up a bit. You might get a bit lost in the code by now, and it's ok. Tidying the corners will allow you to separate things a bit more neatly, allow you to conceptualize the work you've already done, and prepare for the things ahead.
 
-<a class="target" name="sideconsiderations">&nbsp;</a><a class="target" name="sideconsiderations">&nbsp;</a><a class="target" name="toc4">&nbsp;</a><h1>Side Considerations</h1>
+</p>
+<a class="target" name="cleanuptheapi">&nbsp;</a><a class="target" name="housekeeping/cleanuptheapi">&nbsp;</a><a class="target" name="toc1.1">&nbsp;</a><h2>Clean Up the API</h2>
+<p>
 
-<a class="target" name="navigation">&nbsp;</a><a class="target" name="navigation">&nbsp;</a><a class="target" name="toc5">&nbsp;</a><h1>Navigation</h1>
+
+Right now, the bridge between the game and the platform, <code>GameUpdateAndRender</code>, is in a bit of a mess. Alongside things like (Render)<code>Buffer</code> and <code>SoundBuffer</code>, we pass things like <code>XOffset</code> or <code>ToneHz</code>. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">GameUpdateAndRender</span><span class="hljs-params">(game_offscreen_buffer* Buffer, <span class="hljs-keyword">int</span> XOffset, <span class="hljs-keyword">int</span> YOffset,</span>
+<span class="line">                    game_sound_output_buffer *SoundBuffer, <span class="hljs-keyword">int</span> ToneHz)</span></span>;</span></code></pre><center><div class="listingcaption tilde"><file>[handmade.h]</file></div></center>
+<p>
+
+
+This was a forced solution for us to keep the feature parity with our initial implementation. Let's pull out these values from our API and, for the time being, store them as <code>local_persist</code> (static) variables. We'll initialize them to whatever value they had in <code>win32_handmade.cpp</code>: 
+
+</p><pre class="listing tilde"><code><span class="line">internal <span class="hljs-keyword">void</span></span><div class=" edit"><span class="line">GameUpdateAndRender(game_offscreen_buffer* Buffer, game_sound_output_buffer* SoundBuffer)</span></div><span class="line">{</span><div class=" add"><span class="line">    local_persist <span class="hljs-keyword">int</span> XOffset = <span class="hljs-number">0</span>;</span>
+<span class="line">    local_persist <span class="hljs-keyword">int</span> YOffset = <span class="hljs-number">0</span>;</span>
+<span class="line">    local_persist <span class="hljs-keyword">int</span> ToneHz = <span class="hljs-number">256</span>;</span></div><span class="line"></span>
+<span class="line">    GameSoundOutput(SoundBuffer, ToneHz);</span>
+<span class="line">    RenderWeirdGradient(Buffer, XOffset, YOffset);</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;1:</b> <file>[handmade.cpp]</file> Storing input-related parameters locally.</div></center>
+<p>
+
+
+In order to prevent any unwanted function overloading (more on this in subsection  <a href="#toc6.1">6.1</a>), we need to remember also update declaration in <code>handmade.h</code>: 
+
+</p><pre class="listing tilde"><code><span class="line">internal <span class="hljs-keyword">void</span></span><div class=" edit"><span class="line">GameUpdateAndRender(game_offscreen_buffer* Buffer, game_sound_output_buffer* SoundBuffer);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;2:</b> <file>[handmade.h]</file> Updating <code>GameUpdateAndRender</code> declaration.</div></center>
+<p>
+
+
+And, of course, we also want to remove these variables from <code>win32_handmade.cpp</code>. We will simply remove any interaction we were having with them in our platform layer, because at the end of the day we'll handle input differently in the platform-independent layer. 
+
+</p><p>
+
+While we're at it, we can also remove the sound-related things that we moved to <code>handmade.cpp</code> last time:
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_sound_output</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">int</span> SamplesPerSecond;</span>
+<span class="line">    <span class="hljs-keyword">int</span> BytesPerSample;</span>
+<span class="line">    <span class="hljs-keyword">int</span> SecondaryBufferSize;</span>
+<span class="line">    u32 RunningSampleIndex;</span><div class=" delete"><span class="line">    <span class="hljs-keyword">int</span> ToneHz;</span>
+<span class="line">    <span class="hljs-keyword">int</span> ToneVolume;</span>
+<span class="line">    <span class="hljs-keyword">int</span> WavePeriod;</span>
+<span class="line">    f32 tSine;</span></div><span class="line">    <span class="hljs-keyword">int</span> LatencySampleCount;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// ... </span></span>
+<span class="line"><span class="hljs-comment">// WinMain</span></span>
+<span class="line"><span class="hljs-comment">// ... </span></span><div class=" delete"><span class="line"><span class="hljs-comment">// NOTE(casey): Graphics test</span></span>
+<span class="line"><span class="hljs-keyword">int</span> XOffset = <span class="hljs-number">0</span>;</span>
+<span class="line"><span class="hljs-keyword">int</span> YOffset = <span class="hljs-number">0</span>;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// NOTE(casey): Sound test</span></span></div><span class="line">win32_sound_output SoundOutput = {};</span>
+<span class="line">SoundOutput.SamplesPerSecond = <span class="hljs-number">48000</span>;</span>
+<span class="line">SoundOutput.BytesPerSample = <span class="hljs-keyword">sizeof</span>(s16) * <span class="hljs-number">2</span>;</span>
+<span class="line">SoundOutput.SecondaryBufferSize = <span class="hljs-number">2</span> * SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample;</span>
+<span class="line">SoundOutput.RunningSampleIndex = <span class="hljs-number">0</span>;</span><div class=" delete"><span class="line">SoundOutput.ToneHz = <span class="hljs-number">256</span>;</span>
+<span class="line">SoundOutput.ToneVolume = <span class="hljs-number">3000</span>;</span>
+<span class="line">SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;</span></div><span class="line">SoundOutput.LatencySampleCount = SoundOutput.SamplesPerSecond / <span class="hljs-number">15</span>;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// ... </span></span>
+<span class="line"><span class="hljs-comment">// Controller iteration loop</span></span>
+<span class="line"><span class="hljs-comment">// ... </span></span>
+<span class="line">s16 StickX = Pad-&gt;sThumbLX;</span>
+<span class="line">s16 StickY = Pad-&gt;sThumbLY;</span>
+<span class="line"></span><div class=" delete"><span class="line">XOffset += StickX / <span class="hljs-number">4096</span>;</span>
+<span class="line">YOffset += StickY / <span class="hljs-number">4096</span>;</span>
+<span class="line"></span>
+<span class="line">SoundOutput.ToneHz = <span class="hljs-number">512</span> + (<span class="hljs-keyword">int</span>)(<span class="hljs-number">256.0f</span> * ((f32)StickY / <span class="hljs-number">30000.0f</span>));</span>
+<span class="line">SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;</span></div><span class="line"></span>
+<span class="line"><span class="hljs-comment">// ... </span></span><div class=" edit"><span class="line">GameUpdateAndRender(&amp;Buffer, &amp;SoundBuffer);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;3:</b> <file>[win32_handmade.cpp]</file> Propagating changes to the platform layer and doing some cleanup.</div></center>
+
+<a class="target" name="introducewin32_handmade.h">&nbsp;</a><a class="target" name="housekeeping/introducewin32_handmade.h">&nbsp;</a><a class="target" name="toc1.2">&nbsp;</a><h2>Introduce <code>win32_handmade.h</code></h2>
+<p>
+
+
+While we're doing the chores, let's go ahead and extract our struct definitions in a separate <code>.h</code> file specific to our <code>win32_</code> platform. We don't <em class="underscore">technically</em> need it, but it keeps things tidy, plus you can always quickly reference the struct definitions when you need it. We will leave our <code>typedef</code>s where they are, for the time being. Go ahead and create a new file called <code>win32_handmade.h</code>.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;windows.h&gt;</span></span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;stdio.h&gt;</span></span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;xinput.h&gt;</span></span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;dsound.h&gt;</span></span></span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">"win32_handmade.h"</span></span></span></div><div class=" delete"><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_offscreen_buffer</span></span>
+<span class="line">{</span></span>
+<span class="line">    BITMAPINFO Info;</span>
+<span class="line">    <span class="hljs-keyword">void</span> *Memory;</span>
+<span class="line">    <span class="hljs-keyword">int</span> Width;</span>
+<span class="line">    <span class="hljs-keyword">int</span> Height;</span>
+<span class="line">    <span class="hljs-keyword">int</span> Pitch;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_window_dimension</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">int</span> Width;</span>
+<span class="line">    <span class="hljs-keyword">int</span> Height;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_sound_output</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">int</span> SamplesPerSecond;</span>
+<span class="line">    <span class="hljs-keyword">int</span> BytesPerSample;</span>
+<span class="line">    <span class="hljs-keyword">int</span> SecondaryBufferSize;</span>
+<span class="line">    u32 RunningSampleIndex;</span>
+<span class="line">    <span class="hljs-keyword">int</span> LatencySampleCount;</span>
+<span class="line">};</span></div><span class="line"></span>
+<span class="line">global_variable <span class="hljs-keyword">bool</span> GlobalRunning;</span>
+<span class="line">global_variable win32_offscreen_buffer GlobalBackbuffer;</span>
+<span class="line">global_variable IDirectSoundBuffer *GlobalSecondaryBuffer;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;4:</b> <file>[win32_handmade.cpp]</file> Extracting the struct definitions from <code>.cpp</code>....</div></center>
+<pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> !defined(WIN32_HANDMADE_H)</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_offscreen_buffer</span></span>
+<span class="line">{</span></span>
+<span class="line">    BITMAPINFO Info;</span>
+<span class="line">    <span class="hljs-keyword">void</span> *Memory;</span>
+<span class="line">    <span class="hljs-keyword">int</span> Width;</span>
+<span class="line">    <span class="hljs-keyword">int</span> Height;</span>
+<span class="line">    <span class="hljs-keyword">int</span> Pitch;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_window_dimension</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">int</span> Width;</span>
+<span class="line">    <span class="hljs-keyword">int</span> Height;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_sound_output</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">int</span> SamplesPerSecond;</span>
+<span class="line">    <span class="hljs-keyword">int</span> BytesPerSample;</span>
+<span class="line">    <span class="hljs-keyword">int</span> SecondaryBufferSize;</span>
+<span class="line">    u32 RunningSampleIndex;</span>
+<span class="line">    <span class="hljs-keyword">int</span> LatencySampleCount;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> WIN32_HANDMADE_H</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;5:</b> <file>[win32_handmade.h]</file> .... and adding them in a freshly introduced <code>.h</code>. Do you remember about the include guards? (<code>#if</code>/<code>#define</code>/<code>#endif</code> things)</div></center>
+<p>
+
+
+Confused? That's a lot of code we refactored right there. Try to compile, let the compiler errors guide you. At the end of the day, you should still remain with the same picture and sound as before, with the sole exception of losing interactivity. Don't worry, we'll get that back soon!
+
+</p>
+<a class="target" name="writetheusagecodefirst">&nbsp;</a><a class="target" name="writetheusagecodefirst">&nbsp;</a><a class="target" name="toc2">&nbsp;</a><h1>Write the Usage Code First</h1>
+<p>
+
+
+It cannot be understated what we said last time. 
+
+</p><p>
+
+<style>blockquote.fancyquote {text-align:center !important;}</style><blockquote class="fancyquote"><span class="fancyquote">Always Write the Usage Code First.</span><span class="author">
+      &mdash; Casey Muratori, about API design</span></blockquote>
+Even if we follow this approach, the road ahead isn't simple: since we don't really have a game yet, we don't even necessarily know how we're going to use the user's input! If the game was done, we could identify the optimal way to handle the input with ease. This is something that we will definitely have to handle at some point, but this is not that point.
+
+</p><p>
+
+<div class="admonition tip"><div class="admonition-title"> Always be aware of the circumstances!</div>
+
+</p><p>
+
+    Right now, we don't try at all to write final code. You can read more about this philosophy in subsection  <a href="#toc6.2">6.2</a>.</div>
+
+</p><p>
+
+At this point we simply have to remember that this implementation of the input is but the first pass, and the API we'll write today is but an attempt to write the correct interface. So let's have some fun, and <em class="underscore">imagine</em> what would be useful for our game in terms of the input coming from the platform layer. 
+
+</p><p>
+
+<ul>
+<li class="asterisk">Let's assume that our game won't care whether the input is coming from the keyboard or from the gamepad.
+</li>
+<li class="asterisk">Ok, it cares a little, and only for the purposes of tuning of movement (which can be controlled with the analog stick). So there might be something like <code>Input.IsAnalog</code> allowing us to differentiate in a manner similar to the following:</li></ul>
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-keyword">if</span> (Input.IsAnalog)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// NOTE(casey): Use analog movement tuning</span></span>
+<span class="line">}</span>
+<span class="line"><span class="hljs-keyword">else</span></span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// NOTE(casey): Use digital movement tuning</span></span>
+<span class="line">}</span></div><span class="line"></span>
+<span class="line">GameSoundOutput(SoundBuffer, ToneHz);</span>
+<span class="line">RenderWeirdGradient(Buffer, XOffset, YOffset);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;6:</b> <file>[handmade.cpp > GameUpdateAndRender]</file>. Writing Usage Code First.</div></center>
+<p>
+
+
+
+<ul>
+<li class="asterisk">Any other input will behave like regular buttons, with the state of &ldquo;on&rdquo; or &ldquo;off&rdquo;, and we'll make no distinction whether that input is coming from a controller or a keyboard.</li></ul>
+
+</p>
+<a class="target" name="visualizeinputovertime">&nbsp;</a><a class="target" name="writetheusagecodefirst/visualizeinputovertime">&nbsp;</a><a class="target" name="toc2.1">&nbsp;</a><h2>Visualize Input Over Time</h2>
+<p>
+
+
+Let's think about the input planning. Imagine a timeline showing the time (\(t\)) going forward and frames appearing on the screen.
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="96" width="392" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 16,16 L 16,48 " style="fill:none;"/>
+<path d="M 88,16 L 88,48 " style="fill:none;"/>
+<path d="M 160,16 L 160,48 " style="fill:none;"/>
+<path d="M 232,16 L 232,48 " style="fill:none;"/>
+<path d="M 304,16 L 304,48 " style="fill:none;"/>
+<path d="M 16,32 L 360,32 " style="fill:none;"/>
+<polygon points="368,32 356,26.4 356,37.6 "  style="stroke:none" transform="rotate(0,360,32 )"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="48" y="4">0</text><text text-anchor="middle" x="120" y="4">1</text><text text-anchor="middle" x="192" y="4">2</text><text text-anchor="middle" x="264" y="4">3</text><text text-anchor="middle" x="336" y="4">.</text><text text-anchor="middle" x="344" y="4">.</text><text text-anchor="middle" x="352" y="4">.</text><text text-anchor="middle" x="16" y="68">t</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;2:</b> Frame computation over time.</div></center>
+
+</p><p>
+
+It's important to remember that a frame is not visible to the user while a frame is being computed. It's only displayed once all the work related to the frame is done: sound was written, image was prepared, and &ldquo;frame flip&rdquo; command was given. In the meantime, the user is watching and listening the <em class="underscore">previous</em> frame output. They also react to it by providing various inputs: Right, Up, A, what have you.
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="144" width="392" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 16,64 L 16,96 " style="fill:none;"/>
+<path d="M 88,16 L 88,32 " style="fill:none;"/>
+<path d="M 88,64 L 88,96 " style="fill:none;"/>
+<path d="M 128,48 L 128,72 " style="fill:none;"/>
+<path d="M 160,16 L 160,32 " style="fill:none;"/>
+<path d="M 160,64 L 160,96 " style="fill:none;"/>
+<path d="M 232,16 L 232,32 " style="fill:none;"/>
+<path d="M 232,64 L 232,96 " style="fill:none;"/>
+<path d="M 304,16 L 304,32 " style="fill:none;"/>
+<path d="M 304,64 L 304,96 " style="fill:none;"/>
+<path d="M 64,0 L 72,0 " style="fill:none;"/>
+<path d="M 136,0 L 144,0 " style="fill:none;"/>
+<path d="M 208,0 L 216,0 " style="fill:none;"/>
+<path d="M 280,0 L 288,0 " style="fill:none;"/>
+<path d="M 96,64 L 112,64 " style="fill:none;"/>
+<path d="M 16,80 L 360,80 " style="fill:none;"/>
+<path d="M 72,0 C 88.8,0 88,16 88,16 " style="fill:none;"/>
+<path d="M 144,0 C 160.8,0 160,16 160,16 " style="fill:none;"/>
+<path d="M 216,0 C 232.8,0 232,16 232,16 " style="fill:none;"/>
+<path d="M 288,0 C 304.8,0 304,16 304,16 " style="fill:none;"/>
+<polygon points="368,80 356,74.4 356,85.6 "  style="stroke:none" transform="rotate(0,360,80 )"/>
+<polygon points="312,32 300,26.4 300,37.6 "  style="stroke:none" transform="rotate(90,304,32 )"/>
+<polygon points="240,32 228,26.4 228,37.6 "  style="stroke:none" transform="rotate(90,232,32 )"/>
+<polygon points="168,32 156,26.4 156,37.6 "  style="stroke:none" transform="rotate(90,160,32 )"/>
+<polygon points="136,48 124,42.4 124,53.6 "  style="stroke:none" transform="rotate(270,128,48 )"/>
+<polygon points="120,64 108,58.4 108,69.6 "  style="stroke:none" transform="rotate(0,112,64 )"/>
+<polygon points="96,32 84,26.4 84,37.6 "  style="stroke:none" transform="rotate(90,88,32 )"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="48" y="4">0</text><text text-anchor="middle" x="120" y="4">1</text><text text-anchor="middle" x="192" y="4">2</text><text text-anchor="middle" x="264" y="4">3</text><text text-anchor="middle" x="336" y="4">.</text><text text-anchor="middle" x="344" y="4">.</text><text text-anchor="middle" x="352" y="4">.</text><text text-anchor="middle" x="144" y="68">A</text><text text-anchor="middle" x="16" y="116">t</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;3:</b> User input in a frame.</div></center>
+
+</p><p>
+
+Of course, the user only has but a fraction of a second to pass all this input in, but with some serious button mashing it's still possible to pass quite a bit of information. This is becoming even more significant as our framerate drops: in a 1/30<sup>th</sup> of a second you can pass twice as much input as in 1/60<sup>th</sup>, the character would move further during this time, etc.
+
+</p><p>
+
+Thing is, if the user is watching (and reacts to) frame 0, they provide some input during frame 1... but it will only get to us at the start of frame 2. This also mean that frame 1 will not incorporate any input that they've been doing thus far. We're always one frame behind, sometimes even two if you're inefficient with the input handling! This is one of the reasons why a high framerate is good. 
+
+</p><p>
+
+There's another thing that might happen. Let's say the user pushed the A button, then released it, then pushed it again, all within 1/30<sup>th</sup> of a second. This might result in something similar to this:
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="192" width="376" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 16,112 L 16,144 " style="fill:none;"/>
+<path d="M 160,32 L 160,80 " style="fill:none;"/>
+<path d="M 160,112 L 160,144 " style="fill:none;"/>
+<path d="M 192,48 L 192,72 " style="fill:none;"/>
+<path d="M 232,32 L 232,56 " style="fill:none;"/>
+<path d="M 272,48 L 272,72 " style="fill:none;"/>
+<path d="M 304,32 L 304,80 " style="fill:none;"/>
+<path d="M 304,112 L 304,144 " style="fill:none;"/>
+<path d="M 136,16 L 144,16 " style="fill:none;"/>
+<path d="M 280,16 L 288,16 " style="fill:none;"/>
+<path d="M 16,128 L 352,128 " style="fill:none;"/>
+<path d="M 144,16 C 160.8,16 160,32 160,32 " style="fill:none;"/>
+<path d="M 288,16 C 304.8,16 304,32 304,32 " style="fill:none;"/>
+<path d="M 232,64 C 215.2,64 216,80 216,80 " style="fill:none;"/>
+<path d="M 232,64 C 248.8,64 248,80 248,80 " style="fill:none;"/>
+<path d="M 192,80 C 175.2,80 176,96 176,96 " style="fill:none;"/>
+<path d="M 192,80 C 208.8,80 208,96 208,96 " style="fill:none;"/>
+<path d="M 272,80 C 255.2,80 256,96 256,96 " style="fill:none;"/>
+<path d="M 272,80 C 288.8,80 288,96 288,96 " style="fill:none;"/>
+<path d="M 232,96 C 215.2,96 216,80 216,80 " style="fill:none;"/>
+<path d="M 232,96 C 248.8,96 248,80 248,80 " style="fill:none;"/>
+<path d="M 192,112 C 175.2,112 176,96 176,96 " style="fill:none;"/>
+<path d="M 192,112 C 208.8,112 208,96 208,96 " style="fill:none;"/>
+<path d="M 272,112 C 255.2,112 256,96 256,96 " style="fill:none;"/>
+<path d="M 272,112 C 288.8,112 288,96 288,96 " style="fill:none;"/>
+<polygon points="360,128 348,122.4 348,133.6 "  style="stroke:none" transform="rotate(0,352,128 )"/>
+<polygon points="312,80 300,74.4 300,85.6 "  style="stroke:none" transform="rotate(90,304,80 )"/>
+<polygon points="280,72 268,66.4 268,77.6 "  style="stroke:none" transform="rotate(90,272,72 )"/>
+<polygon points="240,32 228,26.4 228,37.6 "  style="stroke:none" transform="rotate(270,232,32 )"/>
+<polygon points="200,72 188,66.4 188,77.6 "  style="stroke:none" transform="rotate(90,192,72 )"/>
+<polygon points="168,80 156,74.4 156,85.6 "  style="stroke:none" transform="rotate(90,160,80 )"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="120" y="20">0</text><text text-anchor="middle" x="264" y="20">1</text><text text-anchor="middle" x="328" y="52">.</text><text text-anchor="middle" x="336" y="52">.</text><text text-anchor="middle" x="344" y="52">.</text><text text-anchor="middle" x="232" y="84">A</text><text text-anchor="middle" x="192" y="100">A</text><text text-anchor="middle" x="272" y="100">A</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;4:</b> It's possible that a button is pressed, released, and then pressed again within a single frame.</div></center>
+
+</p><p>
+
+So, why are we looking in all this? The reason we investigate this behavior is because we're trying to decide for ourselves: what do we record? Which user input do we capture, save and preserve for processing of the world update? Specifically for gamepad, this is important because the input input we get already doesn't capture all the updates. As we said on <a href="../html/day6.html">day 6</a>, gamepad makes polling at some regular rate, and captures the state of the gamepad at that point. We don't know (and will never know) what happens to it between those updates, we can only get a discreet approximation of it.
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="96" width="320" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 40,16 L 40,32 " style="fill:none;"/>
+<path d="M 72,32 L 72,48 " style="fill:none;"/>
+<path d="M 168,16 L 168,32 " style="fill:none;"/>
+<path d="M 232,32 L 232,48 " style="fill:none;"/>
+<path d="M 296,16 L 296,32 " style="fill:none;"/>
+<path d="M 24,16 C 7.199999999999999,16 8,32 8,32 " style="fill:none;"/>
+<path d="M 24,16 C 40.8,16 40,32 40,32 " style="fill:none;"/>
+<path d="M 88,16 C 71.2,16 72,32 72,32 " style="fill:none;"/>
+<path d="M 88,16 C 104.8,16 104,32 104,32 " style="fill:none;"/>
+<path d="M 152,16 C 135.2,16 136,32 136,32 " style="fill:none;"/>
+<path d="M 152,16 C 168.8,16 168,32 168,32 " style="fill:none;"/>
+<path d="M 216,16 C 199.2,16 200,32 200,32 " style="fill:none;"/>
+<path d="M 216,16 C 232.8,16 232,32 232,32 " style="fill:none;"/>
+<path d="M 280,16 C 263.2,16 264,32 264,32 " style="fill:none;"/>
+<path d="M 280,16 C 296.8,16 296,32 296,32 " style="fill:none;"/>
+<path d="M 24,48 C 7.199999999999999,48 8,32 8,32 " style="fill:none;"/>
+<path d="M 24,48 C 40.8,48 40,32 40,32 " style="fill:none;"/>
+<path d="M 88,48 C 71.2,48 72,32 72,32 " style="fill:none;"/>
+<path d="M 88,48 C 104.8,48 104,32 104,32 " style="fill:none;"/>
+<path d="M 152,48 C 135.2,48 136,32 136,32 " style="fill:none;"/>
+<path d="M 152,48 C 168.8,48 168,32 168,32 " style="fill:none;"/>
+<path d="M 216,48 C 199.2,48 200,32 200,32 " style="fill:none;"/>
+<path d="M 216,48 C 232.8,48 232,32 232,32 " style="fill:none;"/>
+<path d="M 280,48 C 263.2,48 264,32 264,32 " style="fill:none;"/>
+<path d="M 280,48 C 296.8,48 296,32 296,32 " style="fill:none;"/>
+<circle cx="40" cy="16" r="6" class="closeddot"/><circle cx="72" cy="48" r="6" class="closeddot"/><circle cx="168" cy="16" r="6" class="closeddot"/><circle cx="232" cy="48" r="6" class="closeddot"/><circle cx="296" cy="16" r="6" class="closeddot"/><g transform="translate(0,0)"><text text-anchor="middle" x="56" y="36">?</text><text text-anchor="middle" x="120" y="36">?</text><text text-anchor="middle" x="184" y="36">?</text><text text-anchor="middle" x="248" y="36">?</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;5:</b> Stick wiggling info we receive from XInput API. We don't know what happens between the captured snapshots. Same logic can be applied to button pressing.</div></center>
+
+</p><p>
+
+In any case, the objective for us should be the following: we don't want to miss any input that affects the game in an important way. We don't want to miss a button press happened in a quick succession with the others if, for example, this button is responsible for shooting. It feels awful when the game is unresponsive to your inputs! 
+
+</p>
+<a class="target" name="defineawayofhandlinginput">&nbsp;</a><a class="target" name="writetheusagecodefirst/defineawayofhandlinginput">&nbsp;</a><a class="target" name="toc2.2">&nbsp;</a><h2>Define a Way of Handling Input</h2>
+<p>
+
+
+Before we settle on our own way of handling inputs, let's look at what other people might do. A common way is something along the lines of the following: 
+
+</p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> EventIndex = <span class="hljs-number">0</span>;</span>
+<span class="line">     EventIndex &lt; EventCount;</span>
+<span class="line">     ++EventIndex)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">switch</span> (Event[EventIndex].Type)</span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-keyword">case</span> EventAButton: </span>
+<span class="line">        {</span>
+<span class="line">            <span class="hljs-comment">// do something</span></span>
+<span class="line">        } <span class="hljs-keyword">break</span>;</span>
+<span class="line">        </span>
+<span class="line">        <span class="hljs-keyword">case</span> LeftStick: </span>
+<span class="line">        {</span>
+<span class="line">            <span class="hljs-comment">// do something</span></span>
+<span class="line">        } <span class="hljs-keyword">break</span>;</span>
+<span class="line">    }</span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><file>[Example]</file></div></center>
+<p>
+
+
+Hopefully you can see what's going on here. We iterate over a specific <code>EventCount</code>, pull out Events from some event array, and process them based on their type. 
+
+</p><p>
+
+With this method, platform layer does the minimal amount of work to package the information. It simply captures the input and passes it over to the game, as is. 
+
+</p><p>
+
+This system, however, has an inherent problem: there's a limited amount of space for the events. If the user's input surpasses the <code>EventCount</code>, those inputs either lost or replace some &ldquo;lower priority&rdquo; ones (which are, in turn, lost as well). 
+
+</p><p>
+
+You could of course make this storage pretty high, but then the question arises: why would we want to bother at all, if we don't need to? Do we really care about that? And for this particular game we don't know that we do. 
+
+</p><p>
+
+What we really care about is if a button 1) started the frame up or down 2) ended the frame up or down 3) how many <em class="underscore">transitions</em> (or half-transitions, down to up or up to down) were there in between.  
+
+</p><p>
+
+There's of course information lost here: we don't know for how long was the button pressed if there was more than one transition. A button might have been pressed for 1/120<sup>th</sup> of a second, and that would be different from, say, 1/240<sup>th</sup>. 
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="288" width="288" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 8,64 L 8,96 " style="fill:none;"/>
+<path d="M 8,192 L 8,224 " style="fill:none;"/>
+<path d="M 40,16 L 40,48 " style="fill:none;"/>
+<path d="M 40,144 L 40,176 " style="fill:none;"/>
+<path d="M 80,144 L 80,176 " style="fill:none;"/>
+<path d="M 112,16 L 112,48 " style="fill:none;"/>
+<path d="M 144,24 L 144,96 " style="fill:none;"/>
+<path d="M 144,152 L 144,224 " style="fill:none;"/>
+<path d="M 8,16 L 40,16 " style="fill:none;"/>
+<path d="M 112,16 L 184,16 " style="fill:none;"/>
+<path d="M 40,48 L 112,48 " style="fill:none;"/>
+<path d="M 8,80 L 248,80 " style="fill:none;"/>
+<path d="M 8,144 L 40,144 " style="fill:none;"/>
+<path d="M 80,144 L 184,144 " style="fill:none;"/>
+<path d="M 40,176 L 80,176 " style="fill:none;"/>
+<path d="M 8,208 L 248,208 " style="fill:none;"/>
+<polygon points="256,208 244,202.4 244,213.6 "  style="stroke:none" transform="rotate(0,248,208 )"/>
+<polygon points="256,80 244,74.4 244,85.6 "  style="stroke:none" transform="rotate(0,248,80 )"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="56" y="36">/</text><text text-anchor="middle" x="64" y="36">/</text><text text-anchor="middle" x="72" y="36">/</text><text text-anchor="middle" x="80" y="36">/</text><text text-anchor="middle" x="88" y="36">/</text><text text-anchor="middle" x="96" y="36">/</text><text text-anchor="middle" x="56" y="68">1</text><text text-anchor="middle" x="64" y="68">/</text><text text-anchor="middle" x="72" y="68">1</text><text text-anchor="middle" x="80" y="68">2</text><text text-anchor="middle" x="88" y="68">0</text><text text-anchor="middle" x="96" y="68">s</text><text text-anchor="middle" x="8" y="116">0</text><text text-anchor="middle" x="136" y="116">1</text><text text-anchor="middle" x="144" y="116">/</text><text text-anchor="middle" x="152" y="116">6</text><text text-anchor="middle" x="160" y="116">0</text><text text-anchor="middle" x="168" y="116">s</text><text text-anchor="middle" x="56" y="164">/</text><text text-anchor="middle" x="64" y="164">/</text><text text-anchor="middle" x="40" y="196">1</text><text text-anchor="middle" x="48" y="196">/</text><text text-anchor="middle" x="56" y="196">2</text><text text-anchor="middle" x="64" y="196">4</text><text text-anchor="middle" x="72" y="196">0</text><text text-anchor="middle" x="80" y="196">s</text><text text-anchor="middle" x="8" y="244">0</text><text text-anchor="middle" x="136" y="244">1</text><text text-anchor="middle" x="144" y="244">/</text><text text-anchor="middle" x="152" y="244">6</text><text text-anchor="middle" x="160" y="244">0</text><text text-anchor="middle" x="168" y="244">s</text></g></g></svg>
+
+</p><p>
+
+[<file>[Example]</file>. Difference between a 1/120s and 1/240s is 4 milliseconds.]
+
+</p><p>
+
+You can argue that there's no need for distinguishing in such granularity is unnecessary simply because players themselves might not be able to intentionally distinguish a difference between such a small time frames. And, if we're talking about button hold, we probably think about something happening across many frames, like a quarter of a second, or even more. 
+
+</p><p>
+
+So, to conclude, in our game we might only need two parameters per button: if a button ended down (<code>true</code> or <code>false</code>) and how many &ldquo;half-transitions&rdquo; (Pressed->Unpressed and viceversa) were there. 
+
+</p><p>
+
+Let's say we would use such input to change YOffset:
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span> (Input.IsAnalog)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// NOTE(casey): Use analog movement tuning</span></span>
+<span class="line">}</span>
+<span class="line"><span class="hljs-keyword">else</span></span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// NOTE(casey): Use digital movement tuning</span></span>
+<span class="line">}</span><div class=" add"><span class="line"><span class="hljs-comment">// Input.DownButtonEndedDown;</span></span>
+<span class="line"><span class="hljs-comment">// Input.DownButtonHalfTransitionCount;</span></span>
+<span class="line"><span class="hljs-keyword">if</span>(Input.DownButtonEndedDown)</span>
+<span class="line">{</span>
+<span class="line">    YOffset += <span class="hljs-number">1</span>;</span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;7:</b> <file>[handmade.cpp > GameUpdateAndRender]</file>. Potential usage of the buttons input.</div></center>
+<p>
+
+
+Now, this is about binary input, like buttons. What about analog input, like the stick motion from the controller? 
+
+</p><p>
+
+Stick position can change significantly during a frame. If we were to capture only one value based on, say, average position that stick had, it could misrepresent significantly user's input. For instance, if one started the frame with the stick resting at 0, then wailed it all the way to the 1 and released before the frame end, we'd get an average value fo 0.5 which is definitely something we don't want. And user doesn't want. Nobody wants half-wailing the stick. 
+
+</p><p>
+
+So, in the end, we <em class="underscore">might</em> adopt an event system for the sticks only, maybe capturing the state of the sticks each millisecond (which would result in ~16 input events per 1/16<sup>th</sup> of a second frame). We won't do this just yet. Instead, let's settle with something similar to what we did with the digital input, and have the following values:
+
+</p><p>
+
+<ul>
+<li class="asterisk">Start position
+</li>
+<li class="asterisk">Minimum position
+</li>
+<li class="asterisk">Maximum position
+</li>
+<li class="asterisk">End position</li></ul>
+
+</p><p>
+
+Catch these values for both X and Y coordinates of the stick, and we have an API. Not necessarily <em class="underscore">the</em> API, we'll have to wait and see.
+
+</p><p>
+
+Again, if we want to imagine how exactly would this code be used, we can simply take our <code>ToneHz</code> and multiply it by some small amount to get a change of the tone. We can imagine that we'll get a value from <code>-1</code> to <code>1</code> for each of our stick axis, so the value in Hertz go from the base of 256 to anywhere from 128 to 384. 
+
+</p><p>
+
+Another use case would be taking our <code>XOffset</code> and move up to 4 pixels at a time up or down based on the X position of the stick at the end of the frame. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span> (Input.IsAnalog)</span>
+<span class="line">{</span><div class=" add"><span class="line">    <span class="hljs-comment">// Input.StartX;</span></span>
+<span class="line">    <span class="hljs-comment">// Input.MinX;</span></span>
+<span class="line">    <span class="hljs-comment">// Input.MaxX;</span></span>
+<span class="line">    <span class="hljs-comment">// Input.EndX;</span></span>
+<span class="line"></span>
+<span class="line">    <span class="hljs-comment">// Input.StartY;</span></span>
+<span class="line">    <span class="hljs-comment">// Input.MinY;</span></span>
+<span class="line">    <span class="hljs-comment">// Input.MaxY;</span></span>
+<span class="line">    <span class="hljs-comment">// Input.EndY;</span></span>
+<span class="line"></span>
+<span class="line">    XOffset += (<span class="hljs-keyword">int</span>)(<span class="hljs-number">4.0f</span> * Input.EndX);</span>
+<span class="line">    ToneHz = <span class="hljs-number">256</span> + (<span class="hljs-keyword">int</span>)(<span class="hljs-number">128.0f</span> * (Input.EndY));</span></div><span class="line">}</span>
+<span class="line"><span class="hljs-keyword">else</span></span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// NOTE(casey): Use digital movement tuning</span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">if</span>(Input.DownButtonEndedDown)</span>
+<span class="line">{</span>
+<span class="line">    YOffset += <span class="hljs-number">1</span>;</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;8:</b> <file>[handmade.cpp > GameUpdateAndRender]</file>. Potential API of a stick input.</div></center>
+<p>
+
+
+The last question we have remaining is: what if we want to support multiple players? We could say that: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">We have multiple input sets, each one for a different player. 
+</li>
+<li class="asterisk">These can be stored inside of an <em class="underscore">array</em> of some superstructure.
+</li>
+<li class="asterisk">We can then access one or more input sets, depending on our need.</li></ul>
+
+</p><p>
+
+In usage, this would look something along the lines of: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">game_controller_input *Input0 = &amp;Input.Controllers[<span class="hljs-number">0</span>];</span></div><div class=" edit"><span class="line"><span class="hljs-keyword">if</span> (Input0-&gt;IsAnalog)</span></div><span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// NOTE(casey): Use analog movement tuning</span></span><div class=" edit"><span class="line">    XOffset += (<span class="hljs-keyword">int</span>)(<span class="hljs-number">4.0f</span> * Input0-&gt;EndX);</span>
+<span class="line">    ToneHz = <span class="hljs-number">256</span> + (<span class="hljs-keyword">int</span>)(<span class="hljs-number">128.0f</span> * (Input0-&gt;EndY));</span></div><span class="line">}</span>
+<span class="line"><span class="hljs-keyword">else</span></span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// NOTE(casey): Use digital movement tuning</span></span>
+<span class="line">}</span>
+<span class="line"></span><div class=" edit"><span class="line"><span class="hljs-keyword">if</span>(Input0-&gt;DownButtonEndedDown)</span></div><div class=" C++ "><span class="line">{</span>
+<span class="line">    YOffset += 1;</span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;9:</b> <file>[handmade.cpp > GameUpdateAndRender]</file>. Accessing input of player 1.</div></center>
+<p>
+
+
+This looks fine so far, let's implement it!
+
+</p>
+<a class="target" name="implementtheinputsystem">&nbsp;</a><a class="target" name="implementtheinputsystem">&nbsp;</a><a class="target" name="toc3">&nbsp;</a><h1>Implement the Input System</h1>
+<p>
+
+
+As the first pass, we're happy with the potential usage we make of the user's input. Let's create the actual API and adapt the platform code to use it. 
+
+</p>
+<a class="target" name="writetheapi">&nbsp;</a><a class="target" name="implementtheinputsystem/writetheapi">&nbsp;</a><a class="target" name="toc3.1">&nbsp;</a><h2>Write the API</h2>
+<p>
+
+
+Inside the <code>handmade.h</code> file, we can define the following structures: 
+
+</p><p>
+
+<ul>
+<li class="asterisk"><code>game_button_state</code>: stores information on each individual button.
+</li>
+<li class="asterisk"><code>game_controller_input</code>: stores all the information on each controller that we care about.
+</li>
+<li class="asterisk"><code>game_input</code>: stores multiple controllers.</li></ul>
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_sound_output_buffer</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">int</span> SampleCount;</span>
+<span class="line">    <span class="hljs-keyword">int</span> SamplesPerSecond;</span>
+<span class="line">    s16* Samples;</span>
+<span class="line">};</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_button_state</span></span>
+<span class="line">{</span></span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_controller_input</span></span>
+<span class="line">{</span></span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_input</span></span>
+<span class="line">{</span></span>
+<span class="line">};</span></div><span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">GameUpdateAndRender</span><span class="hljs-params">(game_offscreen_buffer* Buffer, game_sound_output_buffer *SoundBuffer)</span></span>;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;10:</b> <file>[handmade.h]</file>. Defining input structures.</div></center>
+<p>
+
+
+Let's see each structure in detail: 
+
+</p><p>
+
+<code>game_button_state</code> is pretty straightforward: as we said, it includes a <code>HalfTransitionCount</code> and a boolean <code>EndedDown</code>. Similarly, <code>game_input</code> simply stores 4 controllers.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_button_state</span> </span>
+<span class="line">{</span></span><div class=" add"><span class="line">    s32 HalfTransitionCount;</span>
+<span class="line">    b32 EndedDown;</span></div><span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_controller_input</span></span>
+<span class="line">{</span></span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_input</span></span>
+<span class="line">{</span></span><div class=" add"><span class="line">    game_controller_input Controllers[<span class="hljs-number">4</span>];</span></div><span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;11:</b> <file>[handmade.h]</file>. Filling out <code>game_button_state</code> and <code>game_input</code>.</div></center>
+<p>
+
+
+As for the <code>game_controller_input</code>, it's slightly more complex but we can drill it down quite easily. 
+
+</p><p>
+
+<ul>
+<li class="asterisk">It should contain an <code>IsAnalog</code> boolean. 
+</li>
+<li class="asterisk">It should allow to contain all the relevant information on the analog stick.
+</li>
+<li class="asterisk">It should also contain all the buttons that we need. Let's say we need 6 for now.</li></ul>
+
+</p><p>
+
+So something like this: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_button_state</span> </span>
+<span class="line">{</span></span>
+<span class="line">    s32 HalfTransitionCount;</span>
+<span class="line">    b32 EndedDown;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_controller_input</span></span>
+<span class="line">{</span></span><div class=" add"><span class="line">    b32 IsAnalog; </span>
+<span class="line"></span>
+<span class="line">    f32 StartX;</span>
+<span class="line">    f32 StartY;</span>
+<span class="line">    </span>
+<span class="line">    f32 MinX;</span>
+<span class="line">    f32 MinY;</span>
+<span class="line">    </span>
+<span class="line">    f32 MaxX;</span>
+<span class="line">    f32 MaxY;</span>
+<span class="line">    </span>
+<span class="line">    f32 EndX;</span>
+<span class="line">    f32 EndY;</span>
+<span class="line">    </span>
+<span class="line">    game_button_state Up;</span>
+<span class="line">    game_button_state Down;</span>
+<span class="line">    game_button_state Left;</span>
+<span class="line">    game_button_state Right;</span>
+<span class="line">    game_button_state LeftShoulder;</span>
+<span class="line">    game_button_state RightShoulder;</span></div><span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_input</span></span>
+<span class="line">{</span></span>
+<span class="line">    game_controller_input Controllers[<span class="hljs-number">4</span>];</span>
+<span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;12:</b> <file>[handmade.h]</file>. Filling out <code>game_controller_input</code>.</div></center>
+<p>
+
+
+Mind you that Up/Down/Left/Right buttons don't represent the directions on a D-Pad, but rather the position of the &ldquo;action&rdquo; buttons on a generic controller. Thus, for XBox Controller, <code>Up</code> button would be represented by <code>Y</code>, while on a PlayStation controller it would be Triangle.
+
+</p><p>
+
+That should be fine for now, but let's go one step further and also allow to access the buttons their index. To do that, we can use a nameless <code>union</code> (that we've seen already in <a href="../html/day10.html">day 10</a>) followed by an array of buttons and the same buttons in a struct. This will allow us to access them in both ways: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_controller_input</span></span>
+<span class="line">{</span></span>
+<span class="line">    b32 IsAnalog; </span>
+<span class="line"></span>
+<span class="line">    f32 StartX;</span>
+<span class="line">    f32 StartY;</span>
+<span class="line">    </span>
+<span class="line">    f32 MinX;</span>
+<span class="line">    f32 MinY;</span>
+<span class="line">    </span>
+<span class="line">    f32 MaxX;</span>
+<span class="line">    f32 MaxY;</span>
+<span class="line">    </span>
+<span class="line">    f32 EndX;</span>
+<span class="line">    f32 EndY;</span>
+<span class="line">    </span><div class=" add"><span class="line">    <span class="hljs-keyword">union</span> </span>
+<span class="line">    {</span>
+<span class="line">        game_button_state Buttons[<span class="hljs-number">6</span>];</span>
+<span class="line">        <span class="hljs-class"><span class="hljs-keyword">struct</span></span>
+<span class="line">        {</span></span></div><span class="line">            game_button_state Up;</span>
+<span class="line">            game_button_state Down;</span>
+<span class="line">            game_button_state Left;</span>
+<span class="line">            game_button_state Right;</span>
+<span class="line">            game_button_state LeftShoulder;</span>
+<span class="line">            game_button_state RightShoulder;</span><div class=" add"><span class="line">        };</span>
+<span class="line">    };</span></div><span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;13:</b> <file>[handmade.h]</file>. Improving <code>game_controller_input</code>.</div></center>
+<p>
+
+
+It's a small change that doesn't bear any consequence on the final result, but it's a nice quality of life improvement. 
+
+</p><p>
+
+<div class="admonition ">If you're unfamiliar with how nameless structs and unions work, check out subsection  <a href="#toc6.3">6.3</a>.</div>
+
+</p>
+<a class="target" name="fixthecompilererrors">&nbsp;</a><a class="target" name="implementtheinputsystem/fixthecompilererrors">&nbsp;</a><a class="target" name="toc3.2">&nbsp;</a><h2>Fix the Compiler Errors</h2>
+<p>
+
+
+We are now at a decent enough point to allow compiler guide us in the next step of implementation. We leave the following as an exercise for the reader: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">Update <code>GameUpdateAndRender</code> function signature (such as that it takes a <code>game_input *Input, game_offscreen_buffer *Buffer, game_sound_output_buffer *SoundBuffer</code>).
+</li>
+<li class="asterisk">Fix the <code>.</code> operator for <code>-&gt;</code> when fetching the controller.
+</li>
+<li class="asterisk">Rename <code>DownButtonEndedDown</code> to its analogue in the API.</li></ul>
+
+</p><p>
+
+When you finally arrive to only having one error in <code>win32_handmade.cpp</code> (<code>'GameUpdateAndRender': function does not take 2 arguments</code>), you are ready to proceed.
+
+</p><p>
+
+<div class="admonition tip">If you feel stuck, check out the solution in subsection  <a href="#toc5.1">5.1</a></div>
+
+</p>
+<a class="target" name="updatewindowslayer">&nbsp;</a><a class="target" name="implementtheinputsystem/updatewindowslayer">&nbsp;</a><a class="target" name="toc3.3">&nbsp;</a><h2>Update Windows Layer</h2>
+<p>
+
+
+Updating the Win32 platform layer, with the possible exception of the keyboard input, should be a pretty straightforward operation as well. For starters, we can define a <code>game_input</code> structure at the beginning of our frame and pass it to <code>GameUpdateAndRender</code>, thus fixing the last compiler error we had thus far. Remember to initialize it to 0 so that you don't pass garbage my mistake!
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">while</span> (GlobalRunning)</span>
+<span class="line">{</span><div class=" add"><span class="line">    game_input Input = {};</span></div><span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">    GameUpdateAndRender(&amp;Input, &amp;Buffer, &amp;SoundBuffer);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;14:</b> <file>[win32_handmade.cpp > WinMain]</file>. Defining <code>Input</code> inside main Win32 loop.</div></center>
+<p>
+
+
+Let's start implementing the most intuitive thing. We can adapt it if necessary.
+
+</p>
+<a class="target" name="gamepadbuttons">&nbsp;</a><a class="target" name="implementtheinputsystem/updatewindowslayer/gamepadbuttons">&nbsp;</a><a class="target" name="toc3.3.1">&nbsp;</a><h3>Gamepad Buttons</h3>
+<p>
+
+
+For the gamepad, our input system is super simple at the moment: we only poll the <code>ControllerState</code> once per frame. For the buttons this means that we only really need to count the <code>HalfTransition</code>s if there was the change from the last time we ran this loop. 
+
+</p><p>
+
+Right now, we read the input of each gamepad button in the following block: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">bool</span> Up            = Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_DPAD_UP;</span>
+<span class="line"><span class="hljs-keyword">bool</span> Down          = Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_DPAD_DOWN;</span>
+<span class="line"><span class="hljs-keyword">bool</span> Left          = Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_DPAD_LEFT;</span>
+<span class="line"><span class="hljs-keyword">bool</span> Right         = Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_DPAD_RIGHT;</span>
+<span class="line"><span class="hljs-keyword">bool</span> Start         = Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_START;</span>
+<span class="line"><span class="hljs-keyword">bool</span> Back          = Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_BACK;</span>
+<span class="line"><span class="hljs-keyword">bool</span> LeftShoulder  = Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_LEFT_SHOULDER;</span>
+<span class="line"><span class="hljs-keyword">bool</span> RightShoulder = Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_RIGHT_SHOULDER;</span>
+<span class="line"><span class="hljs-keyword">bool</span> AButton       = Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_A;</span>
+<span class="line"><span class="hljs-keyword">bool</span> BButton       = Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_B;</span>
+<span class="line"><span class="hljs-keyword">bool</span> XButton       = Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_X;</span>
+<span class="line"><span class="hljs-keyword">bool</span> YButton       = Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_Y;</span></code></pre><center><div class="listingcaption tilde"><file>[win32_handmade.cpp]</file></div></center>
+<p>
+
+
+We can convert this readout to what we now expect the controller readout to be by defining an utility function, and passing it everything that it needs. This function would do the following:
+
+</p><p>
+
+<ul>
+<li class="asterisk">To calculate <code>EndedDown</code>, we do the same thing we were doing before in our XInput code: try to bitwise-AND the XInput button state with whatever bit we're reading. If the result is <code>0</code>, button was up, if the result is the test button bit, the button is down.
+</li>
+<li class="asterisk">To calculate <code>HalfTransitionCount</code>, we simply check if the old state and the new states match. If they don't, there was a transition, so we set the count to <code>1</code>.</li></ul>
+
+</p><p>
+
+This is how it looks in code: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32LoadXInput</span><span class="hljs-params">()</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span><div class=" add"><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">Win32ProcessXInputDigitalButton</span><span class="hljs-params">(DWORD XInputButtonState, </span>
+<span class="line">                                game_button_state *OldState, DWORD ButtonBit,</span>
+<span class="line">                                game_button_state *NewState)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    NewState-&gt;EndedDown = ((XInputButtonState &amp; ButtonBit) == ButtonBit);</span>
+<span class="line">    NewState-&gt;HalfTransitionCount = (OldState-&gt;EndedDown != NewState-&gt;EndedDown) ? <span class="hljs-number">1</span> : <span class="hljs-number">0</span>;</span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;15:</b> <file>[win32_handmade.cpp]</file>. Introducing <code>Win32ProcessXInputDigitalButton</code>.</div></center>
+<p>
+
+
+We can now simply come in and process all these buttons. If you remember from above, we don't have any distinction between the actual <em class="underscore">brand</em> of controller. So for Windows, <code>A</code> button is <code>Down</code>, <code>X</code> is <code>Left</code> and so on. Our code will thus be transformed in the following manner: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">bool</span> Up            = Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_DPAD_UP;</span>
+<span class="line"><span class="hljs-keyword">bool</span> Down          = Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_DPAD_DOWN;</span>
+<span class="line"><span class="hljs-keyword">bool</span> Left          = Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_DPAD_LEFT;</span>
+<span class="line"><span class="hljs-keyword">bool</span> Right         = Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_DPAD_RIGHT;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// bool Start         = Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_START;</span></span>
+<span class="line"><span class="hljs-comment">// bool Back          = Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_BACK;</span></span>
+<span class="line"></span><div class=" edit"><span class="line">Win32ProcessXInputDigitalButton(Pad-&gt;wButtons,</span>
+<span class="line">                                &amp;OldController-&gt;Down,XINPUT_GAMEPAD_A,</span>
+<span class="line">                                &amp;NewController-&gt;Down);</span>
+<span class="line">Win32ProcessXInputDigitalButton(Pad-&gt;wButtons,</span>
+<span class="line">                                &amp;OldController-&gt;Right,XINPUT_GAMEPAD_B,</span>
+<span class="line">                                &amp;NewController-&gt;Right);</span>
+<span class="line">Win32ProcessXInputDigitalButton(Pad-&gt;wButtons,</span>
+<span class="line">                                &amp;OldController-&gt;Left,XINPUT_GAMEPAD_X,</span>
+<span class="line">                                &amp;NewController-&gt;Left);</span>
+<span class="line">Win32ProcessXInputDigitalButton(Pad-&gt;wButtons,</span>
+<span class="line">                                &amp;OldController-&gt;Up,XINPUT_GAMEPAD_Y,</span>
+<span class="line">                                &amp;NewController-&gt;Up);</span>
+<span class="line">Win32ProcessXInputDigitalButton(Pad-&gt;wButtons,</span>
+<span class="line">                                &amp;OldController-&gt;LeftShoulder,XINPUT_GAMEPAD_LEFT_SHOULDER,</span>
+<span class="line">                                &amp;NewController-&gt;LeftShoulder);</span>
+<span class="line">Win32ProcessXInputDigitalButton(Pad-&gt;wButtons,</span>
+<span class="line">                                &amp;OldController-&gt;RightShoulder,XINPUT_GAMEPAD_RIGHT_SHOULDER,</span>
+<span class="line">                                &amp;NewController-&gt;RightShoulder);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;16:</b> <file>[win32_handmade.cpp > WinMain]</file>. Storing button input.</div></center>
+<p>
+
+
+You'll notice a couple of things. First, we aren't currently processing all the buttons. This is because, for D-Pad, we'll need to find a way to use it alongside the stick. As for the <code>Start</code> and <code>Back</code> buttons, we'll need to decide how we're going to eventually use them, and whether we're going whatsoever. 
+
+</p><p>
+
+Second, we're using <code>OldController</code> and <code>NewController</code>, while above we only defined a single <code>Input</code> system. This is another benefit of &ldquo;writing usage code first&rdquo;: you find exactly what you need to do next!
+
+</p><p>
+
+Speaking of, to get data for each gamepad we're currently iterating over a Windows-defined <code>XUSER_MAX_COUNT</code>. We don't really want that as we want to only iterate over a specific amount of controllers we'll support. 
+
+</p><p>
+
+Thus we can edit our iteration loop as below. We can also specify the <code>Old</code> and <code>New</code> Controllers right away. 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-keyword">int</span> MaxControllerCount = XUSER_MAX_COUNT; </span>
+<span class="line"><span class="hljs-keyword">if</span>(MaxControllerCount &gt; ArrayCount(NewInput-&gt;Controllers))</span>
+<span class="line">{</span>
+<span class="line">    MaxControllerCount = ArrayCount(NewInput-&gt;Controllers);</span>
+<span class="line">}</span></div><span class="line"></span>
+<span class="line"><span class="hljs-keyword">for</span> (DWORD ControllerIndex = <span class="hljs-number">0</span>;</span><div class=" edit"><span class="line">        ControllerIndex &lt; MaxControllerCount;</span></div><span class="line">        ++ControllerIndex)</span>
+<span class="line">{</span><div class=" add"><span class="line">    game_controller_input *OldController = &amp;OldInput-&gt;Controllers[ControllerIndex];</span>
+<span class="line">    game_controller_input *NewController = &amp;NewInput-&gt;Controllers[ControllerIndex];                </span></div><div class=" C++ "><span class="line">    // ... </span>
+<span class="line">    // Read the controller input</span>
+<span class="line">    // ... </span>
+<span class="line">} </span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;17:</b> <file>[win32_handmade.cpp > WinMain]</file>. Making sure we only iterate over a finite controller count.</div></center>
+
+<a class="target" name="arraycount">&nbsp;</a><a class="target" name="implementtheinputsystem/updatewindowslayer/arraycount">&nbsp;</a><a class="target" name="toc3.3.2">&nbsp;</a><h3>Array Count</h3>
+<p>
+
+
+Quick aside on the <code>ArrayCount</code> function over there. By default, C programming language doesn't provide any utility to count the members of an array, and we don't want to use any utilities in the Standard Library. So we'll make our own utility macro which does just that. Let's do it somewhere in <code>handmade.h</code>: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> !defined(HANDMADE_H)</span></span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))</span></span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;18:</b> <file>[handmade.h]</file>. Defining <code>ArrayCount</code> macro. In macros, you never have enough brackets.</div></center>
+<p>
+
+
+What this macro does is simply taking the size of the array and dividing it by the size of its first element. That's all what we need to get the count of how many items there are in a given array.
+
+</p>
+<a class="target" name="gamepadstick">&nbsp;</a><a class="target" name="implementtheinputsystem/updatewindowslayer/gamepadstick">&nbsp;</a><a class="target" name="toc3.3.3">&nbsp;</a><h3>Gamepad Stick</h3>
+<p>
+
+
+Using a gamepad, we can have both the analog (provided by the its stick) and digital (provided by the its d-pad) stick values. We'll keep the d-pad outside the today's scope and focus entirely on the stick.
+
+</p><p>
+
+If you recall, for each axis we need a <code>Start, Min, Max</code> and <code>End</code> position, ranging from <code>-1.0</code> to <code>1.0</code>. However, the position is stored as a 16-bit integer, so we'll need to <em class="underscore">normalize</em> or convert one into the other.
+
+</p><p>
+
+Now, the way normalization works is that you simply need to divide the value by its maximum. However, the range for the possible stick values is different depending on the sign: it can go from &minus;32768 to 32767. Technically you'll need to divide by different numbers depending on the sign: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">f32 X;</span>
+<span class="line"><span class="hljs-keyword">if</span>(Pad-&gt;sThumbLX &lt; <span class="hljs-number">0</span>)</span>
+<span class="line">{</span>
+<span class="line">    X = (f32)Pad-&gt;sThumbLX / <span class="hljs-number">32768.0f</span>;</span>
+<span class="line">}</span>
+<span class="line"><span class="hljs-keyword">else</span></span>
+<span class="line">{</span>
+<span class="line">    X = (f32)Pad-&gt;sThumbLX / <span class="hljs-number">32767.0f</span>;</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line">f32 Y;</span>
+<span class="line"><span class="hljs-keyword">if</span>(Pad-&gt;sThumbLY &lt; <span class="hljs-number">0</span>)</span>
+<span class="line">{</span>
+<span class="line">    Y = (f32)Pad-&gt;sThumbLY / <span class="hljs-number">32768.0f</span>;</span>
+<span class="line">}</span>
+<span class="line"><span class="hljs-keyword">else</span></span>
+<span class="line">{</span>
+<span class="line">    Y = (f32)Pad-&gt;sThumbLY / <span class="hljs-number">32767.0f</span>;</span>
+<span class="line">}</span>
+<span class="line"></span></div><div class=" delete"><span class="line">s16 StickX = Pad-&gt;sThumbLX;</span>
+<span class="line">s16 StickY = Pad-&gt;sThumbLY;</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;19:</b> <file>[win32_handmade.cpp > WinMain]</file>. Normalizing stick X and Y values.</div></center>
+<p>
+
+
+A question might arise: if we need to get a negative value, why are we dividing by (a positive) 32768? Thing is, if you divide a negative number (which we verified we have) by a negative number, the sign cancels out, and the number becomes positive.
+
+</p><p>
+
+Now, let's supply the various values to the controller. The code below should be self-explanatory: 
+
+</p><pre class="listing tilde"><code><span class="line">f32 X;</span>
+<span class="line"><span class="hljs-keyword">if</span>(Pad-&gt;sThumbLX &lt; <span class="hljs-number">0</span>)</span>
+<span class="line">{</span>
+<span class="line">    X = (f32)Pad-&gt;sThumbLX / <span class="hljs-number">32768.0f</span>;</span>
+<span class="line">}</span>
+<span class="line"><span class="hljs-keyword">else</span></span>
+<span class="line">{</span>
+<span class="line">    X = (f32)Pad-&gt;sThumbLX / <span class="hljs-number">32767.0f</span>;</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line">f32 Y;</span>
+<span class="line"><span class="hljs-keyword">if</span>(Pad-&gt;sThumbLY &lt; <span class="hljs-number">0</span>)</span>
+<span class="line">{</span>
+<span class="line">    Y = (f32)Pad-&gt;sThumbLY / <span class="hljs-number">32768.0f</span>;</span>
+<span class="line">}</span>
+<span class="line"><span class="hljs-keyword">else</span></span>
+<span class="line">{</span>
+<span class="line">    Y = (f32)Pad-&gt;sThumbLY / <span class="hljs-number">32767.0f</span>;</span>
+<span class="line">}</span>
+<span class="line"></span><div class=" add"><span class="line">NewController-&gt;StartX = OldController-&gt;EndX;</span>
+<span class="line">NewController-&gt;StartY = OldController-&gt;EndY;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// TODO(casey): Min/Max macros!!!</span></span>
+<span class="line">NewController-&gt;MinX = NewController-&gt;MaxX = NewController-&gt;EndX = X;</span>
+<span class="line">NewController-&gt;MinY = NewController-&gt;MaxY = NewController-&gt;EndY = Y;</span>
+<span class="line"></span>
+<span class="line">NewController-&gt;IsAnalog = <span class="hljs-literal">true</span>;</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;20:</b> <file>[win32_handmade.cpp > WinMain]</file>. Setting controller stick values. We don't have a Min/Max macros just yet, and we'll think about them next time.</div></center>
+
+<a class="target" name="finishingup">&nbsp;</a><a class="target" name="implementtheinputsystem/updatewindowslayer/finishingup">&nbsp;</a><a class="target" name="toc3.3.4">&nbsp;</a><h3>Finishing Up</h3>
+<p>
+
+
+At this point it's obvious that we'll need two <code>Input</code> structures instead of one. We'll also need to keep track of the <code>OldInput</code> in the next frame, so let's take out our <code>Input</code> from the <code>GlobalRunning</code> loop and split it in two. At this point we could simply take a small array of two elements and swap them around at the end of the loop. This is how it looks like: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">game_input Input[<span class="hljs-number">2</span>] = {};</span>
+<span class="line">game_input* OldInput = &amp;Input[<span class="hljs-number">0</span>];</span>
+<span class="line">game_input* NewInput = &amp;Input[<span class="hljs-number">1</span>];</span></div><span class="line">LARGE_INTEGER LastCounter;</span>
+<span class="line">QueryPerformanceCounter(&amp;LastCounter);</span>
+<span class="line">u64 LastCycleCount = __rdtsc();</span>
+<span class="line">GlobalRunning = <span class="hljs-literal">true</span>;</span>
+<span class="line"><span class="hljs-keyword">while</span> (GlobalRunning)</span>
+<span class="line">{</span><div class=" delete"><span class="line">    game_input Input = {};</span></div><span class="line">    <span class="hljs-comment">// ... </span></span><div class=" edit"><span class="line">    GameUpdateAndRender(NewInput, &amp;Buffer, &amp;SoundBuffer); </span></div><span class="line">    <span class="hljs-comment">// ... </span></span><div class=" add"><span class="line">    game_input *Temp = NewInput;</span>
+<span class="line">    NewInput = OldInput;</span>
+<span class="line">    OldInput = Temp;</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;21:</b> <file>[win32_handmade.cpp > WinMain]</file>. Keeping track of two input systems.</div></center>
+<p>
+
+
+
+
+<div class="admonition ">We need a <code>Temp</code> place to store the input pointer because we can't directly swap old and new inputs. We might write a <code>Swap</code> utility function to do that one day like we did with <code>ArrayCount</code>, and you might as well try it yourself! Today's not the day, though since it's not as straightforward as with <code>ArrayCount</code>.</div>
+
+</p>
+<a class="target" name="recap">&nbsp;</a><a class="target" name="recap">&nbsp;</a><a class="target" name="toc4">&nbsp;</a><h1>Recap</h1>
+<p>
+
+
+We've done a lot today, and we still haven't quite finished yet. In the future, we'll need to handle dead zone processing, properly initialize stick and d-pad values, and of course think about the keyboard. 
+
+</p><p>
+
+But this should be it for now! Next time, we'll start talking about some people's greatest fear: memory management.
+
+</p>
+<a class="target" name="exercises">&nbsp;</a><a class="target" name="exercises">&nbsp;</a><a class="target" name="toc5">&nbsp;</a><h1>Exercises</h1>
+
+<a class="target" name="fixingcompilererrors-solution">&nbsp;</a><a class="target" name="exercises/fixingcompilererrors-solution">&nbsp;</a><a class="target" name="toc5.1">&nbsp;</a><h2>Fixing Compiler Errors - Solution</h2>
+<p>
+
+
+
+
+<div class="admonition ">The following is the solution for the exercise in subsection  <a href="#toc3.2">3.2</a>.</div>
+
+</p><p>
+
+<ol start=1>
+<li class="number">Update <code>GameUpdateAndRender</code> function signature:</li></ol>
+
+</p><pre class="listing tilde"><code><span class="line">error C2065: 'Input': undeclared identifier</span></code></pre><center><div class="listingcaption tilde"><file>[Error text]</file></div></center>
+<pre class="listing tilde"><code><span class="line">internal <span class="hljs-keyword">void</span></span><div class=" edit"><span class="line">GameUpdateAndRender(game_input *Input, game_offscreen_buffer* Buffer, </span>
+<span class="line">                    game_sound_output_buffer *SoundBuffer);</span></div></code></pre><center><div class="listingcaption tilde"><file>[handmade.h]</file></div></center>
+<pre class="listing tilde"><code><span class="line">internal <span class="hljs-keyword">void</span></span><div class=" edit"><span class="line">GameUpdateAndRender(game_input *Input, game_offscreen_buffer* Buffer, </span>
+<span class="line">                    game_sound_output_buffer *SoundBuffer)</span></div><span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><file>[handmade.cpp]</file></div></center>
+<p>
+
+
+
+<ol start=2>
+<li class="number">Fix the referencing error:</li></ol>
+
+</p><pre class="listing tilde"><code><span class="line">error C2228: left of '.Controllers' must have class/struct/union</span>
+<span class="line">note: type is 'game_input *'</span>
+<span class="line">note: did you intend to use '-&gt;' instead?</span></code></pre><center><div class="listingcaption tilde"><file>[Error text]</file> Fix.</div></center>
+<pre class="listing tilde"><code><div class=" edit"><span class="line">game_controller_input *Input0 = &amp;Input-&gt;Controllers[<span class="hljs-number">0</span>];</span></div><span class="line"><span class="hljs-keyword">if</span> (Input0-&gt;IsAnalog)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span>
+<span class="line">[&lt;file&gt;[handmade.cpp &gt; GameUpdateAndRender]&lt;/file&gt; Fix.]</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-number">3.</span> Rename the `DownButtonEndedDown`:</span>
+<span class="line"></span><span class="line">error C2039: 'DownButtonEndedDown': is not a member of 'game_controller_input'</span>
+<span class="line">note: see declaration of 'game_controller_input'</span></code></pre><center><div class="listingcaption tilde"><file>[Error text]</file></div></center>
+<pre class="listing tilde"><code><div class=" edit"><span class="line"><span class="hljs-keyword">if</span>(Input0-&gt;Down.EndedDown)</span></div><span class="line">{</span>
+<span class="line">    XOffset += <span class="hljs-number">1</span>;</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><file>[handmade.cpp > GameUpdateAndRender]</file> Fix.</div></center>
+<p>
+
+
+<em class="underscore">(Continue to subsection  <a href="#toc3.3">3.3</a>)</em>
+
+</p>
+<a class="target" name="programmingnotions">&nbsp;</a><a class="target" name="programmingnotions">&nbsp;</a><a class="target" name="toc6">&nbsp;</a><h1>Programming Notions</h1>
+
+<a class="target" name="functionoverloading">&nbsp;</a><a class="target" name="programmingnotions/functionoverloading">&nbsp;</a><a class="target" name="toc6.1">&nbsp;</a><h2>Function Overloading</h2>
+<p>
+
+
+In C++, there's a feature called &ldquo;Function overloading&rdquo;. It allows you to specify different functions with the same name, each with its own set of parameters.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">GameUpdateAndRender</span><span class="hljs-params">(game_offscreen_buffer* Buffer, <span class="hljs-keyword">int</span> XOffset, <span class="hljs-keyword">int</span> YOffset,</span>
+<span class="line">                    game_sound_output_buffer *SoundBuffer, <span class="hljs-keyword">int</span> ToneHz)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// do something;</span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">GameUpdateAndRender</span><span class="hljs-params">(game_offscreen_buffer* Buffer)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// do something;</span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">GameUpdateAndRender</span><span class="hljs-params">(game_sound_output_buffer *SoundBuffer, <span class="hljs-keyword">int</span> ToneHz)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// do something;</span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">GameUpdateAndRender</span><span class="hljs-params">(game_offscreen_buffer* Buffer, <span class="hljs-keyword">int</span> XOffset, <span class="hljs-keyword">int</span> YOffset)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// do something;</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><file>[Example]</file> This code is totally valid and will compile just fine in C++ mode.</div></center>
+<p>
+
+
+How does the system know which function you want to call when? The compiler will look at the parameter/s that you pass to the function! 
+
+</p><p>
+
+The order, type <em class="underscore">and</em> the amount of parameters passed matter in this case. In the example above there's only one function that takes a parameter of type <code>game_offscreen_buffer *</code> and two <code>int</code>s (in this exact sequence). 
+
+</p><p>
+
+This system is not perfect. While the compiler will do its best to match the things up, sometimes confusion might happen, which will be reported as an error at compile time. Also the compiler doesn't care about the <em class="underscore">name</em> of the parameters, so the code snippet below will fail to build. In this case, you'll need to do some other change in order to differentiate between those function.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">GameUpdateAndRender</span><span class="hljs-params">(<span class="hljs-keyword">int</span> XOffset)</span> <span class="hljs-comment">// see previous definition of 'GameUpdateAndRender'</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// do something;</span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">GameUpdateAndRender</span><span class="hljs-params">(<span class="hljs-keyword">int</span> ToneHz)</span> <span class="hljs-comment">// error C2084: function 'GameUpdateAndRender (int)' already has a body</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// do something;</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><file>[Example]</file> This code will not compile. But don't take our word for it, try it yourself!</div></center>
+<p>
+
+
+We won't be using function overloading a whole lot. That said, it's comfortable having access to the feature. It allows having different functions with a same name, making things a bit more convenient and easier to read.
+
+</p><p>
+
+<em class="underscore">(Back to subsection  <a href="#toc1.1">1.1</a>)</em>
+
+</p>
+<a class="target" name="aboutprematuredesign">&nbsp;</a><a class="target" name="programmingnotions/aboutprematuredesign">&nbsp;</a><a class="target" name="toc6.2">&nbsp;</a><h2>About Premature Design</h2>
+<p>
+
+
+Whether you're writing your platform layer, some API, or some other code, it's always a good idea to keep in mind what exactly you are trying to solve. Similar problem might result in different code depending on the circumstance. This includes things like: kind of code we're writing, kind of standards we need to adhere to on this stage, the future this code is going to have, and so on.
+
+</p><p>
+
+In this case, our circumstance is that we iterate <em class="underscore">towards</em> an API, as opposed to writing <em class="underscore">the</em> API. This means we can give ourselves a bit more slack and even be sloppy sometimes! Don't spend too much time pondering on the optimal solution, allow it to present itself when the time is right. Don't waste your time on the code that is going to be deleted anyway!
+
+</p><p>
+
+Doing too much analysis and work on the code too early in the process <em class="underscore">is bad</em>. There's an old adage &ldquo;Premature Optimization is the Root of All Evil&rdquo;, and many take that to mean that &ldquo;Optimization&rdquo; is &ldquo;Making code fast&rdquo;. While that is definitely true, optimization here can also refer to the design of the code itself. 
+
+</p><p>
+
+Premature design is one of the <em class="underscore">most</em> destructive forces in computing today, it's the thing that costs the most time and results in most problems in shipping code. Premature optimization is <em class="underscore">awful</em>. Right now, we're at the <em class="underscore">beginning</em> of the design phase of this API, and we need to understand that what we're doing here are <em class="underscore">experiments</em>. They might go well, they might go terribly, we don't know that yet, and we won't know until we've set most of the things in place and are ready to go back and tighten up the screws and define the final API. 
+
+</p><p>
+
+<em class="underscore">(Back to section  <a href="#toc2">2</a>)</em>
+
+</p>
+<a class="target" name="namelessstructs">&nbsp;</a><a class="target" name="programmingnotions/namelessstructs">&nbsp;</a><a class="target" name="toc6.3">&nbsp;</a><h2>Nameless Structs</h2>
+<p>
+
+
+We've been working with the structs long enough for you to be familiar with them. We declare some <code>struct foo {};</code>, fill it out with data and then use it in a variable. It's also should be familiar to you by now that you can put structs inside the structs, like in an infinite matryoshka doll. 
+
+</p><p>
+
+However, this means that you also need to put its accessor. if you put <code>foo Foo;</code> inside a struct, you'll need to go through <code>Foo</code> in order to get its members. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">button_states</span></span>
+<span class="line">{</span></span>
+<span class="line">    game_button_state Up;</span>
+<span class="line">    game_button_state Down;</span>
+<span class="line">    game_button_state Left;</span>
+<span class="line">    game_button_state Right;</span>
+<span class="line">    game_button_state LeftShoulder;</span>
+<span class="line">    game_button_state RightShoulder;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">controller_state</span></span>
+<span class="line">{</span></span>
+<span class="line">    button_states Buttons;</span>
+<span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line"></span>
+<span class="line">controller_state State;</span>
+<span class="line">State.Buttons.Up.WasDown = <span class="hljs-literal">true</span>; <span class="hljs-comment">// OK</span></span>
+<span class="line">State.Left.WasDown = <span class="hljs-literal">false</span>; <span class="hljs-comment">// Error</span></span></code></pre><center><div class="listingcaption tilde"><file>[Example]</file></div></center>
+<p>
+
+
+However, if you declare that struct directly inside, you can simply access its members without typing the name.
+
+</p><p>
+
+At this point, you have the option to drop all the names in the declarations altogether, and then it'll simply be a passthrough. It wouldn't really matter usually, except in cases when we use unions. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">controller_state</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">button_states</span></span>
+<span class="line">    {</span></span>
+<span class="line">        game_button_state Up;</span>
+<span class="line">        game_button_state Down;</span>
+<span class="line">        game_button_state Left;</span>
+<span class="line">        game_button_state Right;</span>
+<span class="line">        game_button_state LeftShoulder;</span>
+<span class="line">        game_button_state RightShoulder;</span>
+<span class="line">    } Buttons;</span>
+<span class="line"></span>
+<span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line"></span>
+<span class="line">controller_state State;</span>
+<span class="line">State.Buttons.Up.WasDown = <span class="hljs-literal">true</span>; <span class="hljs-comment">// OK</span></span>
+<span class="line">State.Left.WasDown = <span class="hljs-literal">false</span>;      <span class="hljs-comment">// Also OK!</span></span></code></pre><center><div class="listingcaption tilde"><file>[Example]</file></div></center>
+<p>
+
+
+Unions allow to put two or more things in the same &ldquo;place&rdquo;. if you declare a union <code>union { int X; float Y; };</code>, it will only take 32 bits, and you can access <code>X</code> or <code>Y</code> depending on your need. You really need to know what you're doing here, since it's effectively the same memory. It doesn't convert a float to an integer or back, but displays the <em class="underscore">same bits</em> as if they were that type. 
+
+</p><p>
+
+In our case, if you get a union with a struct and an array at the same memory, you can access both of them in a way you prefer. Furthermore, you can use the same nameless item trick on the unions as well, thus allowing you to access the values you want directly. 
+
+</p><p>
+
+<em class="underscore">(Continue to subsection  <a href="#toc3.2">3.2</a>)</em>
+
+</p>
+<a class="target" name="navigation">&nbsp;</a><a class="target" name="navigation">&nbsp;</a><a class="target" name="toc7">&nbsp;</a><h1>Navigation</h1>
 <p>
 
 
@@ -259,13 +1531,23 @@ Previous: <a href="../html/day12.html">Day 12. Platform-Independent Sound Output
 <div class="nonumberh1">Glossary </div>
 <p>
 
-* 
+
+<ul>
+<li class="asterisk">Arrays
+</li>
+<li class="asterisk">Function overloading
+</li>
+<li class="asterisk">Normalization
+</li>
+<li class="asterisk">Nameless structs</li></ul>
 
 </p>
 <div class="nonumberh1">References </div>
 <p>
 
-(#)
+
+<ul>
+<li class="minus">No external references.</li></ul>
 
 </p><p>
 
@@ -283,7 +1565,4 @@ Previous: <a href="../html/day12.html">Day 12. Platform-Independent Sound Output
   window.alreadyProcessedMarkdeep ||
     (document.body.style.visibility = 'visible');
 </script>
-
-</p><p>
-
-</p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.10&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div>
+</dsound.h></xinput.h></stdio.h></windows.h></p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.10&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.6/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
