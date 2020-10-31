@@ -369,7 +369,7 @@ You can argue that there's no need for distinguishing in such granularity is unn
 
 So, to conclude, in our game we might only need two parameters per button: if a button ended down (`true` or `false`) and how many "half-transitions" (Pressed->Unpressed and viceversa) were there. 
 
-Let's say we would use such input to change XOffset:
+Let's say we would use such input to change YOffset:
 
 ~~~~~~~ C++
 if (Input.IsAnalog)
@@ -385,7 +385,7 @@ else
 // Input.DownButtonHalfTransitionCount;
 if(Input.DownButtonEndedDown)
 {
-    XOffset += 1;
+    YOffset += 1;
 }
 ~~~~~~~
 [Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file>. Potential usage of the buttons input.]
@@ -405,7 +405,7 @@ Catch these values for both X and Y coordinates of the stick, and we have an API
 
 Again, if we want to imagine how exactly would this code be used, we can simply take our `ToneHz` and multiply it by some small amount to get a change of the tone. We can imagine that we'll get a value from `-1` to `1` for each of our stick axis, so the value in Hertz go from the base of 256 to anywhere from 128 to 384. 
 
-Another use case would be taking our YOffset and move up to 4 pixels at a time up or down based on the Y position of the stick at the end of the frame. 
+Another use case would be taking our `XOffset` and move up to 4 pixels at a time up or down based on the X position of the stick at the end of the frame. 
 
 ~~~~~~~ C++
 if (Input.IsAnalog)
@@ -421,8 +421,8 @@ if (Input.IsAnalog)
     // Input.MaxY;
     // Input.EndY;
 
-    ToneHz = 256 + (int)(128.0f * (Input.EndX));
-    YOffset += (int)(4.0f * Input.EndY);
+    XOffset += (int)(4.0f * Input.EndX);
+    ToneHz = 256 + (int)(128.0f * (Input.EndY));
 ~~~~~~~ C++
 }
 else
@@ -432,7 +432,7 @@ else
 
 if(Input.DownButtonEndedDown)
 {
-    XOffset += 1;
+    YOffset += 1;
 }
 ~~~~~~~
 [Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file>. Potential API of a stick input.]
@@ -453,8 +453,8 @@ if (Input0->IsAnalog)
 {
     // NOTE(casey): Use analog movement tuning
 ~~~~~~~ C++ edit
-    ToneHz = 256 + (int)(128.0f * (Input0->EndX));
-    YOffset += (int)(4.0f * Input0->EndY);
+    XOffset += (int)(4.0f * Input0->EndX);
+    ToneHz = 256 + (int)(128.0f * (Input0->EndY));
 ~~~~~~~ C++
 }
 else
@@ -466,7 +466,7 @@ else
 if(Input0->DownButtonEndedDown)
 ~~~~~~~ C++ 
 {
-    XOffset += 1;
+    YOffset += 1;
 }
 ~~~~~~~
 [Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file>. Accessing input of player 1.]
@@ -586,6 +586,8 @@ struct game_input
 ~~~~~~~
 [Listing [x]: <file>[handmade.h]</file>. Filling out `game_controller_input`.]
 
+Mind you that Up/Down/Left/Right buttons don't represent the directions on a D-Pad, but rather the position of the "action" buttons on a generic controller. Thus, for XBox Controller, `Up` button would be represented by `Y`, while on a PlayStation controller it would be Triangle.
+
 That should be fine for now, but let's go one step further and also allow to access the buttons their index. To do that, we can use a nameless `union` (that we've seen already in [day 10][]) followed by an array of buttons and the same buttons in a struct. This will allow us to access them in both ways: 
 
 ~~~~~~~ C++
@@ -654,33 +656,247 @@ while (GlobalRunning)
     // ... 
     GameUpdateAndRender(&Input, &Buffer, &SoundBuffer);
 ~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file>. Defining `Input` inside main Win32 loop.]
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file>. Defining `Input` inside main Win32 loop.]
 
 Let's start implementing the most intuitive thing. We can adapt it if necessary.
 
-### Gamepad Input
+### Gamepad Buttons
 
-For gamepad, our input system is super simple at the moment since we only poll the `ControllerState` once per frame. 
+For the gamepad, our input system is super simple at the moment: we only poll the `ControllerState` once per frame. For the buttons this means that we only really need to count the `HalfTransition`s if there was the change from the last time we ran this loop. 
 
+Right now, we read the input of each gamepad button in the following block: 
 
+~~~~~~~ C++
+bool Up            = Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP;
+bool Down          = Pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN;
+bool Left          = Pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT;
+bool Right         = Pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT;
+bool Start         = Pad->wButtons & XINPUT_GAMEPAD_START;
+bool Back          = Pad->wButtons & XINPUT_GAMEPAD_BACK;
+bool LeftShoulder  = Pad->wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER;
+bool RightShoulder = Pad->wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER;
+bool AButton       = Pad->wButtons & XINPUT_GAMEPAD_A;
+bool BButton       = Pad->wButtons & XINPUT_GAMEPAD_B;
+bool XButton       = Pad->wButtons & XINPUT_GAMEPAD_X;
+bool YButton       = Pad->wButtons & XINPUT_GAMEPAD_Y;
+~~~~~~~
+[<file>[win32_handmade.cpp]</file>]
 
+We can convert this readout to what we now expect the controller readout to be by defining an utility function, and passing it everything that it needs. This function would do the following:
 
+* To calculate `EndedDown`, we do the same thing we were doing before in our XInput code: try to bitwise-AND the XInput button state with whatever bit we're reading. If the result is `0`, button was up, if the result is the test button bit, the button is down.
+* To calculate `HalfTransitionCount`, we simply check if the old state and the new states match. If they don't, there was a transition, so we set the count to `1`.
 
+This is how it looks in code: 
 
+~~~~~~~ C++
+internal void
+Win32LoadXInput()
+{
+    // ...
+}
+~~~~~~~ C++ add
+internal void 
+Win32ProcessXInputDigitalButton(DWORD XInputButtonState, 
+                                game_button_state *OldState, DWORD ButtonBit,
+                                game_button_state *NewState)
+{
+    NewState->EndedDown = ((XInputButtonState & ButtonBit) == ButtonBit);
+    NewState->HalfTransitionCount = (OldState->EndedDown != NewState->EndedDown) ? 1 : 0;
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file>. Introducing `Win32ProcessXInputDigitalButton`.]
 
+We can now simply come in and process all these buttons. If you remember from above, we don't have any distinction between the actual _brand_ of controller. So for Windows, `A` button is `Down`, `X` is `Left` and so on. Our code will thus be transformed in the following manner: 
 
+~~~~~~~ C++
+bool Up            = Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP;
+bool Down          = Pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN;
+bool Left          = Pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT;
+bool Right         = Pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT;
 
+// bool Start         = Pad->wButtons & XINPUT_GAMEPAD_START;
+// bool Back          = Pad->wButtons & XINPUT_GAMEPAD_BACK;
 
+~~~~~~~ C++ edit
+Win32ProcessXInputDigitalButton(Pad->wButtons,
+                                &OldController->Down,XINPUT_GAMEPAD_A,
+                                &NewController->Down);
+Win32ProcessXInputDigitalButton(Pad->wButtons,
+                                &OldController->Right,XINPUT_GAMEPAD_B,
+                                &NewController->Right);
+Win32ProcessXInputDigitalButton(Pad->wButtons,
+                                &OldController->Left,XINPUT_GAMEPAD_X,
+                                &NewController->Left);
+Win32ProcessXInputDigitalButton(Pad->wButtons,
+                                &OldController->Up,XINPUT_GAMEPAD_Y,
+                                &NewController->Up);
+Win32ProcessXInputDigitalButton(Pad->wButtons,
+                                &OldController->LeftShoulder,XINPUT_GAMEPAD_LEFT_SHOULDER,
+                                &NewController->LeftShoulder);
+Win32ProcessXInputDigitalButton(Pad->wButtons,
+                                &OldController->RightShoulder,XINPUT_GAMEPAD_RIGHT_SHOULDER,
+                                &NewController->RightShoulder);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file>. Storing button input.]
 
+You'll notice a couple of things. First, we aren't currently processing all the buttons. This is because, for D-Pad, we'll need to find a way to use it alongside the stick. As for the `Start` and `Back` buttons, we'll need to decide how we're going to eventually use them, and whether we're going whatsoever. 
 
+Second, we're using `OldController` and `NewController`, while above we only defined a single `Input` system. This is another benefit of "writing usage code first": you find exactly what you need to do next!
 
+Speaking of, to get data for each gamepad we're currently iterating over a Windows-defined `XUSER_MAX_COUNT`. We don't really want that as we want to only iterate over a specific amount of controllers we'll support. 
 
+Thus we can edit our iteration loop as below. We can also specify the `Old` and `New` Controllers right away. 
 
+~~~~~~~ C++ add
+int MaxControllerCount = XUSER_MAX_COUNT; 
+if(MaxControllerCount > ArrayCount(NewInput->Controllers))
+{
+    MaxControllerCount = ArrayCount(NewInput->Controllers);
+}
+~~~~~~~ C++
 
+for (DWORD ControllerIndex = 0;
+~~~~~~~ C++ edit
+        ControllerIndex < MaxControllerCount;
+~~~~~~~ C++
+        ++ControllerIndex)
+{
+~~~~~~~ C++ add
+    game_controller_input *OldController = &OldInput->Controllers[ControllerIndex];
+    game_controller_input *NewController = &NewInput->Controllers[ControllerIndex];                
+~~~~~~~ C++ 
+    // ... 
+    // Read the controller input
+    // ... 
+} 
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file>. Making sure we only iterate over a finite controller count.]
 
+### Array Count
 
+Quick aside on the `ArrayCount` function over there. By default, C programming language doesn't provide any utility to count the members of an array, and we don't want to use any utilities in the Standard Library. So we'll make our own utility macro which does just that. Let's do it somewhere in `handmade.h`: 
+
+~~~~~~~ C++
+#if !defined(HANDMADE_H)
+
+~~~~~~~ C++ add
+#define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
+~~~~~~~ 
+[Listing [x]: <file>[handmade.h]</file>. Defining `ArrayCount` macro. In macros, you never have enough brackets.]
+
+What this macro does is simply taking the size of the array and dividing it by the size of its first element. That's all what we need to get the count of how many items there are in a given array.
+
+### Gamepad Stick
+
+Using a gamepad, we can have both the analog (provided by the its stick) and digital (provided by the its d-pad) stick values. We'll keep the d-pad outside the today's scope and focus entirely on the stick.
+
+If you recall, for each axis we need a `Start, Min, Max` and `End` position, ranging from `-1.0` to `1.0`. However, the position is stored as a 16-bit integer, so we'll need to _normalize_ or convert one into the other.
+
+Now, the way normalization works is that you simply need to divide the value by its maximum. However, the range for the possible stick values is different depending on the sign: it can go from -32768 to 32767. Technically you'll need to divide by different numbers depending on the sign: 
+
+~~~~~~~ C++ add
+f32 X;
+if(Pad->sThumbLX < 0)
+{
+    X = (f32)Pad->sThumbLX / -32768.0f;
+}
+else
+{
+    X = (f32)Pad->sThumbLX / 32767.0f;
+}
+
+f32 Y;
+if(Pad->sThumbLY < 0)
+{
+    Y = (f32)Pad->sThumbLY / -32768.0f;
+}
+else
+{
+    Y = (f32)Pad->sThumbLY / 32767.0f;
+}
+
+~~~~~~~ C++ delete
+s16 StickX = Pad->sThumbLX;
+s16 StickY = Pad->sThumbLY;
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file>. Normalizing stick X and Y values.]
+
+Now, let's supply the various values to the controller. The code below should be self-explanatory: 
+
+~~~~~~~ C++
+f32 X;
+if(Pad->sThumbLX < 0)
+{
+    X = (f32)Pad->sThumbLX / -32768.0f;
+}
+else
+{
+    X = (f32)Pad->sThumbLX / 32767.0f;
+}
+
+f32 Y;
+if(Pad->sThumbLY < 0)
+{
+    Y = (f32)Pad->sThumbLY / -32768.0f;
+}
+else
+{
+    Y = (f32)Pad->sThumbLY / 32767.0f;
+}
+
+~~~~~~~ C++ add
+NewController->StartX = OldController->EndX;
+NewController->StartY = OldController->EndY;
+
+// TODO(casey): Min/Max macros!!!
+NewController->MinX = NewController->MaxX = NewController->EndX = X;
+NewController->MinY = NewController->MaxY = NewController->EndY = Y;
+
+NewController->IsAnalog = true;
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file>. Setting controller stick values. We don't have a Min/Max macros just yet, and we'll think about them next time.]
+
+### Finishing Up
+
+At this point it's obvious that we'll need two `Input` structures instead of one. We'll also need to keep track of the `OldInput` in the next frame, so let's take out our `Input` from the `GlobalRunning` loop and split it in two. At this point we could simply take a small array of two elements and swap them around at the end of the loop. This is how it looks like: 
+
+~~~~~~~ C++ add
+game_input Input[2] = {};
+game_input* OldInput = &Input[0];
+game_input* NewInput = &Input[1];
+~~~~~~~ C++
+LARGE_INTEGER LastCounter;
+QueryPerformanceCounter(&LastCounter);
+u64 LastCycleCount = __rdtsc();
+GlobalRunning = true;
+while (GlobalRunning)
+{
+~~~~~~~ C++ delete
+    game_input Input = {};
+~~~~~~~ C++
+    // ... 
+~~~~~~~ C++ edit
+    GameUpdateAndRender(NewInput, &Buffer, &SoundBuffer); 
+~~~~~~~ C++
+    // ... 
+~~~~~~~ C++ add
+    game_input *Temp = NewInput;
+    NewInput = OldInput;
+    OldInput = Temp;
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file>. Keeping track of two input systems.]
+
+!!!
+    We need a `Temp` place to store the input pointer because we can't directly swap old and new inputs. We might write a `Swap` utility function to do that one day like we did with `ArrayCount`, and you might as well try it yourself! Today's not the day, though since it's not as straightforward as with `ArrayCount`.
 
 # Recap 
+
+We've done a lot today, and we still haven't quite finished yet. In the future, we'll need to handle dead zone processing, properly initialize stick and d-pad values, and of course think about the keyboard. 
+
+But this should be it for now! Next time, we'll start talking about some people's greatest fear: memory management.
 
 # Exercises 
 
@@ -811,8 +1027,6 @@ GameUpdateAndRender(int ToneHz) // error C2084: function 'GameUpdateAndRender (i
 We won't be using function overloading a whole lot. That said, it's comfortable having access to the feature. It allows having different functions with a same name, making things a bit more convenient and easier to read.
 
 _(Back to subsection [Clean Up the API])_
-
-# Side Considerations 
 
 ## About Premature Design
 
