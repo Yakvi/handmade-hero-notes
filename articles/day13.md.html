@@ -8,7 +8,659 @@ _Video Length (including Q&A): [1h33](https://hero.handmade.network/episode/code
 
 We're in the middle of taking our Windows code and turning it into platform-independent code with just a little Windows layer. This will set us up to success to allow to go to lots of platforms, without having to touch the code in the main game. 
 
-Last time, we moved the sound over the API "boundary". In this chapter, we're going to do the same thing with the input system. 
+Our API is shaping up nicely, even if it's quite an early stage still. We're already supplying the platform layer with the final image and sound, and all the platform should do is simply display/queue it for the reproduction.
+
+*******************************************************
+*                      Cross-platform                 *
+*                       API boundary                  *
+*  .----------.              |         .------------. *
+* |            |             |         |            | *
+* |  Platform  |.-------  Graphics <-- |    Game    | *
+* |            +--------   Sound   <-- |            | *
+*  '----------'\'-- Input    |         '------------' *
+*               '-- Time     |                        *
+*                            |                        *
+*******************************************************
+[Figure [x]: State of our program. Great things begin with the humble origin!]
+
+In this chapter, we're going to provide our game with the user's input. 
+
+# Housekeeping
+
+First things first, let's clean up a bit. You might get a bit lost in the code by now, and it's ok. Tidying the corners will allow you to separate things a bit more neatly, allow you to conceptualize the work you've already done, and prepare for the things ahead.
+
+## Clean Up the API
+
+Right now, the bridge between the game and the platform, `GameUpdateAndRender`, is in a bit of a mess. Alongside things like (Render)`Buffer` and `SoundBuffer`, we pass things like `XOffset` or `ToneHz`. 
+
+~~~~~~~ C++
+internal void 
+GameUpdateAndRender(game_offscreen_buffer* Buffer, int XOffset, int YOffset,
+                    game_sound_output_buffer *SoundBuffer, int ToneHz);
+~~~~~~~
+[<file>[handmade.h]</file>]
+
+This was a forced solution for us to keep the feature parity with our initial implementation. Let's pull out these values from our API and, for the time being, store them as `local_persist` (static) variables. We'll initialize them to whatever value they had in `win32_handmade.cpp`: 
+
+~~~~~~~ C++
+internal void
+~~~~~~~ C++ edit
+GameUpdateAndRender(game_offscreen_buffer* Buffer, game_sound_output_buffer* SoundBuffer)
+~~~~~~~ C++
+{
+~~~~~~~ C++ add
+    local_persist int XOffset = 0;
+    local_persist int YOffset = 0;
+    local_persist int ToneHz = 256;
+~~~~~~~ C++
+
+    GameSoundOutput(SoundBuffer, ToneHz);
+    RenderWeirdGradient(Buffer, XOffset, YOffset);
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Storing input-related parameters locally.]
+
+In order to prevent any unwanted function overloading (more on this in subsection [function overloading]), we need to remember also update declaration in `handmade.h`: 
+
+~~~~~~~ C++
+internal void
+~~~~~~~ C++ edit
+GameUpdateAndRender(game_offscreen_buffer* Buffer, game_sound_output_buffer* SoundBuffer);
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> Updating `GameUpdateAndRender` declaration.]
+
+And, of course, we also want to remove these variables from `win32_handmade.cpp`. We will simply remove any interaction we were having with them in our platform layer, because at the end of the day we'll handle input differently in the platform-independent layer. 
+
+While we're at it, we can also remove the sound-related things that we moved to `handmade.cpp` last time:
+
+~~~~~~~ C++
+struct win32_sound_output
+{
+    int SamplesPerSecond;
+    int BytesPerSample;
+    int SecondaryBufferSize;
+    u32 RunningSampleIndex;
+~~~~~~~ C++ delete
+    int ToneHz;
+    int ToneVolume;
+    int WavePeriod;
+    f32 tSine;
+~~~~~~~ C++
+    int LatencySampleCount;
+};
+
+// ... 
+// WinMain
+// ... 
+~~~~~~~ C++ delete
+// NOTE(casey): Graphics test
+int XOffset = 0;
+int YOffset = 0;
+
+// NOTE(casey): Sound test
+~~~~~~~ C++
+win32_sound_output SoundOutput = {};
+SoundOutput.SamplesPerSecond = 48000;
+SoundOutput.BytesPerSample = sizeof(s16) * 2;
+SoundOutput.SecondaryBufferSize = 2 * SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample;
+SoundOutput.RunningSampleIndex = 0;
+~~~~~~~ C++ delete
+SoundOutput.ToneHz = 256;
+SoundOutput.ToneVolume = 3000;
+SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
+~~~~~~~ C++
+SoundOutput.LatencySampleCount = SoundOutput.SamplesPerSecond / 15;
+
+// ... 
+// Controller iteration loop
+// ... 
+s16 StickX = Pad->sThumbLX;
+s16 StickY = Pad->sThumbLY;
+
+~~~~~~~ C++ delete
+XOffset += StickX / 4096;
+YOffset += StickY / 4096;
+
+SoundOutput.ToneHz = 512 + (int)(256.0f * ((f32)StickY / 30000.0f));
+SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
+~~~~~~~ C++
+
+// ... 
+~~~~~~~ C++ edit
+GameUpdateAndRender(&Buffer, &SoundBuffer);
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Propagating changes to the platform layer and doing some cleanup.]
+
+## Introduce `win32_handmade.h`
+
+While we're doing the chores, let's go ahead and extract our struct definitions in a separate `.h` file specific to our `win32_` platform. We don't _technically_ need it, but it keeps things tidy, plus you can always quickly reference the struct definitions when you need it. We will leave our `typedef`s where they are, for the time being. Go ahead and create a new file called `win32_handmade.h`.
+
+~~~~~~~ C++
+#include <windows.h>
+#include <stdio.h>
+#include <xinput.h>
+#include <dsound.h>
+
+~~~~~~~ C++ add
+#include "win32_handmade.h"
+~~~~~~~ C++ delete
+struct win32_offscreen_buffer
+{
+    BITMAPINFO Info;
+    void *Memory;
+    int Width;
+    int Height;
+    int Pitch;
+};
+
+struct win32_window_dimension
+{
+    int Width;
+    int Height;
+};
+
+struct win32_sound_output
+{
+    int SamplesPerSecond;
+    int BytesPerSample;
+    int SecondaryBufferSize;
+    u32 RunningSampleIndex;
+    int LatencySampleCount;
+};
+~~~~~~~ C++
+
+global_variable bool GlobalRunning;
+global_variable win32_offscreen_buffer GlobalBackbuffer;
+global_variable IDirectSoundBuffer *GlobalSecondaryBuffer;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Extracting the struct definitions from `.cpp`....]
+
+~~~~~~~ C++ add
+#if !defined(WIN32_HANDMADE_H)
+
+struct win32_offscreen_buffer
+{
+    BITMAPINFO Info;
+    void *Memory;
+    int Width;
+    int Height;
+    int Pitch;
+};
+
+struct win32_window_dimension
+{
+    int Width;
+    int Height;
+};
+
+struct win32_sound_output
+{
+    int SamplesPerSecond;
+    int BytesPerSample;
+    int SecondaryBufferSize;
+    u32 RunningSampleIndex;
+    int LatencySampleCount;
+};
+
+#define WIN32_HANDMADE_H
+#endif
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.h]</file> .... and adding them in a freshly introduced `.h`. Do you remember about the include guards? (`#if`/`#define`/`#endif` things)]
+
+Confused? That's a lot of code we refactored right there. Try to compile, let the compiler errors guide you. At the end of the day, you should still remain with the same picture and sound as before, with the sole exception of losing interactivity. Don't worry, we'll get that back soon!
+
+# Write the Usage Code First
+
+It cannot be understated what we said last time. 
+
+<style>blockquote.fancyquote {text-align:center !important;}</style>
+> "Always Write the Usage Code First."
+>
+>      -- Casey Muratori, about API design
+
+Even if we follow this approach, the road ahead isn't simple: since we don't really have a game yet, we don't even necessarily know how we're going to use the user's input! If the game was done, we could identify the optimal way to handle the input with ease. This is something that we will definitely have to handle at some point, but this is not that point.
+
+!!! Tip Always be aware of the circumstances!
+    Right now, we don't try at all to write final code. You can read more about this philosophy in subsection [about premature design].
+
+At this point we simply have to remember that this implementation of the input is but the first pass, and the API we'll write today is but an attempt to write the correct interface. So let's have some fun, and _imagine_ what would be useful for our game in terms of the input coming from the platform layer. 
+
+* Let's assume that our game won't care whether the input is coming from the keyboard or from the gamepad.
+* Ok, it cares a little, and only for the purposes of tuning of movement (which can be controlled with the analog stick). So there might be something like `Input.IsAnalog` allowing us to differentiate in a manner similar to the following: 
+
+~~~~~~~ C++ add
+if (Input.IsAnalog)
+{
+    // NOTE(casey): Use analog movement tuning
+}
+else
+{
+    // NOTE(casey): Use digital movement tuning
+}
+~~~~~~~ C++
+
+GameSoundOutput(SoundBuffer, ToneHz);
+RenderWeirdGradient(Buffer, XOffset, YOffset);
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file>. Writing Usage Code First.]
+
+* Any other input will behave like regular buttons, with the state of "on" or "off", and we'll make no distinction whether that input is coming from a controller or a keyboard.
+
+## Visualize Input Over Time
+
+Let's think about the input planning. Imagine a timeline showing the time ($t$) going forward and frames appearing on the screen.
+
+**************************************************
+*      0        1        2        3        ...   *
+*  |        |        |        |        |         *
+*  +--------+--------+--------+--------+------>  *
+*  |        |        |        |        |         *
+*  t                                             *
+**************************************************
+[Figure [x]: Frame computation over time.]
+
+It's important to remember that a frame is not visible to the user while a frame is being computed. It's only displayed once all the work related to the frame is done: sound was written, image was prepared, and "frame flip" command was given. In the meantime, the user is watching and listening the _previous_ frame output. They also react to it by providing various inputs: Right, Up, A, what have you.
+
+**************************************************
+*      0 --.    1 --.    2 --.    3 --.    ...   *
+*           |        |        |        |         *
+*           v        v        v        v         *
+*                ^                               *
+*  |        |--> | A |        |        |         *
+*  +--------+--------+--------+--------+------>  *
+*  |        |        |        |        |         *
+*  t                                             *
+**************************************************
+[Figure [x]: User input in a frame.]
+
+Of course, the user only has but a fraction of a second to pass all this input in, but with some serious button mashing it's still possible to pass quite a bit of information. This is becoming even more significant as our framerate drops: in a 1/30<sup>th</sup> of a second you can pass twice as much input as in 1/60<sup>th</sup>, the character would move further during this time, etc.
+
+Thing is, if the user is watching (and reacts to) frame 0, they provide some input during frame 1... but it will only get to us at the start of frame 2. This also mean that frame 1 will not incorporate any input that they've been doing thus far. We're always one frame behind, sometimes even two if you're inefficient with the input handling! This is one of the reasons why a high framerate is good. 
+
+There's another thing that might happen. Let's say the user pushed the A button, then released it, then pushed it again, all within 1/30<sup>th</sup> of a second. This might result in something similar to this:
+
+************************************************
+*                                              *
+*               0 --.             1 --.        *
+*                    |        ^        |       *
+*                    |   |    |    |   |  ...  *
+*                    |   v   .-.   v   |       *
+*                    v  .-. | A | .-.  v       *
+*                      | A | '-' | A |         *
+*  |                 |  '-'       '-'  |       *
+*  +-----------------+-----------------+-----> *
+*  |                 |                 |       *
+*                                              *
+************************************************
+[Figure [x]: It's possible that a button is pressed, released, and then pressed again within a single frame.]
+
+So, why are we looking in all this? The reason we investigate this behavior is because we're trying to decide for ourselves: what do we record? Which user input do we capture, save and preserve for processing of the world update? Specifically for gamepad, this is important because the input input we get already doesn't capture all the updates. As we said on [day 6][], gamepad makes polling at some regular rate, and captures the state of the gamepad at that point. We don't know (and will never know) what happens to it between those updates, we can only get a discreet approximation of it.
+
+*****************************************
+*                                       *
+*  .-.*    .-.     .-.*    .-.     .-.* *
+* |   | ? |   | ? |   | ? |   | ? |   | *
+*  '-'    *'-'     '-'     '-'*    '-'  *
+*                                       *
+*****************************************
+[Figure [x]: Stick wiggling info we receive from XInput API. We don't know what happens between the captured snapshots. Same logic can be applied to button pressing.]
+
+In any case, the objective for us should be the following: we don't want to miss any input that affects the game in an important way. We don't want to miss a button press happened in a quick succession with the others if, for example, this button is responsible for shooting. It feels awful when the game is unresponsive to your inputs! 
+
+## Define a Way of Handling Input
+
+Before we settle on our own way of handling inputs, let's look at what other people might do. A common way is something along the lines of the following: 
+
+~~~~~~~ C++ 
+for (int EventIndex = 0;
+     EventIndex < EventCount;
+     ++EventIndex)
+{
+    switch (Event[EventIndex].Type)
+    {
+        case EventAButton: 
+        {
+            // do something
+        } break;
+        
+        case LeftStick: 
+        {
+            // do something
+        } break;
+    }
+}
+~~~~~~~
+[<file>[Example]</file>]
+
+Hopefully you can see what's going on here. We iterate over a specific `EventCount`, pull out Events from some event array, and process them based on their type. 
+
+With this method, platform layer does the minimal amount of work to package the information. It simply captures the input and passes it over to the game, as is. 
+
+This system, however, has an inherent problem: there's a limited amount of space for the events. If the user's input surpasses the `EventCount`, those inputs either lost or replace some "lower priority" ones (which are, in turn, lost as well). 
+
+You could of course make this storage pretty high, but then the question arises: why would we want to bother at all, if we don't need to? Do we really care about that? And for this particular game we don't know that we do. 
+
+What we really care about is if a button 1) started the frame up or down 2) ended the frame up or down 3) how many _transitions_ (or half-transitions, down to up or up to down) were there in between.  
+
+There's of course information lost here: we don't know for how long was the button pressed if there was more than one transition. A button might have been pressed for 1/120<sup>th</sup> of a second, and that would be different from, say, 1/240<sup>th</sup>. 
+
+************************************* 
+*                                   *
+* ----.        .---------           *
+*     | ////// |   |                *
+*     '--------'   |                *
+* |     1/120s     |                *
+* +----------------+------------>   *
+* |                |                *
+* 0               1/60s             *
+*                                   *
+* ----.    .-------------           *
+*     | // |       |                *
+*     '----'       |                *
+* |   1/240s       |                *
+* +----------------+------------>   *
+* |                |                *
+* 0               1/60s             *
+*                                   *
+************************************* 
+[<file>[Example]</file>. Difference between a 1/120s and 1/240s is 4 milliseconds.]
+
+You can argue that there's no need for distinguishing in such granularity is unnecessary simply because players themselves might not be able to intentionally distinguish a difference between such a small time frames. And, if we're talking about button hold, we probably think about something happening across many frames, like a quarter of a second, or even more. 
+
+So, to conclude, in our game we might only need two parameters per button: if a button ended down (`true` or `false`) and how many "half-transitions" (Pressed->Unpressed and viceversa) were there. 
+
+Let's say we would use such input to change XOffset:
+
+~~~~~~~ C++
+if (Input.IsAnalog)
+{
+    // NOTE(casey): Use analog movement tuning
+}
+else
+{
+    // NOTE(casey): Use digital movement tuning
+}
+~~~~~~~ C++ add
+// Input.DownButtonEndedDown;
+// Input.DownButtonHalfTransitionCount;
+if(Input.DownButtonEndedDown)
+{
+    XOffset += 1;
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file>. Potential usage of the buttons input.]
+
+Now, this is about binary input, like buttons. What about analog input, like the stick motion from the controller? 
+
+Stick position can change significantly during a frame. If we were to capture only one value based on, say, average position that stick had, it could misrepresent significantly user's input. For instance, if one started the frame with the stick resting at 0, then wailed it all the way to the 1 and released before the frame end, we'd get an average value fo 0.5 which is definitely something we don't want. And user doesn't want. Nobody wants half-wailing the stick. 
+
+So, in the end, we _might_ adopt an event system for the sticks only, maybe capturing the state of the sticks each millisecond (which would result in ~16 input events per 1/16<sup>th</sup> of a second frame). We won't do this just yet. Instead, let's settle with something similar to what we did with the digital input, and have the following values:
+
+* Start position
+* Minimum position
+* Maximum position
+* End position
+
+Catch these values for both X and Y coordinates of the stick, and we have an API. Not necessarily _the_ API, we'll have to wait and see.
+
+Again, if we want to imagine how exactly would this code be used, we can simply take our `ToneHz` and multiply it by some small amount to get a change of the tone. We can imagine that we'll get a value from `-1` to `1` for each of our stick axis, so the value in Hertz go from the base of 256 to anywhere from 128 to 384. 
+
+Another use case would be taking our YOffset and move up to 4 pixels at a time up or down based on the Y position of the stick at the end of the frame. 
+
+~~~~~~~ C++
+if (Input.IsAnalog)
+{
+~~~~~~~ C++ add
+    // Input.StartX;
+    // Input.MinX;
+    // Input.MaxX;
+    // Input.EndX;
+
+    // Input.StartY;
+    // Input.MinY;
+    // Input.MaxY;
+    // Input.EndY;
+
+    ToneHz = 256 + (int)(128.0f * (Input.EndX));
+    YOffset += (int)(4.0f * Input.EndY);
+~~~~~~~ C++
+}
+else
+{
+    // NOTE(casey): Use digital movement tuning
+}
+
+if(Input.DownButtonEndedDown)
+{
+    XOffset += 1;
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file>. Potential API of a stick input.]
+
+The last question we have remaining is: what if we want to support multiple players? We could say that: 
+
+* We have multiple input sets, each one for a different player. 
+* These can be stored inside of an _array_ of some superstructure.
+* We can then access one or more input sets, depending on our need. 
+
+In usage, this would look something along the lines of: 
+
+~~~~~~~ C++ add
+game_controller_input *Input0 = &Input.Controllers[0];
+~~~~~~~ C++ edit
+if (Input0->IsAnalog)
+~~~~~~~ C++
+{
+    // NOTE(casey): Use analog movement tuning
+~~~~~~~ C++ edit
+    ToneHz = 256 + (int)(128.0f * (Input0->EndX));
+    YOffset += (int)(4.0f * Input0->EndY);
+~~~~~~~ C++
+}
+else
+{
+    // NOTE(casey): Use digital movement tuning
+}
+
+~~~~~~~ C++ edit
+if(Input0->DownButtonEndedDown)
+~~~~~~~ C++ 
+{
+    XOffset += 1;
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file>. Accessing input of player 1.]
+
+This looks fine so far, let's implement it!
+
+# Implement the Input System
+
+As the first pass, we're happy with the potential usage we make of the user's input. Let's create the actual API and adapt the platform code to use it. 
+
+## Write the API
+
+Inside the `handmade.h` file, we can define the following structures: 
+
+* `game_button_state`: stores information on each individual button.
+* `game_controller_input`: stores all the information on each controller that we care about.
+* `game_input`: stores multiple controllers.
+
+~~~~~~~ C++
+struct game_sound_output_buffer
+{
+    int SampleCount;
+    int SamplesPerSecond;
+    s16* Samples;
+};
+
+~~~~~~~ C++ add
+struct game_button_state
+{
+};
+
+struct game_controller_input
+{
+};
+
+struct game_input
+{
+};
+~~~~~~~ C++
+
+internal void
+GameUpdateAndRender(game_offscreen_buffer* Buffer, game_sound_output_buffer *SoundBuffer);
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file>. Defining input structures.]
+
+Let's see each structure in detail: 
+
+`game_button_state` is pretty straightforward: as we said, it includes a `HalfTransitionCount` and a boolean `EndedDown`. Similarly, `game_input` simply stores 4 controllers.
+
+~~~~~~~ C++
+struct game_button_state 
+{
+~~~~~~~ C++ add
+    s32 HalfTransitionCount;
+    b32 EndedDown;
+~~~~~~~ C++
+};
+
+struct game_controller_input
+{
+};
+
+struct game_input
+{
+~~~~~~~ C++ add
+    game_controller_input Controllers[4];
+~~~~~~~ C++
+};
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file>. Filling out `game_button_state` and `game_input`.]
+
+As for the `game_controller_input`, it's slightly more complex but we can drill it down quite easily. 
+
+* It should contain an `IsAnalog` boolean. 
+* It should allow to contain all the relevant information on the analog stick.
+* It should also contain all the buttons that we need. Let's say we need 6 for now. 
+
+So something like this: 
+
+~~~~~~~ C++
+struct game_button_state 
+{
+    s32 HalfTransitionCount;
+    b32 EndedDown;
+};
+
+struct game_controller_input
+{
+~~~~~~~ C++ add
+    b32 IsAnalog; 
+
+    f32 StartX;
+    f32 StartY;
+    
+    f32 MinX;
+    f32 MinY;
+    
+    f32 MaxX;
+    f32 MaxY;
+    
+    f32 EndX;
+    f32 EndY;
+    
+    game_button_state Up;
+    game_button_state Down;
+    game_button_state Left;
+    game_button_state Right;
+    game_button_state LeftShoulder;
+    game_button_state RightShoulder;
+~~~~~~~ C++
+};
+
+struct game_input
+{
+    game_controller_input Controllers[4];
+};
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file>. Filling out `game_controller_input`.]
+
+That should be fine for now, but let's go one step further and also allow to access the buttons their index. To do that, we can use a nameless `union` (that we've seen already in [day 10][]) followed by an array of buttons and the same buttons in a struct. This will allow us to access them in both ways: 
+
+~~~~~~~ C++
+struct game_controller_input
+{
+    b32 IsAnalog; 
+
+    f32 StartX;
+    f32 StartY;
+    
+    f32 MinX;
+    f32 MinY;
+    
+    f32 MaxX;
+    f32 MaxY;
+    
+    f32 EndX;
+    f32 EndY;
+    
+~~~~~~~ C++ add
+    union 
+    {
+        game_button_state Buttons[6];
+        struct
+        {
+~~~~~~~ C++
+            game_button_state Up;
+            game_button_state Down;
+            game_button_state Left;
+            game_button_state Right;
+            game_button_state LeftShoulder;
+            game_button_state RightShoulder;
+~~~~~~~ C++ add
+        };
+    };
+~~~~~~~ C++
+};
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file>. Improving `game_controller_input`.]
+
+It's a small change that doesn't bear any consequence on the final result, but it's a nice quality of life improvement.
+
+## Fix the Compiler Errors
+
+We are now at a decent enough point to allow compiler guide us in the next step of implementation. We leave the following as an exercise for the reader: 
+
+* Update `GameUpdateAndRender` function signature (such as that it takes a `game_input *Input, game_offscreen_buffer *Buffer, game_sound_output_buffer *SoundBuffer`).
+* Fix the `.` operator for `->` when fetching the controller.
+* Rename `DownButtonEndedDown` to its analogue in the API.
+
+When you finally arrive to only having one error in `win32_handmade.cpp` (`'GameUpdateAndRender': function does not take 2 arguments`), you are ready to proceed.
+
+!!! Tip
+    If you feel stuck, check out the solution in subsection [Fixing Compiler Errors - Solution]
+
+## Update Windows Layer
+
+Updating the Win32 platform layer, with the possible exception of the keyboard input, should be a pretty straightforward operation as well. For starters, we can define a `game_input` structure at the beginning of our frame and pass it to `GameUpdateAndRender`, thus fixing the last compiler error we had thus far. Remember to initialize it to 0 so that you don't pass garbage my mistake!
+
+~~~~~~ C++
+while (GlobalRunning)
+{
+~~~~~~ C++ add
+    game_input Input = {};
+~~~~~~ C++
+    // ... 
+    GameUpdateAndRender(&Input, &Buffer, &SoundBuffer);
+~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file>. Defining `Input` inside main Win32 loop.]
+
+Let's start implementing the most intuitive thing. We can adapt it if necessary.
+
+### Gamepad Input
+
+For gamepad, our input system is super simple at the moment since we only poll the `ControllerState` once per frame. 
 
 
 
@@ -32,9 +684,147 @@ Last time, we moved the sound over the API "boundary". In this chapter, we're go
 
 # Exercises 
 
+## Fixing Compiler Errors - Solution
+
+!!! 
+    The following is the solution for the exercise in subsection [fix the compiler errors].
+
+1. Update `GameUpdateAndRender` function signature: 
+
+~~~~~~~ batch
+error C2065: 'Input': undeclared identifier
+~~~~~~~
+[<file>[Error text]</file>]
+
+~~~~~~~ C++
+internal void
+~~~~~~~ C++ edit
+GameUpdateAndRender(game_input *Input, game_offscreen_buffer* Buffer, 
+                    game_sound_output_buffer *SoundBuffer);
+~~~~~~~
+[<file>[handmade.h]</file>]
+
+~~~~~~~ C++
+internal void
+~~~~~~~ C++ edit
+GameUpdateAndRender(game_input *Input, game_offscreen_buffer* Buffer, 
+                    game_sound_output_buffer *SoundBuffer)
+~~~~~~~ C++
+{
+    // ...
+}
+~~~~~~~
+[<file>[handmade.cpp]</file>]
+
+2. Fix the referencing error: 
+
+~~~~~~~ batch
+error C2228: left of '.Controllers' must have class/struct/union
+note: type is 'game_input *'
+note: did you intend to use '->' instead?
+~~~~~~~
+[<file>[Error text]</file> Fix.]
+
+~~~~~~~ C++ edit
+game_controller_input *Input0 = &Input->Controllers[0];
+~~~~~~~ C++
+if (Input0->IsAnalog)
+{
+    // ...
+}
+[<file>[handmade.cpp > GameUpdateAndRender]</file> Fix.]
+
+3. Rename the `DownButtonEndedDown`:
+
+~~~~~~~ batch
+error C2039: 'DownButtonEndedDown': is not a member of 'game_controller_input'
+note: see declaration of 'game_controller_input'
+~~~~~~~
+[<file>[Error text]</file>]
+
+~~~~~~~ C++ edit
+if(Input0->Down.EndedDown)
+~~~~~~~ C++
+{
+    XOffset += 1;
+}
+~~~~~~~
+[<file>[handmade.cpp > GameUpdateAndRender]</file> Fix.]
+
+_(Continue to subsection [Update Windows Layer])_
+
 # Programming Notions 
 
+## Function Overloading
+
+In C++, there's a feature called "Function overloading". It allows you to specify different functions with the same name, each with its own set of parameters.
+
+~~~~~~~ C++
+internal void 
+GameUpdateAndRender(game_offscreen_buffer* Buffer, int XOffset, int YOffset,
+                    game_sound_output_buffer *SoundBuffer, int ToneHz)
+{
+    // do something;
+}
+
+internal void 
+GameUpdateAndRender(game_offscreen_buffer* Buffer)
+{
+    // do something;
+}
+
+internal void 
+GameUpdateAndRender(game_sound_output_buffer *SoundBuffer, int ToneHz)
+{
+    // do something;
+}
+
+internal void 
+GameUpdateAndRender(game_offscreen_buffer* Buffer, int XOffset, int YOffset)
+{
+    // do something;
+}
+~~~~~~~
+[<file>[Example]</file> This code is totally valid and will compile just fine in C++ mode.]
+
+How does the system know which function you want to call when? The compiler will look at the parameter/s that you pass to the function! 
+
+The order, type _and_ the amount of parameters passed matter in this case. In the example above there's only one function that takes a parameter of type `game_offscreen_buffer *` and two `int`s (in this exact sequence). 
+
+This system is not perfect. While the compiler will do its best to match the things up, sometimes confusion might happen, which will be reported as an error at compile time. Also the compiler doesn't care about the _name_ of the parameters, so the code snippet below will fail to build. In this case, you'll need to do some other change in order to differentiate between those function.
+
+~~~~~~~ C++
+internal void 
+GameUpdateAndRender(int XOffset) // see previous definition of 'GameUpdateAndRender'
+{
+    // do something;
+}
+
+internal void 
+GameUpdateAndRender(int ToneHz) // error C2084: function 'GameUpdateAndRender (int)' already has a body
+{
+    // do something;
+}
+~~~~~~~
+[<file>[Example]</file> This code will not compile. But don't take our word for it, try it yourself!]
+
+We won't be using function overloading a whole lot. That said, it's comfortable having access to the feature. It allows having different functions with a same name, making things a bit more convenient and easier to read.
+
+_(Back to subsection [Clean Up the API])_
+
 # Side Considerations 
+
+## About Premature Design
+
+Whether you're writing your platform layer, some API, or some other code, it's always a good idea to keep in mind what exactly you are trying to solve. Similar problem might result in different code depending on the circumstance. This includes things like: kind of code we're writing, kind of standards we need to adhere to on this stage, the future this code is going to have, and so on.
+
+In this case, our circumstance is that we iterate _towards_ an API, as opposed to writing _the_ API. This means we can give ourselves a bit more slack and even be sloppy sometimes! Don't spend too much time pondering on the optimal solution, allow it to present itself when the time is right. Don't waste your time on the code that is going to be deleted anyway!
+
+Doing too much analysis and work on the code too early in the process _is bad_. There's an old adage "Premature Optimization is the Root of All Evil", and many take that to mean that "Optimization" is "Making code fast". While that is definitely true, optimization here can also refer to the design of the code itself. 
+
+Premature design is one of the _most_ destructive forces in computing today, it's the thing that costs the most time and results in most problems in shipping code. Premature optimization is _awful_. Right now, we're at the _beginning_ of the design phase of this API, and we need to understand that what we're doing here are _experiments_. They might go well, they might go terribly, we don't know that yet, and we won't know until we've set most of the things in place and are ready to go back and tighten up the screws and define the final API. 
+
+_(Back to section [write the usage code first])_
 
 # Navigation 
 
