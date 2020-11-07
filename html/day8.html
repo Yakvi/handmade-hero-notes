@@ -170,7 +170,7 @@ Now, which sound do we want to reproduce? We can't load audio <code>.wav</code> 
 <p>
 
 
-Let's review what our buffer actually represents. We said last time that the sound buffer we initialized is a <em class="underscore">circular buffer</em>. If our remember our rendering backbuffer, it was a simple chunk of memory that we agreed was a 2D representation of a bitmap. We would fill the entire buffer, and then pass it to be rendered on screen, again in its entirety. Rinse and repeat. 
+Let's review what our buffer actually represents. We said last time that the sound buffer we initialized is a <em class="underscore">circular buffer</em>. if you remember our rendering backbuffer, it was a simple chunk of memory that we agreed was a 2D representation of a bitmap. We would fill the entire buffer, and then pass it to be rendered on screen, again in its entirety. Rinse and repeat. 
 
 </p><p>
 
@@ -440,7 +440,7 @@ There're a few interesting things to note. First, the method returns an <code>HR
 <p>
 
 
-Now that we have our buffer ready and willing to accept our samples, let's think about how exactly will we write to it. our graphics backbuffer was accepting 32-bit Pixels in a specific format. Similarly, we'll be writing sound in Samples, each 16-bit sample alternating between two channels. 
+Now that we have our buffer ready and willing to accept our samples, let's think about how exactly will we write to it. Our graphics backbuffer was accepting 32-bit Pixels in a specific format. Similarly, we'll be writing sound in Samples, each 16-bit sample alternating between two channels. 
 
 </p><p>
 
@@ -699,7 +699,7 @@ Try to implement it all yourself! You will find our implementation below:
 
 </p><pre class="listing tilde"><code><span class="line">s16 SampleValue = (SquareWaveCounter &gt; HalfSquareWavePeriod) ? ToneVolume : -ToneVolume;</span></code></pre><p>
     
-    Simply put, it's an assignment based on a test. It's a shortand for the following: 
+    Simply put, it's an assignment based on a test. It's a shorthand for the following: 
 
 </p><pre class="listing tilde"><code><span class="line">s16 SampleValue;</span>
 <span class="line"><span class="hljs-keyword">if</span> (SquareWaveCounter &gt; HalfSquareWavePeriod)</span>
@@ -948,7 +948,7 @@ We also need to start playing. You do it by calling <a href="https://docs.micros
 
 </p><p>
 
-As parameters for <code>Play</code>, we really don't have many options. As you can see from the <a href="https://docs.microsoft.com/en-us/previous-versions/windows/desktop/mt708933(v=vs.85)">documentation</a>, both the first and second parameter can only be <code>0</code>, while <code>dwFlags</code> allows us to seet up looping of the buffer. That's what we're interested in, so we'll pass the <code>DSBPLAY_LOOPING</code> flag along: 
+As parameters for <code>Play</code>, we really don't have many options. As you can see from the <a href="https://docs.microsoft.com/en-us/previous-versions/windows/desktop/mt708933(v=vs.85)">documentation</a>, both the first and second parameter can only be <code>0</code>, while <code>dwFlags</code> allows us to set up looping of the buffer. That's what we're interested in, so we'll pass the <code>DSBPLAY_LOOPING</code> flag along: 
 
 </p><pre class="listing tilde"><code><span class="line">Win32InitDSound(Window, SamplesPerSecond, SecondaryBufferSize);</span><div class=" add"><span class="line">GlobalSecondaryBuffer-&gt;Play(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, DSBPLAY_LOOPING);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;13:</b> <file>[win32_handmade.cpp > WinMain]</file> Start playing.</div></center>
 <p>

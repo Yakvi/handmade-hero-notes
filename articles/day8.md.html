@@ -79,7 +79,7 @@ Now, which sound do we want to reproduce? We can't load audio `.wav` files just 
 
 ## Visualize Circular Buffer
 
-Let's review what our buffer actually represents. We said last time that the sound buffer we initialized is a _circular buffer_. If our remember our rendering backbuffer, it was a simple chunk of memory that we agreed was a 2D representation of a bitmap. We would fill the entire buffer, and then pass it to be rendered on screen, again in its entirety. Rinse and repeat. 
+Let's review what our buffer actually represents. We said last time that the sound buffer we initialized is a _circular buffer_. if you remember our rendering backbuffer, it was a simple chunk of memory that we agreed was a 2D representation of a bitmap. We would fill the entire buffer, and then pass it to be rendered on screen, again in its entirety. Rinse and repeat. 
 
 We decided not to do it with the sound buffer. Instead, we agreed that our sound buffer would be a 2-second stream of data that we will be constantly updating to make sure the most up to date sounds are played. And, instead of filling it from the beginning to the end, we will write only from a specific point for a while using a "cursor" which will constantly run from the beginning to the end of the buffer. 
 
@@ -252,7 +252,7 @@ if (SUCCEEDED(GlobalSecondaryBuffer->Lock(ByteToLock, BytesToWrite,
 
 ## Fill the buffer regions
 
-Now that we have our buffer ready and willing to accept our samples, let's think about how exactly will we write to it. our graphics backbuffer was accepting 32-bit Pixels in a specific format. Similarly, we'll be writing sound in Samples, each 16-bit sample alternating between two channels. 
+Now that we have our buffer ready and willing to accept our samples, let's think about how exactly will we write to it. Our graphics backbuffer was accepting 32-bit Pixels in a specific format. Similarly, we'll be writing sound in Samples, each 16-bit sample alternating between two channels. 
 
 ********************************************************
 *                                                      *
@@ -468,7 +468,7 @@ while (GlobalRunning)
     s16 SampleValue = (SquareWaveCounter > HalfSquareWavePeriod) ? ToneVolume : -ToneVolume;
     ~~~~~~~
     
-    Simply put, it's an assignment based on a test. It's a shortand for the following: 
+    Simply put, it's an assignment based on a test. It's a shorthand for the following: 
 
     ~~~~~~~ C++
     s16 SampleValue;
@@ -702,7 +702,7 @@ if(SUCCEEDED(GlobalSecondaryBuffer->Lock(ByteToLock, BytesToWrite,
 
 We also need to start playing. You do it by calling [Play][] method of the buffer. Usually you want to start playing only after initially filling out the buffer; for the sake of our test, for now we'll do it immediately after we initialized the buffer.
 
-As parameters for `Play`, we really don't have many options. As you can see from the [documentation][Play], both the first and second parameter can only be `0`, while `dwFlags` allows us to seet up looping of the buffer. That's what we're interested in, so we'll pass the `DSBPLAY_LOOPING` flag along: 
+As parameters for `Play`, we really don't have many options. As you can see from the [documentation][Play], both the first and second parameter can only be `0`, while `dwFlags` allows us to set up looping of the buffer. That's what we're interested in, so we'll pass the `DSBPLAY_LOOPING` flag along: 
 
 ~~~~~~~ C++
 Win32InitDSound(Window, SamplesPerSecond, SecondaryBufferSize);

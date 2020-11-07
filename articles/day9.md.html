@@ -51,7 +51,7 @@ if (!SoundIsPlaying)
 
 ## About Debugging Sound
 
-Another issue that we have is that _square wave_ is a rather harsh wave. It's a bit harder if there any any bugs in the sound output, so today we're going to implement another wave: a sine wave! 
+Another issue that we have is that _square wave_ is a rather harsh wave. It's a bit harder if there any bugs in the sound output, so today we're going to implement another wave: a sine wave! 
 
 The sound is an extremely finicky thing, and it might be very hard to find bugs in it, even to realize that there are. Here is a story to illustrate the point. You can read it in its entirety in subsection [The First Game Jam], but the gist of it is the following: you would be surprised at how much variance there is in the sound that comes out from speakers or headphones when you plug them in. The more "pure", responsive to frequency headphones might yield you a world of a difference and show you the bugs and artifacts that on a different hardware you might miss entirely.
 
@@ -67,7 +67,7 @@ This means that the play cursor (the thing that we are "chasing"), starts moving
 
 So where do we start? Let's look at the very beginning and look at our `ByteToLock` and `BytesToWrite` calculations.
 
-Right now, we're comparing whether the `ByteToLock` is greater or not the `PlayCursor`. This means that, if both are at `0`, the `BytesToWrite` will be `0` as well. We could simply say that, if `ByteToLock` and the `PlayCursor` are both equal, `BytesToWrite` would amount to the whole buffer (i.e. `SecondaryBufferSize`). However, our `RunningSampleIndex` would have advanced through the whole buffer, and we'd end up at the same place again on our next loop. 
+Right now, we're comparing whether the `ByteToLock` is greater than the `PlayCursor`. This means that, if both are at `0`, the `BytesToWrite` will be `0` as well. We could simply say that, if `ByteToLock` and the `PlayCursor` are both equal, `BytesToWrite` would amount to the whole buffer (i.e. `SecondaryBufferSize`). However, our `RunningSampleIndex` would have advanced through the whole buffer, and we'd end up at the same place again on our next loop. 
 
 We'd have to fill the buffer again, which is totally wrong, since the buffer only now started playing. We could well be on a system which has an inaccurate play cursor position. 
 
@@ -105,7 +105,7 @@ else
 
 # Generate a Sine Wave
 
-We've already said it several times: square wave is sure is a simple wave, but it's not a good wave for hearing errors. And you can see just by looking at it: it's completely harsh cut, which is quite unnatural. It's not something that you are really going to see in the real world. Sound is a lot smoother normally, and we don't intuitively know what this should sound like. 
+We've already said it several times: square wave sure is a simple wave, but it's not a good wave for hearing errors. And you can see just by looking at it: it's completely harsh cut, which is quite unnatural. It's not something that you are really going to see in the real world. Sound is a lot smoother normally, and we don't intuitively know what this should sound like. 
 
 We're going to implement a [sine wave][] instead. A sine wave should be familiar for many: it's a smooth continuous wave oscillating between its minimum and maximum indefinitely. A good sine wave sounds as a clear, pure tone to a human ear, with no harmonics. A perfect tone with no noise or harshness. So switching to a sine wave will allow us to have a much easier time in finding the errors in our sound output.
 
@@ -711,7 +711,7 @@ This will work, and you will hear the tone change. But this also will introduce 
 
 ## Store Position in the Sine Wave
 
-Right now, we take our running sample index and divide it by the wave period every time. That means our sound will only be continuous only if the wave period was continuous. If the latter suddenly changes to something else, we will have a sound glitch right at the point of change.
+Right now, we take our running sample index and divide it by the wave period every time. That means our sound will be continuous only if the wave period was continuous. If the latter suddenly changes to something else, we will have a sound glitch right at the point of change.
 
 **************************************************************************
 *                                                                        *
@@ -732,8 +732,8 @@ This direct mapping from the running sample index means that we're incredibly ri
 **************************************************************************
 *                     0                                                  *
 *                     |   .-.     .-.     .-.     .-.     .-.     ...    *
-*              wave x |  | ┊ |   | ┊ |   | ┊ |   | ┊ |   | ┊ |   |        *
-*                     +-'  ┊  '-'  ┊  '-'  ┊  '-'  ┊  '-'  ┊  '-'         *
+*              wave x |  | ┊ |   | ┊ |   | ┊ |   | ┊ |   | ┊ |   |       *
+*                     +-'  ┊  '-'  ┊  '-'  ┊  '-'  ┊  '-'  ┊  '-'        *
 *                     |    ┊       ┊       ┊       ┊       ┊             *
 *                     |   .---.    ┊  .---.       .---.    ┊  .---.      *
 *              wave y |  | ┊   |   ┊ |     |     | ┊   |   ┊ |     |...  *
@@ -751,7 +751,7 @@ This direct mapping from the running sample index means that we're incredibly ri
 **************************************************************************
 [Figure [x]: Switching wavelength currently means getting ugly glitches.]
 
-To be able to fix this issue, we need to keep track of our position in the sine wave, the `t` of the sine, and then gradulally increase it by whichever amount we'd like to advance. And we want to advance by a single increment (as opposed to the whole `RunningSampleIndex`) multiplied by $2/pi$ and divided by the wave period:
+To be able to fix this issue, we need to keep track of our position in the sine wave, the `t` of the sine, and then gradually increase it by whichever amount we'd like to advance. And we want to advance by a single increment (as opposed to the whole `RunningSampleIndex`) multiplied by $2/pi$ and divided by the wave period:
 
 ~~~~~~~ C++
 struct win32_sound_output
@@ -768,6 +768,7 @@ struct win32_sound_output
 ~~~~~~~ C++
 };
 ~~~~~~~
+
 ~~~~~~~ C++
 s16 *SampleOut = (s16 *)Region1;
 DWORD Region1SampleCount = Region1Size / SoundOutput->BytesPerSample;
