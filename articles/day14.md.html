@@ -120,7 +120,7 @@ And this is what you have if you add callbacks (for memory or anything else):
 *    |    | memory requested  |    |      *
 *    |    | <---------------. |    |      *
 *    |    |+ memory provided +|    |      *
-*    |    | ----------------> |    |      *
+*    |    | '---------------> |    |      *
 *    |    |                   |    |      *
 *    |    | game init         |    |      *
 *    |    | ----------------> |    |      *
@@ -128,7 +128,7 @@ And this is what you have if you add callbacks (for memory or anything else):
 *    |    | memory requested  |    |      *
 *    |    | <---------------. |    |      *
 *    |    |+ memory provided +|    |      *
-*    |    | ----------------> |    |      *
+*    |    | '---------------> |    |      *
 *    '----'      ....         '----'      *
 *                                         *
 *******************************************
@@ -504,10 +504,9 @@ Let's compile and verify the following in the debugger:
 ***************************************************
 *        0                                        *
 *          .--------------------------------.     *
-*          |                                |     *
-*          |                                |     *
-*          ...                            ...     *
-*          |                                |     *
+*          |▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉|     *
+*          |▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉|     *
+*          |▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉|     *
 *          +--------------------------------+     *
 * 2TB      | Permanent storage (64MB)       |     *
 *          +--------------------------------+     *
@@ -517,10 +516,10 @@ Let's compile and verify the following in the debugger:
 *          ...                            ...     *
 *          |                                |     *
 *          +--------------------------------+     *
-*          |                                |     *
-*          ...                            ...     *
-*          |                                |     *
-*          |                                |     *
+*          |▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉|     *
+*          |▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉|     *
+*          |▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉|     *
+*          |▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉|     *
 *          '--------------------------------'     *
 *     4TB                                         *
 ***************************************************
@@ -570,7 +569,7 @@ We do it by attempting to write to the null pointer (operation which will always
 #define Gigabytes(Value) (Megabytes(Value) * 1024LL)
 #define Terabytes(Value) (Gigabytes(Value) * 1024LL)
 ~~~~~~~
-[Listing [x]: <file>[handmade.cpp]</file> Defining `Assert`.]
+[Listing [x]: <file>[handmade.h]</file> Defining `Assert`.]
 
 That's it, that's all you need to know about the assertions for now.
 
@@ -584,7 +583,7 @@ We hope you enjoyed today's episode of `Handmade Hero Notes`, and we'll see you 
 
 ## Practice Assertions
 
-Try review the code you've written thus far. Where do you definitely want to make sure things you've received are valid? Try to write assertions in those places.
+Try review the code you've written thus far. Where do you definitely want to make sure things you've received are valid? Write assertions in those places.
 
 # Side Considerations 
 
@@ -613,8 +612,6 @@ Previous: [Day 13. Platform-Independent User Input][day 13]
 (#) Glossary 
 
 (insert glossary/glossary_day14.md.html here)
-
-(#) References 
 
 (insert references/refs_day14.md.html here) 
 

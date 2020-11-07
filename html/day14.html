@@ -1,0 +1,984 @@
+<meta charset="UTF-8"><meta http-equiv="content-type" content="text/html;charset=UTF-8"><meta name="viewport" content="width=600, initial-scale=1"><style>body{max-width:680px;margin:auto;padding:20px;text-align:justify;line-height:140%; -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-smoothing:antialiased;color:#222;font-family:Palatino,Georgia,"Times New Roman",serif}</style><style>@media print{*{-webkit-print-color-adjust:exact;text-shadow:none !important}}body{counter-reset: h1 h2 h3 h4 h5 h6 paragraph}@page{margin:0;size:auto}#mdContextMenu{position:absolute;background:#383838;cursor:default;border:1px solid #999;color:#fff;padding:4px 0px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,"Helvetica Neue",sans-serif;font-size:85%;font-weight:600;border-radius:4px;box-shadow:0px 3px 10px rgba(0,0,0,35%)}#mdContextMenu div{padding:0px 20px}#mdContextMenu div:hover{background:#1659d1}.md code,.md pre{font-family:Menlo,Consolas,monospace;font-size:98%;text-align:left;line-height:140%}.md .mediumToc code,.md longToc code,.md .shortToc code,.md h1 code,.md h2 code,.md h3 code,.md h4 code,.md h5 code,.md h6 code{font-size:unset}.md div.title{font-size:26px;font-weight:800;line-height:120%;text-align:center}.md div.afterTitles{height:10px}.md div.subtitle{text-align:center}.md iframe.textinsert, .md object.textinsert,.md iframe:not(.markdeep){display:block;margin-top:10px;margin-bottom:10px;width:100%;height:75vh;border:1px solid #000;border-radius:4px;background:#f5f5f4}.md .image{display:inline-block}.md img{max-width:100%;page-break-inside:avoid}.md li{text-align:left;text-indent:0}.md pre.listing {width:100%;tab-size:4;-moz-tab-size:4;-o-tab-size:4;counter-reset:line;overflow-x:auto;resize:horizontal}.md pre.listing .linenumbers span.line:before{width:30px;margin-left:-28px;font-size:80%;text-align:right;counter-increment:line;content:counter(line);display:inline-block;padding-right:13px;margin-right:8px;color:#ccc}.md div.tilde{margin:20px 0 -10px;text-align:center}.md .imagecaption,.md .tablecaption,.md .listingcaption{display:inline-block;margin:7px 5px 12px;text-align:justify;font-style:italic}.md img.pixel{image-rendering:-moz-crisp-edges;image-rendering:pixelated}.md blockquote.fancyquote{margin:25px 0 25px;text-align:left;line-height:160%}.md blockquote.fancyquote::before{content:"“";color:#DDD;font-family:Times New Roman;font-size:45px;line-height:0;margin-right:6px;vertical-align:-0.3em}.md span.fancyquote{font-size:118%;color:#777;font-style:italic}.md span.fancyquote::after{content:"”";font-style:normal;color:#DDD;font-family:Times New Roman;font-size:45px;line-height:0;margin-left:6px;vertical-align:-0.3em}.md blockquote.fancyquote .author{width:100%;margin-top:10px;display:inline-block;text-align:right}.md small{font-size:60%}.md big{font-size:150%}.md div.title,contents,.md .tocHeader,.md h1,.md h2,.md h3,.md h4,.md h5,.md h6,.md .shortTOC,.md .mediumTOC,.nonumberh1,.nonumberh2,.nonumberh3,.nonumberh4,.nonumberh5,.nonumberh6{font-family:Verdana,Helvetica,Arial,sans-serif;margin:13.4px 0 13.4px;padding:15px 0 3px;border-top:none;clear:both}.md .tocTop {display:none}.md h1,.md h2,.md h3,.md h4,.md h5,.md h6,.md .nonumberh1,.md .nonumberh2,.md .nonumberh3,.md .nonumberh4,.md .nonumberh5,.md .nonumberh6{page-break-after:avoid;break-after:avoid}.md svg.diagram{display:block;font-family:Menlo,Consolas,monospace;font-size:98%;text-align:center;stroke-linecap:round;stroke-width:2px;page-break-inside:avoid;stroke:#000;fill:#000}.md svg.diagram .opendot{fill:#fff}.md svg.diagram .shadeddot{fill:#CCC}.md svg.diagram .dotteddot{stroke:#000;stroke-dasharray:4;fill:none}.md svg.diagram text{stroke:none}@media print{@page{margin:1in 5mm;transform: scale(150%)}}@media print{.md .pagebreak{page-break-after:always;visibility:hidden}}.md a{font-family:Georgia,Palatino,'Times New Roman'}.md h1,.md .tocHeader,.md .nonumberh1{border-bottom:3px solid;font-size:20px;font-weight:bold;}.md h1,.md .nonumberh1{counter-reset: h2 h3 h4 h5 h6}.md h2,.md .nonumberh2{counter-reset: h3 h4 h5 h6;border-bottom:2px solid #999;color:#555;font-weight:bold;font-size:18px;}.md h3,.md h4,.md h5,.md h6,.md .nonumberh3,.md .nonumberh4,.md .nonumberh5,.md .nonumberh6{font-family:Verdana,Helvetica,Arial,sans-serif;color:#555;font-size:16px;}.md h3{counter-reset:h4 h5 h6}.md h4{counter-reset:h5 h6}.md h5{counter-reset:h6}.md div.table{margin:16px 0 16px 0}.md table{border-collapse:collapse;line-height:140%;page-break-inside:avoid}.md table.table{margin:auto}.md table.calendar{width:100%;margin:auto;font-size:11px;font-family:Verdana,Helvetica,Arial,sans-serif}.md table.calendar th{font-size:16px}.md .today{background:#ECF8FA}.md .calendar .parenthesized{color:#999;font-style:italic}.md table.table th{color:#FFF;background-color:#AAA;border:1px solid #888;padding:8px 15px 8px 15px}.md table.table td{padding:5px 15px 5px 15px;border:1px solid #888}.md table.table tr:nth-child(even){background:#EEE}.md pre.tilde{border-top: 1px solid #CCC;border-bottom: 1px solid #CCC;padding: 5px 0 5px 20px;margin:0 0 0 0;background:#FCFCFC;page-break-inside:avoid}.md a.target{width:0px;height:0px;visibility:hidden;font-size:0px;display:inline-block}.md a:link, .md a:visited{color:#38A;text-decoration:none}.md a:link:hover{text-decoration:underline}.md dt{font-weight:700}.md dl>dd{margin-top:-8px; margin-bottom:8px}.md dl>table{margin:35px 0 30px}.md code{page-break-inside:avoid;} @media print{.md .listing code{white-space:pre-wrap}}.md .endnote{font-size:13px;line-height:15px;padding-left:10px;text-indent:-10px}.md .bib{padding-left:80px;text-indent:-80px;text-align:left}.markdeepFooter{font-size:9px;text-align:right;padding-top:80px;color:#999}.md .mediumTOC{float:right;font-size:12px;line-height:15px;border-left:1px solid #CCC;padding-left:15px;margin:15px 0px 15px 25px}.md .mediumTOC .level1{font-weight:600}.md .longTOC .level1{font-weight:600;display:block;padding-top:12px;margin:0 0 -20px}.md .shortTOC{text-align:center;font-weight:bold;margin-top:15px;font-size:14px}.md .admonition{position:relative;margin:1em 0;padding:.4rem 1rem;border-radius:.2rem;border-left:2.5rem solid rgba(68,138,255,.4);background-color:rgba(68,138,255,.15);}.md .admonition-title{font-weight:bold;border-bottom:solid 1px rgba(68,138,255,.4);padding-bottom:4px;margin-bottom:4px;margin-left: -1rem;padding-left:1rem;margin-right:-1rem;border-color:rgba(68,138,255,.4)}.md .admonition.tip{border-left:2.5rem solid rgba(50,255,90,.4);background-color:rgba(50,255,90,.15)}.md .admonition.tip::before{content:"\24d8";font-weight:bold;font-size:150%;position:relative;top:3px;color:rgba(26,128,46,.8);left:-2.95rem;display:block;width:0;height:0}.md .admonition.tip>.admonition-title{border-color:rgba(50,255,90,.4)}.md .admonition.warn,.md .admonition.warning{border-left:2.5rem solid rgba(255,145,0,.4);background-color:rgba(255,145,0,.15)}.md .admonition.warn::before,.md .admonition.warning::before{content:"\26A0";font-weight:bold;font-size:150%;position:relative;top:2px;color:rgba(128,73,0,.8);left:-2.95rem;display:block;width:0;height:0}.md .admonition.warn>.admonition-title,.md .admonition.warning>.admonition-title{border-color:rgba(255,145,0,.4)}.md .admonition.error{border-left: 2.5rem solid rgba(255,23,68,.4);background-color:rgba(255,23,68,.15)}.md .admonition.error>.admonition-title{border-color:rgba(255,23,68,.4)}.md .admonition.error::before{content: "\2612";font-family:"Arial";font-size:200%;position:relative;color:rgba(128,12,34,.8);top:-2px;left:-3rem;display:block;width:0;height:0}.md .admonition p:last-child{margin-bottom:0}.md li.checked,.md li.unchecked{list-style:none;overflow:visible;text-indent:-1.2em}.md li.checked:before,.md li.unchecked:before{content:"\2611";display:block;float:left;width:1em;font-size:120%}.md li.unchecked:before{content:"\2610"}</style><style>.md h1::before {
+content:counter(h1) " ";
+counter-increment: h1;margin-right:10px}.md h2::before {
+content:counter(h1) "."counter(h2) " ";
+counter-increment: h2;margin-right:10px}.md h3::before {
+content:counter(h1) "."counter(h2) "."counter(h3) " ";
+counter-increment: h3;margin-right:10px}.md h4::before {
+content:counter(h1) "."counter(h2) "."counter(h3) "."counter(h4) " ";
+counter-increment: h4;margin-right:10px}.md h5::before {
+content:counter(h1) "."counter(h2) "."counter(h3) "."counter(h4) "."counter(h5) " ";
+counter-increment: h5;margin-right:10px}.md h6::before {
+content:counter(h1) "."counter(h2) "."counter(h3) "."counter(h4) "."counter(h5) "."counter(h6) " ";
+counter-increment: h6;margin-right:10px}</style><style>.hljs{display:block;overflow-x:auto;padding:0.5em;background:#fff;color:#000;-webkit-text-size-adjust:none}.hljs-comment{color:#006a00}.hljs-keyword{color:#02E}.hljs-literal,.nginx .hljs-title{color:#aa0d91}.method,.hljs-list .hljs-title,.hljs-tag .hljs-title,.setting .hljs-value,.hljs-winutils,.tex .hljs-command,.http .hljs-title,.hljs-request,.hljs-status,.hljs-name{color:#008}.hljs-envvar,.tex .hljs-special{color:#660}.hljs-string{color:#c41a16}.hljs-tag .hljs-value,.hljs-cdata,.hljs-filter .hljs-argument,.hljs-attr_selector,.apache .hljs-cbracket,.hljs-date,.hljs-regexp{color:#080}.hljs-sub .hljs-identifier,.hljs-pi,.hljs-tag,.hljs-tag .hljs-keyword,.hljs-decorator,.ini .hljs-title,.hljs-shebang,.hljs-prompt,.hljs-hexcolor,.hljs-rule .hljs-value,.hljs-symbol,.hljs-symbol .hljs-string,.hljs-number,.css .hljs-function,.hljs-function .hljs-title,.coffeescript .hljs-attribute{color:#A0C}.hljs-function .hljs-title{font-weight:bold;color:#000}.hljs-class .hljs-title,.smalltalk .hljs-class,.hljs-type,.hljs-typename,.hljs-tag .hljs-attribute,.hljs-doctype,.hljs-class .hljs-id,.hljs-built_in,.setting,.hljs-params,.clojure .hljs-attribute{color:#5c2699}.hljs-variable{color:#3f6e74}.css .hljs-tag,.hljs-rule .hljs-property,.hljs-pseudo,.hljs-subst{color:#000}.css .hljs-class,.css .hljs-id{color:#9b703f}.hljs-value .hljs-important{color:#ff7700;font-weight:bold}.hljs-rule .hljs-keyword{color:#c5af75}.hljs-annotation,.apache .hljs-sqbracket,.nginx .hljs-built_in{color:#9b859d}.hljs-preprocessor,.hljs-preprocessor *,.hljs-pragma{color:#643820}.tex .hljs-formula{background-color:#eee;font-style:italic}.diff .hljs-header,.hljs-chunk{color:#808080;font-weight:bold}.diff .hljs-change{background-color:#bccff9}.hljs-addition{background-color:#baeeba}.hljs-deletion{background-color:#ffc8bd}.hljs-comment .hljs-doctag{font-weight:bold}.method .hljs-id{color:#000}</style><style>div.title { padding-top: 40px; } div.afterTitles { height: 15px; }</style><meta charset="utf-8">
+<link rel="stylesheet" href="../css/style.css">
+
+<script>try {
+                        Object.defineProperty(screen, "availTop", { value: 0 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availLeft", { value: 0 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availWidth", { value: 1920 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availHeight", { value: 1080 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "colorDepth", { value: 24 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "pixelDepth", { value: 24 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "hardwareConcurrency", { value: 8 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "appVersion", { value: "5.0 (Windows)" });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "doNotTrack", { value: "unspecified" });
+                    } catch (e) {}
+                    
+            try {
+                window.screenY = 1072
+            } catch (e) { }
+        
+            try {
+                window.screenTop = 1072
+            } catch (e) { }
+        
+            try {
+                window.top.window.outerHeight = window.screen.height
+            } catch (e) { }
+        
+            try {
+                window.screenX = 1912
+            } catch (e) { }
+        
+            try {
+                window.screenLeft = 1912
+            } catch (e) { }
+        
+            try {
+                window.top.window.outerWidth = window.screen.width
+            } catch (e) { }
+        </script><script>try {
+                        Object.defineProperty(screen, "availTop", { value: 0 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availLeft", { value: 0 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availWidth", { value: 1920 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availHeight", { value: 1080 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "colorDepth", { value: 24 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "pixelDepth", { value: 24 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "hardwareConcurrency", { value: 8 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "appVersion", { value: "5.0 (Windows)" });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "doNotTrack", { value: "unspecified" });
+                    } catch (e) {}
+                    
+            try {
+                window.screenY = 1072
+            } catch (e) { }
+        
+            try {
+                window.screenTop = 1072
+            } catch (e) { }
+        
+            try {
+                window.top.window.outerHeight = window.screen.height
+            } catch (e) { }
+        
+            try {
+                window.screenX = 1912
+            } catch (e) { }
+        
+            try {
+                window.screenLeft = 1912
+            } catch (e) { }
+        
+            try {
+                window.top.window.outerWidth = window.screen.width
+            } catch (e) { }
+        </script><script>try {
+                        Object.defineProperty(screen, "availTop", { value: 0 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availLeft", { value: 0 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availWidth", { value: 1920 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availHeight", { value: 1080 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "colorDepth", { value: 24 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "pixelDepth", { value: 24 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "hardwareConcurrency", { value: 8 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "appVersion", { value: "5.0 (Windows)" });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "doNotTrack", { value: "unspecified" });
+                    } catch (e) {}
+                    
+            try {
+                window.screenY = 1072
+            } catch (e) { }
+        
+            try {
+                window.screenTop = 1072
+            } catch (e) { }
+        
+            try {
+                window.top.window.outerHeight = window.screen.height
+            } catch (e) { }
+        
+            try {
+                window.screenX = 1912
+            } catch (e) { }
+        
+            try {
+                window.screenLeft = 1912
+            } catch (e) { }
+        
+            try {
+                window.top.window.outerWidth = window.screen.width
+            } catch (e) { }
+        </script><script>try {
+                        Object.defineProperty(screen, "availTop", { value: 0 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availLeft", { value: 0 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availWidth", { value: 1920 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availHeight", { value: 1080 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "colorDepth", { value: 24 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "pixelDepth", { value: 24 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "hardwareConcurrency", { value: 8 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "appVersion", { value: "5.0 (Windows)" });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "doNotTrack", { value: "unspecified" });
+                    } catch (e) {}
+                    
+            try {
+                window.screenY = 1072
+            } catch (e) { }
+        
+            try {
+                window.screenTop = 1072
+            } catch (e) { }
+        
+            try {
+                window.top.window.outerHeight = window.screen.height
+            } catch (e) { }
+        
+            try {
+                window.screenX = 1912
+            } catch (e) { }
+        
+            try {
+                window.screenLeft = 1912
+            } catch (e) { }
+        
+            try {
+                window.top.window.outerWidth = window.screen.width
+            } catch (e) { }
+        </script><span class="md"><p><title>Day 14. Platform-Independent Game Memory</title><div class="title"> Day 14. Platform-Independent Game Memory </div>
+
+<div class="afterTitles"></div>
+<em class="underscore">Video Length (including Q&A): <a href="https://hero.handmade.network/episode/code/day014/">1h35</a></em> 
+
+</p><p>
+
+Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with no external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
+
+</p><p>
+
+Today we're going to talk about game memory management, or at least the beginnings of the philosophy of memory management. We're obviously going to talk quite a bit about memory throughout this course as the need arises, but today we're going to lay foundation for that. 
+
+</p>
+<div class="longTOC"><p align="center">
+    <span align="right"><a href="day13.html">Day 13</a></span>
+    <a href="../index.html"><img src = "../media/logo.png"></a>
+    <span align="left"><a href="day15.html">Day 15</a></span>
+</p><p><a href="#" class="tocTop">(Top)</a><br/>
+<a href="#introtomemorymanagement" class="level1"><span class="tocNumber">1&nbsp; </span>Intro to Memory Management</a><br/>
+&nbsp;&nbsp;<a href="#introtomemorymanagement/whytalkaboutallocationnow?" class="level2"><span class="tocNumber">1.1&nbsp; </span>Why Talk About Allocation Now?</a><br/>
+&nbsp;&nbsp;<a href="#introtomemorymanagement/generalphilosophy" class="level2"><span class="tocNumber">1.2&nbsp; </span>General Philosophy</a><br/>
+&nbsp;&nbsp;<a href="#introtomemorymanagement/pointofdeparture" class="level2"><span class="tocNumber">1.3&nbsp; </span>Point of Departure</a><br/>
+&nbsp;&nbsp;<a href="#introtomemorymanagement/ourapproach" class="level2"><span class="tocNumber">1.4&nbsp; </span>Our Approach</a><br/>
+<a href="#addthememorytoourprogram" class="level1"><span class="tocNumber">2&nbsp; </span>Add the Memory to our Program</a><br/>
+&nbsp;&nbsp;<a href="#addthememorytoourprogram/designtheapi" class="level2"><span class="tocNumber">2.1&nbsp; </span>Design the API</a><br/>
+&nbsp;&nbsp;<a href="#addthememorytoourprogram/implementthewindowslayer" class="level2"><span class="tocNumber">2.2&nbsp; </span>Implement the Windows layer</a><br/>
+&nbsp;&nbsp;<a href="#addthememorytoourprogram/addfixedmemoryaddress" class="level2"><span class="tocNumber">2.3&nbsp; </span>Add Fixed Memory Address</a><br/>
+<a href="#assertions" class="level1"><span class="tocNumber">3&nbsp; </span>Assertions</a><br/>
+<a href="#recap" class="level1"><span class="tocNumber">4&nbsp; </span>Recap</a><br/>
+<a href="#exercises" class="level1"><span class="tocNumber">5&nbsp; </span>Exercises</a><br/>
+&nbsp;&nbsp;<a href="#exercises/practiceassertions" class="level2"><span class="tocNumber">5.1&nbsp; </span>Practice Assertions</a><br/>
+<a href="#sideconsiderations" class="level1"><span class="tocNumber">6&nbsp; </span>Side Considerations</a><br/>
+&nbsp;&nbsp;<a href="#sideconsiderations/perfmon" class="level2"><span class="tocNumber">6.1&nbsp; </span>PerfMon</a><br/>
+<a href="#navigation" class="level1"><span class="tocNumber">7&nbsp; </span>Navigation</a><br/>
+</p></div><a class="target" name="introtomemorymanagement">&nbsp;</a><a class="target" name="introtomemorymanagement">&nbsp;</a><a class="target" name="toc1">&nbsp;</a><h1>Intro to Memory Management</h1>
+
+<a class="target" name="whytalkaboutallocationnow?">&nbsp;</a><a class="target" name="introtomemorymanagement/whytalkaboutallocationnow?">&nbsp;</a><a class="target" name="toc1.1">&nbsp;</a><h2>Why Talk About Allocation Now?</h2>
+<p>
+
+
+Why do we even want to start talking about memory management now? After all, we still have some things to do in the sound systems maybe, definitely in our input systems... why memory now? Besides, we don't even use any memory right now, why would we want to start doing it? 
+
+</p><p>
+
+Well, if you look in your <code>handmade.cpp</code>, you'll see the answer right there: 
+
+</p><pre class="listing tilde"><code><span class="line">local_persist <span class="hljs-keyword">int</span> XOffset = <span class="hljs-number">0</span>;</span>
+<span class="line">local_persist <span class="hljs-keyword">int</span> YOffset = <span class="hljs-number">0</span>;</span>
+<span class="line">local_persist <span class="hljs-keyword">int</span> ToneHz = <span class="hljs-number">256</span>;</span></code></pre><center><div class="listingcaption tilde"><file>[handmade.cpp]</file></div></center>
+<p>
+
+
+This isn't pretty. We did this to get things working while we were playing around defining our platform API. If you recall, <code>local_persist</code> is an alias with which we call <code>static</code> variables inside the functions. For all intents and purposes <code>local_persist</code> is a global variable, it's just that other functions can't access it. 
+
+</p><p>
+
+It's not a good idea having things like that lying around, and certainly it's not something we'll even be able to do with everything. If you'd define a <code>local_persist</code> variable 4GB big who knows what would happen... and it probably wouldn't be good.
+
+</p><p>
+
+So today we could use these values and pretend these are the actual game state that we're going to focus on once we finish building our platform API.
+
+</p><p>
+
+We haven't done any memory management yet. All we have is a sound buffer and a bitmap buffer. We simply ask for these two flat buffers from the operating system once, without ever freeing them. Our program is completely memory-stable because of that, and there's no such thing as &ldquo;running out of memory&rdquo; here (for the most part, anyway. If it starts at all, it's good to go.)
+
+</p>
+<a class="target" name="generalphilosophy">&nbsp;</a><a class="target" name="introtomemorymanagement/generalphilosophy">&nbsp;</a><a class="target" name="toc1.2">&nbsp;</a><h2>General Philosophy</h2>
+<p>
+
+
+In many modern programming languages, memory management is often done automatically for the programmer. Various systems of the so-called <em class="underscore">garbage collection</em> start up and begin operating even before the program enters its main loop. They would catch all the unused data, fill up and eventually free in large chunks. 
+
+</p><p>
+
+This is not necessarily a good thing in general, and this is definitely not a good thing in game development, where performance and code execution speed is key.
+
+</p><p>
+
+Think about this: Every time you do <em class="underscore">memory allocation</em>, you introduce a failure point into your program. Memory is a limited resource, and every time you ask for more memory, your request can fail. Should that happen, and should the result of the allocation be important to you, you either should handle it or simply presume that you run on an infinite memory device. 
+
+</p><p>
+
+<div class="admonition ">Of course, these days you will probably be operating on what for all intents and purposes <em class="underscore">is</em> an infinite memory device: modern computers come with so much memory that you won't be ever able to allocate so much virtual memory that Windows would run out of its own storage.
+
+</p><p>
+
+    That said, if you go deep enough into the memory request rabbit hole, you <em class="underscore">will</em> run in eventual crashes, stalls, etc., due to memory paging and other nastiness. 
+
+</p><p>
+
+    It's always better not to have to deal with that headache and build programs that don't have such failure cases, programs which just aren't going to fail. This way you can focus on what is the joy of programming.</div>
+
+</p><p>
+
+We will try to reply to the question: Can we just never allocate any memory during our game loop? Surprisingly for many, the answer seems to be yes. We're going to do a simple flat partition: grab a chunk of memory during the program start-up (not dissimilar to what we did with the render buffer), pre-decide how much are we going to allow each subsystem to use, and run those subsystems in such a way that they <em class="underscore">must</em> run in that space. They will never go outside the boundary that you give them and ask for more memory later down the road. 
+
+</p><p>
+
+These techniques differ from the general practices you find these days. Even many games that are shipped as &ldquo;allocation festivals&rdquo;, juggling with memory all over the place. But, after all, isn't it fun exploring different ways of doing things? 
+
+</p>
+<a class="target" name="pointofdeparture">&nbsp;</a><a class="target" name="introtomemorymanagement/pointofdeparture">&nbsp;</a><a class="target" name="toc1.3">&nbsp;</a><h2>Point of Departure</h2>
+<p>
+
+
+We'll start off with a demonstration of how we recommend <em class="underscore">not</em> to do things. Often times, you would see &ldquo;guides for beginners&rdquo; having the code similar to the following: 
+
+</p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_state</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">int</span> XOffset;</span>
+<span class="line">    <span class="hljs-keyword">int</span> YOffset;</span>
+<span class="line">    <span class="hljs-keyword">int</span> ToneHz;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal game_state *</span>
+<span class="line"><span class="hljs-title">GameStartup</span><span class="hljs-params">()</span></span>
+<span class="line"></span>{</span>
+<span class="line">    game_state *GameState = <span class="hljs-keyword">new</span> game_state;</span>
+<span class="line">    <span class="hljs-keyword">if</span>(GameState)</span>
+<span class="line">    {</span>
+<span class="line">        GameState-&gt;XOffset = <span class="hljs-number">0</span>;</span>
+<span class="line">        GameState-&gt;YOffset = <span class="hljs-number">0</span>;</span>
+<span class="line">        GameState-&gt;ToneHz = <span class="hljs-number">256</span>;</span>
+<span class="line">    }</span>
+<span class="line"></span>
+<span class="line">    <span class="hljs-keyword">return</span> (GameState);</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">GameShutdown</span><span class="hljs-params">(game_state* GameState)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-keyword">delete</span> GameState;</span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><file>[Example]</file>.</div></center>
+<p>
+
+
+This sort of thing continues of the chain of <code>new</code> and <code>delete</code> continues throughout all the code. Need to load a game asset? <code>new game_asset</code>! Need to create a character? <code>new character</code>! New piece of terrain? You get the drift.
+
+</p><p>
+
+Furthermore, it's usually not even written in such a manner. There usually are multiple additional levels of obfuscation which prevent you from understanding what's really going on: there are constructors and destructors, overloading <code>new</code> to handle allocations... in high-end code, error checking all the way. 
+
+</p><p>
+
+It's not inherently bad, but it's definitely not what we're going to do. Here's why: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">If you follow this pattern, you <em class="underscore">have</em> to have a strategy for the failure cases. Either you handle it somehow, or you accept that your program can crash at any moment. 
+</li>
+<li class="asterisk">It adds another loop back to your platform abstraction. Right now we have our platform neatly packing our graphics and sound buffer, user input, and passing them to the game. We don't have any round-trips after that: the game will finish doing its work and hand back the completed buffers to the platforms.</li></ul>
+
+</p><p>
+
+What do we mean by the latter? 
+
+</p><p>
+
+Imagine a situation where you enter <code>GameUpdateAndRender</code> (from the platform layer) start your initialization and... immediately call the platform back to allocate the memory. This back-and-forth conversation between the platform and the game is what creates unnecessary complexity. 
+
+</p><p>
+
+To put it in the other way, this is what we have now: 
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="160" width="280" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 32,16 L 32,112 " style="fill:none;"/>
+<path d="M 72,16 L 72,112 " style="fill:none;"/>
+<path d="M 176,16 L 176,112 " style="fill:none;"/>
+<path d="M 216,16 L 216,112 " style="fill:none;"/>
+<path d="M 32,16 L 72,16 " style="fill:none;"/>
+<path d="M 176,16 L 216,16 " style="fill:none;"/>
+<path d="M 88,64 L 152,64 " style="fill:none;"/>
+<path d="M 32,112 L 72,112 " style="fill:none;"/>
+<path d="M 176,112 L 216,112 " style="fill:none;"/>
+<polygon points="160,64 148,58.4 148,69.6 "  style="stroke:none" transform="rotate(0,152,64 )"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="24" y="4">P</text><text text-anchor="middle" x="32" y="4">L</text><text text-anchor="middle" x="40" y="4">A</text><text text-anchor="middle" x="48" y="4">T</text><text text-anchor="middle" x="56" y="4">F</text><text text-anchor="middle" x="64" y="4">O</text><text text-anchor="middle" x="72" y="4">R</text><text text-anchor="middle" x="80" y="4">M</text><text text-anchor="middle" x="184" y="4">G</text><text text-anchor="middle" x="192" y="4">A</text><text text-anchor="middle" x="200" y="4">M</text><text text-anchor="middle" x="208" y="4">E</text><text text-anchor="middle" x="96" y="52">1</text><text text-anchor="middle" x="112" y="52">c</text><text text-anchor="middle" x="120" y="52">a</text><text text-anchor="middle" x="128" y="52">l</text><text text-anchor="middle" x="136" y="52">l</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;1:</b> The only call to the game that we have is, of course, <code>GameUpdateAndRender</code>.</div></center>
+
+</p><p>
+
+
+And this is what you have if you add callbacks (for memory or anything else):
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="288" width="336" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 32,16 L 32,240 " style="fill:none;"/>
+<path d="M 72,16 L 72,240 " style="fill:none;"/>
+<path d="M 232,16 L 232,240 " style="fill:none;"/>
+<path d="M 272,16 L 272,240 " style="fill:none;"/>
+<path d="M 32,16 L 72,16 " style="fill:none;"/>
+<path d="M 232,16 L 272,16 " style="fill:none;"/>
+<path d="M 88,64 L 208,64 " style="fill:none;"/>
+<path d="M 96,96 L 216,96 " style="fill:none;"/>
+<path d="M 88,144 L 216,144 " style="fill:none;"/>
+<path d="M 88,192 L 208,192 " style="fill:none;"/>
+<path d="M 96,224 L 216,224 " style="fill:none;"/>
+<path d="M 32,240 L 72,240 " style="fill:none;"/>
+<path d="M 232,240 L 272,240 " style="fill:none;"/>
+<path d="M 208,64 C 224.8,64 224,80 224,80 " style="fill:none;"/>
+<path d="M 96,96 C 79.2,96 80,80 80,80 " style="fill:none;"/>
+<path d="M 208,192 C 224.8,192 224,208 224,208 " style="fill:none;"/>
+<path d="M 96,224 C 79.2,224 80,208 80,208 " style="fill:none;"/>
+<polygon points="224,224 212,218.4 212,229.6 "  style="stroke:none" transform="rotate(0,216,224 )"/>
+<polygon points="224,144 212,138.4 212,149.6 "  style="stroke:none" transform="rotate(0,216,144 )"/>
+<polygon points="224,96 212,90.4 212,101.6 "  style="stroke:none" transform="rotate(0,216,96 )"/>
+<polygon points="96,192 84,186.4 84,197.6 "  style="stroke:none" transform="rotate(180,88,192 )"/>
+<polygon points="96,64 84,58.4 84,69.6 "  style="stroke:none" transform="rotate(180,88,64 )"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="24" y="4">P</text><text text-anchor="middle" x="32" y="4">L</text><text text-anchor="middle" x="40" y="4">A</text><text text-anchor="middle" x="48" y="4">T</text><text text-anchor="middle" x="56" y="4">F</text><text text-anchor="middle" x="64" y="4">O</text><text text-anchor="middle" x="72" y="4">R</text><text text-anchor="middle" x="80" y="4">M</text><text text-anchor="middle" x="240" y="4">G</text><text text-anchor="middle" x="248" y="4">A</text><text text-anchor="middle" x="256" y="4">M</text><text text-anchor="middle" x="264" y="4">E</text><text text-anchor="middle" x="88" y="52">m</text><text text-anchor="middle" x="96" y="52">e</text><text text-anchor="middle" x="104" y="52">m</text><text text-anchor="middle" x="112" y="52">o</text><text text-anchor="middle" x="120" y="52">r</text><text text-anchor="middle" x="128" y="52">y</text><text text-anchor="middle" x="144" y="52">r</text><text text-anchor="middle" x="152" y="52">e</text><text text-anchor="middle" x="160" y="52">q</text><text text-anchor="middle" x="168" y="52">u</text><text text-anchor="middle" x="176" y="52">e</text><text text-anchor="middle" x="184" y="52">s</text><text text-anchor="middle" x="192" y="52">t</text><text text-anchor="middle" x="200" y="52">e</text><text text-anchor="middle" x="208" y="52">d</text><text text-anchor="middle" x="96" y="84">m</text><text text-anchor="middle" x="104" y="84">e</text><text text-anchor="middle" x="112" y="84">m</text><text text-anchor="middle" x="120" y="84">o</text><text text-anchor="middle" x="128" y="84">r</text><text text-anchor="middle" x="136" y="84">y</text><text text-anchor="middle" x="152" y="84">p</text><text text-anchor="middle" x="160" y="84">r</text><text text-anchor="middle" x="168" y="84">o</text><text text-anchor="middle" x="176" y="84">v</text><text text-anchor="middle" x="184" y="84">i</text><text text-anchor="middle" x="192" y="84">d</text><text text-anchor="middle" x="200" y="84">e</text><text text-anchor="middle" x="208" y="84">d</text><text text-anchor="middle" x="88" y="132">g</text><text text-anchor="middle" x="96" y="132">a</text><text text-anchor="middle" x="104" y="132">m</text><text text-anchor="middle" x="112" y="132">e</text><text text-anchor="middle" x="128" y="132">i</text><text text-anchor="middle" x="136" y="132">n</text><text text-anchor="middle" x="144" y="132">i</text><text text-anchor="middle" x="152" y="132">t</text><text text-anchor="middle" x="88" y="180">m</text><text text-anchor="middle" x="96" y="180">e</text><text text-anchor="middle" x="104" y="180">m</text><text text-anchor="middle" x="112" y="180">o</text><text text-anchor="middle" x="120" y="180">r</text><text text-anchor="middle" x="128" y="180">y</text><text text-anchor="middle" x="144" y="180">r</text><text text-anchor="middle" x="152" y="180">e</text><text text-anchor="middle" x="160" y="180">q</text><text text-anchor="middle" x="168" y="180">u</text><text text-anchor="middle" x="176" y="180">e</text><text text-anchor="middle" x="184" y="180">s</text><text text-anchor="middle" x="192" y="180">t</text><text text-anchor="middle" x="200" y="180">e</text><text text-anchor="middle" x="208" y="180">d</text><text text-anchor="middle" x="96" y="212">m</text><text text-anchor="middle" x="104" y="212">e</text><text text-anchor="middle" x="112" y="212">m</text><text text-anchor="middle" x="120" y="212">o</text><text text-anchor="middle" x="128" y="212">r</text><text text-anchor="middle" x="136" y="212">y</text><text text-anchor="middle" x="152" y="212">p</text><text text-anchor="middle" x="160" y="212">r</text><text text-anchor="middle" x="168" y="212">o</text><text text-anchor="middle" x="176" y="212">v</text><text text-anchor="middle" x="184" y="212">i</text><text text-anchor="middle" x="192" y="212">d</text><text text-anchor="middle" x="200" y="212">e</text><text text-anchor="middle" x="208" y="212">d</text><text text-anchor="middle" x="128" y="244">.</text><text text-anchor="middle" x="136" y="244">.</text><text text-anchor="middle" x="144" y="244">.</text><text text-anchor="middle" x="152" y="244">.</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;2:</b> API becomes essentially a sequence of calls, instead of single one.</div></center>
+</p><p>
+
+If you then were to create an implementation for another platform (say, Linux), you would then need to spend multiple weeks simply to understand what's going on here.
+
+</p>
+<a class="target" name="ourapproach">&nbsp;</a><a class="target" name="introtomemorymanagement/ourapproach">&nbsp;</a><a class="target" name="toc1.4">&nbsp;</a><h2>Our Approach</h2>
+<p>
+
+
+So how are we going to approach this topic? 
+
+</p><p>
+
+We will simply pass to our game a thing called, say, <code>game_memory</code>. That's it. As with other pieces of our code, once that memory is set up, we won't do anything else to it until our program closes. As a result, if the initial setup will work, the game will never crash. Platform layer could potentially crash, platform itself could crash, but our game will continue strong.
+
+</p><p>
+
+What will the setup entail? It will involve allocating some memory, pre-partitioning it as necessary, packing it up in the struct. Every frame, we will send this memory to our game with the rest of structures. 
+
+</p>
+<a class="target" name="addthememorytoourprogram">&nbsp;</a><a class="target" name="addthememorytoourprogram">&nbsp;</a><a class="target" name="toc2">&nbsp;</a><h1>Add the Memory to our Program</h1>
+<p>
+
+
+Enough with the words, let's start coding!
+
+</p>
+<a class="target" name="designtheapi">&nbsp;</a><a class="target" name="addthememorytoourprogram/designtheapi">&nbsp;</a><a class="target" name="toc2.1">&nbsp;</a><h2>Design the API</h2>
+<p>
+
+
+First thing first, let's imagine how the usage will change in <code>handmade.cpp</code>: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">We will receive memory from our platform in one big <code>void *</code> blob.
+</li>
+<li class="asterisk">We will then <em class="underscore">cast</em> it to whatever our <code>game_state</code> will be.
+</li>
+<li class="asterisk">For now this game state only contains what were our <code>local_persist</code> variables.</li></ul>
+
+</p><pre class="listing tilde"><code><span class="line">internal <span class="hljs-keyword">void</span></span><div class=" edit"><span class="line">GameUpdateAndRender(game_memory* Memory, game_input *Input,       </span></div><span class="line">                    game_offscreen_buffer* Buffer, game_sound_output_buffer *SoundBuffer)</span>
+<span class="line">{</span><div class=" add"><span class="line">    game_state *GameState = (game_state*)Memory;</span></div><span class="line">        </span><div class=" edit"><span class="line">    GameState-&gt;XOffset = <span class="hljs-number">0</span>;</span>
+<span class="line">    GameState-&gt;YOffset = <span class="hljs-number">0</span>;</span>
+<span class="line">    GameState-&gt;ToneHz = <span class="hljs-number">256</span>;</span></div><span class="line">    </span>
+<span class="line">    game_controller_input *Input0 = &amp;Input-&gt;Controllers[<span class="hljs-number">0</span>];</span>
+<span class="line">    <span class="hljs-keyword">if</span> (Input0-&gt;IsAnalog)</span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-comment">// NOTE(casey): Use analog movement tuning</span></span><div class=" edit"><span class="line">        GameState-&gt;ToneHz = <span class="hljs-number">256</span> + (<span class="hljs-keyword">int</span>)(<span class="hljs-number">128.0f</span> * (Input0-&gt;EndX));</span>
+<span class="line">        GameState-&gt;YOffset += (<span class="hljs-keyword">int</span>)(<span class="hljs-number">4.0f</span> * Input0-&gt;EndY);</span></div><span class="line">    }</span>
+<span class="line">    <span class="hljs-keyword">else</span></span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-comment">// NOTE(casey): Use digital movement tuning</span></span>
+<span class="line">    }</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">if</span>(Input0-&gt;Down.EndedDown)</span>
+<span class="line">    {</span><div class=" edit"><span class="line">        GameState-&gt;XOffset += <span class="hljs-number">1</span>;</span></div><span class="line">    }</span>
+<span class="line">    </span><div class=" edit"><span class="line">    GameSoundOutput(SoundBuffer, GameState-&gt;ToneHz);</span>
+<span class="line">    RenderWeirdGradient(Buffer, GameState-&gt;XOffset, GameState-&gt;YOffset);</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;1:</b> <file>[handmade.cpp]</file>. Writing usage code first.</div></center>
+<p>
+
+
+Now, we can imagine that really we will have a size and the pointer to the actual memory inside the <code>game_memory</code> struct. Furthermore, we can already divide our memory in two parts: permanent (to store the game state) and transient (to store the work which can eventually be cleared). So we modify our <code>GameState</code> line as follows:
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">game_state *GameState = (game_state*)Memory-&gt;PermanentStorage;</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;2:</b> <file>[handmade.cpp > GameUpdateAndRender]</file>. Using the permanent storage.</div></center>
+<p>
+
+
+
+
+<div class="admonition ">Why distinction between permanent and transient memory? Permanent storage is non-negotiable, transient one is. The latter will contain sound, animations, etc. You could even throw it all away if you ever need it. Then again, &ldquo;Write the usage code first&rdquo;. It's free for us to add another memory storage from the get-go, but it's the game that will dictate how many blocks and for which purpose we will eventually require.
+
+</p><p>
+
+    You can read more about similar strategies in this article by GingerBill: <a href="https://www.gingerbill.org/article/2019/02/01/memory-allocation-strategies-001/">Memory Allocation Strategies, part 1</a></div>
+
+</p><p>
+
+Last but not least, we'll need an initialization step, where we initialize our variables only at the first pass! This suggests that we'll need a <code>IsInitialized</code> variable inside the memory block:
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-keyword">if</span> (!Memory-&gt;IsInitialized)</span>
+<span class="line">{</span></div><span class="line">    GameState-&gt;XOffset = <span class="hljs-number">0</span>;</span>
+<span class="line">    GameState-&gt;YOffset = <span class="hljs-number">0</span>;</span>
+<span class="line">    GameState-&gt;ToneHz = <span class="hljs-number">256</span>;</span>
+<span class="line"></span><div class=" add"><span class="line">    Memory-&gt;IsInitialized = <span class="hljs-literal">true</span>;</span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;3:</b> <file>[handmade.cpp > GameUpdateAndRender]</file>. Ensuring memory initialization happens only once.</div></center>
+<p>
+
+
+To recap: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">Whatever our game state is, it will be cast straight to permanent memory.
+</li>
+<li class="asterisk">Memory blocks are a <code>void *</code> because we don't know what will go into them when in platform layer. However, once we enter the game layer, we immediately cast to the relevant state.
+</li>
+<li class="asterisk">There will be an initialization step on the first frame.
+</li>
+<li class="asterisk">It's necessary our memory to be cleared to zero at startup.</li></ul>
+
+</p><p>
+
+Based on this knowledge, let's define <code>game_memory</code> structure inside <code>handmade.h</code> (and, while we're at it, <code>game_state</code> as well. We will throw it in a separate spot though to indicate it's not relevant to the platform API.). Remember to change <code>GameUpdateAndRender</code> signature!
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_input</span></span>
+<span class="line">{</span></span>
+<span class="line">    game_controller_input Controllers[<span class="hljs-number">4</span>];</span>
+<span class="line">};</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_memory</span></span>
+<span class="line">{</span></span>
+<span class="line">    u64 PermanentStorageSize; </span>
+<span class="line"><span class="hljs-keyword">void</span> *PermanentStorage; <span class="hljs-comment">// NOTE(casey): REQUIRED to be cleared to zero at startup</span></span>
+<span class="line"></span>
+<span class="line">    u64 TransientStorageSize;</span>
+<span class="line">    <span class="hljs-keyword">void</span> *TransientStorage;</span>
+<span class="line"></span>
+<span class="line">    b32 IsInitialized;</span>
+<span class="line">};</span></div><span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">GameUpdateAndRender</span><span class="hljs-params">(game_memory *Memory, game_input *Input,</span>
+<span class="line">                    game_offscreen_buffer* Buffer, game_sound_output_buffer *SoundBuffer)</span></span>;</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-comment">//</span></span>
+<span class="line"><span class="hljs-comment">//</span></span>
+<span class="line"><span class="hljs-comment">//</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_state</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">int</span> ToneHz;</span>
+<span class="line">    <span class="hljs-keyword">int</span> XOffset;</span>
+<span class="line">    <span class="hljs-keyword">int</span> YOffset;</span>
+<span class="line">};</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;4:</b> <file>[handmade.h]</file>. Defining our structs.</div></center>
+<p>
+
+
+That should be fine by now, we can take care of the Windows layer! But before we do that, let's write a couple of useful macros while we're in <code>handmade.h</code>. These macros will help us calculate the sizes in Kilobytes, Megabytes and Gigabytes  and will become useful in just a second.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> !defined(HANDMADE_H)</span></span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Kilobytes(Value) ((Value) * 1024LL)</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Megabytes(Value) (Kilobytes(Value) * 1024LL)</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Gigabytes(Value) (Megabytes(Value) * 1024LL)</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Terabytes(Value) (Gigabytes(Value) * 1024LL)</span></span></div><span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))</span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;5:</b> <file>[handmade.h]</file>. Defining byte-calculation macros.</div></center>
+<p>
+
+
+Why do we multiply by 1024? and what's that <code>LL</code> thing at the end? 
+
+</p><p>
+
+<ul>
+<li class="asterisk">Technically, we aren't calculating the Kilo-, Mega-, or Gigabytes amount here. It's actually <em class="underscore">Kibi- Mebi- Gibibytes</em>, i.e. a multiple of the bytes in the digital information space. We use 1024 because it's a multiple of 2, (2<sup>10</sup>, to be precise), and thus lends itself quite easily for memory operations. We use the Kilo-/Mega-/etc. denominations because it's simpler to think about.
+</li>
+<li class="asterisk"><code>LL</code> simply means that the compiler should read the number as a <code>long long</code>, i.e. a 64-bit value. We don't want any? issues!</li></ul>
+
+</p>
+<a class="target" name="implementthewindowslayer">&nbsp;</a><a class="target" name="addthememorytoourprogram/implementthewindowslayer">&nbsp;</a><a class="target" name="toc2.2">&nbsp;</a><h2>Implement the Windows layer</h2>
+<p>
+
+
+On the platform side, things should be equally straightforward. In the roughly the same spot where we allocated space for our sound samples, we can define our game memory and actually allocate it. 
+
+</p><p>
+
+By now you should be able to do it by yourself, so try and think how would you allocate, let's say, 64 megabytes of <code>PermanentStorage</code> and 2 gigabytes of <code>TransientStorage</code>.
+
+</p><p>
+
+Here's how we did it:
+
+</p><pre class="listing tilde"><code><span class="line">s16 *Samples = (s16 *)VirtualAlloc(<span class="hljs-number">0</span>, SoundOutput.SecondaryBufferSize,</span>
+<span class="line">                                               MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);</span>
+<span class="line">            </span><div class=" add"><span class="line">game_memory GameMemory = {};</span>
+<span class="line">GameMemory.PermanentStorageSize = Megabytes(<span class="hljs-number">64</span>);</span>
+<span class="line">GameMemory.TransientStorageSize = Gigabytes(<span class="hljs-number">2</span>);</span>
+<span class="line"></span>
+<span class="line">GameMemory.PermanentStorage = VirtualAlloc(<span class="hljs-number">0</span>, GameMemory.PermanentStorageSize,</span>
+<span class="line">                                            MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);</span>
+<span class="line">GameMemory.TransientStorage = VirtualAlloc(<span class="hljs-number">0</span>, GameMemory.TransientStorageSize,</span>
+<span class="line">                                            MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);</span></div><span class="line"></span>
+<span class="line">game_input Input[<span class="hljs-number">2</span>] = {};</span>
+<span class="line">game_input* OldInput = &amp;Input[<span class="hljs-number">0</span>];</span>
+<span class="line">game_input* NewInput = &amp;Input[<span class="hljs-number">1</span>];</span>
+<span class="line"><span class="hljs-comment">// </span></span>
+<span class="line"><span class="hljs-comment">// ... </span></span>
+<span class="line"><span class="hljs-comment">// </span></span><div class=" edit"><span class="line">GameUpdateAndRender(&amp;GameMemory, NewInput, &amp;Buffer, &amp;SoundBuffer);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;6:</b> <file>[win32_handmade.cpp > WinMain]</file>. Initializing game memory in Windows.</div></center>
+<p>
+
+
+Yes, we did it using the good ol' <code>VirtualAlloc</code>. As with most systems with memory security, it comes with an added benefit of clearing your memory to zero! 
+
+</p><p>
+
+Now, one thing that absolutely cannot happen is going into our main loop with invalid game memory. So let's make sure we have valid memory (including, by the way, the sound memory) before proceeding: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">WinMain</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">//... </span></span>
+<span class="line">    <span class="hljs-keyword">if</span> (RegisterClassA(...))</span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-comment">//... </span></span>
+<span class="line">        <span class="hljs-keyword">if</span> (Window)</span>
+<span class="line">        {</span>
+<span class="line">            <span class="hljs-comment">//... </span></span>
+<span class="line">            s16 *Samples = (s16 *)VirtualAlloc(...);</span>
+<span class="line">            </span>
+<span class="line">            game_memory GameMemory = {};</span>
+<span class="line">            GameMemory.PermanentStorageSize = Megabytes(<span class="hljs-number">64</span>);</span>
+<span class="line">            GameMemory.TransientStorageSize = Gigabytes(<span class="hljs-number">2</span>);</span>
+<span class="line"></span>
+<span class="line">            GameMemory.PermanentStorage = VirtualAlloc(...);</span>
+<span class="line">            GameMemory.TransientStorage = VirtualAlloc(...);</span><div class=" add"><span class="line">            <span class="hljs-keyword">if</span> (Samples &amp;&amp; </span>
+<span class="line">                GameMemory.PermanentStorage &amp;&amp; </span>
+<span class="line">                GameMemory.TransientStorage)</span>
+<span class="line">            {</span></div><span class="line">                <span class="hljs-comment">// ... We are ready to do the main loop</span></span><div class=" add"><span class="line">            }</span>
+<span class="line">            <span class="hljs-keyword">else</span></span>
+<span class="line">            {</span>
+<span class="line">                <span class="hljs-comment">// Memory allocation failed</span></span>
+<span class="line">                <span class="hljs-comment">// TODO(casey): Logging</span></span>
+<span class="line">            }</span></div><span class="line">        }</span>
+<span class="line">        <span class="hljs-keyword">else</span></span>
+<span class="line">        {</span>
+<span class="line">            <span class="hljs-comment">// Window Creation failed</span></span>
+<span class="line">            <span class="hljs-comment">// TODO(casey): Logging</span></span>
+<span class="line">        }</span>
+<span class="line">    }</span>
+<span class="line">    <span class="hljs-keyword">else</span></span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-comment">// Window Class Registration failed</span></span>
+<span class="line">        <span class="hljs-comment">// TODO(casey): Logging</span></span>
+<span class="line">    }</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">return</span> (<span class="hljs-number">0</span>);</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;7:</b> <file>[win32_handmade.cpp > WinMain]</file>. Making sure we have valid memory.</div></center>
+<p>
+
+
+Compile, run and verify in the debugger the following: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">That <code>PermanentStorageSize</code> and <code>TransientStorageSize</code> are calculated as you expect them to.
+</li>
+<li class="asterisk">That <code>PermanentStorage</code> and <code>TransientStorage</code> receive valid pointers.
+</li>
+<li class="asterisk">That your game runs as it used to.</li></ul>
+
+</p><p>
+
+Moreover, if you open the task manager, you can see that the commit size is roughly 2GB, exactly what we wanted.
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day14/taskmgr.jpg" target="_blank"><img class="markdeep" src="../media/day14/taskmgr.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;3:</b> If you don't see Commit Size column, right click on the headers and select it from &ldquo;Select column&rdquo; interface.</span></center></div></center>
+
+</p><p>
+
+If so, everyone's happy! Because sometimes, you really should do things to make yourself happy.
+
+</p>
+<a class="target" name="addfixedmemoryaddress">&nbsp;</a><a class="target" name="addthememorytoourprogram/addfixedmemoryaddress">&nbsp;</a><a class="target" name="toc2.3">&nbsp;</a><h2>Add Fixed Memory Address</h2>
+<p>
+
+
+Let's have some fun! <code>VirtualAlloc</code> allows us to set a base address where we'd like to store the allocated memory. This isn't something that we'd be doing for the released game, but we might do it for our debug build! This allows us to:
+
+</p><p>
+
+<ul>
+<li class="asterisk">Have a pointer point at the same location in a section of a program.
+</li>
+<li class="asterisk">Have an easier life in some parts of debugging.</li></ul>
+
+</p><p>
+
+First, we need to find a way to separate between the &ldquo;debug&rdquo; build and &ldquo;release&rdquo; build. MSVC compiler provides <code>_DEBUG</code> flag automatically, but it's a bit vague. What we really need is the distinction if a) something is used for the slow code or the fast code and b) if something is used for the internal or release use.
+
+</p><p>
+
+We have <code>HANDMADE_WIN32</code> defined in the <code>build.bat</code>. Let's go ahead and define another couple of flags, <code>HANDMADE_INTERNAL</code> and <code>HANDMADE_SLOW</code>: 
+
+</p><pre class="listing tilde"><code><span class="line">pushd build</span>
+<span class="line"></span><div class=" edit"><span class="line">cl -DHANDMADE_WIN32=1 -DHANDMADE_SLOW=1 -DHANDMADE_INTERNAL=1 -FC -Zi ..\code\win32_handmade.cpp user32.lib gdi32.lib</span></div><span class="line"></span>
+<span class="line">popd</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;8:</b> <file>[build.bat]</file>. Adding new compile-time <code># define</code>s.</div></center>
+<p>
+
+
+We can also leave ourselves a reminder in <code>handmade.h</code> regarding what these values represent: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> !defined(HANDMADE_H)</span></span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-comment">/*</span>
+<span class="line">  NOTE(casey): </span>
+<span class="line"></span>
+<span class="line">  HANDMADE_INTERNAL: </span>
+<span class="line">    0 - Build for public release</span>
+<span class="line">    1 - Build for developer only</span>
+<span class="line"></span>
+<span class="line">  HANDMADE_SLOW: </span>
+<span class="line">    0 - No slow code allowed!</span>
+<span class="line">    1 - Slow code welcome. </span>
+<span class="line">*/</span></span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;9:</b> <file>[handmade.h]</file>. Leaving a reminder for the future.</div></center>
+<p>
+
+
+Now, back to our previous goal. On 64-bit Windows systems, virtual address space of a program ranges from 0 to ~4 Terabytes. Let's say our memory block will sit somewhere in the middle of this space, like at 2 terabytes. We will do it only for our development build, otherwise it'll be at <code>0</code> (which means <code>VirtualAlloc</code> decides automatically the address of the memory). We'll use this address to allocate <code>PermanentStorage</code>: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> HANDMADE_INTERNAL</span></span>
+<span class="line">    LPVOID BaseAddress = (LPVOID)Terabytes(<span class="hljs-number">2</span>);</span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span></span>
+<span class="line">    LPVOID BaseAddress = <span class="hljs-number">0</span>;</span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div><div class=" C++ "><span class="line">    </span>
+<span class="line">    game_memory GameMemory = {};</span>
+<span class="line">    GameMemory.PermanentStorageSize = Megabytes(64);</span>
+<span class="line">    GameMemory.TransientStorageSize = Gigabytes(2);</span></div><div class=" edit"><span class="line">    GameMemory.PermanentStorage = VirtualAlloc(BaseAddress, GameMemory.PermanentStorageSize,</span></div><div class=" C++ "><span class="line">                                                MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;10:</b> <file>[win32_handmade.cpp > WinMain]</file>. Assigning a base address in debug build.</div></center>
+<p>
+
+
+As for the <code>TransientStorage</code>, we could do the same thing, and allocate that memory at some other address. Or we could simply allocate one big chunk of memory, and then divide it between the permanent and the transient storage like this:
+
+</p><pre class="listing tilde"><code><div class=" C++ "><span class="line">game_memory GameMemory = {};</span>
+<span class="line">GameMemory.PermanentStorageSize = Megabytes(64);</span>
+<span class="line">GameMemory.TransientStorageSize = Gigabytes(2);</span></div><div class=" add"><span class="line">u64 TotalStorageSize = GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize;</span></div><div class=" edit"><span class="line">GameMemory.PermanentStorage = VirtualAlloc(BaseAddress, TotalStorageSize,</span></div><div class=" C++ "><span class="line">                                            MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);</span></div><div class=" edit"><span class="line">GameMemory.TransientStorage = ((u8 *)GameMemory.PermanentStorage + </span>
+<span class="line">                               GameMemory.PermanentStorageSize);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;11:</b> <file>[win32_handmade.cpp > WinMain]</file>. Allocating a common memory block.</div></center>
+<p>
+
+
+Hopefully it's clear what's going on here: 
+
+</p><p>
+
+<ol start=1>
+<li class="number">We specify the sizes for each memory block
+</li>
+<li class="number">We calculate the total size
+</li>
+<li class="number">We allocate the memory only once
+</li>
+<li class="number">We then offset the transient memory pointer to point <em class="underscore">after</em> the size of the permanent memory.</li></ol>
+
+</p><p>
+
+Let's compile and verify the following in the debugger: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">Our base address for <code>PermanentStorage</code> is at exactly <code>0x20000000000</code>. 
+</li>
+<li class="asterisk">The <code>PermanentStorageSize</code> is at <code>0x4000000</code>, so the address of <code>TransientStorage</code> is <code>0x20004000000</code>.</li></ul>
+
+</p><p>
+
+<div class="admonition ">&ldquo;Base Address&rdquo; is simply the &ldquo;address of the base&rdquo;, the thing that the pointer points to.</div>
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day14/debug.jpg" target="_blank"><img class="markdeep" src="../media/day14/debug.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;4:</b> If you add <code>GameMemory</code> to the watch window, and switch to Hexadecimal display, you should be able to see the correct values.</span></center></div></center>
+
+</p><p>
+
+<ul>
+<li class="asterisk">Have a fixed address in virtual alloc on our machine
+<ul>
+    <li class="asterisk">Same pointer in the same program
+</li>
+    <li class="asterisk">Debugging is simpler
+</li></ul>
+<li class="asterisk">Add the base address if we're on the internal build</li></ul>
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="336" width="400" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 80,16 L 80,288 " style="fill:none;"/>
+<path d="M 344,16 L 344,288 " style="fill:none;"/>
+<path d="M 80,16 L 344,16 " style="fill:none;"/>
+<path d="M 80,80 L 344,80 " style="fill:none;"/>
+<path d="M 80,112 L 344,112 " style="fill:none;"/>
+<path d="M 80,208 L 344,208 " style="fill:none;"/>
+<path d="M 80,288 L 344,288 " style="fill:none;"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="64" y="4">0</text><text text-anchor="middle" x="88" y="36">▉</text><text text-anchor="middle" x="96" y="36">▉</text><text text-anchor="middle" x="104" y="36">▉</text><text text-anchor="middle" x="112" y="36">▉</text><text text-anchor="middle" x="120" y="36">▉</text><text text-anchor="middle" x="128" y="36">▉</text><text text-anchor="middle" x="136" y="36">▉</text><text text-anchor="middle" x="144" y="36">▉</text><text text-anchor="middle" x="152" y="36">▉</text><text text-anchor="middle" x="160" y="36">▉</text><text text-anchor="middle" x="168" y="36">▉</text><text text-anchor="middle" x="176" y="36">▉</text><text text-anchor="middle" x="184" y="36">▉</text><text text-anchor="middle" x="192" y="36">▉</text><text text-anchor="middle" x="200" y="36">▉</text><text text-anchor="middle" x="208" y="36">▉</text><text text-anchor="middle" x="216" y="36">▉</text><text text-anchor="middle" x="224" y="36">▉</text><text text-anchor="middle" x="232" y="36">▉</text><text text-anchor="middle" x="240" y="36">▉</text><text text-anchor="middle" x="248" y="36">▉</text><text text-anchor="middle" x="256" y="36">▉</text><text text-anchor="middle" x="264" y="36">▉</text><text text-anchor="middle" x="272" y="36">▉</text><text text-anchor="middle" x="280" y="36">▉</text><text text-anchor="middle" x="288" y="36">▉</text><text text-anchor="middle" x="296" y="36">▉</text><text text-anchor="middle" x="304" y="36">▉</text><text text-anchor="middle" x="312" y="36">▉</text><text text-anchor="middle" x="320" y="36">▉</text><text text-anchor="middle" x="328" y="36">▉</text><text text-anchor="middle" x="336" y="36">▉</text><text text-anchor="middle" x="88" y="52">▉</text><text text-anchor="middle" x="96" y="52">▉</text><text text-anchor="middle" x="104" y="52">▉</text><text text-anchor="middle" x="112" y="52">▉</text><text text-anchor="middle" x="120" y="52">▉</text><text text-anchor="middle" x="128" y="52">▉</text><text text-anchor="middle" x="136" y="52">▉</text><text text-anchor="middle" x="144" y="52">▉</text><text text-anchor="middle" x="152" y="52">▉</text><text text-anchor="middle" x="160" y="52">▉</text><text text-anchor="middle" x="168" y="52">▉</text><text text-anchor="middle" x="176" y="52">▉</text><text text-anchor="middle" x="184" y="52">▉</text><text text-anchor="middle" x="192" y="52">▉</text><text text-anchor="middle" x="200" y="52">▉</text><text text-anchor="middle" x="208" y="52">▉</text><text text-anchor="middle" x="216" y="52">▉</text><text text-anchor="middle" x="224" y="52">▉</text><text text-anchor="middle" x="232" y="52">▉</text><text text-anchor="middle" x="240" y="52">▉</text><text text-anchor="middle" x="248" y="52">▉</text><text text-anchor="middle" x="256" y="52">▉</text><text text-anchor="middle" x="264" y="52">▉</text><text text-anchor="middle" x="272" y="52">▉</text><text text-anchor="middle" x="280" y="52">▉</text><text text-anchor="middle" x="288" y="52">▉</text><text text-anchor="middle" x="296" y="52">▉</text><text text-anchor="middle" x="304" y="52">▉</text><text text-anchor="middle" x="312" y="52">▉</text><text text-anchor="middle" x="320" y="52">▉</text><text text-anchor="middle" x="328" y="52">▉</text><text text-anchor="middle" x="336" y="52">▉</text><text text-anchor="middle" x="88" y="68">▉</text><text text-anchor="middle" x="96" y="68">▉</text><text text-anchor="middle" x="104" y="68">▉</text><text text-anchor="middle" x="112" y="68">▉</text><text text-anchor="middle" x="120" y="68">▉</text><text text-anchor="middle" x="128" y="68">▉</text><text text-anchor="middle" x="136" y="68">▉</text><text text-anchor="middle" x="144" y="68">▉</text><text text-anchor="middle" x="152" y="68">▉</text><text text-anchor="middle" x="160" y="68">▉</text><text text-anchor="middle" x="168" y="68">▉</text><text text-anchor="middle" x="176" y="68">▉</text><text text-anchor="middle" x="184" y="68">▉</text><text text-anchor="middle" x="192" y="68">▉</text><text text-anchor="middle" x="200" y="68">▉</text><text text-anchor="middle" x="208" y="68">▉</text><text text-anchor="middle" x="216" y="68">▉</text><text text-anchor="middle" x="224" y="68">▉</text><text text-anchor="middle" x="232" y="68">▉</text><text text-anchor="middle" x="240" y="68">▉</text><text text-anchor="middle" x="248" y="68">▉</text><text text-anchor="middle" x="256" y="68">▉</text><text text-anchor="middle" x="264" y="68">▉</text><text text-anchor="middle" x="272" y="68">▉</text><text text-anchor="middle" x="280" y="68">▉</text><text text-anchor="middle" x="288" y="68">▉</text><text text-anchor="middle" x="296" y="68">▉</text><text text-anchor="middle" x="304" y="68">▉</text><text text-anchor="middle" x="312" y="68">▉</text><text text-anchor="middle" x="320" y="68">▉</text><text text-anchor="middle" x="328" y="68">▉</text><text text-anchor="middle" x="336" y="68">▉</text><text text-anchor="middle" x="8" y="100">2</text><text text-anchor="middle" x="16" y="100">T</text><text text-anchor="middle" x="24" y="100">B</text><text text-anchor="middle" x="96" y="100">P</text><text text-anchor="middle" x="104" y="100">e</text><text text-anchor="middle" x="112" y="100">r</text><text text-anchor="middle" x="120" y="100">m</text><text text-anchor="middle" x="128" y="100">a</text><text text-anchor="middle" x="136" y="100">n</text><text text-anchor="middle" x="144" y="100">e</text><text text-anchor="middle" x="152" y="100">n</text><text text-anchor="middle" x="160" y="100">t</text><text text-anchor="middle" x="176" y="100">s</text><text text-anchor="middle" x="184" y="100">t</text><text text-anchor="middle" x="192" y="100">o</text><text text-anchor="middle" x="200" y="100">r</text><text text-anchor="middle" x="208" y="100">a</text><text text-anchor="middle" x="216" y="100">g</text><text text-anchor="middle" x="224" y="100">e</text><text text-anchor="middle" x="240" y="100">(</text><text text-anchor="middle" x="248" y="100">6</text><text text-anchor="middle" x="256" y="100">4</text><text text-anchor="middle" x="264" y="100">M</text><text text-anchor="middle" x="272" y="100">B</text><text text-anchor="middle" x="280" y="100">)</text><text text-anchor="middle" x="8" y="132">2</text><text text-anchor="middle" x="16" y="132">T</text><text text-anchor="middle" x="24" y="132">B</text><text text-anchor="middle" x="40" y="132">6</text><text text-anchor="middle" x="48" y="132">4</text><text text-anchor="middle" x="56" y="132">M</text><text text-anchor="middle" x="64" y="132">B</text><text text-anchor="middle" x="96" y="132">T</text><text text-anchor="middle" x="104" y="132">r</text><text text-anchor="middle" x="112" y="132">a</text><text text-anchor="middle" x="120" y="132">n</text><text text-anchor="middle" x="128" y="132">s</text><text text-anchor="middle" x="136" y="132">i</text><text text-anchor="middle" x="144" y="132">e</text><text text-anchor="middle" x="152" y="132">n</text><text text-anchor="middle" x="160" y="132">t</text><text text-anchor="middle" x="176" y="132">s</text><text text-anchor="middle" x="184" y="132">t</text><text text-anchor="middle" x="192" y="132">o</text><text text-anchor="middle" x="200" y="132">r</text><text text-anchor="middle" x="208" y="132">a</text><text text-anchor="middle" x="216" y="132">g</text><text text-anchor="middle" x="224" y="132">e</text><text text-anchor="middle" x="240" y="132">(</text><text text-anchor="middle" x="248" y="132">2</text><text text-anchor="middle" x="256" y="132">G</text><text text-anchor="middle" x="264" y="132">B</text><text text-anchor="middle" x="272" y="132">)</text><text text-anchor="middle" x="88" y="180">.</text><text text-anchor="middle" x="96" y="180">.</text><text text-anchor="middle" x="328" y="180">.</text><text text-anchor="middle" x="336" y="180">.</text><text text-anchor="middle" x="88" y="228">▉</text><text text-anchor="middle" x="96" y="228">▉</text><text text-anchor="middle" x="104" y="228">▉</text><text text-anchor="middle" x="112" y="228">▉</text><text text-anchor="middle" x="120" y="228">▉</text><text text-anchor="middle" x="128" y="228">▉</text><text text-anchor="middle" x="136" y="228">▉</text><text text-anchor="middle" x="144" y="228">▉</text><text text-anchor="middle" x="152" y="228">▉</text><text text-anchor="middle" x="160" y="228">▉</text><text text-anchor="middle" x="168" y="228">▉</text><text text-anchor="middle" x="176" y="228">▉</text><text text-anchor="middle" x="184" y="228">▉</text><text text-anchor="middle" x="192" y="228">▉</text><text text-anchor="middle" x="200" y="228">▉</text><text text-anchor="middle" x="208" y="228">▉</text><text text-anchor="middle" x="216" y="228">▉</text><text text-anchor="middle" x="224" y="228">▉</text><text text-anchor="middle" x="232" y="228">▉</text><text text-anchor="middle" x="240" y="228">▉</text><text text-anchor="middle" x="248" y="228">▉</text><text text-anchor="middle" x="256" y="228">▉</text><text text-anchor="middle" x="264" y="228">▉</text><text text-anchor="middle" x="272" y="228">▉</text><text text-anchor="middle" x="280" y="228">▉</text><text text-anchor="middle" x="288" y="228">▉</text><text text-anchor="middle" x="296" y="228">▉</text><text text-anchor="middle" x="304" y="228">▉</text><text text-anchor="middle" x="312" y="228">▉</text><text text-anchor="middle" x="320" y="228">▉</text><text text-anchor="middle" x="328" y="228">▉</text><text text-anchor="middle" x="336" y="228">▉</text><text text-anchor="middle" x="88" y="244">▉</text><text text-anchor="middle" x="96" y="244">▉</text><text text-anchor="middle" x="104" y="244">▉</text><text text-anchor="middle" x="112" y="244">▉</text><text text-anchor="middle" x="120" y="244">▉</text><text text-anchor="middle" x="128" y="244">▉</text><text text-anchor="middle" x="136" y="244">▉</text><text text-anchor="middle" x="144" y="244">▉</text><text text-anchor="middle" x="152" y="244">▉</text><text text-anchor="middle" x="160" y="244">▉</text><text text-anchor="middle" x="168" y="244">▉</text><text text-anchor="middle" x="176" y="244">▉</text><text text-anchor="middle" x="184" y="244">▉</text><text text-anchor="middle" x="192" y="244">▉</text><text text-anchor="middle" x="200" y="244">▉</text><text text-anchor="middle" x="208" y="244">▉</text><text text-anchor="middle" x="216" y="244">▉</text><text text-anchor="middle" x="224" y="244">▉</text><text text-anchor="middle" x="232" y="244">▉</text><text text-anchor="middle" x="240" y="244">▉</text><text text-anchor="middle" x="248" y="244">▉</text><text text-anchor="middle" x="256" y="244">▉</text><text text-anchor="middle" x="264" y="244">▉</text><text text-anchor="middle" x="272" y="244">▉</text><text text-anchor="middle" x="280" y="244">▉</text><text text-anchor="middle" x="288" y="244">▉</text><text text-anchor="middle" x="296" y="244">▉</text><text text-anchor="middle" x="304" y="244">▉</text><text text-anchor="middle" x="312" y="244">▉</text><text text-anchor="middle" x="320" y="244">▉</text><text text-anchor="middle" x="328" y="244">▉</text><text text-anchor="middle" x="336" y="244">▉</text><text text-anchor="middle" x="88" y="260">▉</text><text text-anchor="middle" x="96" y="260">▉</text><text text-anchor="middle" x="104" y="260">▉</text><text text-anchor="middle" x="112" y="260">▉</text><text text-anchor="middle" x="120" y="260">▉</text><text text-anchor="middle" x="128" y="260">▉</text><text text-anchor="middle" x="136" y="260">▉</text><text text-anchor="middle" x="144" y="260">▉</text><text text-anchor="middle" x="152" y="260">▉</text><text text-anchor="middle" x="160" y="260">▉</text><text text-anchor="middle" x="168" y="260">▉</text><text text-anchor="middle" x="176" y="260">▉</text><text text-anchor="middle" x="184" y="260">▉</text><text text-anchor="middle" x="192" y="260">▉</text><text text-anchor="middle" x="200" y="260">▉</text><text text-anchor="middle" x="208" y="260">▉</text><text text-anchor="middle" x="216" y="260">▉</text><text text-anchor="middle" x="224" y="260">▉</text><text text-anchor="middle" x="232" y="260">▉</text><text text-anchor="middle" x="240" y="260">▉</text><text text-anchor="middle" x="248" y="260">▉</text><text text-anchor="middle" x="256" y="260">▉</text><text text-anchor="middle" x="264" y="260">▉</text><text text-anchor="middle" x="272" y="260">▉</text><text text-anchor="middle" x="280" y="260">▉</text><text text-anchor="middle" x="288" y="260">▉</text><text text-anchor="middle" x="296" y="260">▉</text><text text-anchor="middle" x="304" y="260">▉</text><text text-anchor="middle" x="312" y="260">▉</text><text text-anchor="middle" x="320" y="260">▉</text><text text-anchor="middle" x="328" y="260">▉</text><text text-anchor="middle" x="336" y="260">▉</text><text text-anchor="middle" x="88" y="276">▉</text><text text-anchor="middle" x="96" y="276">▉</text><text text-anchor="middle" x="104" y="276">▉</text><text text-anchor="middle" x="112" y="276">▉</text><text text-anchor="middle" x="120" y="276">▉</text><text text-anchor="middle" x="128" y="276">▉</text><text text-anchor="middle" x="136" y="276">▉</text><text text-anchor="middle" x="144" y="276">▉</text><text text-anchor="middle" x="152" y="276">▉</text><text text-anchor="middle" x="160" y="276">▉</text><text text-anchor="middle" x="168" y="276">▉</text><text text-anchor="middle" x="176" y="276">▉</text><text text-anchor="middle" x="184" y="276">▉</text><text text-anchor="middle" x="192" y="276">▉</text><text text-anchor="middle" x="200" y="276">▉</text><text text-anchor="middle" x="208" y="276">▉</text><text text-anchor="middle" x="216" y="276">▉</text><text text-anchor="middle" x="224" y="276">▉</text><text text-anchor="middle" x="232" y="276">▉</text><text text-anchor="middle" x="240" y="276">▉</text><text text-anchor="middle" x="248" y="276">▉</text><text text-anchor="middle" x="256" y="276">▉</text><text text-anchor="middle" x="264" y="276">▉</text><text text-anchor="middle" x="272" y="276">▉</text><text text-anchor="middle" x="280" y="276">▉</text><text text-anchor="middle" x="288" y="276">▉</text><text text-anchor="middle" x="296" y="276">▉</text><text text-anchor="middle" x="304" y="276">▉</text><text text-anchor="middle" x="312" y="276">▉</text><text text-anchor="middle" x="320" y="276">▉</text><text text-anchor="middle" x="328" y="276">▉</text><text text-anchor="middle" x="336" y="276">▉</text><text text-anchor="middle" x="40" y="308">4</text><text text-anchor="middle" x="48" y="308">T</text><text text-anchor="middle" x="56" y="308">B</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;5:</b> Our memory in the process address space.</div></center>
+
+</p>
+<a class="target" name="assertions">&nbsp;</a><a class="target" name="assertions">&nbsp;</a><a class="target" name="toc3">&nbsp;</a><h1>Assertions</h1>
+<p>
+
+
+While we talk about memory, we might as well start talking about the <em class="underscore">assertions</em>. 
+
+</p><p>
+
+What is an assertion anyway? In programming, it's a statement that some condition, expression or value is true at that point of the program execution. It's somewhat similar to what we do with the <code>if (Window)</code>/if (Memory)` blocks, except in this case we expect that there is a potentially a case where the Window <em class="underscore">might</em> not be created, memory <em class="underscore">might</em> not be allocated. For assertions, there isn't a second guess: it's a tool to <em class="underscore">ascertain</em> that some statement is true, otherwise something in the code has gone terribly, terribly wrong. 
+
+</p><p>
+
+Assertions are a development tool. They are great for catching up bugs early, for validating things to ensure we don't miss anything. You should strive to put as many as you feasibly can in your code. Why? Because, while the assertions definitely have some cost in performance during the development, they are stripped away from the final product, so you really don't lose anything from adding assertions, only gain. 
+
+</p><p>
+
+We have a practical case to start using assertions on: when we pass our memory to the game, we cast it as the <code>game_state</code>. Naturally, before casting we want to <em class="underscore">assert</em> that <code>game_state</code> is never bigger than the memory!
+
+</p><p>
+
+In code, this looks as simple as this: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">GameUpdateAndRender</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span><div class=" add"><span class="line">    Assert(<span class="hljs-keyword">sizeof</span>(game_state) &lt;= Memory-&gt;PermanentStorageSize);</span></div><span class="line">    game_state *GameState = (game_state*)Memory;</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;12:</b> <file>[handmade.cpp]</file> Adding our first assertion.</div></center>
+<p>
+
+
+So what happens in the assertion? 
+* If the condition is true, nothing. Code continues as usual. 
+* If the condition is <em class="underscore">not</em> true, we flat-out crash, debugger catches the error and halts at that specific spot. 
+
+</p><p>
+
+We do it by attempting to write to the null pointer (operation which will always crash), but there're other tools, like the Windows' <a href="https://docs.microsoft.com/en-us/visualstudio/debugger/debugbreak-and-debugbreak">DebugBreak</a>. Let's add the definition of the <code>Assert</code> to <code>handmade.h</code>, and they will work only if we're on <code>HANDMADE_SLOW</code> build:
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> HANDMADE_SLOW</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Assert(Expression) <span class="hljs-meta-keyword">if</span> (!(Expression)) { *(int *)0 = 0; }</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Assert(Expression)</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div><span class="line"></span>
+<span class="line">#define Kilobytes(Value) ((Value) * 1024LL)</span>
+<span class="line">#define Megabytes(Value) (Kilobytes(Value) * 1024LL)</span>
+<span class="line">#define Gigabytes(Value) (Megabytes(Value) * 1024LL)</span>
+<span class="line">#define Terabytes(Value) (Gigabytes(Value) * 1024LL)</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;13:</b> <file>[handmade.h]</file> Defining <code>Assert</code>.</div></center>
+<p>
+
+
+That's it, that's all you need to know about the assertions for now.
+
+</p>
+<a class="target" name="recap">&nbsp;</a><a class="target" name="recap">&nbsp;</a><a class="target" name="toc4">&nbsp;</a><h1>Recap</h1>
+<p>
+
+
+Memory management is a highly controversial topic. We don't want to take any extreme sides and try and convince you that our way is better that the others. Maybe it's not, who knows? However, throughout this course we'll use one specific way of approaching memory, and today we laid foundations to that. We were so efficient that we could even do some tricks with it and touch some other subjects (like assertions)!
+
+</p><p>
+
+We hope you enjoyed today's episode of <code>Handmade Hero Notes</code>, and we'll see you next time, when we'll move to the topic we've been putting aside for way too long: reading and writing files.
+
+</p>
+<a class="target" name="exercises">&nbsp;</a><a class="target" name="exercises">&nbsp;</a><a class="target" name="toc5">&nbsp;</a><h1>Exercises</h1>
+
+<a class="target" name="practiceassertions">&nbsp;</a><a class="target" name="exercises/practiceassertions">&nbsp;</a><a class="target" name="toc5.1">&nbsp;</a><h2>Practice Assertions</h2>
+<p>
+
+
+Try review the code you've written thus far. Where do you definitely want to make sure things you've received are valid? Write assertions in those places.
+
+</p>
+<a class="target" name="sideconsiderations">&nbsp;</a><a class="target" name="sideconsiderations">&nbsp;</a><a class="target" name="toc6">&nbsp;</a><h1>Side Considerations</h1>
+
+<a class="target" name="perfmon">&nbsp;</a><a class="target" name="sideconsiderations/perfmon">&nbsp;</a><a class="target" name="toc6.1">&nbsp;</a><h2>PerfMon</h2>
+<p>
+
+
+If you open Task Manager and go into the &ldquo;Details&rdquo; tab (or &ldquo;Processes&rdquo; if you're still on Windows 7), you will see the list of all the running processes and some information related to them. You can then right-click on the header bar and select even more columns, like &ldquo;Commit Size&rdquo;, &ldquo;Working Set&rdquo;, etc. 
+
+</p><p>
+
+What do all these fields even mean? 
+
+</p><p>
+
+<ul>
+<li class="asterisk">How much it asked for
+</li>
+<li class="asterisk">actually <em class="underscore">touched</em>
+</li>
+<li class="asterisk">resident/not resident in memory</li></ul>
+
+</p><p>
+
+It can get even more in-depth than that. If you find <code>PerfMon</code> in your start menu (or Performance Monitor), you can go in, pick a process and pick more fields to track over time. These are all the performance-measurement tools that can become more useful if you are doing allocations on the fly, but since we simply allocate a large block of memory for ourselves, our own usage is pretty limited.
+
+</p><p>
+
+If you want to dive even deeper, check out <a href="https://channel9.msdn.com/Events/TechEd/NorthAmerica/2011/WCL406">Mysteries of Memory Management Revealed</a>. 
+
+</p>
+<a class="target" name="navigation">&nbsp;</a><a class="target" name="navigation">&nbsp;</a><a class="target" name="toc7">&nbsp;</a><h1>Navigation</h1>
+<p>
+
+
+Previous: <a href="../html/day13.html">Day 13. Platform-Independent User Input</a>
+
+</p><p>
+
+<a href="../index.md.html">Back to Index</a>
+
+</p>
+<div class="nonumberh1">Glossary </div>
+<p>
+
+
+<ul>
+<li class="asterisk">Assertions
+</li>
+<li class="asterisk">Garbage collection
+</li>
+<li class="asterisk">Integer Promotion
+</li>
+<li class="asterisk">Memory allocation</li></ul>
+
+</p>
+
+<div class="nonumberh1">Articles</div>
+<p>
+
+
+<a href="https://www.gingerbill.org/article/2019/02/01/memory-allocation-strategies-001/">Memory Allocation Strategies, part 1</a>
+
+</p><p>
+
+<a href="https://channel9.msdn.com/Events/TechEd/NorthAmerica/2011/WCL406">Mysteries of Memory Management Revealed</a>
+
+</p><p>
+
+<a href="https://en.cppreference.com/w/c/language/conversion">Implicit Convertions</a>
+
+</p>
+<div class="nonumberh1">MSDN</div>
+<p>
+
+
+<a href="https://docs.microsoft.com/en-us/visualstudio/debugger/debugbreak-and-debugbreak">DebugBreak</a>
+
+</p><p>
+
+<style class="fallback">
+  body {
+    visibility: hidden;
+    font-family: sans-serif;
+  }
+</style>
+
+</p><p>
+
+<script>
+  markdeepOptions = { tocStyle: 'long' };
+  window.alreadyProcessedMarkdeep ||
+    (document.body.style.visibility = 'visible');
+</script>
+
+</p><p>
+
+</p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.10&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div>
