@@ -20,9 +20,9 @@ It's not as simple as it sounds. Sure, there's the concept of [clock][] in the c
 
 # Tools for Time Tracking
 
-Today, we're going take a look at two tools to measure cycles and how much time has passed. 
+Today, we're going to take a look at two tools to measure cycles and how much time has passed. 
 
-Processors operate in cycles. Each cycle something happens, things shift, transistors flip some values, and you get computer magic. You know how processors tell their frequency, things like "3.2GHz"? This is 3.2 _billion_ cycles _per second_. In other words, 3.2 operations per _nanosecond_. It's like... very fast. You know how fast it is? Light can travel only ~30 cm during that time. 
+Processors operate in cycles. Each cycle things happen: data shifts, transistors flip some values, and you get computer magic. You know how processors tell their frequency, things like "3.2GHz"? This is 3.2 _billion_ cycles _per second_. In other words, 3.2 operations per _nanosecond_. It's like... very fast. You know how fast it is? Light can travel only ~30 cm during that time. 
 
 Today, we're going to look at two tools which help us measure these cycles: `RDTSC` and `QueryPerformanceCounter`.
 
@@ -158,9 +158,9 @@ LastCounter = EndCounter;
 
 We now have a value showing how many full milliseconds it took us to make a full game cycle. This value will of course vary as the game goes, and the first frame usually takes the longest. Let's print it out to our `Output` console! 
 
-But... how? We know there's `OutputDebugStringA` function which allows us to print a string we want, but so far we only dealt with a predefined strings. 
+But... how? We know there's `OutputDebugStringA` function which allows us to print a string we want, but so far we only dealt with predefined strings. 
 
-If you had to do with Python, JavaScript or another high level language, your first impulse would be simply type something like `"ms/frame: " + MSPerFrame`. This will not work in C. Once we get more of our own code up and running, we will come up with a custom solution that we'll design; for now, let's use whatever Windows provides by default.
+If you had to do with Python, JavaScript or another high level language, your first impulse would be to simply type something like `"ms/frame: " + MSPerFrame`. This will not work in C. Once we get more of our own code up and running, we will come up with a custom solution that we'll design; for now, let's use whatever Windows provides by default.
 
 If you want to quickly print out strings in Windows, you can use a function called [wsprintf][wsprintfA] (which comes with `A` or `W` variants). This function allows you to format and write a string to some buffer (memory). It takes the following parameters:
 
@@ -555,7 +555,7 @@ _(Back to subsection [Print Counters in Floating Point])_
 
 ## The Intel Architecture Reference Manual
 
-You're going to need on your journey a. And, if you program for any length an x86-based architecture, you will require the [Intel Architecture Reference Manual][]. This is document, which you can download for free, does just the thing for you. Such a document goes through every little detail of their processors and, since the x86-64 architecture is shared, it also applies to AMD processors of the same type, as well. 
+You're going to need on your journey a guide. And, if you program for any length an x86-based architecture, you will require the [Intel Architecture Reference Manual][]. This document, which you can download for free, does just the thing for you. Such a document goes through every little detail of their processors and, since the x86-64 architecture is shared, it also applies to AMD processors of the same type, as well. 
 
 We're mostly going to be concerned about Volume 2 contents, but the other volumes are interesting as well! Take a look at least at the table of contents to see what's it all about. It really tells how things work inside a processor. 
 

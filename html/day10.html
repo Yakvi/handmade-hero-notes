@@ -73,11 +73,11 @@ It's not as simple as it sounds. Sure, there's the concept of <a href="https://e
 <p>
 
 
-Today, we're going take a look at two tools to measure cycles and how much time has passed. 
+Today, we're going to take a look at two tools to measure cycles and how much time has passed. 
 
 </p><p>
 
-Processors operate in cycles. Each cycle something happens, things shift, transistors flip some values, and you get computer magic. You know how processors tell their frequency, things like &ldquo;3.2GHz&rdquo;? This is 3.2 <em class="underscore">billion</em> cycles <em class="underscore">per second</em>. In other words, 3.2 operations per <em class="underscore">nanosecond</em>. It's like... very fast. You know how fast it is? Light can travel only ~30 cm during that time. 
+Processors operate in cycles. Each cycle things happen: data shifts, transistors flip some values, and you get computer magic. You know how processors tell their frequency, things like &ldquo;3.2GHz&rdquo;? This is 3.2 <em class="underscore">billion</em> cycles <em class="underscore">per second</em>. In other words, 3.2 operations per <em class="underscore">nanosecond</em>. It's like... very fast. You know how fast it is? Light can travel only ~30 cm during that time. 
 
 </p><p>
 
@@ -157,7 +157,7 @@ To do that, we're going to call <a href="https://docs.microsoft.com/en-us/window
 <span class="line">    LastCounter = EndCounter;</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;1:</b> <file>[win32_handmade.cpp > WinMain]</file> Calculating timing at the end of each frame.</div></center>
 <p>
 
-? is a type of structure called a &ldquo;union&rdquo;. Its 64 bits can be split in the 32-bit <code>LowPart</code> and <code>HighPart</code>. Since we are on the 64-bit operating system, we can go straight to accessing the 64-bit <code>QuadPart</code>. 
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-large_integer-r1">LARGE_INTEGER</a> is a type of structure called a &ldquo;union&rdquo;. Its 64 bits can be split in the 32-bit <code>LowPart</code> and <code>HighPart</code>. Since we are on the 64-bit operating system, we can go straight to accessing the 64-bit <code>QuadPart</code>. 
 
 </p><p>
 
@@ -241,11 +241,11 @@ We now have a value showing how many full milliseconds it took us to make a full
 
 </p><p>
 
-But... how? We know there's <code>OutputDebugStringA</code> function which allows us to print a string we want, but so far we only dealt with a predefined strings. 
+But... how? We know there's <code>OutputDebugStringA</code> function which allows us to print a string we want, but so far we only dealt with predefined strings. 
 
 </p><p>
 
-If you had to do with Python, JavaScript or another high level language, your first impulse would be simply type something like <code>&quot;ms/frame: &quot; + MSPerFrame</code>. This will not work in C. Once we get more of our own code up and running, we will come up with a custom solution that we'll design; for now, let's use whatever Windows provides by default.
+If you had to do with Python, JavaScript or another high level language, your first impulse would be to simply type something like <code>&quot;ms/frame: &quot; + MSPerFrame</code>. This will not work in C. Once we get more of our own code up and running, we will come up with a custom solution that we'll design; for now, let's use whatever Windows provides by default.
 
 </p><p>
 
@@ -763,7 +763,7 @@ If you do this way (or by using <code>f32</code>s we've defined last time), C un
 <p>
 
 
-You're going to need on your journey a. And, if you program for any length an x86-based architecture, you will require the <a href="https://software.intel.com/content/www/us/en/develop/articles/intel-sdm.html">Intel Architecture Reference Manual</a>. This is document, which you can download for free, does just the thing for you. Such a document goes through every little detail of their processors and, since the x86-64 architecture is shared, it also applies to AMD processors of the same type, as well. 
+You're going to need on your journey a guide. And, if you program for any length an x86-based architecture, you will require the <a href="https://software.intel.com/content/www/us/en/develop/articles/intel-sdm.html">Intel Architecture Reference Manual</a>. This document, which you can download for free, does just the thing for you. Such a document goes through every little detail of their processors and, since the x86-64 architecture is shared, it also applies to AMD processors of the same type, as well. 
 
 </p><p>
 

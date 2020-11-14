@@ -999,6 +999,7 @@ Let's introduce a latency sample count which would stand for how much ahead of t
 
 On our first run, we'll fill our buffer only by whatever the <code>LatencySampleCount</code> is (multiplied by <code>BytesPerSample</code>).
 
+
 </p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_sound_output</span></span>
 <span class="line">{</span></span>
 <span class="line">    <span class="hljs-keyword">int</span> SamplesPerSecond;</span>
@@ -1008,16 +1009,13 @@ On our first run, we'll fill our buffer only by whatever the <code>LatencySample
 <span class="line">    <span class="hljs-keyword">int</span> ToneHz;</span>
 <span class="line">    <span class="hljs-keyword">int</span> ToneVolume;</span>
 <span class="line">    <span class="hljs-keyword">int</span> WavePeriod;</span>
-<span class="line">    f32 tSine;</span><div class=" add"><span class="line">    <span class="hljs-keyword">int</span> LatencySampleCount;</span></div><span class="line">};</span></code></pre><p>
-~~~~~~~ C++ 
-SoundOutput.SamplesPerSecond = 48000;
-SoundOutput.BytesPerSample = sizeof(s16) * 2;
-SoundOutput.SecondaryBufferSize = 2 * SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample;
-SoundOutput.RunningSampleIndex = 0;
-SoundOutput.ToneHz = 256;
-SoundOutput.ToneVolume = 3000;
-SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
-</p><pre class="listing tilde"><code><div class=" add"><span class="line">SoundOutput.LatencySampleCount = SoundOutput.SamplesPerSecond / <span class="hljs-number">15</span>;</span></div><div class=" C++ "><span class="line">Win32InitDSound(Window, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize);</span></div><div class=" edit"><span class="line">Win32FillSoundBuffer(&amp;SoundOutput, <span class="hljs-number">0</span>, (SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample));</span></div><span class="line">GlobalSecondaryBuffer-&gt;Play(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, DSBPLAY_LOOPING);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;23:</b> <file>[win32_handmade.cpp; win32_handmade.cpp > WinMain]</file> Introducing and Defining <code>LatencySampleCount</code>.</div></center>
+<span class="line">    f32 tSine;</span><div class=" add"><span class="line">    <span class="hljs-keyword">int</span> LatencySampleCount;</span></div><span class="line">};</span></code></pre><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-symbol">SoundOutput.SamplesPerSecond</span> = <span class="hljs-number">48000</span><span class="hljs-comment">;</span></span>
+<span class="line"><span class="hljs-symbol">SoundOutput.BytesPerSample</span> = sizeof(<span class="hljs-built_in">s16</span>) * <span class="hljs-number">2</span><span class="hljs-comment">;</span></span>
+<span class="line"><span class="hljs-symbol">SoundOutput.SecondaryBufferSize</span> = <span class="hljs-number">2</span> * SoundOutput.SamplesPerSecond * SoundOutput.<span class="hljs-keyword">BytesPerSample;</span>
+<span class="line"></span><span class="hljs-symbol">SoundOutput.RunningSampleIndex</span> = <span class="hljs-number">0</span><span class="hljs-comment">;</span></span>
+<span class="line"><span class="hljs-symbol">SoundOutput.ToneHz</span> = <span class="hljs-number">256</span><span class="hljs-comment">;</span></span>
+<span class="line"><span class="hljs-symbol">SoundOutput.ToneVolume</span> = <span class="hljs-number">3000</span><span class="hljs-comment">;</span></span>
+<span class="line"><span class="hljs-symbol">SoundOutput.WavePeriod</span> = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz<span class="hljs-comment">;</span></span></div><div class=" add"><span class="line">SoundOutput.LatencySampleCount = SoundOutput.SamplesPerSecond / <span class="hljs-number">15</span>;</span></div><div class=" C++ "><span class="line">Win32InitDSound(Window, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize);</span></div><div class=" edit"><span class="line">Win32FillSoundBuffer(&amp;SoundOutput, <span class="hljs-number">0</span>, (SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample));</span></div><span class="line">GlobalSecondaryBuffer-&gt;Play(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, DSBPLAY_LOOPING);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;23:</b> <file>[win32_handmade.cpp; win32_handmade.cpp > WinMain]</file> Introducing and Defining <code>LatencySampleCount</code>.</div></center>
 <p>
 
 
@@ -1036,7 +1034,7 @@ This however introduces a bug: there're occasional skips here and there.
 
 </p><p>
 
-In the past couple lessons we talked so much about the circular buffers, that you might have noticed already what the problem is: we didn't account for the fact when the <code>PlayCursor</code> wraps around, and there not enough space for the <code>TargetCursor</code>. To fix that, we simply need to mod the result of our <code>TargetCursor</code> calculation with the <code>SecondaryBufferSize</code> as we did for our <code>ByteToLock</code> above. 
+In the past couple lessons we talked so much about the circular buffers, that you might have noticed already what the problem is: we didn't account for the fact when the <code>PlayCursor</code> wraps around, and there's not enough space for the <code>TargetCursor</code>. To fix that, we simply need to mod the result of our <code>TargetCursor</code> calculation with the <code>SecondaryBufferSize</code> as we did for our <code>ByteToLock</code> above. 
 
 </p><p>
 
@@ -1576,7 +1574,7 @@ A register is the physically closest &ldquo;memory&rdquo; location to the proces
 <span class="line">x &lt;&lt;= <span class="hljs-number">1</span>;</span>
 <span class="line">x &lt;&lt;= <span class="hljs-number">1</span>;</span></code></pre><p>
 
-If you go to the debugger and open disassembly, you will see that each each shift/assignment operation translates to three instructions: 
+If you go to the debugger and open disassembly, you will see that each shift/assignment operation translates to three instructions: 
 
 </p><p>
 

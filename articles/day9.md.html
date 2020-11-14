@@ -863,6 +863,7 @@ struct win32_sound_output
 ~~~~~~~ C++
 };
 ~~~~~~~
+
 ~~~~~~~ C++ 
 SoundOutput.SamplesPerSecond = 48000;
 SoundOutput.BytesPerSample = sizeof(s16) * 2;
@@ -912,7 +913,7 @@ Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite);
 
 This however introduces a bug: there're occasional skips here and there. 
 
-In the past couple lessons we talked so much about the circular buffers, that you might have noticed already what the problem is: we didn't account for the fact when the `PlayCursor` wraps around, and there not enough space for the `TargetCursor`. To fix that, we simply need to mod the result of our `TargetCursor` calculation with the `SecondaryBufferSize` as we did for our `ByteToLock` above. 
+In the past couple lessons we talked so much about the circular buffers, that you might have noticed already what the problem is: we didn't account for the fact when the `PlayCursor` wraps around, and there's not enough space for the `TargetCursor`. To fix that, we simply need to mod the result of our `TargetCursor` calculation with the `SecondaryBufferSize` as we did for our `ByteToLock` above. 
 
 Remember to account for operator precedence! We want multiplication -> addition -> modulation, and addition is the "weaker" operation, so we need to wrap the operations accordingly.
 
@@ -1131,7 +1132,7 @@ x <<= 1;
 x <<= 1;
 ~~~~~~~ 
 
-If you go to the debugger and open disassembly, you will see that each each shift/assignment operation translates to three instructions: 
+If you go to the debugger and open disassembly, you will see that each shift/assignment operation translates to three instructions: 
 
 1. `mov eax, ptr`: Load the value to `eax` register.
 2. `shl eax, 1`: Shift Left the `eax` by 1.

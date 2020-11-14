@@ -6,23 +6,595 @@ _Video Length (including Q&A): [1h33](https://hero.handmade.network/episode/code
 
 (insert intro.md.html here) 
 
+Throughout the past four days, we were isolating what will become the platform-independent layer from our Win32 layer. Up until the present, we've been converting already existing "systems" but now the time has come to introduce a somewhat new one. We'll do some basic file I/O today. 
 
+# About File I/O in Games
 
+File I/O means literally interacting with the file system (folders, files, etc.) for reading and writing files. In games, this is usually done for two distinct purposes: 
 
+1. Loading game assets from read-only files. 
+    * These include music, sounds, 2D/3D art, level layouts, and much more.
+    * During the game execution, you never write to these files. Writing happens at some point before the game ships, and not necessarily by the game itself. It might even be done by some third-party tool like photoshop. 
+    * You read from the asset files and into the memory during the game execution. That data can be pulled from the network, an optical drive, hard drive, and so on.
 
+2. Reading _and_ writing configuration and save files.
+    * The data in config files might be graphics or sound settings, and potentially more.
+    * The save files store the state of the progress of the player (various unlocks, player position on map, etc.)
 
+When we talk about game I/O we talk about these two different things. And don't take this lightly: these _are_ completely different things and they have different criteria for success. Config files are small and agile, while the asset files take potentially gigabytes of data. 
 
+!!! Trivia About Asset Files Loading Evolution
+    The way asset files are loaded has evolved over the years. The process used to be quite linear: you'd open a file directly as the part of execution, read N bytes to the provided buffer, do something with that buffer, read more, etc. (and when the file was no longer needed, close the file).
 
+    Nowadays, thanks to the widespread of multithreading techniques, many adopt _streaming_ of assets in the background so that the user doesn't have to sit on the loading screens. 
 
+## Define Approach
 
+As usual, there're many ways to put the proverbial pants on a dog. One way would be keeping the file handle around and only reading the bytes we want at a time. This is an approach that many games adopt... but we won't, because of the issues it presents later down the line: 
+
+* You could find yourself handling more than one file at a time. This means having several handles open, several memory blocks, all nested and all ready to break at any moment. This of course can be mitigated, but it's an extra headache you'd rather not have.
+* Any new read can fail at any moment (for example if user physically removes the USB stick where the data is stored).
+* Such an approach is not _thread safe_ by default. We haven't touched on multithreading yet, but suffice to say that two different threads could potentially read from the same location at the same time, even if they don't want it.
+* The read is _synchronous_. No work can be done until it's completed, and hard drive is _by orders of magnitude_ the slowest thing on a computer. So we just wait until the work is done. 
+* Such an API is sequentially _streaming data_, which assumes that we pull data incrementally. If you want to read from another location in the file, it creates even further delays.
+
+![Figure [x]: Latency (delay) comparison using various media. To give you some context, if you scale the numbers up, reading from memory would take a couple minutes, from SSD a couple of days, and from hard drive a few _months_.](../media/day15/latency.png)
+
+So what will be our approach? 
+
+For the smaller files we'll use right now, we'll simply read them whole, and store them in memory. It's a similar structure to the above method except we don't read in small pieces. Once we're ready to stream big asset files, we'll be doing it asynchronously and from only one asset file. 
+
+That said, as with anything we've done up until now, it won't be the final system. We don't want to put the cart before the horse in designing a fully-fledged asset streaming system, but we need to be able to load the files for our debugging purposes from somewhere. So today we're going to just that: put the minimal set of functions to get the game running.
+
+## Write Usage Code First 
+
+Let's start coding. Open your `handmade.cpp` and try to imagine how would you approach reading files. Such a simple function would only need to take the path to the file (absolute or relative to our working directory) and return a `void *`, pure memory.
+
+!!! Warning
+    If you remember, during the [day 1][] we set our "Working Directory" to be `data`, so any relative paths in the file system will take it from there. If you skipped that step then, make sure to return and set the correct working directory!
+
+~~~~~~~ C++
+internal void
+GameUpdateAndRender(game_memory* Memory, game_input *Input, game_offscreen_buffer* Buffer, game_sound_output_buffer *SoundBuffer)
+{
+~~~~~~~ C++ add    
+    void *FileData = ReadEntireFile("test.bmp");
+    if (FileData)
+    {
+        // yay!
+    }
+~~~~~~~ C++
+// ... 
+}
+~~~~~~~    
+[Listing [x]: <file>[handmade.cpp]</file> Adding a read file function.]
+
+We don't have any files to read yet, so let's say we want to read this file. Compiler has a handy macro called `__FILE__` which stores the path to this specific file you put this macro in (in our case, `handmade.cpp`). We'll also want to have a call to free whatever memory we get.
+
+~~~~~~~ C++ edit
+void *FileData = ReadEntireFile(__FILE__);
+~~~~~~~ C++
+if (FileData)
+{
+~~~~~~~ C++ add
+    FreeFileMemory(FileData);
+~~~~~~~ C++
+}
+~~~~~~~    
+[Listing [x]: <file>[handmade.cpp]</file> Adding a free file memory call.]
+
+Last, we also want to be able to write to our files. Let's imagine that, in order to write to the file, you'd want to provide a path, but also link to the data and the size. 
+
+This reminds us that from a `Read` function we'd also want to get the size of the file we read. Let's store both the `void *` and the size in a struct, say `read_file_result`. `FreeFileMemory` would only need the former, so our usage would be the following.
+
+~~~~~~~ C++ edit
+read_file_result FileData = ReadEntireFile(__FILE__);
+~~~~~~~ C++
+if (FileData.Contents)
+{
+~~~~~~~ C++ add
+    WriteEntireFile("test.out", FileData.ContentsSize, FileData.Contents);
+~~~~~~~ C++ edit
+    FreeFileMemory(FileData.Contents);
+~~~~~~~ C++
+}
+~~~~~~~    
+[Listing [x]: <file>[handmade.cpp]</file> Adding a write file call and modifying the others.]
+
+Looks good! Now this code differs from what we've written thus far: this is the call which happens from the game back to the platform layer, thus making the "round trip". to the platform. 
+
+And this is what you have if you add callbacks (for memory or anything else):
+**********************************************
+*   PLATFORM                      GAME       *
+*    .----.                      .----.      *
+*    |    | GameUpdateAndRender  |    |      *
+*    |    | -------------------> |    |      *
+*    |    | (start of the frame) |    |      *
+*    |    |                      |    |      *
+*    |    |                      |    |      *
+*    |    | ReadEntireFile       |    |      *
+*    |    | <------------------. |    |      *
+*    |    |+ return              |    |      *
+*    |    | '------------------> |    |      *
+*    |    |                      |    |      *
+*    |    | WriteEntireFile      |    |      *
+*    |    | <------------------. |    |      *
+*    |    |+ return              |    |      *
+*    |    | '------------------> |    |      *
+*    |    |                      |    |      *
+*    |    | FreeFileMemory       |    |      *
+*    |    | <------------------. |    |      *
+*    |    |+ return              |    |      *
+*    |    | '------------------> |    |      *
+*    |    |                      |    |      *
+*    |    |                      |    |      *
+*    |    |  return              |    |      *
+*    |    | <------------------. |    |      *
+*    |    |  (end of frame)      |    |      *
+*    '----'                      '----'      *
+*                                            *
+**********************************************
+[Figure [x]: Our API structure. Of course, we can call the file functions at any moment during the frame.]
+
+We want to make sure that anyone using this call in the game knows it's not final, and that's it a call to the platform. We can even write it in big letters that it's all for `DEBUG` purposes. Also it's a `Platform` call, se we will add this prefix as well. 
+
+~~~~~~~ C++ edit
+debug_read_file_result FileData = DEBUGPlatformReadEntireFile(__FILE__);
+~~~~~~~ C++
+if (FileData.Contents)
+{
+~~~~~~~ C++ edit
+    DEBUGPlatformWriteEntireFile("test.out", FileData.ContentsSize, FileData.Contents);
+    DEBUGPlatformFreeFileMemory(FileData.Contents);
+~~~~~~~ C++
+}
+~~~~~~~    
+[Listing [x]: <file>[handmade.cpp]</file> Adding prefixes.]
+
+Now, moving to `handmade.h`, we can even further accentuate it by writing the API inside `#if HANDMADE_INTERNAL` (that we defined [last time][day 14]). This will make so these calls only work when we're compiling with this flag set. We will define our file API inside the section we reserved for the "services that the platform layer provides to the game":
+
+~~~~~~~ C++ 
+// NOTE(casey): Services that the platform layer provides to the game.
+~~~~~~~ C++ add
+#if HANDMADE_INTERNAL
+struct debug_read_file_result
+{
+    u32 ContentsSize;
+    void *Contents;
+};
+internal debug_read_file_result DEBUGPlatformReadEntireFile(char *Filename);
+internal void DEBUGPlatformFreeFileMemory(void *Memory);
+internal b32 DEBUGPlatformWriteEntireFile(char *Filename, u32 MemorySize, void *Memory);
+#endif
+~~~~~~~ C++
+
+// NOTE(casey): Services that the game provides to the platform layer.
+~~~~~~~    
+[Listing [x]: <file>[handmade.h]</file> Defining the API.]
+
+Hopefully, it's clear what's going on here. We largely mirrored the usage we've thought about inside `GameUpdateAndRender`. The only difference is that our `Write` function now returns a `b32` so we can potentially check if the write was successful. 
+
+# Platform implementation
+
+For each of these functions, we'll ask Windows to do exactly we mentioned in the API. It won't be anything fancy: you should strive to only write the absolute minimum necessary at this stage.
+
+## Free File Memory
+
+Our free file memory function will be trivial. We'll be using `VirtualAlloc` for file memory allocation, so we can simply call [VirtualFree][] with `MEM_RELEASE` flag. 
+
+~~~~~~~ C++
+#define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(...)
+typedef DIRECT_SOUND_CREATE(direct_sound_create);
+
+~~~~~~~ C++ add
+internal void
+DEBUGPlatformFreeFileMemory(void *Memory)
+{
+    if (Memory)
+    {
+        VirtualFree(Memory, 0, MEM_RELEASE);
+    }
+}
+~~~~~~~ C++
+
+internal void
+Win32LoadXInput()...
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Defining free file memory function.]
+
+## Read file
+
+Read file is a bit more involved but, again, is rather straightforward. It just involves more steps and calling Windows. This is what we need to do:
+
+    1. Get the file handle by calling [CreateFileA][] to open a file. 
+    2. Get the file size using [GetFileSizeEx][]. We _could_ use `GetFileSize` but it's a bit antiquated and doesn't really work well in the 64-bit systems.
+    3. Allocate memory for that size using [VirtualAlloc][].
+    4. [ReadFile][] contents into that memory.
+    5. Finally, [CloseHandle][] to return the file back to Windows.
+
+We will also need to have a `debug_read_file_result` which we'll return at the end of the function.
+
+~~~~~~~ C++
+internal void
+DEBUGPlatformFreeFileMemory(void *Memory)
+{
+    if (Memory)
+    {
+        VirtualFree(Memory, 0, MEM_RELEASE);
+    }
+}
+~~~~~~~ C++ add
+internal debug_read_file_result 
+DEBUGPlatformReadEntireFile(char *Filename)
+{
+    debug_read_file_result Result = {};
+
+    CreateFileA();
+    GetFileSizeEx();
+    VirtualAlloc();
+    ReadFile();
+    CloseHandle();
+
+    return (Result);
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Sketching out the read file function.]
+
+Not a lot of mystery, and actually exactly what you'd expect from a similar function. Let's expand and complete each step.
+
+!!! Note About Result Definition
+    You might have noticed that, in our functions, we usually define a `Result` value at the beginning of the function and clear it to `0` (`false`/`{}` or whatever is appropriate depending on its type). We then fill it in somewhere in the middle of the function and eventually return at the very end. 
+    
+    While this structure is not at all necessary, it definitely helps to structure your way of thinking, so you don't lose things along the way, plus you always have a result that you can generally check against `0` to make sure the operation succeeded. It's also error-secure, clean, and helps to verify if everything's ok.
+
+### Get a Handle
+
+Operating systems love their handles. These systems have all sorts of resources (processes, files, sockets, streams, etc.) and they need to know which one exactly are you talking about when you ask some of these. They might not want to give you the exact thing because of the opaque API or some other reasons, so they give you a handle. Internally, handles might be something like a index in some lookup table or pointers in the kernel, but we really don't care.
+
+In order to get our file handle, we need to call [CreateFileA], which is a general purpose function for this thing. `CreateFileA` is used to create new files, open existing files, for all sorts of purposes, and it allows you, the programmer, specify which purpose are you after using its various parameters.
+    * `lpFileName`: file name, we have our `Filename` which we simply pass. 
+    * `dwDesiredAccess`: what you want to do with the file. For reading, we want a `GENERIC_READ`. 
+    * `dwShareMode`: It's essentially a _lock_. Windows uses this flag to know if many people can access the same file, and what can they do with it. We are fine with sharing the read permissions, but not writing or deletion, so that the file isn't removed from under our feet during the following operations. We thus specify the flag `FILE_SHARE_READ`.
+    * `lpSecurityAttributes`: This can be used to be able to pass, for example, the handle to another process. We don't really care about it, so we pass `0` (or `NULL` if that's your cup of tea). 
+    * `dwCreationDisposition`: This complicated-sounding parameter tells Windows what it should do if the file with that name already exists (or doesn't). For reading, we want to specify `OPEN_EXISTING` which will attempt to open a file if it exists. 
+    * `dwFlagsAndAttributes`: Whether you want the file (if you create it) to be read-only/hidden/etc, as well as some other special system flags. We don't really care about it for reading, `0`. 
+    * `hTemplateFile`: Not something we care about,`0` once again. 
+
+`CreateFileA` will return `INVALID_HANDLE_VALUE` if it fails for any reason (file doesn't exist, it's locked, or what have you), so we can check the resulting handle if it's valid (and eventually handle errors if it's not).
+
+~~~~~~~ C++
+internal debug_read_file_result 
+DEBUGPlatformReadEntireFile(char *Filename)
+{
+    debug_read_file_result Result = {};
+~~~~~~~ C++ edit
+    HANDLE FileHandle = CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+~~~~~~~ C++ add
+    if (FileHandle != INVALID_HANDLE_VALUE)
+    {
+~~~~~~~ C++
+        GetFileSizeEx();
+        VirtualAlloc();
+        ReadFile();
+        CloseHandle();
+~~~~~~~ C++ add
+    }
+    else
+    {
+        // Error: handle creation failed
+        // TODO(casey): Logging
+    }
+~~~~~~~ C++
+    return (Result);
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > DEBUGPlatformReadEntireFile]</file> Getting the File Handle.]
+
+### Get File Size
+
+Now that we have a valid handle to the file, we can ask the system how big that file is. We will call [GetFileSizeEx][] for it. Why not `GetFileSize`? `GetFileSize` is the original version of the call which should still work with the old legacy programs. If you have a file bigger than ~4GB, you'll need to do some additional operations to get the final size. `GetFileSizeEx` ("Ex" standing for "Extended"), on the other hand, fills out a `LARGE_INTEGER` value the address of which you pass to the function. 
+
+We've already seen `LARGE_INTEGER`s in [day 10][]. We're looking for the `FileSize.QuadPart` which is the combined 64-bit value representing the file size. The result of this function is a handy `BOOL` which we can use to make sure the function executed properly.
+
+~~~~~~~ C++
+if (FileHandle != INVALID_HANDLE_VALUE)
+{
+~~~~~~~ C++ add
+    LARGE_INTEGER FileSize;
+~~~~~~~ C++ edit
+    if(GetFileSizeEx(FileHandle, &FileSize))
+~~~~~~~ C++ add
+    {
+        // FileSize.QuadPart is the 64-bit value of the size.
+~~~~~~~ C++
+        VirtualAlloc();
+        ReadFile();
+~~~~~~~ C++ add
+    }
+    else
+    {
+        // Error: File size evaluation failed
+        // TODO(casey): Logging
+    }
+~~~~~~~ C++
+    CloseHandle(); 
+}
+else
+{
+    // Error: handle creation failed
+    // TODO(casey): Logging
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > DEBUGPlatformReadEntireFile]</file> Getting the File Size. We want to close the handle no matter what if we opened it, that's why it remains outside that block.]
+
+We don't want to store the `FileSize` as our `ContentsSize` just yet; we'll return to it in a short while.
+
+### Allocate File Memory
+
+You should be intimately familiar with `VirtualAlloc` by now. It's exactly as simple as you can imagine: Get the file size and allocate memory for it. That said, we wouldn't want to use `VirtualAlloc` in our final code, since it only reserves memory in large chunks. But for our debug code it's perfectly fine.
+
+~~~~~~~ C++
+if(GetFileSizeEx(FileHandle, &FileSize))
+{
+~~~~~~~ C++ edit
+    Result.Contents = VirtualAlloc(0, FileSize.QuadPart, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+~~~~~~~ C++ add
+    if (Result.Contents)
+    {
+~~~~~~~ C++
+        ReadFile();
+~~~~~~~ C++ add
+    }
+    else
+    {
+        // Error: Memory allocation failed
+        // TODO(casey): Logging
+    }
+~~~~~~~ C++
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > DEBUGPlatformReadEntireFile]</file> Getting the memory.]
+
+### Read the File Contents
+
+Now we finally can do what we came for... read the file. We do it using the [ReadFile][] function.
+
+    * `hFile`: Our file handle.
+    * `lpBuffer`: Memory we've just reserved with `VirtualAlloc`. 
+    * `nNumberOfBytesToRead`: How many bytes we want to read. We'll return to it in a second.
+    * `lpNumberOfBytesRead`: pointer to a value which will store how many bytes we actually read.
+    * `lpOverlapped`: an optional flag which would allow us to have this read asynchronously. We aren't there yet, so just pass `0`.
+
+    Function returns a `BOOL` so we can verify that the read was successful. We can then to "further nest into success" so that if necessary we can confirm it. While we're at it, we can also make sure that the size we want to read corresponds to the bytes we've read. Once we finished reading, we'll set the `ContentsSize` to how many bytes we've read.
+
+~~~~~~~ C++
+Result.Contents = VirtualAlloc(...);
+if (Result.Contents)
+{
+~~~~~~~ C++ add
+    DWORD BytesRead;
+~~~~~~~ C++ edit
+    if (ReadFile(FileHandle, Result.Contents, FileSize.QuadPart, &BytesRead, 0) &&
+~~~~~~~ C++ add
+            (FileSize.QuadPart == BytesRead))
+    {
+        // NOTE(casey): File read successfully
+        Result.ContentsSize = BytesRead;
+    }
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > DEBUGPlatformReadEntireFile]</file> Reading file contents.]
+
+The read can fail (for all sorts of reasons). In such case we should free the memory we reserved just beforehand. We will also set the `Result.Contents` pointer back to `0`, since `DEBUGPlatformFreeMemory` doesn't do it for us.
+
+~~~~~~~ C++
+DWORD BytesRead;
+if (ReadFile(...))
+{
+    // NOTE(casey): File read successfully
+    Result.ContentsSize = BytesRead;
+}
+~~~~~~~ C++ add
+else
+{
+    // Error: Read failed
+    DEBUGPlatformFreeFileMemory(Result.Contents);
+    Result.Contents = 0;
+    // TODO(casey): Logging
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > DEBUGPlatformReadEntireFile]</file> Handling read failure.]
+
+!!! Note About `nNumberOfBytesToRead`
+    If you read the [documentation][ReadFile] carefully, you'll notice that `nNumberOfBytesToRead` is a `DWORD`, which is a Win32 type for `32 unsigned int`. 
+    
+    This means that, even if we got the 64-bit file size, `ReadFile` only supports reading up to 32 bits of size (~4GB). If the file were larger than 32 bits, you'd actually need to loop over and do multiple reads. In our debug code we don't really care since we don't expect won't work with big files using debug functions. That said, we'll do the safe truncation described in subsection [Safe Truncation]! 
+
+### Close Handle
+
+Finally, whether we succeeded in reading the file or not, we should always remember to close the handle. Failing to do so will result in all sorts of nastiness. `CloseHandle` is a simple call which only takes the handle.
+
+~~~~~~~ C++
+HANDLE FileHandle = CreateFileA(...);
+if (FileHandle != INVALID_HANDLE_VALUE)
+{
+    //...
+~~~~~~~ C++ edit
+    CloseHandle(FileHandle);
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > DEBUGPlatformReadEntireFile]</file> Closing the file handle.]
+
+## Write file
+
+`DEBUGPlatformWriteEntireFile` is quite similar to `ReadEntireFile`. In fact, we can simply copy the call and edit the things that we don't need:
+
+* When we get the file handle, we request:
+    * `GENERIC_WRITE` instead of `GENERIC_READ`
+    * no file sharing (`0`)
+    * `CREATE_ALWAYS` instead of `OPEN_EXISTING`
+* We don't need to get the file size or allocate any memory.
+* Instead of `ReadFile`, we call [WriteFile][] function. It takes exactly the same parameters as `ReadFile`.
+
+* If we succeeded to `WriteFile`, we'll compare whether the `BytesWritten` correspond to `MemorySize` - this comparison will produce `true` or `false` which we can capture as the result.
+
+~~~~~~~ C++
+internal debug_read_file_result
+DEBUGPlatformReadEntireFile(char *Filename)
+{
+    //... 
+}
+
+~~~~~~~ C++ add
+internal b32
+DEBUGPlatformWriteEntireFile(char *Filename, u32 MemorySize, void *Memory)
+{
+    b32 Result = false;
+    
+    HANDLE FileHandle = CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+    if(FileHandle != INVALID_HANDLE_VALUE)
+    {
+        DWORD BytesWritten;
+        if(WriteFile(FileHandle, Memory, MemorySize, &BytesWritten, 0))
+        {
+            // NOTE(casey): File written successfully
+            Result = (BytesWritten == MemorySize);
+        }
+        else
+        {
+            // Error: Write failed
+            // TODO(casey): Logging
+        }
+        CloseHandle(FileHandle);
+    }
+    else
+    {
+        // Error: Handle creation failed
+        // TODO(casey): Logging
+    }
+    
+    return(Result);
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Defining write file function.]
+
+!!! Warning Important
+    We said it already, but this write is NOT for doing anything in the shipping game - such a write is blocking and doesn't protect against lost data. Overwrite could fail, leaving the user with a corrupted save file. 
+    
+    In a similar situation what we'll want to do is to write to a different file and either have a rolling buffer scheme where you have an A and a B file, and you write to them interchangeably, or you write to a secondary temp file, release the old file and rename the new file. (Rename can also fail but at least you know you won't run out of space so it's a lesser of two evils).
+
+# Compile and Test
+
+We should now be compilable! Let's quickly test the changes.
+
+1. Set the breakpoint (`F9`) at the beginning of your `GameUpdateAndRender` function. 
+2. Step into (`F11`) `DEBUGPlatformReadEntireFile`.
+3. Step over (`F10`) all the lines in `DEBUGPlatformReadEntireFile` until you (hopefully) arrive the its core. You should successfully read the contents of the file. 
+4. Step over until the return of the function.
+5. Once back in `GameUpdateAndRender`, add `FileData` to the `Watch` window. 
+6. Open the structure in the Watch window, copy the value of `Contents` and paste it in the `Memory` window (some debuggers also allow typing directly the variable name, i.e. `FileData.Contents`).
+
+![Figure [x]: Inspecting the file memory in the debugger.](../media/day15/debug.jpg)
+
+7. In the `Memory` window, you should see the contents of your memory. Next to them you'll also see their conversion to ASCII (if you don't see the ascii conversion, right click on the memory window and enable it, or resize the window). You'll notice that that's your file contents!
+8. Step into `DEBUGPlatformWriteEntireFile`. 
+9. If you open your Command Prompt, and type `dir` inside your `data` folder after each step, you'll notice that the file `test.out` will appear, but it will have zero size up until you close the handle. 
+
+![Figure [x]: Inspecting the `data` folder in the command prompt.](../media/day15/cmd.jpg)
+
+10. Step over `DEBUGPlatformFreeFileMemory`. You'll notice that the contents of `FileData.Contents` will disappear. 
 
 # Recap 
 
-# Exercises 
+Our platform code is finally complete for the first pass. We now can finish "tightening the screws" on the API, do the general cleanup and finally transition away into our game! 
 
 # Programming Notions 
 
+## Intro to Struct Packing
+
+You've seen us create a number of structs already, big and small. We'll be working on many, many more in the future. But for now, let's compare these two structs: 
+
+~~~~~~~ C++
+struct A
+{
+    u8 X;
+    u32 Y;
+    u8 Z;
+    u8 U;
+    u8 V;
+};
+
+struct B {
+    u32 Y;
+    u8 X;
+    u8 Z;
+    u8 U;
+    u8 V;
+};
+~~~~~~~
+
+You'll notice that these two structs are basically identical, except `Y` variable position changed. Does it matter for the struct? As it turns out, yes, order of struct components matters! struct `A` is in fact much bigger than struct `B`, 12 bytes vs. 8! 
+
+It has to do with how C _packs_ and _pads_ the structs. Memory is cheap but performance? Not necessarily. If you have tens of thousands of these structs, any byte extra might be critical for the performance.
+
 # Side Considerations 
+
+## Safe Truncation
+
+If we pass a 64-bit value as a 32-bit parameter, the system will do what is known as "implicit conversion", truncating away the upper 32 bits. This of course can be a problem if you have data in those upper 32 bits.
+
+In our `DEBUGPlatformReadEntireFile`, we do such an implicit conversion from the 64-bit `FileSize.QuadPart` to the 32-bit `DWORD`. 
+
+To make sure we didn't have anything in our upper bytes, we can `Assert` that our `QuadPart` isn't bigger than the maximum 32-bit value, `0xFFFFFFFF`. We can be even more explicit and _cast_ our value to (u32) ourselves.
+
+Let's write a separate helper function, stored inside `handmade.h`, doing just that: 
+
+~~~~~~~ C++
+#define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
+
+~~~~~~~ C++ add
+inline u32
+SafeTruncateUInt64(u64 Value)
+{
+    Assert(Value <= 0xFFFFFFFF);
+    u32 Result = (u32)Value;
+    return (Result);
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> Defining safe truncate of `u64`.]
+
+We now can use this value in our code: 
+
+~~~~~~~ C++
+LARGE_INTEGER FileSize;
+if(GetFileSizeEx(FileHandle, &FileSize))
+{
+~~~~~~~ C++ add
+    u32 FileSize32 = SafeTruncateUInt64(FileSize.QuadPart);
+~~~~~~~ C++ edit
+    Result.Contents = VirtualAlloc(0, FileSize32, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+~~~~~~~ C++
+    if (Result.Contents)
+    {
+        DWORD BytesRead;
+~~~~~~~ C++ edit
+        if (ReadFile(FileHandle, Result.Contents, FileSize32, &BytesRead, 0) &&
+                (FileSize32 == BytesRead))
+~~~~~~~ C++
+        {
+            //...
+        }
+    }
+    // ...
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > DEBUGPlatformReadEntireFile]</file> Using our 32-bit file size.]
+
+Why the assertion anyway? If this code is used in a way we didn't anticipate, we'll catch it in time before bigger issues arise. It's always good to catch issues at their source. Mysterious bugs happening in the middle of your multithreaded code are not fun to hunt for. 
+
+_(Continue to subsection [Free File Memory])_
 
 # Navigation 
 
