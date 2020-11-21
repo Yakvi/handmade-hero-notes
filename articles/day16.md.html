@@ -6,128 +6,532 @@ _Video Length (including Q&A): [1h41](https://hero.handmade.network/episode/code
 
 (insert intro.md.html here) 
 
-Win32 interface is mostly complete. We're close to working at the game part of the game. 
-In the next series of episodes we'll be focusing on what is essentially the cleanup of the loose ends that we've left hanging.
+Our Win32 interface is mostly complete and we're close to working at the game part of the game. In the next series of episodes we'll be focusing on what is essentially the cleanup of the loose ends that we've left hanging.
 
-Before we can do that, we need to make a step back and look at our `build.bat`, the file that we use to build our game, and on the compiler options we enable.
+Today, however, we'll talk about something completely different. We'll discuss our build system that we so quickly defined during [day 1][]. We will be improving it by passing additional switches to the compiler. 
 
-# Warnings
+# Set the Stage
 
-[msvc-options][]. Search for a specific warning or check the list.
+If you recall, our build system is extremely simple: we only ever rely on two _batch scripts_. We set up our environment variables via `shell.bat` and then build using `build.bat`. Both of these scripts are little more than one-liners, but there's a lot of things that happen in those lines. 
 
-We don't have any warnings turned on, only the barest minimum. 
-Warning is something that the compiler doesn't need you to fix but it indicates that something might be wrong. 
-Warnings are usually arranged in levels, you can enable them in waves. 
-Enable warnings in our compile to a higher level of warnings. 
-You enable a warning level you're comfortable with; disable warnings you don't want. 
+* `shell.bat`, aside from adding the `misc` folder to the system path, calls `vcvarsall`, a lot more complex batch script provided by Visual Studio build tools. This script is responsible for adding to the shell a bunch of paths and variables that the compiler will be using at later stages. We only need to call this script once, when the command prompt is opened.
+    * We pass one single flag to `vcvarsall`: target architecture, i.e. `x64`.
+* `build.bat` does a few things:
+    1. Make the `build` directory (if it doesn't already exist)
+    2. Move to the `build` directory (`pushd`)
+    3. Compile our program (we'll return to it in a second)
+    4. Move back to wherever we called the script from (`popd`)
 
-If we enable [-Wall][warning] and compile we'll see a... wall of warnings. Some we can't/want to fix, some we really want to know about. Windows header files are _littered_ with warnings. 
-[-W3][warning] and even [-W4][warning]: shows interesting warnings but successfully ignores windows headers 
+What exactly happens at step 3? We call the `cl` command, nice and simple. `cl.exe` is a program somewhere in the Visual Studio folders which we know about thanks to `vcvarsall` script we ran at the shell startup. This program doesn't run on its own: at the very least it needs to know which is the file to compile. In our case, it's `..\code\win32_handmade.cpp`. Remember that we are running `cl` from `build` directory (see step 2), that's why we need to go up one level (`..`), then down to `code`. 
 
-What we consider annoying, not interesting, busywork can be turned off. The rest will be left on. 
-Warnings don't stop a compile. Even if we get warnings, compile happens anyway. Solution: [-WX][warning]. Treats all warnings as errors. We either turn the warning off, or we fix it. 
+!!! Tip
+    On Windows and POSIX systems (Linux, MacOS, etc.), each directory contains a "virtual" subdirectories `.` (which refers to itself) and `..` (which refers to the level above).
 
-We'll never allow any further from here on.
+We also pass a few _flags/switches/options_ (call them as you like): when receiving them, `cl.exe` will do some actions associated with that option. Right now we're passing the following flags. We've touched all of them in the past, so this should serve as a refresher.
+
+* `-DHANDMADE_WIN32=1`: compile-time define, identical to `#define HANDMADE_WIN32 1` inside the code. 
+* `-DHANDMADE_SLOW=1`: compile-time define, identical to `#define HANDMADE_SLOW 1` inside the code. 
+* `-DHANDMADE_INTERNAL=1`: compile-time define, identical to `#define HANDMADE_INTERNAL 1` inside the code. 
+* `-FC`: Produce the full path of the source code file when printing errors, notes, and other diagnostic messages.
+* `-Zi`: Produce debug information (allows us to step into the code).
+* A couple of libraries to be able to link with Windows (`user32.lib` and `gdi32.lib`).
+
+It's important to note that any flags we pass don't necessarily _enable_ something. By default, `cl.exe` has some features enabled and some disabled. And the [list of the options][msvc-options] is long! It's up to us to set the values as we want them, and ignore those that we don't care. 
+
+## Break Down Existing Flags
+
+You could re-organize your build file by adding a bit more clarity. 
+
+In the `.bat` files, you can comment out the whole line by prefixing it with `REM [comment]` or `:: [comment]`. You can even comment on the same line if you add `&` symbol before that (`&REM` or `&::`, respectively). Together with the batch script variables, we can use this knowledge to make a reference line for each flag. Let's add a `debug` variable and put the flags we already have: 
+
+~~~~~~~ batch
+@echo off
+
+if not exist build (mkdir build)
+pushd build
+
+~~~~~~~ batch add
+:: DEBUG VARIABLES
+set debug=        -FC &:: Produce the full path of the source code file
+set debug=%debug% -Zi &:: Produce debug information
+~~~~~~~ batch edit
+cl -DHANDMADE_WIN32=1 -DHANDMADE_SLOW=1 -DHANDMADE_INTERNAL=1 %debug% ..\code\win32_handmade.cpp user32.lib gdi32.lib
+~~~~~~~ batch
+
+popd
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> Breaking down each compiler flag.]
+
+Note that we need to re-include the previously defined value to add new values to it (except for the first time).
+
+We can also pull out all but win32-specific compile-time defines. We will omit in-line comments as it should be self-explanatory.
+
+~~~~~~~ batch
+:: DEBUG VARIABLES
+set debug=        -FC &:: Produce the full path of the source code file
+set debug=%debug% -Zi &:: Produce debug information
+~~~~~~~ batch add
+:: CROSS_PLATFORM DEFINES
+set defines=          -DHANDMADE_INTERNAL=1
+set defines=%defines% -DHANDMADE_SLOW=1
+
+~~~~~~~ batch edit
+cl -DHANDMADE_WIN32=1 %defines% %debug% ..\code\win32_handmade.cpp user32.lib gdi32.lib
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> Pulling out cross-platform defines.]
+
+Last, we can also pull out `..\code\` and the import libraries we use on our win32 platform. 
+
+~~~~~~~ batch add
+set code_path=..\code\
+~~~~~~~ batch
+:: DEBUG VARIABLES
+:: ...
+~~~~~~~ batch add
+:: WIN32 PLATFORM LIBRARIES
+set win32_libs=             user32.lib
+set win32_libs=%win32_libs% gdi32.lib
+~~~~~~~ batch
+:: CROSS_PLATFORM DEFINES
+:: ...
+
+~~~~~~~ batch edit
+cl -DHANDMADE_WIN32=1 %defines% %debug% %code_path%win32_handmade.cpp %win32_libs%
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> We now have a lot of `%`s in our `cl` line.]
+
+To recap, this is what happens here. We're also arranging all the comments in a table so that you can see each component at a glance. 
+
+*****************************************************************************
+*   .-- Full-line comment sign                                              *
+*  |                                                                        *
+*  |                        .-- Inline comment sign                         *
+*  |                       |                                                *
+*  |              .--------|--------+ Comments                              *
+*  |             |         |       /                                        *
+*  v             v         |      /                                         *
+*  :: DEBUG VARIABLES      v     v                                          *
+* +---+------+-------+---+---+---------------------------------------------+*
+* |set|debug=|       |-FC|&::|Produce the full path of the source code file|*
+* |   |      |       |   |   |                                             |*
+* |set|debug=|%debug%|-Zi|&::|Produce debug information                    |*
+* +---+------+-------+---+---+---------------------------------------------+*
+*                                                                           *
+*    ^    ^     ^      ^                                                    *
+*    |    |     |      |                                                    *
+*    |    |     |       '-- actual compiler flag                            *
+*    |    |     |                                                           *
+*    |    |      '-- contents of the variable (only use if it was set)      *
+*    |    |                                                                 *
+*    |     '-- variable name                                                *
+*    |                                                                      *
+*     '-- command to set a variable                                         *
+*                                                                           *
+*    --------------------------------------------------------------------   *
+*                                                                           *
+*         .-- contents of the variable                                      *
+*        |                                                                  *
+*        v                                                                  *
+*                                                                           *
+*  cl %debug% ../code/win32_handmade.cpp                                    *
+*                                                                           *
+*  ^                                                                        *
+*  |                                                                        *
+*   '-- command to start compilation                                        *
+*                                                                           *
+*****************************************************************************
+[Figure [x]: Structure of `build.bat` variables.]
+
+Keep in mind that this step is entirely optional! We will use this structure for educational purposes, as it should make it easier for the reader to follow which flags we edit, and what they represent. If you feel this view is more confusing than simply writing all the values in one line, you can write more values in each line or even inline it all as it was before.
+
+# Compiler Warnings
+
+By now you have seen plenty of compiler _Errors_. They give you anxiety, sometimes outright drive you in panic, but ultimately they are extremely useful as they make your code _work_. You've also seen some _Notes_, they usually accompany compiler errors trying to explain the error a bit further. Today, we're going to introduce compiler _Warnings_. 
+
+A warning is something that the compiler doesn't need you to fix. Usually it will implicitly do the necessary fix itself. However, warnings often are extremely helpful as they indicate that something might be wrong. 
+
+Warnings are usually arranged in levels, and you can enable them in waves. The idea is that you enable a warning level you're comfortable with. After that, compiler allows you to disable warnings you don't want so they don't bother you. 
+
+Right now we don't have any warnings turned on, only the barest minimum. Let's enable warnings in our compile to a higher level of warnings. Add a `-Wall` flag to your compiler options and rebuild.
+
+~~~~~~~ batch
+set code_path=..\code\
+
+~~~~~~~ batch add
+:: GENERAL COMPILER FLAGS
+set compiler=-Wall     &:: Display All Warnings
+~~~~~~~ batch
+:: DEBUG VARIABLES
+:: ... 
+:: WIN32 PLATFORM LIBRARIES
+:: ... 
+:: CROSS_PLATFORM DEFINES
+:: ... 
+
+~~~~~~~ batch edit
+cl %compiler% -DHANDMADE_WIN32=1 %defines% %debug% %code_path%win32_handmade.cpp %win32_libs%
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> `-Wall` totally doesn't stand for "Wall of Text".]
+
+You will see... a lot of warnings. These contain: 
+    * Warnings that we really want to know about
+    * Warnings that we don't want to fix
+    * Warnings that are contained within Windows headers.
+
+Yep, Windows header files are _littered_ with warnings. However, those are among the most pedantic errors you'll ever see. Most of these will go away once you enable a lower warning level. Let's try `-W4`. 
+
+~~~~~~~ batch
+:: GENERAL COMPILER FLAGS
+~~~~~~~ batch edit
+set compiler=-W4     &:: Display warnings up to level 4
+~~~~~~~ batch
+:: DEBUG VARIABLES
+:: ... 
+:: WIN32 PLATFORM LIBRARIES
+:: ... 
+:: CROSS_PLATFORM DEFINES
+:: ... 
+
+cl %compiler% -DHANDMADE_WIN32=1 %defines% %debug% %code_path%win32_handmade.cpp %win32_libs%
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> Setting a more reasonable warning level.]
+
+That's much better. All the Windows warnings should go away, so you'll be left with the warnings in your own code. Now we can go through each warning that we find. What we consider annoying, not interesting, busywork can be turned off. The rest will be left on and fixed.
+
+Let's be clear: we don't want any warnings in our code. Warnings are a useful tool as it can save us from headaches down the line so they should be addressed immediately just like we fix all the compiler errors. However, a file with warnings compiles just fine, so you'd be compelled to return "to them later"... Luckily, the compiler has a flag [-WX][warning] which resolves this temptation. It treats all warnings as errors, so if we "catch" a warning, we simply won't compile. 
+
+~~~~~~~ batch
+:: GENERAL COMPILER FLAGS
+set compiler=               -W4     &:: Display warnings up to level 4
+~~~~~~~ batch add
+set compiler=%compiler%     -WX     &:: Treat all warnings as errors
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file>.]
+
+!!! Tip
+    Warnings catch errors (bugs in the code). When they are there, you'll be happy of it. It's always a good idea to keep the warning level relatively high.
 
 ## Check Existing Warnings
 
-* [C4201][] Nameless struct/union: we don't care, fine by us. [-wd]4201. 
-* [C4244][] Conversion from `type` to `type`, possible loss of data: That's a valid warning, we can cast it here or fix the error.
-* [C4018][] Another valid warning, fix the issue. Signed/unsigned mismatch.
-* [C4100][] We passed a parameter to a function and didn't use it. We absolutely don't care about this warning, such behaviour can happen all the time for all sorts of reasons, so we disable it. [-wd]4100.
-* [C4189][] This warning is quite useless since the compiler optimizes out (removes) all unused variables. Disable warning [-wd]4189.
+Let's see what is the list of warnings we get after 15 days of typing. 
 
-Warnings do occasionally catch errors (bugs in the code). When they are there, you'll be happy of it. It's always a good idea to keep the warning level relatively high.
+### [C4201][] Nameless struct/union
 
-## Other Compiler Switches
+We used nameless structs and unions a couple of times already, and we'll use more of them. The reason this warning appears is because nameless structs or unions _are not standard to C++_, using them is possible due to compiler extension in the Microsoft Visual C++ toolkit. 
 
-[-Zi][ZiZ7] produce debug information and other files. .pdb files contain notation for the debugger where in the executable corresponds to the source file, what the names of the variables were, etc. It's a 2MB file for a 200k executable!
+That's totally fine by us: not only most of the modern compilers have this feature _de facto_, it's highly useful as we've already seen. So we'll disable this warning by adding [-wd][warning]4201 warning. 
 
-It can be problematic though. The .pdbs are shared and you can get into problems. So change [-Zi][ZiZ7] to an "older" [-Z7][ZiZ7]. The difference is quite minimal but it gets rid of many problems. There's no longer vcXXX.pdb. 
+~~~~~~~ batch
+:: GENERAL COMPILER FLAGS
+set compiler=               -W4     &:: Display warnings up to level 4
+set compiler=%compiler%     -WX     &:: Treat all warnings as errors
+~~~~~~~ batch add
+:: IGNORE WARNINGS
+set compiler=%compiler%     -wd4201 &:: Nameless struct/union
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> We use the same %compiler% variable but feel free to introduce your %warning% variable, or include warning-related items to %debug%. It's completely up to you!]
 
-[-Od][] Disables all optimizations. We don't want it if we want to dive into disassembly. 
-[-Gm-][] Disables minimal rebuild. Seems deprecated but you can never be sure. 
+### [C4100][] Unreferenced Formal Parameter
 
-## Want All the Time
+We passed a parameter to a function and didn't use it. We absolutely don't care about this warning, such behaviour can happen all the time for all sorts of reasons: stub functions, partially using an API, following some convention, you name it. We simply disable this warning. [-wd][warning]4100.
 
-[-Oi][] substitute the instruction directly with the assembly code where possible (like RDTSC). Even in debug mode.
-[-MD][CRT] says "use the DLL", that's bad. [-MT][CRT] says "use the static library, pack everything in and don't look for DLL". That's something you absolutely want to be set. It's default on the command line but still good to specify.
-[-nologo][] self-explanatory. We're pretty well aware of who wrote the compiler by this point.
+~~~~~~~ batch
+:: GENERAL COMPILER FLAGS
+set compiler=               -W4     &:: Display warnings up to level 4
+set compiler=%compiler%     -WX     &:: Treat all warnings as errors
+:: IGNORE WARNINGS
+set compiler=%compiler%     -wd4201 &:: Nameless struct/union
+~~~~~~~ batch add
+set compiler=%compiler%     -wd4100 &:: Unused function parameter
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> You'll notice that disabling this warning will thin out the list of our warnings extensively.]
 
-## Never Want
+### [C4244][] Possible Loss of Data
 
-[-GR-][] Disable Run-time Type Information. It's C++ stuff that we don't care about. 
-[-EHa-][] Disable Exception Handling. More C++ stuff we won't use at all. "Try" something, if someone "throws" an exception, "catch" it. We will never do that exception handling but maybe Windows' [SEH][].
+Now this is a totally valid warning. Usually it pops up when you inadvertently convert a `float` to an `int`, from a `u32` to `u16`, and so on. We then should choose whether to treat the conversion gracefully (like we did with `SafeTruncateUInt64`) or to explicitly cast. Usually we opted for the latter, but we missed a couple spots. Let's fix them! 
+
+~~~~~~~ C++
+internal void
+Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
+{
+    // ... 
+~~~~~~~ C++ edit
+    WORD BytesPerPixel = 4;
+~~~~~~~ C++
+    // ... 
+}
+
+// ...
+
+
+internal LRESULT CALLBACK
+Win32MainWindowCallback(HWND Window,
+                        UINT Message,
+                        WPARAM WParam,
+                        LPARAM LParam)
+{
+    LRESULT Result;
+    
+    switch (Message)
+    {
+        // ... 
+        
+        case WM_SYSKEYDOWN:
+        case WM_SYSKEYUP:
+        case WM_KEYDOWN:
+        case WM_KEYUP:
+        {
+            // ... 
+~~~~~~~ C++ edit
+            u32 VKCode = (u32)WParam;
+~~~~~~~ C++
+            // ...
+        }
+        // ... 
+    }
+    return (Result);
+}            
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> In `Win32ResizeDIBSection`, we set `BytesPerPixel` to be WORD. Inside `Win32MainWindowCallback` we do the cast explicitly.]
+
+### [C4018][] Signed/Unsigned Mismatch
+
+This is another completely valid error. Incorrect conversion or comparison might lead to data loss! Luckily, it only happened once so far, and it's definitely not a case of potential integer overflow. Still, let's fix the issue. 
+
+~~~~~~~ C++ edit
+DWORD MaxControllerCount = XUSER_MAX_COUNT;
+~~~~~~~ C++
+if(MaxControllerCount > ArrayCount(NewInput->Controllers))
+{
+    MaxControllerCount = ArrayCount(NewInput->Controllers);
+}
+
+for (DWORD ControllerIndex = 0;
+     ControllerIndex < MaxControllerCount;
+     ++ControllerIndex)
+{
+    // ... 
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> `MaxControllerCount` was an `int` (which is signed) where it should have been a `DWORD` (which is not).]
+
+### [C4189][] Local Variable not Referenced
+
+This warning is quite useless, both for development and release. During development, you often sketch out some variables for some future use, while for the release the compiler optimizes out (removes) all unused variables anyway. It's safe to disable, so let's do that.
+
+~~~~~~~ batch
+:: GENERAL COMPILER FLAGS
+set compiler=               -W4     &:: Display warnings up to level 4
+set compiler=%compiler%     -WX     &:: Treat all warnings as errors
+:: IGNORE WARNINGS
+set compiler=%compiler%     -wd4201 &:: Nameless struct/union
+set compiler=%compiler%     -wd4100 &:: Unused function parameter
+~~~~~~~ batch add
+set compiler=%compiler%     -wd4189 &:: Local variable not referenced
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> You'll notice that disabling this warning will thin out the list of our warnings extensively.]
+
+# Other Compiler Switches
+
+The [MSVC compiler options list][msvc-options] is extensive. We should definitely make use of it while we're at it. It's not the last time we revisit `build.bat`; we'll return and add more flags, but for now let's add the list below. 
+
+## Revisit -Zi
+
+[-Zi][ZiZ7] produces debug information inside `.pdb` files. This information can get quite big: our executable produces `.pdb` file almost 10 times as big!
+
+However, this specific flag can be problematic though. It produces a `vcXXX.pdb` which is shared and can get you into problems. Let's change [-Zi][ZiZ7] to an "older" [-Z7][ZiZ7]. The difference is quite minimal but it allows you not to think of the potential issues any more. For instance, there won't be `vcXXX.pdb` any longer. 
+
+~~~~~~~ batch
+:: DEBUG VARIABLES
+set debug=                  -FC     &:: Produce the full path of the source code file
+~~~~~~~ batch edit
+set debug=%debug%           -Z7     &:: Produce debug information
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> Replacing `-Zi` with `-Z7`.]
+
+## Statically Link CRT Library
+
+If you remember, C Runtime Library (or CRT Library) is the standard set of functions implemented by the compiler (in this case, Microsoft) as a part of compiler package. The way it's built by default may vary: it can be linked either _statically_ or _dynamically_. Static linking means that the functions are physically copied inside your executable. Dynamic, on the other hand, means that the only thing present in your executable are the function stubs, and the actual location of the functions is resolved at runtime (think about when we were looking for `xinput.dll` and extracting relevant functions). 
+
+Normally dynamic linking would be fine for our purposes. You offload some of the functions to the operating system, and your distribution is overall smaller. However, there's a catch. CRT has versions, many many versions in fact, and you can't really guarantee that the user has a version of the C Runtime Library that you are linking against. This forces you to include the "Microsoft Visual C++ XXXX Redistributable" with your game and run it when the user installs it. 
+
+It's definitely a bad idea but somehow many developers still do it... Not us, we will use [-MT][CRT] flag. `-MT` says "use the static library, pack everything in and don't look for DLLs at runtime". That's something you absolutely want to be set. It's default on the command line but still good to specify.
+
+~~~~~~~ batch
+:: GENERAL COMPILER FLAGS
+~~~~~~~ batch add
+set compiler=               -MT     &:: Include CRT library in the executable (static link)
+~~~~~~~ batch edit
+set compiler=%compiler%     -W4     &:: Display warnings up to level 4
+~~~~~~~ batch
+set compiler=%compiler%     -WX     &:: Treat all warnings as errors
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> CRT library handling.]
+
+In general, this is the reason why you want to test on as many machines as possible: to see the compatibility of your game on different setups. That said, there's software like the [Dependency Walker][depends] (a free tool which we recommend you to check out) which allows to see what the executable relies on.
+
+!!!     
+    You can remove your dependency on the CRT Library completely, but you'll need to perform some specific actions to do so though. [This guide][CRT] should get you started.
+
+## Map File
+
+[-Fm][] flag allows to specify a location to the map file. 
+
+The map file is a text file containing a list of all the functions in your program _in the order_ in which they appear in the corresponding `.exe` or `.dll` file. A map, if you will. We can add this flag directly on the `cl` line: 
+
+~~~~~~~ batch edit
+cl %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %code_path%win32_handmade.cpp %win32_libs%
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> Adding a map file flag.]
+
+Why would we need such a thing? If you open the file you'll note that there's a lot of functions in the executable, and we can see what module is responsible for outputting which function. This will become more useful once we're ready to tighten up the screws on our program even further.
+
+If you inspect the file, you'll notice there's a lot of _name mangling_ going on (more about it in subsection [Name Mangling]). You can also see the import libraries marked with `__imp__` prefix. 
+
+## Optimization Level
+
+[-Od][] Disables all optimizations. As a result, it produces quite a slow code, and it's not something we want to ship. However, this flag is quite useful if you want to dive into disassembly or even simply step through your code.
+
+We will want to change optimization level in the future, to test how faster a specific chunk of code performs and of course for the final release. In that situation, you will want to use `-O2` flag. For this reason, let's add it directly into our `cl` line: 
+
+~~~~~~~ batch add
+:: No optimizations (slow): -Od; all optimizations (fast): -O2
+~~~~~~~ batch edit
+cl -Od %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %code_path%win32_handmade.cpp %win32_libs%
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> Adding `-Od` flag.]
+
+## Disable C++ Features
+
+These are the switches which prevent the compiler from doing some other things (mainly C++ related).
+
+* [-Gm-][] Disables minimal rebuild, thus reducing "build" time. We don't really care because the optimization this flag does isn't really applicable to the build we're doing. This flag seems mostly deprecated but you can never be sure. 
+* [-GR-][] Disable Run-time Type Information. It's a C++ feature that we don't care about. 
+* [-EHa-][] Disable Exception Handling. This is another C++ feature we won't use at all. 
+
+!!! About Exception Handling
+    Exception handling works in the following way: "try" something, if someone "throws" an exception (things don't behave as expected), "catch" it. 
+    
+    We will never do C++ exception handling. Eventually, however, we might take a look at Windows' own exception handling system, [SEH][].
+
+~~~~~~~ batch
+:: GENERAL COMPILER FLAGS
+set compiler=               -MT     &:: Include CRT library in the executable (static link)
+~~~~~~~ batch add
+set compiler=%compiler%     -Gm-    &:: Disable minimal rebuild
+set compiler=%compiler%     -GR-    &:: Disable runtime type info (C++)
+set compiler=%compiler%     -EHa-   &:: Disable exception handling (C++)
+~~~~~~~ batch
+set compiler=%compiler%     -W4     &:: Display warnings up to level 4
+set compiler=%compiler%     -WX     &:: Treat all warnings as errors
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> Disabling C++ features.]
+
+## Other Switches
+
+Let's see a few other Switches that we always want: 
+
+* [-nologo][]. This flag should be self-explanatory. We're pretty well aware of who wrote the compiler by this point, thank you very much. 
+* [-Oi][] Substitute the instruction directly with the assembly intrinsics where possible (like `RDTSC`). Even if all optimizations are disabled.
+
+~~~~~~~ batch
+:: GENERAL COMPILER FLAGS
+~~~~~~~ batch add
+set compiler=               -nologo &:: Suppress Startup Banner
+set compiler=%compiler%     -Oi     &:: Use assembly intrinsics where possible
+~~~~~~~ batch edit
+set compiler=%compiler%     -MT     &:: Include CRT library in the executable (static link)
+~~~~~~~ batch
+set compiler=%compiler%     -Gm-    &:: Disable minimal rebuild
+set compiler=%compiler%     -GR-    &:: Disable runtime type info (C++)
+set compiler=%compiler%     -EHa-   &:: Disable exception handling (C++)
+set compiler=%compiler%     -W4     &:: Display warnings up to level 4
+set compiler=%compiler%     -WX     &:: Treat all warnings as errors
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> Adding even more switches.]
+
+## Linker Options
+
+If you remember, the full compilation is set in stages: 
+
+* **Interpretation** or _Preprocessing_ of the translation units
+* **Compiling** interpreted code into object files
+* **Linking** various object files together to produce final executable
+
+!!! 
+    Check out also Figure 1 of [day 11][]. 
+
+Each step is performed by a different program. In particular, linking is done by `link.exe` that is called by `cl.exe` once the latter has done its job. We _could_ pass `-c` flag which disables calling linker and call it ourselves but it's a bit of an overkill. Instead, `cl.exe` allows us to communicate with the linker by defining `/link` flag at the end of the compiler switches, and passing it the linker-specific switches we define.
+
+Let's do just that. We can right away define a couple of switches:
+
+* [-subsystem][]. The targeted system. Usually the subsystem is `windows` or `console`, for a window-based or console-based options. In reality however, if you want maximum compatibility you need to pass subsystem `windows,5.2` for an x64 system (and `windows,5.1` for x86). This will ensure you'll be able to run all the way until Windows Server 2003 (5.2) or Windows XP (5.1). The default is 6.0, i.e. Windows Vista (you can find the full list of subsystems [here][subsystems]).
+* [-opt][] Optimizations flag. We'll pass `-opt:ref` to eliminate functions and data that are never referenced. This reduces size of the executable (but there's still a lot of stuff used by the CRT). 
+
+~~~~~~~ batch add
+:: WIN32 LINKER SWITCHES
+set win32_link=             -subsystem:windows,5.2 &:: subsystem, 5.1 for x86
+set win32_link=%win32_link% -opt:ref               &:: Remove unused functions
+~~~~~~~ batch
+:: WIN32 PLATFORM LIBRARIES
+:: ...
+
+:: No optimizations (slow): -Od; all optimizations (fast): -O2
+
+~~~~~~~ batch edit
+cl -Od %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %code_path%win32_handmade.cpp %win32_libs% /link %win32_link%
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> Passing linker options.]
 
 # Compile in 32-bit
 
-* Reduce transient storage to 1 GB.
-* Use Vcvarsall x86
-* introduce `memory_index`: u32 on 32-bit systems, u64 on 64-bit systems (size_t)
-* Try it
+Let's have some fun! We'll try to compile the game in 32-bit mode. Before doing that, we only need to make a few changes to our `win32_handmade.cpp`: 
 
-"Is not a valid Win32 Application" - happens often when people try to distribute their code nowadays
-Requires redistributables
-Potential solution: have a virtual machine with absolutely virgin operating system to test and see what are you missing. 
+* Reduce transient storage size to 1 GB.
+* Pass 32-bit sizes to `VirtualAlloc`. 
 
-## CRT Library
+The latter can be easily achieved by casting `TotalStorageSize` to `u32`, but this means that the code we'll need to change the cast again once we return to 64-bit mode. Instead, we can use a type called `size_t`. It's defined to an unsigned 32-bit or 64-bit integer, depending on whether you compile on a 32-bit or 64-bit platform. 
 
-CRT Library, the stuff that Microsoft implemented as a part of compiler package is done by default by using an external DLL. It assumes the OS will supply the necessary building blocks necessary to run the thing. Problem is that by now there're hundreds of versions of this CRT. So often the system doesn't have the right version of the C Runtime Library. 
+~~~~~~~ C++
+game_memory GameMemory = {};
+GameMemory.PermanentStorageSize = Megabytes(64);
+~~~~~~~ C++ edit
+GameMemory.TransientStorageSize = Gigabytes(1);
+~~~~~~~ C++ 
+u64 TotalStorageSize = GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize;
 
-[depends][] allows to see what the executable relies on so you don't need to necessarily test.
+~~~~~~~ C++ edit
+GameMemory.PermanentStorage = VirtualAlloc(BaseAddress, (size_t)TotalStorageSize,
+                                            MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Reducing memory footprint to support 32-bit environment.]
 
-## Linker Options
-We need to start passing things to the linker. 
+Now, before you can compile to the 32-bit architecture, you need to reboot your environment in the 32-bit mode. Modify your `shell.bat` as follows: 
 
-/link: allows you to start passing linker options (after this keyword). 
-[-subsystem] :windows/console... but really if you want maximum compatibility you need to pass windows,5,1.
+~~~~~~~ batch edit
+call "[path to vcvarsall.bat]\vcvarsall.bat" x86
+~~~~~~~
+[Listing [x]: <file>[shell.bat]</file> Switching architecture from x64 to x86.]
 
-[-Fm][] - a location to the map file. Tells the linker to produce a map file containing a list of segments in the order in which they appear in the corresponding .exe file or DLL. It's an extra file, the map to all the functions in the executable. `-Fmwin32_handmade.map` Why do we care? There're tons of functions in the executable, and we can see what module is responsible for outputting which function, and where in the file.
+.... and reboot your command prompt. If you're compiling through the editor, you'll need to restart it as well. Try compiling now! If everything goes well, your executable will change to a 32-bit one. 
 
-You'll notice there's a lot of _name mangling_ going on (more about it in subsection [Name Mangling]). You can also see the import libraries marked `__imp__` prefix. All the stuff that was stuck in there that you don't even necessarily need. 
-
-[-opt][] Optimizations flag. We pass `-opt:ref` to eliminate functions and data that are never referenced. This reduces size of the executable but there's still a lot of stuff used by the CRT that's stuck in there. 
-
-------------------------
-<!-- 
-[Listing [x]: <file>[]</file> .]
-![Figure [x]: .](../media/day16/.jpg) 
-[Figure [x]: .]
--->
-------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Don't forget to change `shell.bat` back since we'll continue our development in 64-bit mode. 
 
 # Recap 
 
-# Exercises 
+Hopefully you've enjoyed this brief interstitial and are ready to move on! Next, we'll be tightening screws on our input system.
 
 # Programming Notions 
 
 ## Name Mangling
 
-Some functions look absolutely crazy in map files. It's a C++ thing. 
+Some functions look absolutely crazy in map files. This is due to application of a technique known as _name mangling_ or _name decoration_. 
 
-C used to have sane names. But C++ introduced _overloaded functions_ (see [day 13][]). Because C++ was initially built on top of C, and the functions that had the same names couldn't be duplicated in C, the compiler would silently add the function parameters (`FOO@@INT@@INT`). Furthermore, some random characters were added to render the name completely unique.
+In C, the function names are mostly are exactly as you define them in code. On the other hand, C++ is considered among the most widespread users of name mangling. This is in large part due to _function overloading_ (we talked about it on [day 13][]). 
+
+Because C++ was initially built on top of C, and the functions that had the same names couldn't be duplicated in C, the compiler would silently add the function parameters. Thus, a function `Foo` which takes an `int` and an `int` as parameters, would get the name `FOO@@INT@@INT` to be differentiated from the other similar. This mangling can go completely bonkers, depending on compiler, thing type, etc. 
+
+You can read more [on Wikipedia][name mangling].
 
 # Navigation 
 

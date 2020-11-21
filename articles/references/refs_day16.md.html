@@ -1,9 +1,15 @@
 <meta charset="utf-8" />
 
-(#) Tools
+(#) Tools and Articles
 
 [depends]: http://dependencywalker.com/
-[Dependency Walker]
+[Dependency Walker][depends]
+[CRT]: https://hero.handmade.network/forums/code-discussion/t/94-guide_-_how_to_avoid_c_c++_runtime_on_windows
+[How to avoid C++ Runtime on Windows][CRT]
+[name mangling]: https://en.wikipedia.org/wiki/Name_mangling
+[name mangling][]
+[subsystems]: https://en.wikipedia.org/wiki/Comparison_of_Microsoft_Windows_versions
+[Subsystem Versions of Windows][subsystems]
 
 (#) MSVC
 
@@ -14,6 +20,8 @@
 
 [-EHa-]: https://docs.microsoft.com/en-us/cpp/build/reference/eh-exception-handling-model
 [-EHa-][] Disable Exception Handling
+[-Fm]: https://docs.microsoft.com/en-us/cpp/build/reference/fm-name-mapfile
+[-Fm][] Name Map file
 [-Gm-]: https://docs.microsoft.com/en-us/cpp/build/reference/gm-enable-minimal-rebuild
 [-Gm-][] Disable Minimal Rebuild
 [-GR-]: https://docs.microsoft.com/en-us/cpp/build/reference/gr-enable-run-time-type-information
@@ -46,8 +54,6 @@
 
 (#) MSVC Linker Options
 
-[-Fm]: https://docs.microsoft.com/en-us/cpp/build/reference/fm-name-mapfile
-[-Fm][] Name Map file
 [-subsystem]: https://docs.microsoft.com/en-us/cpp/build/reference/subsystem-specify-subsystem
 [-subsystem][]
 [-opt]: https://docs.microsoft.com/en-us/cpp/build/reference/opt-optimizations

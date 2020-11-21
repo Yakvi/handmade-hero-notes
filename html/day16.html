@@ -1,0 +1,987 @@
+<meta charset="UTF-8"><meta http-equiv="content-type" content="text/html;charset=UTF-8"><meta name="viewport" content="width=600, initial-scale=1"><style>body{max-width:680px;margin:auto;padding:20px;text-align:justify;line-height:140%; -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-smoothing:antialiased;color:#222;font-family:Palatino,Georgia,"Times New Roman",serif}</style><style>@media print{*{-webkit-print-color-adjust:exact;text-shadow:none !important}}body{counter-reset: h1 h2 h3 h4 h5 h6 paragraph}@page{margin:0;size:auto}#mdContextMenu{position:absolute;background:#383838;cursor:default;border:1px solid #999;color:#fff;padding:4px 0px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,"Helvetica Neue",sans-serif;font-size:85%;font-weight:600;border-radius:4px;box-shadow:0px 3px 10px rgba(0,0,0,35%)}#mdContextMenu div{padding:0px 20px}#mdContextMenu div:hover{background:#1659d1}.md code,.md pre{font-family:Menlo,Consolas,monospace;font-size:98%;text-align:left;line-height:140%}.md .mediumToc code,.md longToc code,.md .shortToc code,.md h1 code,.md h2 code,.md h3 code,.md h4 code,.md h5 code,.md h6 code{font-size:unset}.md div.title{font-size:26px;font-weight:800;line-height:120%;text-align:center}.md div.afterTitles{height:10px}.md div.subtitle{text-align:center}.md iframe.textinsert, .md object.textinsert,.md iframe:not(.markdeep){display:block;margin-top:10px;margin-bottom:10px;width:100%;height:75vh;border:1px solid #000;border-radius:4px;background:#f5f5f4}.md .image{display:inline-block}.md img{max-width:100%;page-break-inside:avoid}.md li{text-align:left;text-indent:0}.md pre.listing {width:100%;tab-size:4;-moz-tab-size:4;-o-tab-size:4;counter-reset:line;overflow-x:auto;resize:horizontal}.md pre.listing .linenumbers span.line:before{width:30px;margin-left:-28px;font-size:80%;text-align:right;counter-increment:line;content:counter(line);display:inline-block;padding-right:13px;margin-right:8px;color:#ccc}.md div.tilde{margin:20px 0 -10px;text-align:center}.md .imagecaption,.md .tablecaption,.md .listingcaption{display:inline-block;margin:7px 5px 12px;text-align:justify;font-style:italic}.md img.pixel{image-rendering:-moz-crisp-edges;image-rendering:pixelated}.md blockquote.fancyquote{margin:25px 0 25px;text-align:left;line-height:160%}.md blockquote.fancyquote::before{content:"“";color:#DDD;font-family:Times New Roman;font-size:45px;line-height:0;margin-right:6px;vertical-align:-0.3em}.md span.fancyquote{font-size:118%;color:#777;font-style:italic}.md span.fancyquote::after{content:"”";font-style:normal;color:#DDD;font-family:Times New Roman;font-size:45px;line-height:0;margin-left:6px;vertical-align:-0.3em}.md blockquote.fancyquote .author{width:100%;margin-top:10px;display:inline-block;text-align:right}.md small{font-size:60%}.md big{font-size:150%}.md div.title,contents,.md .tocHeader,.md h1,.md h2,.md h3,.md h4,.md h5,.md h6,.md .shortTOC,.md .mediumTOC,.nonumberh1,.nonumberh2,.nonumberh3,.nonumberh4,.nonumberh5,.nonumberh6{font-family:Verdana,Helvetica,Arial,sans-serif;margin:13.4px 0 13.4px;padding:15px 0 3px;border-top:none;clear:both}.md .tocTop {display:none}.md h1,.md h2,.md h3,.md h4,.md h5,.md h6,.md .nonumberh1,.md .nonumberh2,.md .nonumberh3,.md .nonumberh4,.md .nonumberh5,.md .nonumberh6{page-break-after:avoid;break-after:avoid}.md svg.diagram{display:block;font-family:Menlo,Consolas,monospace;font-size:98%;text-align:center;stroke-linecap:round;stroke-width:2px;page-break-inside:avoid;stroke:#000;fill:#000}.md svg.diagram .opendot{fill:#fff}.md svg.diagram .shadeddot{fill:#CCC}.md svg.diagram .dotteddot{stroke:#000;stroke-dasharray:4;fill:none}.md svg.diagram text{stroke:none}@media print{@page{margin:1in 5mm;transform: scale(150%)}}@media print{.md .pagebreak{page-break-after:always;visibility:hidden}}.md a{font-family:Georgia,Palatino,'Times New Roman'}.md h1,.md .tocHeader,.md .nonumberh1{border-bottom:3px solid;font-size:20px;font-weight:bold;}.md h1,.md .nonumberh1{counter-reset: h2 h3 h4 h5 h6}.md h2,.md .nonumberh2{counter-reset: h3 h4 h5 h6;border-bottom:2px solid #999;color:#555;font-weight:bold;font-size:18px;}.md h3,.md h4,.md h5,.md h6,.md .nonumberh3,.md .nonumberh4,.md .nonumberh5,.md .nonumberh6{font-family:Verdana,Helvetica,Arial,sans-serif;color:#555;font-size:16px;}.md h3{counter-reset:h4 h5 h6}.md h4{counter-reset:h5 h6}.md h5{counter-reset:h6}.md div.table{margin:16px 0 16px 0}.md table{border-collapse:collapse;line-height:140%;page-break-inside:avoid}.md table.table{margin:auto}.md table.calendar{width:100%;margin:auto;font-size:11px;font-family:Verdana,Helvetica,Arial,sans-serif}.md table.calendar th{font-size:16px}.md .today{background:#ECF8FA}.md .calendar .parenthesized{color:#999;font-style:italic}.md table.table th{color:#FFF;background-color:#AAA;border:1px solid #888;padding:8px 15px 8px 15px}.md table.table td{padding:5px 15px 5px 15px;border:1px solid #888}.md table.table tr:nth-child(even){background:#EEE}.md pre.tilde{border-top: 1px solid #CCC;border-bottom: 1px solid #CCC;padding: 5px 0 5px 20px;margin:0 0 0 0;background:#FCFCFC;page-break-inside:avoid}.md a.target{width:0px;height:0px;visibility:hidden;font-size:0px;display:inline-block}.md a:link, .md a:visited{color:#38A;text-decoration:none}.md a:link:hover{text-decoration:underline}.md dt{font-weight:700}.md dl>dd{margin-top:-8px; margin-bottom:8px}.md dl>table{margin:35px 0 30px}.md code{page-break-inside:avoid;} @media print{.md .listing code{white-space:pre-wrap}}.md .endnote{font-size:13px;line-height:15px;padding-left:10px;text-indent:-10px}.md .bib{padding-left:80px;text-indent:-80px;text-align:left}.markdeepFooter{font-size:9px;text-align:right;padding-top:80px;color:#999}.md .mediumTOC{float:right;font-size:12px;line-height:15px;border-left:1px solid #CCC;padding-left:15px;margin:15px 0px 15px 25px}.md .mediumTOC .level1{font-weight:600}.md .longTOC .level1{font-weight:600;display:block;padding-top:12px;margin:0 0 -20px}.md .shortTOC{text-align:center;font-weight:bold;margin-top:15px;font-size:14px}.md .admonition{position:relative;margin:1em 0;padding:.4rem 1rem;border-radius:.2rem;border-left:2.5rem solid rgba(68,138,255,.4);background-color:rgba(68,138,255,.15);}.md .admonition-title{font-weight:bold;border-bottom:solid 1px rgba(68,138,255,.4);padding-bottom:4px;margin-bottom:4px;margin-left: -1rem;padding-left:1rem;margin-right:-1rem;border-color:rgba(68,138,255,.4)}.md .admonition.tip{border-left:2.5rem solid rgba(50,255,90,.4);background-color:rgba(50,255,90,.15)}.md .admonition.tip::before{content:"\24d8";font-weight:bold;font-size:150%;position:relative;top:3px;color:rgba(26,128,46,.8);left:-2.95rem;display:block;width:0;height:0}.md .admonition.tip>.admonition-title{border-color:rgba(50,255,90,.4)}.md .admonition.warn,.md .admonition.warning{border-left:2.5rem solid rgba(255,145,0,.4);background-color:rgba(255,145,0,.15)}.md .admonition.warn::before,.md .admonition.warning::before{content:"\26A0";font-weight:bold;font-size:150%;position:relative;top:2px;color:rgba(128,73,0,.8);left:-2.95rem;display:block;width:0;height:0}.md .admonition.warn>.admonition-title,.md .admonition.warning>.admonition-title{border-color:rgba(255,145,0,.4)}.md .admonition.error{border-left: 2.5rem solid rgba(255,23,68,.4);background-color:rgba(255,23,68,.15)}.md .admonition.error>.admonition-title{border-color:rgba(255,23,68,.4)}.md .admonition.error::before{content: "\2612";font-family:"Arial";font-size:200%;position:relative;color:rgba(128,12,34,.8);top:-2px;left:-3rem;display:block;width:0;height:0}.md .admonition p:last-child{margin-bottom:0}.md li.checked,.md li.unchecked{list-style:none;overflow:visible;text-indent:-1.2em}.md li.checked:before,.md li.unchecked:before{content:"\2611";display:block;float:left;width:1em;font-size:120%}.md li.unchecked:before{content:"\2610"}</style><style>.md h1::before {
+content:counter(h1) " ";
+counter-increment: h1;margin-right:10px}.md h2::before {
+content:counter(h1) "."counter(h2) " ";
+counter-increment: h2;margin-right:10px}.md h3::before {
+content:counter(h1) "."counter(h2) "."counter(h3) " ";
+counter-increment: h3;margin-right:10px}.md h4::before {
+content:counter(h1) "."counter(h2) "."counter(h3) "."counter(h4) " ";
+counter-increment: h4;margin-right:10px}.md h5::before {
+content:counter(h1) "."counter(h2) "."counter(h3) "."counter(h4) "."counter(h5) " ";
+counter-increment: h5;margin-right:10px}.md h6::before {
+content:counter(h1) "."counter(h2) "."counter(h3) "."counter(h4) "."counter(h5) "."counter(h6) " ";
+counter-increment: h6;margin-right:10px}</style><style>.hljs{display:block;overflow-x:auto;padding:0.5em;background:#fff;color:#000;-webkit-text-size-adjust:none}.hljs-comment{color:#006a00}.hljs-keyword{color:#02E}.hljs-literal,.nginx .hljs-title{color:#aa0d91}.method,.hljs-list .hljs-title,.hljs-tag .hljs-title,.setting .hljs-value,.hljs-winutils,.tex .hljs-command,.http .hljs-title,.hljs-request,.hljs-status,.hljs-name{color:#008}.hljs-envvar,.tex .hljs-special{color:#660}.hljs-string{color:#c41a16}.hljs-tag .hljs-value,.hljs-cdata,.hljs-filter .hljs-argument,.hljs-attr_selector,.apache .hljs-cbracket,.hljs-date,.hljs-regexp{color:#080}.hljs-sub .hljs-identifier,.hljs-pi,.hljs-tag,.hljs-tag .hljs-keyword,.hljs-decorator,.ini .hljs-title,.hljs-shebang,.hljs-prompt,.hljs-hexcolor,.hljs-rule .hljs-value,.hljs-symbol,.hljs-symbol .hljs-string,.hljs-number,.css .hljs-function,.hljs-function .hljs-title,.coffeescript .hljs-attribute{color:#A0C}.hljs-function .hljs-title{font-weight:bold;color:#000}.hljs-class .hljs-title,.smalltalk .hljs-class,.hljs-type,.hljs-typename,.hljs-tag .hljs-attribute,.hljs-doctype,.hljs-class .hljs-id,.hljs-built_in,.setting,.hljs-params,.clojure .hljs-attribute{color:#5c2699}.hljs-variable{color:#3f6e74}.css .hljs-tag,.hljs-rule .hljs-property,.hljs-pseudo,.hljs-subst{color:#000}.css .hljs-class,.css .hljs-id{color:#9b703f}.hljs-value .hljs-important{color:#ff7700;font-weight:bold}.hljs-rule .hljs-keyword{color:#c5af75}.hljs-annotation,.apache .hljs-sqbracket,.nginx .hljs-built_in{color:#9b859d}.hljs-preprocessor,.hljs-preprocessor *,.hljs-pragma{color:#643820}.tex .hljs-formula{background-color:#eee;font-style:italic}.diff .hljs-header,.hljs-chunk{color:#808080;font-weight:bold}.diff .hljs-change{background-color:#bccff9}.hljs-addition{background-color:#baeeba}.hljs-deletion{background-color:#ffc8bd}.hljs-comment .hljs-doctag{font-weight:bold}.method .hljs-id{color:#000}</style><style>div.title { padding-top: 40px; } div.afterTitles { height: 15px; }</style><meta charset="utf-8">
+<link rel="stylesheet" href="../css/style.css">
+
+<script>try {
+                        Object.defineProperty(screen, "availTop", { value: 0 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availLeft", { value: 0 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availWidth", { value: 1920 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availHeight", { value: 1080 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "colorDepth", { value: 24 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "pixelDepth", { value: 24 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "hardwareConcurrency", { value: 8 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "appVersion", { value: "5.0 (Windows)" });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "doNotTrack", { value: "unspecified" });
+                    } catch (e) {}
+                    
+            try {
+                window.screenY = 1072
+            } catch (e) { }
+        
+            try {
+                window.screenTop = 1072
+            } catch (e) { }
+        
+            try {
+                window.top.window.outerHeight = window.screen.height
+            } catch (e) { }
+        
+            try {
+                window.screenX = 1912
+            } catch (e) { }
+        
+            try {
+                window.screenLeft = 1912
+            } catch (e) { }
+        
+            try {
+                window.top.window.outerWidth = window.screen.width
+            } catch (e) { }
+        </script><script>try {
+                        Object.defineProperty(screen, "availTop", { value: 0 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availLeft", { value: 0 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availWidth", { value: 1920 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availHeight", { value: 1080 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "colorDepth", { value: 24 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "pixelDepth", { value: 24 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "hardwareConcurrency", { value: 8 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "appVersion", { value: "5.0 (Windows)" });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "doNotTrack", { value: "unspecified" });
+                    } catch (e) {}
+                    
+            try {
+                window.screenY = 1072
+            } catch (e) { }
+        
+            try {
+                window.screenTop = 1072
+            } catch (e) { }
+        
+            try {
+                window.top.window.outerHeight = window.screen.height
+            } catch (e) { }
+        
+            try {
+                window.screenX = 1912
+            } catch (e) { }
+        
+            try {
+                window.screenLeft = 1912
+            } catch (e) { }
+        
+            try {
+                window.top.window.outerWidth = window.screen.width
+            } catch (e) { }
+        </script><script>try {
+                        Object.defineProperty(screen, "availTop", { value: 0 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availLeft", { value: 0 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availWidth", { value: 1920 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availHeight", { value: 1080 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "colorDepth", { value: 24 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "pixelDepth", { value: 24 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "hardwareConcurrency", { value: 8 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "appVersion", { value: "5.0 (Windows)" });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "doNotTrack", { value: "unspecified" });
+                    } catch (e) {}
+                    
+            try {
+                window.screenY = 1072
+            } catch (e) { }
+        
+            try {
+                window.screenTop = 1072
+            } catch (e) { }
+        
+            try {
+                window.top.window.outerHeight = window.screen.height
+            } catch (e) { }
+        
+            try {
+                window.screenX = 1912
+            } catch (e) { }
+        
+            try {
+                window.screenLeft = 1912
+            } catch (e) { }
+        
+            try {
+                window.top.window.outerWidth = window.screen.width
+            } catch (e) { }
+        </script><script>try {
+                        Object.defineProperty(screen, "availTop", { value: 0 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availLeft", { value: 0 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availWidth", { value: 1920 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "availHeight", { value: 1080 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "colorDepth", { value: 24 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(screen, "pixelDepth", { value: 24 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "hardwareConcurrency", { value: 8 });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "appVersion", { value: "5.0 (Windows)" });
+                    } catch (e) {}
+                    try {
+                        Object.defineProperty(navigator, "doNotTrack", { value: "unspecified" });
+                    } catch (e) {}
+                    
+            try {
+                window.screenY = 1072
+            } catch (e) { }
+        
+            try {
+                window.screenTop = 1072
+            } catch (e) { }
+        
+            try {
+                window.top.window.outerHeight = window.screen.height
+            } catch (e) { }
+        
+            try {
+                window.screenX = 1912
+            } catch (e) { }
+        
+            try {
+                window.screenLeft = 1912
+            } catch (e) { }
+        
+            try {
+                window.top.window.outerWidth = window.screen.width
+            } catch (e) { }
+        </script><span class="md"><p><title>Day 16. Visual Studio Compiler Switches</title><div class="title"> Day 16. Visual Studio Compiler Switches </div>
+
+<div class="afterTitles"></div>
+<em class="underscore">Video Length (including Q&A): <a href="https://hero.handmade.network/episode/code/day016/">1h41</a></em> 
+
+</p><p>
+
+Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with no external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
+
+</p><p>
+
+Our Win32 interface is mostly complete and we're close to working at the game part of the game. In the next series of episodes we'll be focusing on what is essentially the cleanup of the loose ends that we've left hanging.
+
+</p><p>
+
+Today, however, we'll talk about something completely different. We'll discuss our build system that we so quickly defined during <a href="../html/day1.html">day 1</a>. We will be improving it by passing additional switches to the compiler. 
+
+</p>
+<div class="longTOC"><p align="center">
+    <span align="right"><a href="day15.html">Day 15</a></span>
+    <a href="../index.html"><img src = "../media/logo.png"></a>
+    <span align="left"><a href="day17.html">Day 17</a></span>
+</p><p><a href="#" class="tocTop">(Top)</a><br/>
+<a href="#setthestage" class="level1"><span class="tocNumber">1&nbsp; </span>Set the Stage</a><br/>
+&nbsp;&nbsp;<a href="#setthestage/breakdownexistingflags" class="level2"><span class="tocNumber">1.1&nbsp; </span>Break Down Existing Flags</a><br/>
+<a href="#compilerwarnings" class="level1"><span class="tocNumber">2&nbsp; </span>Compiler Warnings</a><br/>
+&nbsp;&nbsp;<a href="#compilerwarnings/checkexistingwarnings" class="level2"><span class="tocNumber">2.1&nbsp; </span>Check Existing Warnings</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilerwarnings/checkexistingwarnings/c4201namelessstruct/union" class="level3"><span class="tocNumber">2.1.1&nbsp; </span>C4201 Nameless struct/union</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilerwarnings/checkexistingwarnings/c4100unreferencedformalparameter" class="level3"><span class="tocNumber">2.1.2&nbsp; </span>C4100 Unreferenced Formal Parameter</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilerwarnings/checkexistingwarnings/c4244possiblelossofdata" class="level3"><span class="tocNumber">2.1.3&nbsp; </span>C4244 Possible Loss of Data</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilerwarnings/checkexistingwarnings/c4018signed/unsignedmismatch" class="level3"><span class="tocNumber">2.1.4&nbsp; </span>C4018 Signed/Unsigned Mismatch</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilerwarnings/checkexistingwarnings/c4189localvariablenotreferenced" class="level3"><span class="tocNumber">2.1.5&nbsp; </span>C4189 Local Variable not Referenced</a><br/>
+<a href="#othercompilerswitches" class="level1"><span class="tocNumber">3&nbsp; </span>Other Compiler Switches</a><br/>
+&nbsp;&nbsp;<a href="#othercompilerswitches/revisit-zi" class="level2"><span class="tocNumber">3.1&nbsp; </span>Revisit -Zi</a><br/>
+&nbsp;&nbsp;<a href="#othercompilerswitches/staticallylinkcrtlibrary" class="level2"><span class="tocNumber">3.2&nbsp; </span>Statically Link CRT Library</a><br/>
+&nbsp;&nbsp;<a href="#othercompilerswitches/mapfile" class="level2"><span class="tocNumber">3.3&nbsp; </span>Map File</a><br/>
+&nbsp;&nbsp;<a href="#othercompilerswitches/optimizationlevel" class="level2"><span class="tocNumber">3.4&nbsp; </span>Optimization Level</a><br/>
+&nbsp;&nbsp;<a href="#othercompilerswitches/disablec++features" class="level2"><span class="tocNumber">3.5&nbsp; </span>Disable C++ Features</a><br/>
+&nbsp;&nbsp;<a href="#othercompilerswitches/otherswitches" class="level2"><span class="tocNumber">3.6&nbsp; </span>Other Switches</a><br/>
+&nbsp;&nbsp;<a href="#othercompilerswitches/linkeroptions" class="level2"><span class="tocNumber">3.7&nbsp; </span>Linker Options</a><br/>
+<a href="#compilein32-bit" class="level1"><span class="tocNumber">4&nbsp; </span>Compile in 32-bit</a><br/>
+<a href="#recap" class="level1"><span class="tocNumber">5&nbsp; </span>Recap</a><br/>
+<a href="#programmingnotions" class="level1"><span class="tocNumber">6&nbsp; </span>Programming Notions</a><br/>
+&nbsp;&nbsp;<a href="#programmingnotions/namemangling" class="level2"><span class="tocNumber">6.1&nbsp; </span>Name Mangling</a><br/>
+<a href="#navigation" class="level1"><span class="tocNumber">7&nbsp; </span>Navigation</a><br/>
+</p></div><a class="target" name="setthestage">&nbsp;</a><a class="target" name="setthestage">&nbsp;</a><a class="target" name="toc1">&nbsp;</a><h1>Set the Stage</h1>
+<p>
+
+
+If you recall, our build system is extremely simple: we only ever rely on two <em class="underscore">batch scripts</em>. We set up our environment variables via <code>shell.bat</code> and then build using <code>build.bat</code>. Both of these scripts are little more than one-liners, but there's a lot of things that happen in those lines. 
+
+</p><p>
+
+<ul>
+<li class="asterisk"><code>shell.bat</code>, aside from adding the <code>misc</code> folder to the system path, calls <code>vcvarsall</code>, a lot more complex batch script provided by Visual Studio build tools. This script is responsible for adding to the shell a bunch of paths and variables that the compiler will be using at later stages. We only need to call this script once, when the command prompt is opened.
+<ul>
+    <li class="asterisk">We pass one single flag to <code>vcvarsall</code>: target architecture, i.e. <code>x64</code>.
+</li></ul>
+<li class="asterisk"><code>build.bat</code> does a few things:
+<ol start=1>
+    <li class="number">Make the <code>build</code> directory (if it doesn't already exist)
+</li>
+    <li class="number">Move to the <code>build</code> directory (<code>pushd</code>)
+</li>
+    <li class="number">Compile our program (we'll return to it in a second)
+</li>
+    <li class="number">Move back to wherever we called the script from (<code>popd</code>)</li></ol></li></ul>
+
+</p><p>
+
+What exactly happens at step 3? We call the <code>cl</code> command, nice and simple. <code>cl.exe</code> is a program somewhere in the Visual Studio folders which we know about thanks to <code>vcvarsall</code> script we ran at the shell startup. This program doesn't run on its own: at the very least it needs to know which is the file to compile. In our case, it's <code>..\code\win32_handmade.cpp</code>. Remember that we are running <code>cl</code> from <code>build</code> directory (see step 2), that's why we need to go up one level (<code>..</code>), then down to <code>code</code>. 
+
+</p><p>
+
+<div class="admonition tip">On Windows and POSIX systems (Linux, MacOS, etc.), each directory contains a &ldquo;virtual&rdquo; subdirectories <code>.</code> (which refers to itself) and <code>..</code> (which refers to the level above).</div>
+
+</p><p>
+
+We also pass a few <em class="underscore">flags/switches/options</em> (call them as you like): when receiving them, <code>cl.exe</code> will do some actions associated with that option. Right now we're passing the following flags. We've touched all of them in the past, so this should serve as a refresher.
+
+</p><p>
+
+<ul>
+<li class="asterisk"><code>-DHANDMADE_WIN32=1</code>: compile-time define, identical to <code>#define HANDMADE_WIN32 1</code> inside the code. 
+</li>
+<li class="asterisk"><code>-DHANDMADE_SLOW=1</code>: compile-time define, identical to <code>#define HANDMADE_SLOW 1</code> inside the code. 
+</li>
+<li class="asterisk"><code>-DHANDMADE_INTERNAL=1</code>: compile-time define, identical to <code>#define HANDMADE_INTERNAL 1</code> inside the code. 
+</li>
+<li class="asterisk"><code>-FC</code>: Produce the full path of the source code file when printing errors, notes, and other diagnostic messages.
+</li>
+<li class="asterisk"><code>-Zi</code>: Produce debug information (allows us to step into the code).
+</li>
+<li class="asterisk">A couple of libraries to be able to link with Windows (<code>user32.lib</code> and <code>gdi32.lib</code>).</li></ul>
+
+</p><p>
+
+It's important to note that any flags we pass don't necessarily <em class="underscore">enable</em> something. By default, <code>cl.exe</code> has some features enabled and some disabled. And the <a href="https://docs.microsoft.com/en-us/cpp/build/reference/compiler-options-listed-alphabetically">list of the options</a> is long! It's up to us to set the values as we want them, and ignore those that we don't care. 
+
+</p>
+<a class="target" name="breakdownexistingflags">&nbsp;</a><a class="target" name="setthestage/breakdownexistingflags">&nbsp;</a><a class="target" name="toc1.1">&nbsp;</a><h2>Break Down Existing Flags</h2>
+<p>
+
+
+You could re-organize your build file by adding a bit more clarity. 
+
+</p><p>
+
+In the <code>.bat</code> files, you can comment out the whole line by prefixing it with <code>REM [comment]</code> or <code>:: [comment]</code>. You can even comment on the same line if you add <code>&amp;</code> symbol before that (<code>&amp;REM</code> or <code>&amp;::</code>, respectively). Together with the batch script variables, we can use this knowledge to make a reference line for each flag. Let's add a <code>debug</code> variable and put the flags we already have: 
+
+</p><pre class="listing tilde"><code><span class="line">@echo off</span>
+<span class="line"></span>
+<span class="line">if not exist build (mkdir build)</span>
+<span class="line">pushd build</span>
+<span class="line"></span><div class=" add"><span class="line">:: DEBUG VARIABLES</span>
+<span class="line">set debug=        -FC &amp;:: Produce the full path of the source code file</span>
+<span class="line">set debug=%debug% -Zi &amp;:: Produce debug information</span></div><div class=" edit"><span class="line">cl -DHANDMADE_WIN32=1 -DHANDMADE_SLOW=1 -DHANDMADE_INTERNAL=1 %debug% ..\code\win32_handmade.cpp user32.lib gdi32.lib</span></div><span class="line"></span>
+<span class="line">popd</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;1:</b> <file>[build.bat]</file> Breaking down each compiler flag.</div></center>
+<p>
+
+
+Note that we need to re-include the previously defined value to add new values to it (except for the first time).
+
+</p><p>
+
+We can also pull out all but win32-specific compile-time defines. We will omit in-line comments as it should be self-explanatory.
+
+</p><pre class="listing tilde"><code><span class="line">:: DEBUG VARIABLES</span>
+<span class="line">set debug=        -FC &amp;:: Produce the full path of the source code file</span>
+<span class="line">set debug=%debug% -Zi &amp;:: Produce debug information</span><div class=" add"><span class="line">:: CROSS_PLATFORM DEFINES</span>
+<span class="line">set defines=          -DHANDMADE_INTERNAL=1</span>
+<span class="line">set defines=%defines% -DHANDMADE_SLOW=1</span>
+<span class="line"></span></div><div class=" edit"><span class="line">cl -DHANDMADE_WIN32=1 %defines% %debug% ..\code\win32_handmade.cpp user32.lib gdi32.lib</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;2:</b> <file>[build.bat]</file> Pulling out cross-platform defines.</div></center>
+<p>
+
+
+Last, we can also pull out `..\code` and the import libraries we use on our win32 platform. 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">set code_path=..\code\</span></div><span class="line">:: DEBUG VARIABLES</span>
+<span class="line">:: ...</span><div class=" add"><span class="line">:: WIN32 PLATFORM LIBRARIES</span>
+<span class="line">set win32_libs=             user32.lib</span>
+<span class="line">set win32_libs=%win32_libs% gdi32.lib</span></div><span class="line">:: CROSS_PLATFORM DEFINES</span>
+<span class="line">:: ...</span>
+<span class="line"></span><div class=" edit"><span class="line">cl -DHANDMADE_WIN32=1 %defines% %debug% %code_path%win32_handmade.cpp %win32_libs%</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;3:</b> <file>[build.bat]</file> We now have a lot of <code>%</code>s in our <code>cl</code> line.</div></center>
+<p>
+
+
+To recap, this is what happens here. We're also arranging all the comments in a table so that you can see each component at a glance. 
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="592" width="608" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 8,128 L 8,192 " style="fill:none;"/>
+<path d="M 16,16 L 16,96 " style="fill:none;"/>
+<path d="M 16,512 L 16,528 " style="fill:none;"/>
+<path d="M 32,224 L 32,336 " style="fill:none;"/>
+<path d="M 40,128 L 40,192 " style="fill:none;"/>
+<path d="M 64,432 L 64,448 " style="fill:none;"/>
+<path d="M 72,224 L 72,304 " style="fill:none;"/>
+<path d="M 96,128 L 96,192 " style="fill:none;"/>
+<path d="M 120,224 L 120,272 " style="fill:none;"/>
+<path d="M 128,80 L 128,96 " style="fill:none;"/>
+<path d="M 160,128 L 160,192 " style="fill:none;"/>
+<path d="M 176,224 L 176,240 " style="fill:none;"/>
+<path d="M 192,128 L 192,192 " style="fill:none;"/>
+<path d="M 208,48 L 208,120 " style="fill:none;"/>
+<path d="M 224,128 L 224,192 " style="fill:none;"/>
+<path d="M 592,128 L 592,192 " style="fill:none;"/>
+<path d="M 32,0 L 40,0 " style="fill:none;"/>
+<path d="M 224,32 L 232,32 " style="fill:none;"/>
+<path d="M 144,64 L 200,64 " style="fill:none;"/>
+<path d="M 216,64 L 280,64 " style="fill:none;"/>
+<path d="M 8,128 L 592,128 " style="fill:none;"/>
+<path d="M 8,192 L 592,192 " style="fill:none;"/>
+<path d="M 192,256 L 200,256 " style="fill:none;"/>
+<path d="M 136,288 L 144,288 " style="fill:none;"/>
+<path d="M 88,320 L 96,320 " style="fill:none;"/>
+<path d="M 48,352 L 56,352 " style="fill:none;"/>
+<path d="M 32,384 L 568,384 " style="fill:none;"/>
+<path d="M 80,416 L 88,416 " style="fill:none;"/>
+<path d="M 32,544 L 40,544 " style="fill:none;"/>
+<path d="M 252,120 L 280,64 " style="fill:none;"/>
+<path d="M 32,0 C 15.2,0 16,16 16,16 " style="fill:none;"/>
+<path d="M 224,32 C 207.2,32 208,48 208,48 " style="fill:none;"/>
+<path d="M 144,64 C 127.2,64 128,80 128,80 " style="fill:none;"/>
+<path d="M 192,256 C 175.2,256 176,240 176,240 " style="fill:none;"/>
+<path d="M 136,288 C 119.2,288 120,272 120,272 " style="fill:none;"/>
+<path d="M 88,320 C 71.2,320 72,304 72,304 " style="fill:none;"/>
+<path d="M 48,352 C 31.2,352 32,336 32,336 " style="fill:none;"/>
+<path d="M 80,416 C 63.2,416 64,432 64,432 " style="fill:none;"/>
+<path d="M 32,544 C 15.2,544 16,528 16,528 " style="fill:none;"/>
+<polygon points="260,120 248,114.4 248,125.6 "  style="stroke:none" transform="rotate(116.56505117707799,252,120 )"/>
+<polygon points="216,120 204,114.4 204,125.6 "  style="stroke:none" transform="rotate(90,208,120 )"/>
+<polygon points="184,224 172,218.4 172,229.6 "  style="stroke:none" transform="rotate(270,176,224 )"/>
+<polygon points="136,96 124,90.4 124,101.6 "  style="stroke:none" transform="rotate(90,128,96 )"/>
+<polygon points="128,224 116,218.4 116,229.6 "  style="stroke:none" transform="rotate(270,120,224 )"/>
+<polygon points="80,224 68,218.4 68,229.6 "  style="stroke:none" transform="rotate(270,72,224 )"/>
+<polygon points="72,448 60,442.4 60,453.6 "  style="stroke:none" transform="rotate(90,64,448 )"/>
+<polygon points="40,224 28,218.4 28,229.6 "  style="stroke:none" transform="rotate(270,32,224 )"/>
+<polygon points="24,512 12,506.4 12,517.6 "  style="stroke:none" transform="rotate(270,16,512 )"/>
+<polygon points="24,96 12,90.4 12,101.6 "  style="stroke:none" transform="rotate(90,16,96 )"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="56" y="4">F</text><text text-anchor="middle" x="64" y="4">u</text><text text-anchor="middle" x="72" y="4">l</text><text text-anchor="middle" x="80" y="4">l</text><text text-anchor="middle" x="88" y="4">-</text><text text-anchor="middle" x="96" y="4">l</text><text text-anchor="middle" x="104" y="4">i</text><text text-anchor="middle" x="112" y="4">n</text><text text-anchor="middle" x="120" y="4">e</text><text text-anchor="middle" x="136" y="4">c</text><text text-anchor="middle" x="144" y="4">o</text><text text-anchor="middle" x="152" y="4">m</text><text text-anchor="middle" x="160" y="4">m</text><text text-anchor="middle" x="168" y="4">e</text><text text-anchor="middle" x="176" y="4">n</text><text text-anchor="middle" x="184" y="4">t</text><text text-anchor="middle" x="200" y="4">s</text><text text-anchor="middle" x="208" y="4">i</text><text text-anchor="middle" x="216" y="4">g</text><text text-anchor="middle" x="224" y="4">n</text><text text-anchor="middle" x="248" y="36">I</text><text text-anchor="middle" x="256" y="36">n</text><text text-anchor="middle" x="264" y="36">l</text><text text-anchor="middle" x="272" y="36">i</text><text text-anchor="middle" x="280" y="36">n</text><text text-anchor="middle" x="288" y="36">e</text><text text-anchor="middle" x="304" y="36">c</text><text text-anchor="middle" x="312" y="36">o</text><text text-anchor="middle" x="320" y="36">m</text><text text-anchor="middle" x="328" y="36">m</text><text text-anchor="middle" x="336" y="36">e</text><text text-anchor="middle" x="344" y="36">n</text><text text-anchor="middle" x="352" y="36">t</text><text text-anchor="middle" x="368" y="36">s</text><text text-anchor="middle" x="376" y="36">i</text><text text-anchor="middle" x="384" y="36">g</text><text text-anchor="middle" x="392" y="36">n</text><text text-anchor="middle" x="296" y="68">C</text><text text-anchor="middle" x="304" y="68">o</text><text text-anchor="middle" x="312" y="68">m</text><text text-anchor="middle" x="320" y="68">m</text><text text-anchor="middle" x="328" y="68">e</text><text text-anchor="middle" x="336" y="68">n</text><text text-anchor="middle" x="344" y="68">t</text><text text-anchor="middle" x="352" y="68">s</text><text text-anchor="middle" x="16" y="116">:</text><text text-anchor="middle" x="24" y="116">:</text><text text-anchor="middle" x="40" y="116">D</text><text text-anchor="middle" x="48" y="116">E</text><text text-anchor="middle" x="56" y="116">B</text><text text-anchor="middle" x="64" y="116">U</text><text text-anchor="middle" x="72" y="116">G</text><text text-anchor="middle" x="88" y="116">V</text><text text-anchor="middle" x="96" y="116">A</text><text text-anchor="middle" x="104" y="116">R</text><text text-anchor="middle" x="112" y="116">I</text><text text-anchor="middle" x="120" y="116">A</text><text text-anchor="middle" x="128" y="116">B</text><text text-anchor="middle" x="136" y="116">L</text><text text-anchor="middle" x="144" y="116">E</text><text text-anchor="middle" x="152" y="116">S</text><text text-anchor="middle" x="16" y="148">s</text><text text-anchor="middle" x="24" y="148">e</text><text text-anchor="middle" x="32" y="148">t</text><text text-anchor="middle" x="48" y="148">d</text><text text-anchor="middle" x="56" y="148">e</text><text text-anchor="middle" x="64" y="148">b</text><text text-anchor="middle" x="72" y="148">u</text><text text-anchor="middle" x="80" y="148">g</text><text text-anchor="middle" x="88" y="148">=</text><text text-anchor="middle" x="168" y="148">-</text><text text-anchor="middle" x="176" y="148">F</text><text text-anchor="middle" x="184" y="148">C</text><text text-anchor="middle" x="200" y="148">&amp;</text><text text-anchor="middle" x="208" y="148">:</text><text text-anchor="middle" x="216" y="148">:</text><text text-anchor="middle" x="232" y="148">P</text><text text-anchor="middle" x="240" y="148">r</text><text text-anchor="middle" x="248" y="148">o</text><text text-anchor="middle" x="256" y="148">d</text><text text-anchor="middle" x="264" y="148">u</text><text text-anchor="middle" x="272" y="148">c</text><text text-anchor="middle" x="280" y="148">e</text><text text-anchor="middle" x="296" y="148">t</text><text text-anchor="middle" x="304" y="148">h</text><text text-anchor="middle" x="312" y="148">e</text><text text-anchor="middle" x="328" y="148">f</text><text text-anchor="middle" x="336" y="148">u</text><text text-anchor="middle" x="344" y="148">l</text><text text-anchor="middle" x="352" y="148">l</text><text text-anchor="middle" x="368" y="148">p</text><text text-anchor="middle" x="376" y="148">a</text><text text-anchor="middle" x="384" y="148">t</text><text text-anchor="middle" x="392" y="148">h</text><text text-anchor="middle" x="408" y="148">o</text><text text-anchor="middle" x="416" y="148">f</text><text text-anchor="middle" x="432" y="148">t</text><text text-anchor="middle" x="440" y="148">h</text><text text-anchor="middle" x="448" y="148">e</text><text text-anchor="middle" x="464" y="148">s</text><text text-anchor="middle" x="472" y="148">o</text><text text-anchor="middle" x="480" y="148">u</text><text text-anchor="middle" x="488" y="148">r</text><text text-anchor="middle" x="496" y="148">c</text><text text-anchor="middle" x="504" y="148">e</text><text text-anchor="middle" x="520" y="148">c</text><text text-anchor="middle" x="528" y="148">o</text><text text-anchor="middle" x="536" y="148">d</text><text text-anchor="middle" x="544" y="148">e</text><text text-anchor="middle" x="560" y="148">f</text><text text-anchor="middle" x="568" y="148">i</text><text text-anchor="middle" x="576" y="148">l</text><text text-anchor="middle" x="584" y="148">e</text><text text-anchor="middle" x="16" y="180">s</text><text text-anchor="middle" x="24" y="180">e</text><text text-anchor="middle" x="32" y="180">t</text><text text-anchor="middle" x="48" y="180">d</text><text text-anchor="middle" x="56" y="180">e</text><text text-anchor="middle" x="64" y="180">b</text><text text-anchor="middle" x="72" y="180">u</text><text text-anchor="middle" x="80" y="180">g</text><text text-anchor="middle" x="88" y="180">=</text><text text-anchor="middle" x="104" y="180">%</text><text text-anchor="middle" x="112" y="180">d</text><text text-anchor="middle" x="120" y="180">e</text><text text-anchor="middle" x="128" y="180">b</text><text text-anchor="middle" x="136" y="180">u</text><text text-anchor="middle" x="144" y="180">g</text><text text-anchor="middle" x="152" y="180">%</text><text text-anchor="middle" x="168" y="180">-</text><text text-anchor="middle" x="176" y="180">Z</text><text text-anchor="middle" x="184" y="180">i</text><text text-anchor="middle" x="200" y="180">&amp;</text><text text-anchor="middle" x="208" y="180">:</text><text text-anchor="middle" x="216" y="180">:</text><text text-anchor="middle" x="232" y="180">P</text><text text-anchor="middle" x="240" y="180">r</text><text text-anchor="middle" x="248" y="180">o</text><text text-anchor="middle" x="256" y="180">d</text><text text-anchor="middle" x="264" y="180">u</text><text text-anchor="middle" x="272" y="180">c</text><text text-anchor="middle" x="280" y="180">e</text><text text-anchor="middle" x="296" y="180">d</text><text text-anchor="middle" x="304" y="180">e</text><text text-anchor="middle" x="312" y="180">b</text><text text-anchor="middle" x="320" y="180">u</text><text text-anchor="middle" x="328" y="180">g</text><text text-anchor="middle" x="344" y="180">i</text><text text-anchor="middle" x="352" y="180">n</text><text text-anchor="middle" x="360" y="180">f</text><text text-anchor="middle" x="368" y="180">o</text><text text-anchor="middle" x="376" y="180">r</text><text text-anchor="middle" x="384" y="180">m</text><text text-anchor="middle" x="392" y="180">a</text><text text-anchor="middle" x="400" y="180">t</text><text text-anchor="middle" x="408" y="180">i</text><text text-anchor="middle" x="416" y="180">o</text><text text-anchor="middle" x="424" y="180">n</text><text text-anchor="middle" x="216" y="260">a</text><text text-anchor="middle" x="224" y="260">c</text><text text-anchor="middle" x="232" y="260">t</text><text text-anchor="middle" x="240" y="260">u</text><text text-anchor="middle" x="248" y="260">a</text><text text-anchor="middle" x="256" y="260">l</text><text text-anchor="middle" x="272" y="260">c</text><text text-anchor="middle" x="280" y="260">o</text><text text-anchor="middle" x="288" y="260">m</text><text text-anchor="middle" x="296" y="260">p</text><text text-anchor="middle" x="304" y="260">i</text><text text-anchor="middle" x="312" y="260">l</text><text text-anchor="middle" x="320" y="260">e</text><text text-anchor="middle" x="328" y="260">r</text><text text-anchor="middle" x="344" y="260">f</text><text text-anchor="middle" x="352" y="260">l</text><text text-anchor="middle" x="360" y="260">a</text><text text-anchor="middle" x="368" y="260">g</text><text text-anchor="middle" x="160" y="292">c</text><text text-anchor="middle" x="168" y="292">o</text><text text-anchor="middle" x="176" y="292">n</text><text text-anchor="middle" x="184" y="292">t</text><text text-anchor="middle" x="192" y="292">e</text><text text-anchor="middle" x="200" y="292">n</text><text text-anchor="middle" x="208" y="292">t</text><text text-anchor="middle" x="216" y="292">s</text><text text-anchor="middle" x="232" y="292">o</text><text text-anchor="middle" x="240" y="292">f</text><text text-anchor="middle" x="256" y="292">t</text><text text-anchor="middle" x="264" y="292">h</text><text text-anchor="middle" x="272" y="292">e</text><text text-anchor="middle" x="288" y="292">v</text><text text-anchor="middle" x="296" y="292">a</text><text text-anchor="middle" x="304" y="292">r</text><text text-anchor="middle" x="312" y="292">i</text><text text-anchor="middle" x="320" y="292">a</text><text text-anchor="middle" x="328" y="292">b</text><text text-anchor="middle" x="336" y="292">l</text><text text-anchor="middle" x="344" y="292">e</text><text text-anchor="middle" x="360" y="292">(</text><text text-anchor="middle" x="368" y="292">o</text><text text-anchor="middle" x="376" y="292">n</text><text text-anchor="middle" x="384" y="292">l</text><text text-anchor="middle" x="392" y="292">y</text><text text-anchor="middle" x="408" y="292">u</text><text text-anchor="middle" x="416" y="292">s</text><text text-anchor="middle" x="424" y="292">e</text><text text-anchor="middle" x="440" y="292">i</text><text text-anchor="middle" x="448" y="292">f</text><text text-anchor="middle" x="464" y="292">i</text><text text-anchor="middle" x="472" y="292">t</text><text text-anchor="middle" x="488" y="292">w</text><text text-anchor="middle" x="496" y="292">a</text><text text-anchor="middle" x="504" y="292">s</text><text text-anchor="middle" x="520" y="292">s</text><text text-anchor="middle" x="528" y="292">e</text><text text-anchor="middle" x="536" y="292">t</text><text text-anchor="middle" x="544" y="292">)</text><text text-anchor="middle" x="112" y="324">v</text><text text-anchor="middle" x="120" y="324">a</text><text text-anchor="middle" x="128" y="324">r</text><text text-anchor="middle" x="136" y="324">i</text><text text-anchor="middle" x="144" y="324">a</text><text text-anchor="middle" x="152" y="324">b</text><text text-anchor="middle" x="160" y="324">l</text><text text-anchor="middle" x="168" y="324">e</text><text text-anchor="middle" x="184" y="324">n</text><text text-anchor="middle" x="192" y="324">a</text><text text-anchor="middle" x="200" y="324">m</text><text text-anchor="middle" x="208" y="324">e</text><text text-anchor="middle" x="72" y="356">c</text><text text-anchor="middle" x="80" y="356">o</text><text text-anchor="middle" x="88" y="356">m</text><text text-anchor="middle" x="96" y="356">m</text><text text-anchor="middle" x="104" y="356">a</text><text text-anchor="middle" x="112" y="356">n</text><text text-anchor="middle" x="120" y="356">d</text><text text-anchor="middle" x="136" y="356">t</text><text text-anchor="middle" x="144" y="356">o</text><text text-anchor="middle" x="160" y="356">s</text><text text-anchor="middle" x="168" y="356">e</text><text text-anchor="middle" x="176" y="356">t</text><text text-anchor="middle" x="192" y="356">a</text><text text-anchor="middle" x="208" y="356">v</text><text text-anchor="middle" x="216" y="356">a</text><text text-anchor="middle" x="224" y="356">r</text><text text-anchor="middle" x="232" y="356">i</text><text text-anchor="middle" x="240" y="356">a</text><text text-anchor="middle" x="248" y="356">b</text><text text-anchor="middle" x="256" y="356">l</text><text text-anchor="middle" x="264" y="356">e</text><text text-anchor="middle" x="104" y="420">c</text><text text-anchor="middle" x="112" y="420">o</text><text text-anchor="middle" x="120" y="420">n</text><text text-anchor="middle" x="128" y="420">t</text><text text-anchor="middle" x="136" y="420">e</text><text text-anchor="middle" x="144" y="420">n</text><text text-anchor="middle" x="152" y="420">t</text><text text-anchor="middle" x="160" y="420">s</text><text text-anchor="middle" x="176" y="420">o</text><text text-anchor="middle" x="184" y="420">f</text><text text-anchor="middle" x="200" y="420">t</text><text text-anchor="middle" x="208" y="420">h</text><text text-anchor="middle" x="216" y="420">e</text><text text-anchor="middle" x="232" y="420">v</text><text text-anchor="middle" x="240" y="420">a</text><text text-anchor="middle" x="248" y="420">r</text><text text-anchor="middle" x="256" y="420">i</text><text text-anchor="middle" x="264" y="420">a</text><text text-anchor="middle" x="272" y="420">b</text><text text-anchor="middle" x="280" y="420">l</text><text text-anchor="middle" x="288" y="420">e</text><text text-anchor="middle" x="16" y="484">c</text><text text-anchor="middle" x="24" y="484">l</text><text text-anchor="middle" x="40" y="484">%</text><text text-anchor="middle" x="48" y="484">d</text><text text-anchor="middle" x="56" y="484">e</text><text text-anchor="middle" x="64" y="484">b</text><text text-anchor="middle" x="72" y="484">u</text><text text-anchor="middle" x="80" y="484">g</text><text text-anchor="middle" x="88" y="484">%</text><text text-anchor="middle" x="104" y="484">.</text><text text-anchor="middle" x="112" y="484">.</text><text text-anchor="middle" x="120" y="484">/</text><text text-anchor="middle" x="128" y="484">c</text><text text-anchor="middle" x="136" y="484">o</text><text text-anchor="middle" x="144" y="484">d</text><text text-anchor="middle" x="152" y="484">e</text><text text-anchor="middle" x="160" y="484">/</text><text text-anchor="middle" x="168" y="484">w</text><text text-anchor="middle" x="176" y="484">i</text><text text-anchor="middle" x="184" y="484">n</text><text text-anchor="middle" x="192" y="484">3</text><text text-anchor="middle" x="200" y="484">2</text><text text-anchor="middle" x="208" y="484">_</text><text text-anchor="middle" x="216" y="484">h</text><text text-anchor="middle" x="224" y="484">a</text><text text-anchor="middle" x="232" y="484">n</text><text text-anchor="middle" x="240" y="484">d</text><text text-anchor="middle" x="248" y="484">m</text><text text-anchor="middle" x="256" y="484">a</text><text text-anchor="middle" x="264" y="484">d</text><text text-anchor="middle" x="272" y="484">e</text><text text-anchor="middle" x="280" y="484">.</text><text text-anchor="middle" x="288" y="484">c</text><text text-anchor="middle" x="296" y="484">p</text><text text-anchor="middle" x="304" y="484">p</text><text text-anchor="middle" x="56" y="548">c</text><text text-anchor="middle" x="64" y="548">o</text><text text-anchor="middle" x="72" y="548">m</text><text text-anchor="middle" x="80" y="548">m</text><text text-anchor="middle" x="88" y="548">a</text><text text-anchor="middle" x="96" y="548">n</text><text text-anchor="middle" x="104" y="548">d</text><text text-anchor="middle" x="120" y="548">t</text><text text-anchor="middle" x="128" y="548">o</text><text text-anchor="middle" x="144" y="548">s</text><text text-anchor="middle" x="152" y="548">t</text><text text-anchor="middle" x="160" y="548">a</text><text text-anchor="middle" x="168" y="548">r</text><text text-anchor="middle" x="176" y="548">t</text><text text-anchor="middle" x="192" y="548">c</text><text text-anchor="middle" x="200" y="548">o</text><text text-anchor="middle" x="208" y="548">m</text><text text-anchor="middle" x="216" y="548">p</text><text text-anchor="middle" x="224" y="548">i</text><text text-anchor="middle" x="232" y="548">l</text><text text-anchor="middle" x="240" y="548">a</text><text text-anchor="middle" x="248" y="548">t</text><text text-anchor="middle" x="256" y="548">i</text><text text-anchor="middle" x="264" y="548">o</text><text text-anchor="middle" x="272" y="548">n</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;1:</b> Structure of <code>build.bat</code> variables.</div></center>
+
+</p><p>
+
+Keep in mind that this step is entirely optional! We will use this structure for educational purposes, as it should make it easier for the reader to follow which flags we edit, and what they represent. If you feel this view is more confusing than simply writing all the values in one line, you can write more values in each line or even inline it all as it was before.
+
+</p>
+<a class="target" name="compilerwarnings">&nbsp;</a><a class="target" name="compilerwarnings">&nbsp;</a><a class="target" name="toc2">&nbsp;</a><h1>Compiler Warnings</h1>
+<p>
+
+
+By now you have seen plenty of compiler <em class="underscore">Errors</em>. They give you anxiety, sometimes outright drive you in panic, but ultimately they are extremely useful as they make your code <em class="underscore">work</em>. You've also seen some <em class="underscore">Notes</em>, they usually accompany compiler errors trying to explain the error a bit further. Today, we're going to introduce compiler <em class="underscore">Warnings</em>. 
+
+</p><p>
+
+A warning is something that the compiler doesn't need you to fix. Usually it will implicitly do the necessary fix itself. However, warnings often are extremely helpful as they indicate that something might be wrong. 
+
+</p><p>
+
+Warnings are usually arranged in levels, and you can enable them in waves. The idea is that you enable a warning level you're comfortable with. After that, compiler allows you to disable warnings you don't want so they don't bother you. 
+
+</p><p>
+
+Right now we don't have any warnings turned on, only the barest minimum. Let's enable warnings in our compile to a higher level of warnings. Add a <code>-Wall</code> flag to your compiler options and rebuild.
+
+</p><pre class="listing tilde"><code><span class="line">set code_path=..\code\</span>
+<span class="line"></span><div class=" add"><span class="line">:: GENERAL COMPILER FLAGS</span>
+<span class="line">set compiler=-Wall     &amp;:: Display All Warnings</span></div><span class="line">:: DEBUG VARIABLES</span>
+<span class="line">:: ... </span>
+<span class="line">:: WIN32 PLATFORM LIBRARIES</span>
+<span class="line">:: ... </span>
+<span class="line">:: CROSS_PLATFORM DEFINES</span>
+<span class="line">:: ... </span>
+<span class="line"></span><div class=" edit"><span class="line">cl %compiler% -DHANDMADE_WIN32=1 %defines% %debug% %code_path%win32_handmade.cpp %win32_libs%</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;4:</b> <file>[build.bat]</file> <code>-Wall</code> totally doesn't stand for &ldquo;Wall of Text&rdquo;.</div></center>
+<p>
+
+
+You will see... a lot of warnings. These contain: 
+
+</p><p>
+
+<ul>
+    <li class="asterisk">Warnings that we really want to know about
+</li>
+    <li class="asterisk">Warnings that we don't want to fix
+</li>
+    <li class="asterisk">Warnings that are contained within Windows headers.</li></ul>
+
+</p><p>
+
+Yep, Windows header files are <em class="underscore">littered</em> with warnings. However, those are among the most pedantic errors you'll ever see. Most of these will go away once you enable a lower warning level. Let's try <code>-W4</code>. 
+
+</p><pre class="listing tilde"><code><span class="line">:: GENERAL COMPILER FLAGS</span><div class=" edit"><span class="line">set compiler=-W4     &amp;:: Display warnings up to level 4</span></div><span class="line">:: DEBUG VARIABLES</span>
+<span class="line">:: ... </span>
+<span class="line">:: WIN32 PLATFORM LIBRARIES</span>
+<span class="line">:: ... </span>
+<span class="line">:: CROSS_PLATFORM DEFINES</span>
+<span class="line">:: ... </span>
+<span class="line"></span>
+<span class="line">cl %compiler% -DHANDMADE_WIN32=1 %defines% %debug% %code_path%win32_handmade.cpp %win32_libs%</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;5:</b> <file>[build.bat]</file> Setting a more reasonable warning level.</div></center>
+<p>
+
+
+That's much better. All the Windows warnings should go away, so you'll be left with the warnings in your own code. Now we can go through each warning that we find. What we consider annoying, not interesting, busywork can be turned off. The rest will be left on and fixed.
+
+</p><p>
+
+Let's be clear: we don't want any warnings in our code. Warnings are a useful tool as it can save us from headaches down the line so they should be addressed immediately just like we fix all the compiler errors. However, a file with warnings compiles just fine, so you'd be compelled to return &ldquo;to them later&rdquo;... Luckily, the compiler has a flag <a href="https://docs.microsoft.com/en-us/cpp/build/reference/compiler-option-warning-level">-WX</a> which resolves this temptation. It treats all warnings as errors, so if we &ldquo;catch&rdquo; a warning, we simply won't compile. 
+
+</p><pre class="listing tilde"><code><span class="line">:: GENERAL COMPILER FLAGS</span>
+<span class="line">set compiler=               -W4     &amp;:: Display warnings up to level 4</span><div class=" add"><span class="line">set compiler=%compiler%     -WX     &amp;:: Treat all warnings as errors</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;6:</b> <file>[build.bat]</file>.</div></center>
+<p>
+
+
+
+
+<div class="admonition tip">Warnings catch errors (bugs in the code). When they are there, you'll be happy of it. It's always a good idea to keep the warning level relatively high.</div>
+
+</p>
+<a class="target" name="checkexistingwarnings">&nbsp;</a><a class="target" name="compilerwarnings/checkexistingwarnings">&nbsp;</a><a class="target" name="toc2.1">&nbsp;</a><h2>Check Existing Warnings</h2>
+<p>
+
+
+Let's see what is the list of warnings we get after 15 days of typing. 
+
+</p>
+<a class="target" name="%5Bc4201%5D%5B%5Dnamelessstruct/union">&nbsp;</a><a class="target" name="compilerwarnings/checkexistingwarnings/c4201namelessstruct/union">&nbsp;</a><a class="target" name="toc2.1.1">&nbsp;</a><h3><a href="https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-4-c4201">C4201</a> Nameless struct/union</h3>
+<p>
+
+
+We used nameless structs and unions a couple of times already, and we'll use more of them. The reason this warning appears is because nameless structs or unions <em class="underscore">are not standard to C++</em>, using them is possible due to compiler extension in the Microsoft Visual C++ toolkit. 
+
+</p><p>
+
+That's totally fine by us: not only most of the modern compilers have this feature <em class="underscore">de facto</em>, it's highly useful as we've already seen. So we'll disable this warning by adding <a href="https://docs.microsoft.com/en-us/cpp/build/reference/compiler-option-warning-level">-wd</a>4201 warning. 
+
+</p><pre class="listing tilde"><code><span class="line">:: GENERAL COMPILER FLAGS</span>
+<span class="line">set compiler=               -W4     &amp;:: Display warnings up to level 4</span>
+<span class="line">set compiler=%compiler%     -WX     &amp;:: Treat all warnings as errors</span><div class=" add"><span class="line">:: IGNORE WARNINGS</span>
+<span class="line">set compiler=%compiler%     -wd4201 &amp;:: Nameless struct/union</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;7:</b> <file>[build.bat]</file> We use the same %compiler% variable but feel free to introduce your %warning% variable, or include warning-related items to %debug%. It's completely up to you!</div></center>
+
+<a class="target" name="%5Bc4100%5D%5B%5Dunreferencedformalparameter">&nbsp;</a><a class="target" name="compilerwarnings/checkexistingwarnings/c4100unreferencedformalparameter">&nbsp;</a><a class="target" name="toc2.1.2">&nbsp;</a><h3><a href="https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-4-c4100">C4100</a> Unreferenced Formal Parameter</h3>
+<p>
+
+
+We passed a parameter to a function and didn't use it. We absolutely don't care about this warning, such behaviour can happen all the time for all sorts of reasons: stub functions, partially using an API, following some convention, you name it. We simply disable this warning. <a href="https://docs.microsoft.com/en-us/cpp/build/reference/compiler-option-warning-level">-wd</a>4100.
+
+</p><pre class="listing tilde"><code><span class="line">:: GENERAL COMPILER FLAGS</span>
+<span class="line">set compiler=               -W4     &amp;:: Display warnings up to level 4</span>
+<span class="line">set compiler=%compiler%     -WX     &amp;:: Treat all warnings as errors</span>
+<span class="line">:: IGNORE WARNINGS</span>
+<span class="line">set compiler=%compiler%     -wd4201 &amp;:: Nameless struct/union</span><div class=" add"><span class="line">set compiler=%compiler%     -wd4100 &amp;:: Unused function parameter</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;8:</b> <file>[build.bat]</file> You'll notice that disabling this warning will thin out the list of our warnings extensively.</div></center>
+
+<a class="target" name="%5Bc4244%5D%5B%5Dpossiblelossofdata">&nbsp;</a><a class="target" name="compilerwarnings/checkexistingwarnings/c4244possiblelossofdata">&nbsp;</a><a class="target" name="toc2.1.3">&nbsp;</a><h3><a href="https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4244">C4244</a> Possible Loss of Data</h3>
+<p>
+
+
+Now this is a totally valid warning. Usually it pops up when you inadvertently convert a <code>float</code> to an <code>int</code>, from a <code>u32</code> to <code>u16</code>, and so on. We then should choose whether to treat the conversion gracefully (like we did with <code>SafeTruncateUInt64</code>) or to explicitly cast. Usually we opted for the latter, but we missed a couple spots. Let's fix them! 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32ResizeDIBSection</span><span class="hljs-params">(win32_offscreen_buffer *Buffer, <span class="hljs-keyword">int</span> Width, <span class="hljs-keyword">int</span> Height)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// ... </span></span><div class=" edit"><span class="line">    WORD BytesPerPixel = <span class="hljs-number">4</span>;</span></div><span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal LRESULT CALLBACK</span>
+<span class="line"><span class="hljs-title">Win32MainWindowCallback</span><span class="hljs-params">(HWND Window,</span>
+<span class="line">                        UINT Message,</span>
+<span class="line">                        WPARAM WParam,</span>
+<span class="line">                        LPARAM LParam)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    LRESULT Result;</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">switch</span> (Message)</span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-comment">// ... </span></span>
+<span class="line">        </span>
+<span class="line">        <span class="hljs-keyword">case</span> WM_SYSKEYDOWN:</span>
+<span class="line">        <span class="hljs-keyword">case</span> WM_SYSKEYUP:</span>
+<span class="line">        <span class="hljs-keyword">case</span> WM_KEYDOWN:</span>
+<span class="line">        <span class="hljs-keyword">case</span> WM_KEYUP:</span>
+<span class="line">        {</span>
+<span class="line">            <span class="hljs-comment">// ... </span></span><div class=" edit"><span class="line">            u32 VKCode = (u32)WParam;</span></div><span class="line">            <span class="hljs-comment">// ...</span></span>
+<span class="line">        }</span>
+<span class="line">        <span class="hljs-comment">// ... </span></span>
+<span class="line">    }</span>
+<span class="line">    <span class="hljs-keyword">return</span> (Result);</span>
+<span class="line">}            </span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;9:</b> <file>[win32_handmade.cpp]</file> In <code>Win32ResizeDIBSection</code>, we set <code>BytesPerPixel</code> to be WORD. Inside <code>Win32MainWindowCallback</code> we do the cast explicitly.</div></center>
+
+<a class="target" name="%5Bc4018%5D%5B%5Dsigned/unsignedmismatch">&nbsp;</a><a class="target" name="compilerwarnings/checkexistingwarnings/c4018signed/unsignedmismatch">&nbsp;</a><a class="target" name="toc2.1.4">&nbsp;</a><h3><a href="https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-3-c4018">C4018</a> Signed/Unsigned Mismatch</h3>
+<p>
+
+
+This is another completely valid error. Incorrect conversion or comparison might lead to data loss! Luckily, it only happened once so far, and it's definitely not a case of potential integer overflow. Still, let's fix the issue. 
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">DWORD MaxControllerCount = XUSER_MAX_COUNT;</span></div><span class="line"><span class="hljs-keyword">if</span>(MaxControllerCount &gt; ArrayCount(NewInput-&gt;Controllers))</span>
+<span class="line">{</span>
+<span class="line">    MaxControllerCount = ArrayCount(NewInput-&gt;Controllers);</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">for</span> (DWORD ControllerIndex = <span class="hljs-number">0</span>;</span>
+<span class="line">     ControllerIndex &lt; MaxControllerCount;</span>
+<span class="line">     ++ControllerIndex)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;10:</b> <file>[win32_handmade.cpp > WinMain]</file> <code>MaxControllerCount</code> was an <code>int</code> (which is signed) where it should have been a <code>DWORD</code> (which is not).</div></center>
+
+<a class="target" name="%5Bc4189%5D%5B%5Dlocalvariablenotreferenced">&nbsp;</a><a class="target" name="compilerwarnings/checkexistingwarnings/c4189localvariablenotreferenced">&nbsp;</a><a class="target" name="toc2.1.5">&nbsp;</a><h3><a href="https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-4-c4189">C4189</a> Local Variable not Referenced</h3>
+<p>
+
+
+This warning is quite useless, both for development and release. During development, you often sketch out some variables for some future use, while for the release the compiler optimizes out (removes) all unused variables anyway. It's safe to disable, so let's do that.
+
+</p><pre class="listing tilde"><code><span class="line">:: GENERAL COMPILER FLAGS</span>
+<span class="line">set compiler=               -W4     &amp;:: Display warnings up to level 4</span>
+<span class="line">set compiler=%compiler%     -WX     &amp;:: Treat all warnings as errors</span>
+<span class="line">:: IGNORE WARNINGS</span>
+<span class="line">set compiler=%compiler%     -wd4201 &amp;:: Nameless struct/union</span>
+<span class="line">set compiler=%compiler%     -wd4100 &amp;:: Unused function parameter</span><div class=" add"><span class="line">set compiler=%compiler%     -wd4189 &amp;:: Local variable not referenced</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;11:</b> <file>[build.bat]</file> You'll notice that disabling this warning will thin out the list of our warnings extensively.</div></center>
+
+<a class="target" name="othercompilerswitches">&nbsp;</a><a class="target" name="othercompilerswitches">&nbsp;</a><a class="target" name="toc3">&nbsp;</a><h1>Other Compiler Switches</h1>
+<p>
+
+
+The <a href="https://docs.microsoft.com/en-us/cpp/build/reference/compiler-options-listed-alphabetically">MSVC compiler options list</a> is extensive. We should definitely make use of it while we're at it. It's not the last time we revisit <code>build.bat</code>; we'll return and add more flags, but for now let's add the list below. 
+
+</p>
+<a class="target" name="revisit-zi">&nbsp;</a><a class="target" name="othercompilerswitches/revisit-zi">&nbsp;</a><a class="target" name="toc3.1">&nbsp;</a><h2>Revisit -Zi</h2>
+<p>
+
+
+<a href="https://docs.microsoft.com/en-us/cpp/build/reference/z7-zi-zi-debug-information-format">-Zi</a> produces debug information inside <code>.pdb</code> files. This information can get quite big: our executable produces <code>.pdb</code> file almost 10 times as big!
+
+</p><p>
+
+However, this specific flag can be problematic though. It produces a <code>vcXXX.pdb</code> which is shared and can get you into problems. Let's change <a href="https://docs.microsoft.com/en-us/cpp/build/reference/z7-zi-zi-debug-information-format">-Zi</a> to an &ldquo;older&rdquo; <a href="https://docs.microsoft.com/en-us/cpp/build/reference/z7-zi-zi-debug-information-format">-Z7</a>. The difference is quite minimal but it allows you not to think of the potential issues any more. For instance, there won't be <code>vcXXX.pdb</code> any longer. 
+
+</p><pre class="listing tilde"><code><span class="line">:: DEBUG VARIABLES</span>
+<span class="line">set debug=                  -FC     &amp;:: Produce the full path of the source code file</span><div class=" edit"><span class="line">set debug=%debug%           -Z7     &amp;:: Produce debug information</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;12:</b> <file>[build.bat]</file> Replacing <code>-Zi</code> with <code>-Z7</code>.</div></center>
+
+<a class="target" name="staticallylinkcrtlibrary">&nbsp;</a><a class="target" name="othercompilerswitches/staticallylinkcrtlibrary">&nbsp;</a><a class="target" name="toc3.2">&nbsp;</a><h2>Statically Link CRT Library</h2>
+<p>
+
+
+If you remember, C Runtime Library (or CRT Library) is the standard set of functions implemented by the compiler (in this case, Microsoft) as a part of compiler package. The way it's built by default may vary: it can be linked either <em class="underscore">statically</em> or <em class="underscore">dynamically</em>. Static linking means that the functions are physically copied inside your executable. Dynamic, on the other hand, means that the only thing present in your executable are the function stubs, and the actual location of the functions is resolved at runtime (think about when we were looking for <code>xinput.dll</code> and extracting relevant functions). 
+
+</p><p>
+
+Normally dynamic linking would be fine for our purposes. You offload some of the functions to the operating system, and your distribution is overall smaller. However, there's a catch. CRT has versions, many many versions in fact, and you can't really guarantee that the user has a version of the C Runtime Library that you are linking against. This forces you to include the &ldquo;Microsoft Visual C++ XXXX Redistributable&rdquo; with your game and run it when the user installs it. 
+
+</p><p>
+
+It's definitely a bad idea but somehow many developers still do it... Not us, we will use <a href="https://docs.microsoft.com/en-us/cpp/c-runtime-library/c-run-time-library-reference">-MT</a> flag. <code>-MT</code> says &ldquo;use the static library, pack everything in and don't look for DLLs at runtime&rdquo;. That's something you absolutely want to be set. It's default on the command line but still good to specify.
+
+</p><pre class="listing tilde"><code><span class="line">:: GENERAL COMPILER FLAGS</span><div class=" add"><span class="line">set compiler=               -MT     &amp;:: Include CRT library in the executable (static link)</span></div><div class=" edit"><span class="line">set compiler=%compiler%     -W4     &amp;:: Display warnings up to level 4</span></div><span class="line">set compiler=%compiler%     -WX     &amp;:: Treat all warnings as errors</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;13:</b> <file>[build.bat]</file> CRT library handling.</div></center>
+<p>
+
+
+In general, this is the reason why you want to test on as many machines as possible: to see the compatibility of your game on different setups. That said, there's software like the <a href="http://dependencywalker.com/">Dependency Walker</a> (a free tool which we recommend you to check out) which allows to see what the executable relies on.
+
+</p><p>
+
+<div class="admonition ">You can remove your dependency on the CRT Library completely, but you'll need to perform some specific actions to do so though. <a href="https://docs.microsoft.com/en-us/cpp/c-runtime-library/c-run-time-library-reference">This guide</a> should get you started.</div>
+
+</p>
+<a class="target" name="mapfile">&nbsp;</a><a class="target" name="othercompilerswitches/mapfile">&nbsp;</a><a class="target" name="toc3.3">&nbsp;</a><h2>Map File</h2>
+<p>
+
+
+<a href="https://docs.microsoft.com/en-us/cpp/build/reference/fm-name-mapfile">-Fm</a> flag allows to specify a location to the map file. 
+
+</p><p>
+
+The map file is a text file containing a list of all the functions in your program <em class="underscore">in the order</em> in which they appear in the corresponding <code>.exe</code> or <code>.dll</code> file. A map, if you will. We can add this flag directly on the <code>cl</code> line: 
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">cl %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %code_path%win32_handmade.cpp %win32_libs%</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;14:</b> <file>[build.bat]</file> Adding a map file flag.</div></center>
+<p>
+
+
+Why would we need such a thing? If you open the file you'll note that there's a lot of functions in the executable, and we can see what module is responsible for outputting which function. This will become more useful once we're ready to tighten up the screws on our program even further.
+
+</p><p>
+
+If you inspect the file, you'll notice there's a lot of <em class="underscore">name mangling</em> going on (more about it in subsection  <a href="#toc6.1">6.1</a>). You can also see the import libraries marked with <code>__imp__</code> prefix. 
+
+</p>
+<a class="target" name="optimizationlevel">&nbsp;</a><a class="target" name="othercompilerswitches/optimizationlevel">&nbsp;</a><a class="target" name="toc3.4">&nbsp;</a><h2>Optimization Level</h2>
+<p>
+
+
+<a href="https://docs.microsoft.com/en-us/cpp/build/reference/od-disable-debug">-Od</a> Disables all optimizations. As a result, it produces quite a slow code, and it's not something we want to ship. However, this flag is quite useful if you want to dive into disassembly or even simply step through your code.
+
+</p><p>
+
+We will want to change optimization level in the future, to test how faster a specific chunk of code performs and of course for the final release. In that situation, you will want to use <code>-O2</code> flag. For this reason, let's add it directly into our <code>cl</code> line: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">:: No optimizations (slow): -Od; all optimizations (fast): -O2</span></div><div class=" edit"><span class="line">cl -Od %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %code_path%win32_handmade.cpp %win32_libs%</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;15:</b> <file>[build.bat]</file> Adding <code>-Od</code> flag.</div></center>
+
+<a class="target" name="disablec++features">&nbsp;</a><a class="target" name="othercompilerswitches/disablec++features">&nbsp;</a><a class="target" name="toc3.5">&nbsp;</a><h2>Disable C++ Features</h2>
+<p>
+
+
+These are the switches which prevent the compiler from doing some other things (mainly C++ related).
+
+</p><p>
+
+<ul>
+<li class="asterisk"><a href="https://docs.microsoft.com/en-us/cpp/build/reference/gm-enable-minimal-rebuild">-Gm-</a> Disables minimal rebuild, thus reducing &ldquo;build&rdquo; time. We don't really care because the optimization this flag does isn't really applicable to the build we're doing. This flag seems mostly deprecated but you can never be sure. 
+</li>
+<li class="asterisk"><a href="https://docs.microsoft.com/en-us/cpp/build/reference/gr-enable-run-time-type-information">-GR-</a> Disable Run-time Type Information. It's a C++ feature that we don't care about. 
+</li>
+<li class="asterisk"><a href="https://docs.microsoft.com/en-us/cpp/build/reference/eh-exception-handling-model">-EHa-</a> Disable Exception Handling. This is another C++ feature we won't use at all.</li></ul>
+
+</p><p>
+
+<div class="admonition about"><div class="admonition-title"> Exception Handling</div>
+
+</p><p>
+
+    Exception handling works in the following way: &ldquo;try&rdquo; something, if someone &ldquo;throws&rdquo; an exception (things don't behave as expected), &ldquo;catch&rdquo; it. 
+
+</p><p>
+
+    We will never do C++ exception handling. Eventually, however, we might take a look at Windows' own exception handling system, <a href="https://docs.microsoft.com/en-us/cpp/cpp/structured-exception-handling-c-cpp">SEH</a>.</div>
+
+</p><pre class="listing tilde"><code><span class="line">:: GENERAL COMPILER FLAGS</span>
+<span class="line">set compiler=               -MT     &amp;:: Include CRT library in the executable (static link)</span><div class=" add"><span class="line">set compiler=%compiler%     -Gm-    &amp;:: Disable minimal rebuild</span>
+<span class="line">set compiler=%compiler%     -GR-    &amp;:: Disable runtime type info (C++)</span>
+<span class="line">set compiler=%compiler%     -EHa-   &amp;:: Disable exception handling (C++)</span></div><span class="line">set compiler=%compiler%     -W4     &amp;:: Display warnings up to level 4</span>
+<span class="line">set compiler=%compiler%     -WX     &amp;:: Treat all warnings as errors</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;16:</b> <file>[build.bat]</file> Disabling C++ features.</div></center>
+
+<a class="target" name="otherswitches">&nbsp;</a><a class="target" name="othercompilerswitches/otherswitches">&nbsp;</a><a class="target" name="toc3.6">&nbsp;</a><h2>Other Switches</h2>
+<p>
+
+
+Let's see a few other Switches that we always want: 
+
+</p><p>
+
+<ul>
+<li class="asterisk"><a href="https://docs.microsoft.com/en-us/cpp/build/reference/nologo-suppress-startup-banner-c-cpp">-nologo</a>. This flag should be self-explanatory. We're pretty well aware of who wrote the compiler by this point, thank you very much. 
+</li>
+<li class="asterisk"><a href="https://docs.microsoft.com/en-us/cpp/build/reference/oi-generate-intrinsic-functions">-Oi</a> Substitute the instruction directly with the assembly intrinsics where possible (like <code>RDTSC</code>). Even if all optimizations are disabled.</li></ul>
+
+</p><pre class="listing tilde"><code><span class="line">:: GENERAL COMPILER FLAGS</span><div class=" add"><span class="line">set compiler=               -nologo &amp;:: Suppress Startup Banner</span>
+<span class="line">set compiler=%compiler%     -Oi     &amp;:: Use assembly intrinsics where possible</span></div><div class=" edit"><span class="line">set compiler=%compiler%     -MT     &amp;:: Include CRT library in the executable (static link)</span></div><span class="line">set compiler=%compiler%     -Gm-    &amp;:: Disable minimal rebuild</span>
+<span class="line">set compiler=%compiler%     -GR-    &amp;:: Disable runtime type info (C++)</span>
+<span class="line">set compiler=%compiler%     -EHa-   &amp;:: Disable exception handling (C++)</span>
+<span class="line">set compiler=%compiler%     -W4     &amp;:: Display warnings up to level 4</span>
+<span class="line">set compiler=%compiler%     -WX     &amp;:: Treat all warnings as errors</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;17:</b> <file>[build.bat]</file> Adding even more switches.</div></center>
+
+<a class="target" name="linkeroptions">&nbsp;</a><a class="target" name="othercompilerswitches/linkeroptions">&nbsp;</a><a class="target" name="toc3.7">&nbsp;</a><h2>Linker Options</h2>
+<p>
+
+
+If you remember, the full compilation is set in stages: 
+
+</p><p>
+
+<ul>
+<li class="asterisk"><strong class="asterisk">Interpretation</strong> or <em class="underscore">Preprocessing</em> of the translation units
+</li>
+<li class="asterisk"><strong class="asterisk">Compiling</strong> interpreted code into object files
+</li>
+<li class="asterisk"><strong class="asterisk">Linking</strong> various object files together to produce final executable</li></ul>
+
+</p><p>
+
+<div class="admonition ">Check out also Figure 1 of <a href="../html/day11.html">day 11</a>.</div>
+
+</p><p>
+
+Each step is performed by a different program. In particular, linking is done by <code>link.exe</code> that is called by <code>cl.exe</code> once the latter has done its job. We <em class="underscore">could</em> pass <code>-c</code> flag which disables calling linker and call it ourselves but it's a bit of an overkill. Instead, <code>cl.exe</code> allows us to communicate with the linker by defining <code>/link</code> flag at the end of the compiler switches, and passing it the linker-specific switches we define.
+
+</p><p>
+
+Let's do just that. We can right away define a couple of switches:
+
+</p><p>
+
+<ul>
+<li class="asterisk"><a href="https://docs.microsoft.com/en-us/cpp/build/reference/subsystem-specify-subsystem">-subsystem</a>. The targeted system. Usually the subsystem is <code>windows</code> or <code>console</code>, for a window-based or console-based options. In reality however, if you want maximum compatibility you need to pass subsystem <code>windows,5.2</code> for an x64 system (and <code>windows,5.1</code> for x86). This will ensure you'll be able to run all the way until Windows Server 2003 (5.2) or Windows XP (5.1). The default is 6.0, i.e. Windows Vista (you can find the full list of subsystems <a href="https://en.wikipedia.org/wiki/Comparison_of_Microsoft_Windows_versions">here</a>).
+</li>
+<li class="asterisk"><a href="https://docs.microsoft.com/en-us/cpp/build/reference/opt-optimizations">-opt</a> Optimizations flag. We'll pass <code>-opt:ref</code> to eliminate functions and data that are never referenced. This reduces size of the executable (but there's still a lot of stuff used by the CRT).</li></ul>
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">:: WIN32 LINKER SWITCHES</span>
+<span class="line">set win32_link=             -subsystem:windows,5.2 &amp;:: subsystem, 5.1 for x86</span>
+<span class="line">set win32_link=%win32_link% -opt:ref               &amp;:: Remove unused functions</span></div><span class="line">:: WIN32 PLATFORM LIBRARIES</span>
+<span class="line">:: ...</span>
+<span class="line"></span>
+<span class="line">:: No optimizations (slow): -Od; all optimizations (fast): -O2</span>
+<span class="line"></span><div class=" edit"><span class="line">cl -Od %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %code_path%win32_handmade.cpp %win32_libs% /link %win32_link%</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;18:</b> <file>[build.bat]</file> Passing linker options.</div></center>
+
+<a class="target" name="compilein32-bit">&nbsp;</a><a class="target" name="compilein32-bit">&nbsp;</a><a class="target" name="toc4">&nbsp;</a><h1>Compile in 32-bit</h1>
+<p>
+
+
+Let's have some fun! We'll try to compile the game in 32-bit mode. Before doing that, we only need to make a few changes to our <code>win32_handmade.cpp</code>: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">Reduce transient storage size to 1 GB.
+</li>
+<li class="asterisk">Pass 32-bit sizes to <code>VirtualAlloc</code>.</li></ul>
+
+</p><p>
+
+The latter can be easily achieved by casting <code>TotalStorageSize</code> to <code>u32</code>, but this means that the code we'll need to change the cast again once we return to 64-bit mode. Instead, we can use a type called <code>size_t</code>. It's defined to an unsigned 32-bit or 64-bit integer, depending on whether you compile on a 32-bit or 64-bit platform. 
+
+</p><pre class="listing tilde"><code><span class="line">game_memory GameMemory = {};</span>
+<span class="line">GameMemory.PermanentStorageSize = Megabytes(<span class="hljs-number">64</span>);</span><div class=" edit"><span class="line">GameMemory.TransientStorageSize = Gigabytes(<span class="hljs-number">1</span>);</span></div><div class=" C++ "><span class="line">u64 TotalStorageSize = GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize;</span>
+<span class="line"></span></div><div class=" edit"><span class="line">GameMemory.PermanentStorage = VirtualAlloc(BaseAddress, (<span class="hljs-keyword">size_t</span>)TotalStorageSize,</span>
+<span class="line">                                            MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;19:</b> <file>[win32_handmade.cpp > WinMain]</file> Reducing memory footprint to support 32-bit environment.</div></center>
+<p>
+
+
+Now, before you can compile to the 32-bit architecture, you need to reboot your environment in the 32-bit mode. Modify your <code>shell.bat</code> as follows: 
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">call "[path to vcvarsall.bat]\vcvarsall.bat" x86</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;20:</b> <file>[shell.bat]</file> Switching architecture from x64 to x86.</div></center>
+<p>
+
+
+.... and reboot your command prompt. If you're compiling through the editor, you'll need to restart it as well. Try compiling now! If everything goes well, your executable will change to a 32-bit one. 
+
+</p><p>
+
+Don't forget to change <code>shell.bat</code> back since we'll continue our development in 64-bit mode. 
+
+</p>
+<a class="target" name="recap">&nbsp;</a><a class="target" name="recap">&nbsp;</a><a class="target" name="toc5">&nbsp;</a><h1>Recap</h1>
+<p>
+
+
+Hopefully you've enjoyed this brief interstitial and are ready to move on! Next, we'll be tightening screws on our input system.
+
+</p>
+<a class="target" name="programmingnotions">&nbsp;</a><a class="target" name="programmingnotions">&nbsp;</a><a class="target" name="toc6">&nbsp;</a><h1>Programming Notions</h1>
+
+<a class="target" name="namemangling">&nbsp;</a><a class="target" name="programmingnotions/namemangling">&nbsp;</a><a class="target" name="toc6.1">&nbsp;</a><h2>Name Mangling</h2>
+<p>
+
+
+Some functions look absolutely crazy in map files. This is due to application of a technique known as <em class="underscore">name mangling</em> or <em class="underscore">name decoration</em>. 
+
+</p><p>
+
+In C, the function names are mostly are exactly as you define them in code. On the other hand, C++ is considered among the most widespread users of name mangling. This is in large part due to <em class="underscore">function overloading</em> (we talked about it on <a href="../html/day13.html">day 13</a>). 
+
+</p><p>
+
+Because C++ was initially built on top of C, and the functions that had the same names couldn't be duplicated in C, the compiler would silently add the function parameters. Thus, a function <code>Foo</code> which takes an <code>int</code> and an <code>int</code> as parameters, would get the name <code>FOO@@INT@@INT</code> to be differentiated from the other similar. This mangling can go completely bonkers, depending on compiler, thing type, etc. 
+
+</p><p>
+
+You can read more <a href="https://en.wikipedia.org/wiki/Name_mangling">on Wikipedia</a>.
+
+</p>
+<a class="target" name="navigation">&nbsp;</a><a class="target" name="navigation">&nbsp;</a><a class="target" name="toc7">&nbsp;</a><h1>Navigation</h1>
+<p>
+
+
+Previous: <a href="../html/day15.html">Day 15. Platform-Independent Debug File I/O</a>
+
+</p><p>
+
+Up Next: <a href="../html/day17.html">Day 17. </a>
+
+</p><p>
+
+<a href="../index.md.html">Back to Index</a>
+
+</p>
+<div class="nonumberh1">Glossary </div>
+<p>
+
+
+<ul>
+<li class="asterisk">Compiler Warning
+</li>
+<li class="asterisk">Name Mangling
+</li>
+<li class="asterisk">Overloaded functions</li></ul>
+
+</p>
+<div class="nonumberh1">Tools and Articles</div>
+<p>
+
+
+<a href="http://dependencywalker.com/">Dependency Walker</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/cpp/c-runtime-library/c-run-time-library-reference">How to avoid C++ Runtime on Windows</a>
+
+</p><p>
+
+<a href="https://en.wikipedia.org/wiki/Name_mangling">name mangling</a>
+
+</p><p>
+
+<a href="https://en.wikipedia.org/wiki/Comparison_of_Microsoft_Windows_versions">Subsystem Versions of Windows</a>
+
+</p>
+<div class="nonumberh1">MSVC</div>
+<p>
+
+
+<a href="https://docs.microsoft.com/en-us/cpp/cpp/structured-exception-handling-c-cpp">Structured Exception Handling</a>
+
+</p>
+<div class="nonumberh1">MSVC Compiler Options</div>
+<p>
+
+
+<a href="https://docs.microsoft.com/en-us/cpp/build/reference/eh-exception-handling-model">-EHa-</a> Disable Exception Handling
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/cpp/build/reference/fm-name-mapfile">-Fm</a> Name Map file
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/cpp/build/reference/gm-enable-minimal-rebuild">-Gm-</a> Disable Minimal Rebuild
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/cpp/build/reference/gr-enable-run-time-type-information">-GR-</a> Disable C++ Runtime Type Information
+? Use Run-Time Library
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/cpp/build/reference/nologo-suppress-startup-banner-c-cpp">-nologo</a> Suppress startup banner
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/cpp/build/reference/od-disable-debug">-Od</a> Disable all optimizations
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/cpp/build/reference/oi-generate-intrinsic-functions">-Oi</a> Generate Intrinsic Functions
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/cpp/build/reference/compiler-option-warning-level">-W3, -W4, -Wall, -wd, -WX</a> Warning-related switches
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/cpp/build/reference/z7-zi-zi-debug-information-format">-Zi, -Z7</a> Debug Info Format
+
+</p>
+<div class="nonumberh1">MSVC Compiler Errors/Warnings</div>
+<p>
+
+
+<a href="https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-3-c4018">C4018: Signed/Unsigned Mismatch</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-4-c4100">C4100: Unreferenced formal parameter</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-4-c4189">C4100: Local variable not referenced</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-4-c4201">C4201: Nameless struct/union</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4244">C4201: conversion from 'type1' to 'type2', possible loss of data</a>
+
+</p>
+<div class="nonumberh1">MSVC Linker Options</div>
+<p>
+
+
+<a href="https://docs.microsoft.com/en-us/cpp/build/reference/subsystem-specify-subsystem">-subsystem</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/cpp/build/reference/opt-optimizations">-opt</a>
+
+</p><p>
+
+<style class="fallback">
+  body {
+    visibility: hidden;
+    font-family: sans-serif;
+  }
+</style>
+
+</p><p>
+
+<script>
+  markdeepOptions = { tocStyle: 'long' };
+  window.alreadyProcessedMarkdeep ||
+    (document.body.style.visibility = 'visible');
+</script>
+
+</p><p>
+
+</p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.10&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div>
