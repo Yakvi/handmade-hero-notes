@@ -403,7 +403,7 @@ We can easily take this code and port it over to become cross-platform. Here's h
 </p><p>
 
 <ol start=1>
-<li class="number">We'll define function <code>GameSoundOutput</code> inside <code>handmade.cpp</code>. As we said, it will take a <code>SoundBuffer</code>, which for now we can define to be some <code>game_sound_output_buffer *</code> and an <code>int SampleCountToOutput</code>. Inside, we'll paste the code above.</li></ol>
+<li class="number">We'll define function <code>GameSoundOutput</code> inside <code>handmade.cpp</code>. As we said, it will take a <code>SoundBuffer</code>, which for now we can define to be some <code>game_sound_output_buffer *</code> and an <code>int SampleCountToOutput</code>. Inside, we'll paste the code above. Don't eliminate the code from `win32_handmade.cpp`! We'll return to it in a minute.</li></ol>
 
 </p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
 <span class="line"><span class="hljs-title">GameSoundOutput</span><span class="hljs-params">(game_sound_output_buffer *SoundBuffer, <span class="hljs-keyword">int</span> SampleCountToOutput)</span></span>
@@ -541,7 +541,7 @@ On a second thought, we can make the API even simpler by also making <code>Sampl
 <span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
 <span class="line"><span class="hljs-title">GameUpdateAndRender</span><span class="hljs-params">(game_offscreen_buffer* Buffer, <span class="hljs-keyword">int</span> XOffset, <span class="hljs-keyword">int</span> YOffset)</span></span>
 <span class="line"></span>{</span><div class=" edit"><span class="line">    GameSoundOutput(SoundBuffer);</span></div><span class="line">    RenderWeirdGradient(Buffer, XOffset, YOffset);</span>
-<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;9:</b> <file>[handmade.h]</file> Simplifying the API.</div></center>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;9:</b> <file>[handmade.cpp]</file> Simplifying the API.</div></center>
 <p>
 
 
@@ -555,6 +555,17 @@ We can update our <code>GameUpdateAndRender</code> call to actually receive the 
 <span class="line">                                  game_sound_output_buffer *SoundBuffer)</span></span>;</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;11:</b> <file>[handmade.h]</file> Receiving <code>SoundBuffer</code> from the platform.</div></center>
 <p>
 
+<div class="admonition function"><div class="admonition-title"> <em class="underscore">definition</em> vs. function <em class="underscore">declaration</em></div>
+
+</p><p>
+
+    You can <em class="underscore">declare</em> a function with a specific signature as many times and wherever in your code as you wish. But you only can <em class="underscore">define</em> (give a body) to a specific function once.
+
+</p><p>
+
+    Syntactically, function <em class="underscore">definition</em> has the body (in curly braces <code>{}</code> with no semicolon) while the function declaration is immediately followed by semicolon <code>;</code>, as you can see above.</div>
+
+</p><p>
 
 Our next error is the missing <code>sinf</code> function, let's simply reorder the headers around:
 
@@ -958,7 +969,7 @@ Why allocate on stack, as opposed to the heap? As with anything, there're severa
 
 </p><p>
 
-It's advantages are: 
+Its advantages are: 
 
 </p><p>
 

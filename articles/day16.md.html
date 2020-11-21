@@ -6,6 +6,87 @@ _Video Length (including Q&A): [1h41](https://hero.handmade.network/episode/code
 
 (insert intro.md.html here) 
 
+Win32 interface is mostly complete. We're close to working at the game part of the game. 
+In the next series of episodes we'll be focusing on what is essentially the cleanup of the loose ends that we've left hanging.
+
+Before we can do that, we need to make a step back and look at our `build.bat`, the file that we use to build our game, and on the compiler options we enable.
+
+# Warnings
+
+[msvc-options][]. Search for a specific warning or check the list.
+
+We don't have any warnings turned on, only the barest minimum. 
+Warning is something that the compiler doesn't need you to fix but it indicates that something might be wrong. 
+Warnings are usually arranged in levels, you can enable them in waves. 
+Enable warnings in our compile to a higher level of warnings. 
+You enable a warning level you're comfortable with; disable warnings you don't want. 
+
+If we enable [-Wall][warning] and compile we'll see a... wall of warnings. Some we can't/want to fix, some we really want to know about. Windows header files are _littered_ with warnings. 
+[-W3][warning] and even [-W4][warning]: shows interesting warnings but successfully ignores windows headers 
+
+What we consider annoying, not interesting, busywork can be turned off. The rest will be left on. 
+Warnings don't stop a compile. Even if we get warnings, compile happens anyway. Solution: [-WX][warning]. Treats all warnings as errors. We either turn the warning off, or we fix it. 
+
+We'll never allow any further from here on.
+
+## Check Existing Warnings
+
+* [C4201][] Nameless struct/union: we don't care, fine by us. [-wd]4201. 
+* [C4244][] Conversion from `type` to `type`, possible loss of data: That's a valid warning, we can cast it here or fix the error.
+* [C4018][] Another valid warning, fix the issue. Signed/unsigned mismatch.
+* [C4100][] We passed a parameter to a function and didn't use it. We absolutely don't care about this warning, such behaviour can happen all the time for all sorts of reasons, so we disable it. [-wd]4100.
+* [C4189][] This warning is quite useless since the compiler optimizes out (removes) all unused variables. Disable warning [-wd]4189.
+
+Warnings do occasionally catch errors (bugs in the code). When they are there, you'll be happy of it. It's always a good idea to keep the warning level relatively high.
+
+## Other Compiler Switches
+
+[-Zi][ZiZ7] produce debug information and other files. .pdb files contain notation for the debugger where in the executable corresponds to the source file, what the names of the variables were, etc. It's a 2MB file for a 200k executable!
+
+It can be problematic though. The .pdbs are shared and you can get into problems. So change [-Zi][ZiZ7] to an "older" [-Z7][ZiZ7]. The difference is quite minimal but it gets rid of many problems. There's no longer vcXXX.pdb. 
+
+[-Od][] Disables all optimizations. We don't want it if we want to dive into disassembly. 
+[-Gm-][] Disables minimal rebuild. Seems deprecated but you can never be sure. 
+
+## Want All the Time
+
+[-Oi][] substitute the instruction directly with the assembly code where possible (like RDTSC). Even in debug mode.
+[-MD][CRT] says "use the DLL", that's bad. [-MT][CRT] says "use the static library, pack everything in and don't look for DLL". That's something you absolutely want to be set. It's default on the command line but still good to specify.
+[-nologo][] self-explanatory. We're pretty well aware of who wrote the compiler by this point.
+
+## Never Want
+
+[-GR-][] Disable Run-time Type Information. It's C++ stuff that we don't care about. 
+[-EHa-][] Disable Exception Handling. More C++ stuff we won't use at all. "Try" something, if someone "throws" an exception, "catch" it. We will never do that exception handling but maybe Windows' [SEH][].
+
+# Compile in 32-bit
+
+* Reduce transient storage to 1 GB.
+* Use Vcvarsall x86
+* introduce `memory_index`: u32 on 32-bit systems, u64 on 64-bit systems (size_t)
+* Try it
+
+"Is not a valid Win32 Application" - happens often when people try to distribute their code nowadays
+Requires redistributables
+Potential solution: have a virtual machine with absolutely virgin operating system to test and see what are you missing. 
+
+## CRT Library
+
+CRT Library, the stuff that Microsoft implemented as a part of compiler package is done by default by using an external DLL. It assumes the OS will supply the necessary building blocks necessary to run the thing. Problem is that by now there're hundreds of versions of this CRT. So often the system doesn't have the right version of the C Runtime Library. 
+
+[depends][] allows to see what the executable relies on so you don't need to necessarily test.
+
+## Linker Options
+We need to start passing things to the linker. 
+
+/link: allows you to start passing linker options (after this keyword). 
+[-subsystem] :windows/console... but really if you want maximum compatibility you need to pass windows,5,1.
+
+[-Fm][] - a location to the map file. Tells the linker to produce a map file containing a list of segments in the order in which they appear in the corresponding .exe file or DLL. It's an extra file, the map to all the functions in the executable. `-Fmwin32_handmade.map` Why do we care? There're tons of functions in the executable, and we can see what module is responsible for outputting which function, and where in the file.
+
+You'll notice there's a lot of _name mangling_ going on (more about it in subsection [Name Mangling]). You can also see the import libraries marked `__imp__` prefix. All the stuff that was stuck in there that you don't even necessarily need. 
+
+[-opt][] Optimizations flag. We pass `-opt:ref` to eliminate functions and data that are never referenced. This reduces size of the executable but there's still a lot of stuff used by the CRT that's stuck in there. 
 
 ------------------------
 <!-- 
@@ -42,7 +123,11 @@ _Video Length (including Q&A): [1h41](https://hero.handmade.network/episode/code
 
 # Programming Notions 
 
-# Side Considerations 
+## Name Mangling
+
+Some functions look absolutely crazy in map files. It's a C++ thing. 
+
+C used to have sane names. But C++ introduced _overloaded functions_ (see [day 13][]). Because C++ was initially built on top of C, and the functions that had the same names couldn't be duplicated in C, the compiler would silently add the function parameters (`FOO@@INT@@INT`). Furthermore, some random characters were added to render the name completely unique.
 
 # Navigation 
 

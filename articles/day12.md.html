@@ -80,7 +80,7 @@ for (DWORD SampleIndex = 0;
 
 We can easily take this code and port it over to become cross-platform. Here's how we're going to approach it:
 
-1. We'll define function `GameSoundOutput` inside `handmade.cpp`. As we said, it will take a `SoundBuffer`, which for now we can define to be some `game_sound_output_buffer *` and an `int SampleCountToOutput`. Inside, we'll paste the code above.
+1. We'll define function `GameSoundOutput` inside `handmade.cpp`. As we said, it will take a `SoundBuffer`, which for now we can define to be some `game_sound_output_buffer *` and an `int SampleCountToOutput`. Inside, we'll paste the code above. Don't eliminate the code from `win32_handmade.cpp`! We'll return to it in a minute.
 
 ~~~~~~~ C++ add
 internal void
@@ -264,7 +264,7 @@ GameUpdateAndRender(game_offscreen_buffer* Buffer, int XOffset, int YOffset)
     RenderWeirdGradient(Buffer, XOffset, YOffset);
 }
 ~~~~~~~
-[Listing [x]: <file>[handmade.h]</file> Simplifying the API.]
+[Listing [x]: <file>[handmade.cpp]</file> Simplifying the API.]
 
 We can update our `GameUpdateAndRender` call to actually receive the sound output buffer from the system. We need to make changes in `handmade.h` and `handmade.cpp`; we'll get to the platform code in a second. 
 
@@ -285,6 +285,11 @@ internal void GameUpdateAndRender(game_offscreen_buffer* Buffer, int XOffset, in
                                   game_sound_output_buffer *SoundBuffer);
 ~~~~~~~
 [Listing [x]: <file>[handmade.h]</file> Receiving `SoundBuffer` from the platform.]
+
+!!! Function _definition_ vs. function _declaration_
+    You can _declare_ a function with a specific signature as many times and wherever in your code as you wish. But you only can _define_ (give a body) to a specific function once.
+
+    Syntactically, function _definition_ has the body (in curly braces `{}` with no semicolon) while the function declaration is immediately followed by semicolon `;`, as you can see above.
 
 Our next error is the missing `sinf` function, let's simply reorder the headers around:
 
@@ -775,7 +780,7 @@ if (SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCurso
 
 Why allocate on stack, as opposed to the heap? As with anything, there're several advantages and disadvantages to it. 
 
-It's advantages are: 
+Its advantages are: 
 * It's faster. Reserving a new page of virtual memory takes time since it's a kernel call; stack allocation are, for all intents and purposes, immediate.
 * You don't need to think about freeing the memory. Once you go out of the scope of the function allocating the memory, the stack is popped back automatically, and the memory is freed. (Not the local scope, mind you! You can't run `alloca` inside a loop indefinitely!)
 

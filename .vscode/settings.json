@@ -6,6 +6,7 @@
         "DPAD",
         "DSBPLAY",
         "DWORD",
+        "Fmwin",
         "HINSTANCE",
         "HREDRAW",
         "HRESULT",
@@ -20,6 +21,7 @@
         "SETCURSOR",
         "USEDEFAULT",
         "VREDRAW",
+        "Vcvarsall",
         "WINAPI",
         "WNDCLASS",
         "XUSER",
@@ -30,7 +32,9 @@
         "lpfn",
         "lpsz",
         "memset",
+        "nologo",
         "platformness",
+        "redistributables",
         "stdint"
     ]
 }
