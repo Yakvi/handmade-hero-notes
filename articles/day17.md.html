@@ -2,9 +2,326 @@
 <link rel="stylesheet" href="../css/style.css" />
 
 **Day 17. ** 
-_Video Length (including Q&A): [XhXX](https://hero.handmade.network/episode/code/day017/)_ 
+_Video Length (including Q&A): [1h41](https://hero.handmade.network/episode/code/day017/)_ 
 
 (insert intro.md.html here) 
+
+The way Windows forces us to do callbacks, we have _no context_. So we should either use a global variable or some local storage on the window. It's complex, and ideally we'd love to parse the messages directly in our `GlobalRunning` loop. Could we go ahead and do it there? 
+
+Let's try it. These messages are dispatched in the loop, so we can "peek" into them and see what they are. If they're what we want, we translate them right there. We can leave an assertion that would fire if we ever catch messages we assume to treat in the `GlobalRunning` queue.
+
+1. Convert existing message handling in a `switch` statement, as we've done in the callback: 
+
+~~~~~~~ C++
+MSG Message;
+while (PeekMessageA(&Message, 0, 0, 0, PM_REMOVE))
+{
+    switch(Message.message)
+    {
+        case WM_QUIT:
+        {
+        GlobalRunning = false;
+        } break;
+        
+        default:
+        {
+            TranslateMessage(&Message);
+            DispatchMessage(&Message);
+        } break;
+    }
+}
+~~~~~~~
+
+2. Export it to an external function. 
+Windows is free to call us back when it wants to, however keyboard messages don't seem to be dispatched like that. This means that we can process them in our main loop, without bothering to go through the callback. 
+
+~~~~~~~ C++
+internal void 
+Win32ProcessPendingMessages()
+{
+    MSG Message;
+    while (PeekMessageA(&Message, 0, 0, 0, PM_REMOVE))
+    {
+        switch(Message.message)
+        {
+            case WM_QUIT:
+            {
+            GlobalRunning = false;
+            } break;
+            
+            default:
+            {
+                TranslateMessage(&Message);
+                DispatchMessage(&Message);
+            } break;
+        }
+    }
+}
+
+// ... 
+
+while(GlobalRunning)
+{
+    Win32ProcessPendingMessages();
+}
+~~~~~~~
+
+3. Bring over our key handling system. `WParam` and `LParam` should now be read from the message! 
+
+~~~~~~~ C++
+switch(Message.message)
+{
+    case WM_QUIT:
+    {
+        GlobalRunning = false;
+    } break;
+~~~~~~~ C++ add
+    case WM_SYSKEYDOWN:
+    case WM_SYSKEYUP:
+    case WM_KEYDOWN:
+    case WM_KEYUP:
+    {
+        u32 VKCode = (u32)Message.wParam;
+        bool IsDown = ((Message.lParam & (1 << 31)) == 0);
+        bool WasDown = ((Message.lParam & (1 << 30)) != 0);
+        
+        if(IsDown != WasDown)
+        {
+            if (VKCode == 'W')
+            {
+            }
+            else if (VKCode == 'A')
+            {
+            }
+            else if (VKCode == 'S')
+            {
+            }
+            else if (VKCode == 'D')
+            {
+            }
+            else if (VKCode == 'Q')
+            {
+            }
+            else if (VKCode == 'E')
+            {
+            }
+            else if (VKCode == VK_UP)
+            {
+            }
+            else if (VKCode == VK_DOWN)
+            {
+            }
+            else if (VKCode == VK_LEFT)
+            {
+            }
+            else if (VKCode == VK_RIGHT)
+            {
+            }
+            else if (VKCode == VK_ESCAPE)
+            {
+                OutputDebugStringA("ESCAPE: ");
+                if (IsDown)
+                {
+                    OutputDebugStringA("IsDown ");
+                }
+                if (WasDown)
+                {
+                    OutputDebugStringA("WasDown");
+                }
+                OutputDebugStringA("\n");
+            }
+            else if (VKCode == VK_SPACE)
+            {
+            }
+            
+            b32 AltKeyWasDown = ((Message.lParam & (1 << 29)) != 0);
+            if((VKCode == VK_F4) && AltKeyWasDown)
+            {
+                GlobalRunning = false;
+            }
+        }
+    } break;
+~~~~~~~ C++
+}
+~~~~~~~ 
+
+4. Clear `Win32MainWindowCallback` and leave an error for us if we ever hit that.
+
+~~~~~~~ C++
+case WM_ACTIVATEAPP:
+{
+    OutputDebugStringA("WM_ACTIVATEAPP\n");
+} break;
+
+case WM_SYSKEYDOWN:
+case WM_SYSKEYUP:
+case WM_KEYDOWN:
+case WM_KEYUP:
+{
+~~~~~~~ C++ add
+    Assert(!"Keyboard input came in through a non-dispatch message!!!");
+~~~~~~~ C++ delete
+    bool IsDown = ((LParam & (1 << 31)) == 0);
+    bool WasDown = ((LParam & (1 << 30)) != 0);
+    u32 VKCode = (u32)WParam;
+    
+    if(IsDown != WasDown)
+    {
+        if (VKCode == 'W')
+        {
+        }
+        else if (VKCode == 'A')
+        {
+        }
+        else if (VKCode == 'S')
+        {
+        }
+        else if (VKCode == 'D')
+        {
+        }
+        else if (VKCode == 'Q')
+        {
+        }
+        else if (VKCode == 'E')
+        {
+        }
+        else if (VKCode == VK_UP)
+        {
+        }
+        else if (VKCode == VK_DOWN)
+        {
+        }
+        else if (VKCode == VK_LEFT)
+        {
+        }
+        else if (VKCode == VK_RIGHT)
+        {
+        }
+        else if (VKCode == VK_ESCAPE)
+        {
+            OutputDebugStringA("ESCAPE: ");
+            if (IsDown)
+            {
+                OutputDebugStringA("IsDown ");
+            }
+            if (WasDown)
+            {
+                OutputDebugStringA("WasDown");
+            }
+            OutputDebugStringA("\n");
+        }
+        else if (VKCode == VK_SPACE)
+        {
+        }
+        
+        b32 AltKeyWasDown = ((LParam & (1 << 29)) != 0);
+        if((VKCode == VK_F4) && AltKeyWasDown)
+        {
+            GlobalRunning = false;
+        }
+    }
+~~~~~~~ C++
+} break;
+~~~~~~~ 
+
+5. Assign some function to the buttons. Let's say `Escape` kills our game, while for the other buttons we'll mimic our gamepad handling. 
+
+~~~~~~~ C++
+if (VKCode == 'W')
+{
+}
+else if (VKCode == 'A')
+{
+}
+else if (VKCode == 'S')
+{
+}
+else if (VKCode == 'D')
+{
+}
+else if (VKCode == 'Q')
+{
+    Win32ProcessKeyboardMessages(&KeyboardController->LeftShoulder, IsDown);
+}
+else if (VKCode == 'E')
+{
+    Win32ProcessKeyboardMessages(&KeyboardController->RightShoulder, IsDown);
+}
+else if (VKCode == VK_UP)
+{
+    Win32ProcessKeyboardMessages(&KeyboardController->Up, IsDown);
+}
+else if (VKCode == VK_DOWN)
+{
+    Win32ProcessKeyboardMessages(&KeyboardController->Down, IsDown);
+}
+else if (VKCode == VK_LEFT)
+{
+    Win32ProcessKeyboardMessages(&KeyboardController->Left, IsDown);
+}
+else if (VKCode == VK_RIGHT)
+{
+    Win32ProcessKeyboardMessages(&KeyboardController->Right, IsDown);
+}
+else if (VKCode == VK_ESCAPE)
+{
+    GlobalRunning = false;
+}
+else if (VKCode == VK_SPACE)
+{
+}
+~~~~~~~ 
+
+6. Implement `Win32ProcessKeyboardMessage`. Mostly copy and simplify `Win32ProcessXInputDigitalButton`.
+
+~~~~~~~ C++
+internal void
+Win32ProcessXInputDigitalButton(DWORD XInputButtonState,
+                                game_button_state *OldState, DWORD ButtonBit,
+                                game_button_state *NewState)
+{
+    NewState->EndedDown = ((XInputButtonState & ButtonBit) == ButtonBit);
+    NewState->HalfTransitionCount = (OldState->EndedDown != NewState->EndedDown) ? 1 : 0;
+}
+
+~~~~~~~ C++ add
+internal void
+Win32ProcessKeyboardMessages(game_button_state *NewState, b32 IsDown)
+{
+    NewState->EndedDown = IsDown;
+    ++NewState->HalfTransitionCount;
+}
+~~~~~~~ 
+
+7. Add `KeyboardController` and clear it to zero. 
+
+~~~~~~~ C++
+internal void
+~~~~~~~ C++ edit
+Win32ProcessPendingMessages(game_controller_input *KeyboardController)
+~~~~~~~ C++
+{
+    //... 
+}
+
+while (GlobalRunning)
+{
+    game_controller_input *KeyboardController = &NewInput->Controllers[0];
+    // TODO(casey): Zeroing macro
+    game_controller_input ZeroController = {};
+    *KeyboardController = ZeroController;
+
+    Win32ProcessPendingMessages(KeyboardController);
+    // ...
+}
+~~~~~~~ 
+
+Compile and run. Problem: we can't zero out everything because the up/down state will be wrong. You need to repeatedly hit the button if you want the game to react to it. We want to be able to hold down a key. This might need requiring more changes.
+
+# Day 17
+
+
+
 
 ------------------------
 <!-- 
@@ -40,6 +357,20 @@ _Video Length (including Q&A): [XhXX](https://hero.handmade.network/episode/code
 # Exercises 
 
 # Programming Notions 
+
+## Intro to Functional Programming
+
+When programming, there're two prevalent _programming paradigms_ and therefore ways of treating functions. 
+
+In the _object-oriented_ programming, coding revolves around the idea of "objects". They are _constructed_ (mostly out of a series of structs), operate and are destroyed as if they were actual entities. 
+
+In such a context, functions are used almost exclusively as "methods", i.e. related to very specific usage in service of those structs. They usually only take a reference to the object they report to, maybe a few more parameters to affect it with, but what happens inside is invisible to you. State of something may change. Memory may be overwritten. You don't know what's going on. 
+
+As an example we have seen, think about DirectSound. You don't even see the functions you need to call: these are passed to you as pointers inside the DirectSound structs (a recurring theme in Object-Oriented Programming in and of itself). 
+
+On the other hand, think about a function which doesn't have any side effects or internal repercussions. Think about a sine function: you ask it a sine of a given number, it returns the sine of that number. This value will never change if the input never changes, no matter what. A programming paradigm which is constructed on such functions is called _functional programming_. 
+
+Where possible, we will be trying to employ functional programming throughout this course. While we will still have our _game state_ which will be most likely altered in some way, it's a good ideal to thrive towards, as the limited hidden functionality (if any at all) will prevent you many a headache later down the line. 
 
 # Side Considerations 
 
