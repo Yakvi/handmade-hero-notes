@@ -1,7 +1,7 @@
 <meta charset="utf-8" />
 <link rel="stylesheet" href="../css/style.css" />
 
-**Day 17. ** 
+**Day 17. Unified Keyboard and Gamepad Input** 
 _Video Length (including Q&A): [1h41](https://hero.handmade.network/episode/code/day017/)_ 
 
 (insert intro.md.html here) 
@@ -527,7 +527,54 @@ Win32ProcessXInputStickValue(SHORT Value, SHORT DeadZoneThreshold)
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Pulling out stick processing code.]
 
+At this point we can even make the code better! Looking at it this way we can see that we really should only transform the span from the dead zone end, and not from 0. This way our game will actually see values from zero to whichever point our deadzone is, just remapped in the usable area.
+
+********************************
+*              |        dead   *
+*              |   .--- zone   *
+*              |  |            *
+*              |  v            *
+*          .---+---.           *
+*          |   |   |           *
+*   -------+---+---+--------   *
+*          |   |   |           *
+*          '---+---'           *
+*              |               *
+*              |   0 - - - 1   *
+*              |    usable     *
+*              |    values     *
+*              |               *
+*                              *
+*              0 - - - - - 1   *
+*              actual values   *
+*       (game never sees values*
+*            in the dead zone) *
+********************************
+[Figure [x]: Different ways of mapping the positive X axis.]
+
+~~~~~~~ C++ add
+internal f32
+Win32ProcessXInputStickValue(SHORT Value, SHORT DeadZoneThreshold)
+{
+    f32 Result = 0;
+    
+    if(Value < -DeadZoneThreshold)
+    {
+        Result = (f32)((Value + DeadZoneThreshold) / (32768.0f - DeadZoneThreshold));
+    }
+    else if(Value > DeadZoneThreshold)
+    {
+        Result = (f32)((Value - DeadZoneThreshold) / (32767.0f - DeadZoneThreshold));
+    }
+    
+    return (Result);
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Improving dead zone processing.]
+
 If you compile and test now, you should find no differences from where we started, except now our code is more solid.
+
+
 
 ## Optimize Stick Value Capture
 
@@ -625,6 +672,38 @@ struct game_controller_input
 ~~~~~~~
 [Listing [x]: <file>[handmade.h]</file> Modifying `game_controller_input` structure.]
 
+!!! Note Securing yourself against modifying Buttons length
+    If want to make sure you won't forget to update `Buttons` length when adding or removing new buttons, you can add the following assertion at the beginning of the `GameUpdateAndRender`: 
+
+    ~~~~~~~ C++ add
+    Assert((&Input->Controllers[0].Start - &Input->Controllers[0].Buttons[0]) == 
+            (ArrayCount(Input->Controllers[0].Buttons) - 1));
+    ~~~~~~~
+
+    We take the very last button available in the anonymous struct, subtract its address from the first one and we should receive the same value as the array count of the `Buttons` array - 1. 
+    
+    You could fool-proof this even further by adding a fake `Terminator` button at the very end of it and comparing against that. Then you don't even need to subtract 1 (or increase button size).
+
+    ~~~~~~~ C++
+    // handmade.h > game_controller_input
+    game_button_state Buttons[12]; // don't need to increase button array size!
+    struct
+    {
+        game_button_state MoveUp;
+        //...
+        game_button_state Back;
+        game_button_state Start;
+    ~~~~~~~ C++ add
+        // NOTE(casey): All buttons should be added above this line
+
+        game_button_state Terminator;
+    ~~~~~~~ C++
+    };
+    // handmade.cpp > GameUpdateAndRender
+    Assert((&Input->Controllers[0].Terminator - &Input->Controllers[0].Buttons[0]) == 
+            (ArrayCount(Input->Controllers[0].Buttons)));
+    ~~~~~~~
+
 We can also update the change in `handmade.cpp` right away: 
 
 ~~~~~~~ C++
@@ -689,16 +768,15 @@ Win32ProcessXInputDigitalButton(Pad->wButtons,
 
 As for the stick and Move values, we have our stick that gives us real numbers from `-1.0f` (left/down) to `1.0f` (right/up). We can say that if the stick position (after we've updated the dead zone) is above some random threshold, this button is considered pressed. Let's set the threshold to `0.5f` for now, and will be able to fine-tune it later. We'll then take this value and pack it inside our button handling code.
 
+We also want to define `IsAnalog` only when the stick actually moves.
+
 ~~~~~~~ C++ delete
 bool Up            = Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP;
 bool Down          = Pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN;
 bool Left          = Pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT;
 bool Right         = Pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT;
 
-~~~~~~~ C++
 NewController->IsAnalog = true;
-
-~~~~~~~ C++ delete
 NewController->StartX = OldController->EndX;
 NewController->StartY = OldController->EndY;
 
@@ -717,6 +795,12 @@ NewController->StickAverageY = Win32ProcessXInputStickValue (
 NewController->MinY = NewController->MaxY = NewController->EndY = Y;
 
 ~~~~~~~ C++ add
+if ((NewController->StickAverageX != 0.0f) ||
+    (NewController->StickAverageY != 0.0f))
+{
+    NewController->IsAnalog = true;
+}
+
 f32 Threshold = 0.5f;
 Win32ProcessXInputDigitalButton((NewController->StickAverageX > Threshold) ? 1 : 0,
                                 &OldController->MoveRight, 1,
@@ -735,30 +819,35 @@ Win32ProcessXInputDigitalButton((NewController->StickAverageY < -Threshold) ? 1 
 
 ## Hook up the Real DPad
 
-Last, we have a DPad which gives you flat `on/off` value as any other button does. Usually user uses either one or the other, so we can simply overwrite whatever values DPad had and give it to the stick, before we throw it into the fake DPad code we've added.
+Last, we have a DPad which gives you flat `on/off` value as any other button does. Usually user uses either one or the other, so we can simply overwrite whatever values DPad had and give it to the stick, before we throw it into the fake DPad code we've added. Moreover, at that point we also want to signal to our game that the input is no longer analog.
 
 ~~~~~~~ C++ 
-NewController->StickAverageX = Win32ProcessXInputStickValue
-    (Pad->sThumbLX,XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
-NewController->StickAverageY = Win32ProcessXInputStickValue
-    (Pad->sThumbLY,XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+if ((NewController->StickAverageX != 0.0f) ||
+    (NewController->StickAverageY != 0.0f))
+{
+    NewController->IsAnalog = true;
+}
 
 ~~~~~~~ C++ add
 if (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP)
 {
     NewController->StickAverageY = 1.0f;
+    NewController->IsAnalog = false;
 }
 if (Pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN)
 {
     NewController->StickAverageY = -1.0f;
+    NewController->IsAnalog = false;
 }
 if (Pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT)
 {
     NewController->StickAverageX = -1.0f;
+    NewController->IsAnalog = false;
 }
 if (Pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT)
 {
     NewController->StickAverageX = 1.0f;
+    NewController->IsAnalog = false;
 }
 ~~~~~~~ C++
 
@@ -839,9 +928,23 @@ else if (VKCode == VK_RIGHT)
     Win32ProcessKeyboardMessages(&KeyboardController->Action, IsDown);
 ~~~~~~~ C++
 }
-// ... 
+else if (VKCode == VK_ESCAPE)
+{
+    GlobalRunning = false;
+}
+else if (VKCode == VK_SPACE)
+{
+~~~~~~~ C++ edit
+    Win32ProcessKeyboardMessages(&KeyboardController->Start, IsDown);
+~~~~~~~ C++
+}
+~~~~~~~ C++ add
+else if (VKCode == VK_BACK)
+{
+    Win32ProcessKeyboardMessages(&KeyboardController->Back, IsDown);
+}
 ~~~~~~~ 
-[Listing [x]: <file>[win32_handmade.cpp > Win32ProcessPendingMessages]</file> Adding movement buttons.]
+[Listing [x]: <file>[win32_handmade.cpp > Win32ProcessPendingMessages]</file> Adding more keyboard buttons.]
 
 While we're at it, let's add some non-analog code to test out if it works: 
 
@@ -1000,16 +1103,16 @@ game_controller_input ZeroController = {};
 *KeyboardController = ZeroController;
 ~~~~~~~
 
-In our gamepad code, we were swapping and `OldInput` and `NewInput`. We can use the same structures here, as well. Simply copying over the `EndedDown` value will suffice: 
+In our gamepad code, we were swapping and `OldInput` and `NewInput`. We can use the same structures here, as well. Simply copying over the `EndedDown` value will suffice. While we're at it, we can also get rid of the `ZeroController` and reinitialize the controller directly. It's a newer C++ feature but it should be pretty simply and straightforward in usage to prevent us any issues.
 
 ~~~~~~~ C++ edit
 game_controller_input *OldKeyboardController = &OldInput->Controllers[0];
 ~~~~~~~ C++ add
 game_controller_input *NewKeyboardController = &NewInput->Controllers[0];
-~~~~~~~ C++
+~~~~~~~ C++ delete
 game_controller_input ZeroController = {};
 ~~~~~~~ C++ edit
-*NewKeyboardController = ZeroController;
+*NewKeyboardController = {};
 ~~~~~~~ C++ add
 for (int ButtonIndex = 0;
         ButtonIndex < ArrayCount(OldKeyboardController->Buttons);
@@ -1025,7 +1128,7 @@ Win32ProcessPendingMessages(NewKeyboardController);
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Bringing over `EndedDown`.]
 
-Hopefully you can see what's going on here. We still do the full clear of the new state (using `ZeroController`) but also preserve the pointer to the previous state and then copy the pieces we're interested in.
+Hopefully you can see what's going on here. We still do the full clear of the new state but also preserve the pointer to the previous state and then copy the pieces we're interested in.
 
 Now, when we come in to `Win32ProcessPendingMessages`, we will already have a structure with the previous state preserved. We also want to add an assertion to `Win32ProcessKeyboardMessages` to make sure that the two states are different.
 
@@ -1070,8 +1173,7 @@ For now, our keyboard will be always connected:
 ~~~~~~~ C++
 game_controller_input *OldKeyboardController = &OldInput->Controllers[0];
 game_controller_input *NewKeyboardController = &NewInput->Controllers[0];
-game_controller_input ZeroController = {};
-*NewKeyboardController = ZeroController;
+*NewKeyboardController = {};
 ~~~~~~~ C++ add
 NewKeyboardController->IsConnected = true;
 ~~~~~~~ C++
@@ -1155,7 +1257,7 @@ for (int ControllerIndex = 0;
 game_controller_input *OldKeyboardController = GetController(OldInput, 0);
 game_controller_input *NewKeyboardController = GetController(NewInput, 0);
 ~~~~~~~ C++
-game_controller_input ZeroController = {};
+*NewKeyboardController = {};
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file>]
 
@@ -1170,11 +1272,26 @@ game_controller_input *NewController = GetController(NewInput, OurControllerInde
 !!! Tip
     You can temporarily rename `Controllers` in the `game_input` structure to quickly find the places where this array is used.
 
-Ok, we've set up our traps, now let's go bug hunting. Compile, run the game and... you'll crash right away, and at the assertion we've just set up no less! If you click up on the `Call Stack`, you'll notice that the error happened when we tried to set `OldController` but we went _out of (array's) bounds_. If you think about what we did in the last few sections, the error should become immediately apparent to you: we've added 1 in the wrong place.
+Ok, we've set up our traps, now let's go bug hunting. Compile, run the game and... you'll crash right away, and at the assertion we've just set up no less! If you click up on the `Call Stack`, you'll notice that the error happened when we tried to set `OldController` but we went _out of (array's) bounds_. If you think about what we did in the last few sections, the error should become immediately apparent to you: we've added 1 to the wrong place.
 
+When we were designing our controller system, we introduced a `MaxControllerCount` to make sure that we never go outside our borders. However, in the subsection [Add a Fifth Controller (the Keyboard)], when we added the keyboard controller we also bumped this maximum count by one. Once we go inside the loop, we start accessing Controllers n+1, i.e. 1, 2, 3, 4, 5. (instead of 0, 1, 2, 3). What we really intended is this: 
+
+~~~~~~~ C++ edit
+DWORD MaxControllerCount = XUSER_MAX_COUNT;
+if(MaxControllerCount > (ArrayCount(NewInput->Controllers) - 1))
+~~~~~~~ C++
+{
+~~~~~~~ C++ edit
+    MaxControllerCount = (ArrayCount(NewInput->Controllers) - 1);
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Fixing Buffer overflow bug.]
 
 
 # Recap 
+
+Today we went through a lot of refactoring but we can finally say that our input system is solid enough to move on. We will of course return to it once we need more features but for now it will suffice. We can move on to new and exciting things next time.
 
 # Programming Notions 
 
