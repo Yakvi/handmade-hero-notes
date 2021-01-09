@@ -6,22 +6,49 @@ _Video Length (including Q&A): [1h41](https://hero.handmade.network/episode/code
 
 (insert intro.md.html here) 
 
-The way Windows forces us to do callbacks, we have _no context_. So we should either use a global variable or some local storage on the window. It's complex, and ideally we'd love to parse the messages directly in our `GlobalRunning` loop. Could we go ahead and do it there? 
+We were putting away the work on finalizing the input system for long enough. It's not like we don't have anything to do in our program, not at all. But time has come to tighten the screws on the keyboard and gamepad input and finalize it for our cross-platform layer. It's not going to be difficult, just a bit laborious.
 
-Let's try it. These messages are dispatched in the loop, so we can "peek" into them and see what they are. If they're what we want, we translate them right there. We can leave an assertion that would fire if we ever catch messages we assume to treat in the `GlobalRunning` queue.
+# Implement Keyboard Input Inside WinMain
 
-1. Convert existing message handling in a `switch` statement, as we've done in the callback: 
+If you remember, up until now there was a significant difference between the gamepad input and the keyboard input: keyboard wasn't processed inside WinMain. We had to use the callback function `Win32MainWindowCallback`, a function completely separated from the rest of our program. 
+
+## Window Class, Messages and Callback
+
+Let's have a quick refresher on "why" we have this problem, so that we can find a solution to it. 
+
+In order to create a window in Windows, a program must register the so-called "Window Class". You might remember the structure `WNDCLASSA` that we filled out for that purpose.
+
+Yes, but why? 
+
+Once we register the window class, Windows will start sending it related messages. These are all sorts of things including, you guessed it, keyboard. Some of these we intercept (inside our `PeekMessage` loop), "translate" and send to back to Windows. 
+
+However, the operating system wants to reserve itself the right to call each window process at its own accord. It might happen, for example, that the program's window becomes covered by another window. In that case Windows would need to redraw that area without really alerting the program which might not even be "active" at that moment. 
+
+Here is where the callback function comes into play. With it, Windows "calls us back", including the message type, related window handle (because a process might have many windows) and a couple parameters that each message fills out as it requires.
+
+This is all nice and good, but it leaves us with the problem. The way Windows forces us to do callbacks, we have _no context_, it all remains inside `WinMain`... So we should either use a global variable or do some tricks like using local storage on the window. The latter is actually a thing, Windows allows to store some information related to the window handle (which we get inside the loop). But it's complex, so we'll need to find another way before going for that one. 
+
+## Move out Keyboard Messages
+
+Windows is free to call us back when it wants to, however keyboard messages don't seem to be dispatched like that. This means that we can process them in our main loop, without bothering to go through the callback. 
+
+Let's try it. These messages are dispatched in the loop, so we can "peek" into them and see what they are. If they're what we want, we translate them right there. And inside `Win32MainWindowCallback` we can leave an assertion that would fire if we ever catch messages we shouldn't.
+
+__Step 1. Set the stage.__ Inside the `WinMain`, we will convert existing message handling to a `switch` statement, so that it'll have the same structure as in the `Win32MainWindowsCallback`. The `MSG Message` contains a member called `message` which is effectively the same thing you will receive in the callback, so we'll iterate over it. The `default` case (that is, unless we capture and process the message) will still be translating and dispatching it. The resulting refactoring should be compilable and work the same.
 
 ~~~~~~~ C++
 MSG Message;
 while (PeekMessageA(&Message, 0, 0, 0, PM_REMOVE))
 {
+~~~~~~~ C++ edit
     switch(Message.message)
     {
         case WM_QUIT:
         {
-        GlobalRunning = false;
+            GlobalRunning = false;
         } break;
+
+        // More messages will go here
         
         default:
         {
@@ -29,11 +56,13 @@ while (PeekMessageA(&Message, 0, 0, 0, PM_REMOVE))
             DispatchMessage(&Message);
         } break;
     }
+~~~~~~~ C++
 }
 ~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Converting `if` block to a `switch`.]
 
-2. Export it to an external function. 
-Windows is free to call us back when it wants to, however keyboard messages don't seem to be dispatched like that. This means that we can process them in our main loop, without bothering to go through the callback. 
+
+__Step 2. Pull out this block to an external function, for ease of readability, and call it from the same spot.__ Again, no change to the code.
 
 ~~~~~~~ C++
 internal void 
@@ -46,7 +75,7 @@ Win32ProcessPendingMessages()
         {
             case WM_QUIT:
             {
-            GlobalRunning = false;
+                GlobalRunning = false;
             } break;
             
             default:
@@ -58,15 +87,19 @@ Win32ProcessPendingMessages()
     }
 }
 
-// ... 
+// ...
+// WinMain 
+// ...
 
 while(GlobalRunning)
 {
     Win32ProcessPendingMessages();
 }
 ~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Exporting the message loop outside of `WinMain`.]
 
-3. Bring over our key handling system. `WParam` and `LParam` should now be read from the message! 
+
+__Step 3. Copy the key handling system.__ You'll notice that you're not compilable if you copy the code as is, because you don't have `LParam` and `WParam` any more. Luckily, these are also provided inside `MSG` structure. 
 
 ~~~~~~~ C++
 switch(Message.message)
@@ -144,8 +177,9 @@ switch(Message.message)
 ~~~~~~~ C++
 }
 ~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > Win32ProcessPendingMessages]</file> Adding the key handling from `Win32MainWindowCallback`.]
 
-4. Clear `Win32MainWindowCallback` and leave an error for us if we ever hit that.
+__Step 4. Remove key handling from `Win32MainWindowCallback`.__ Instead we'll leave an assertion which will fire should Windows send us this type of message (which it shouldn't but we'll investigate in case).__
 
 ~~~~~~~ C++
 case WM_ACTIVATEAPP:
@@ -223,8 +257,13 @@ case WM_KEYUP:
 ~~~~~~~ C++
 } break;
 ~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> Replacing key handling with an assertion.]
 
-5. Assign some function to the buttons. Let's say `Escape` kills our game, while for the other buttons we'll mimic our gamepad handling. 
+We're still compilable, and we still have effectively the same functionality as before. Except now we can actually send things to the `Win32ProcessPendingMessages` function directly! That's some great progress right there.
+
+## Keyboard Input Storage: First Pass
+
+To get things going, let's assign some function to the buttons. Let's say `Escape` kills our game, while for the other buttons we'll mimic our gamepad handling. `Win32ProcessPendingMessages` would receive a controller structure, not dissimilar from what we used for the gamepad. For this purpose we will use another function which we'll call `Win32ProcessKeyboardMessages`. This would do the work of storing the input. 
 
 ~~~~~~~ C++
 if (VKCode == 'W')
@@ -241,38 +280,92 @@ else if (VKCode == 'D')
 }
 else if (VKCode == 'Q')
 {
+~~~~~~~ C++ add
     Win32ProcessKeyboardMessages(&KeyboardController->LeftShoulder, IsDown);
+~~~~~~~ C++
 }
 else if (VKCode == 'E')
 {
+~~~~~~~ C++ add
     Win32ProcessKeyboardMessages(&KeyboardController->RightShoulder, IsDown);
+~~~~~~~ C++
 }
 else if (VKCode == VK_UP)
 {
+~~~~~~~ C++ add
     Win32ProcessKeyboardMessages(&KeyboardController->Up, IsDown);
+~~~~~~~ C++
 }
 else if (VKCode == VK_DOWN)
 {
+~~~~~~~ C++ add
     Win32ProcessKeyboardMessages(&KeyboardController->Down, IsDown);
+~~~~~~~ C++
 }
 else if (VKCode == VK_LEFT)
 {
+~~~~~~~ C++ add
     Win32ProcessKeyboardMessages(&KeyboardController->Left, IsDown);
+~~~~~~~ C++
 }
 else if (VKCode == VK_RIGHT)
 {
+~~~~~~~ C++ add
     Win32ProcessKeyboardMessages(&KeyboardController->Right, IsDown);
+~~~~~~~ C++
 }
 else if (VKCode == VK_ESCAPE)
 {
+~~~~~~~ C++ delete
+    OutputDebugStringA("ESCAPE: ");
+    if (IsDown)
+    {
+        OutputDebugStringA("IsDown ");
+    }
+    if (WasDown)
+    {
+        OutputDebugStringA("WasDown");
+    }
+    OutputDebugStringA("\n");
+~~~~~~~ C++ add
     GlobalRunning = false;
+~~~~~~~ C++
+    
 }
 else if (VKCode == VK_SPACE)
 {
 }
 ~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > Win32ProcessPendingMessages]</file> Adding some functionality.]
 
-6. Implement `Win32ProcessKeyboardMessage`. Mostly copy and simplify `Win32ProcessXInputDigitalButton`.
+This of course presumes that we pass the function a `KeyboardController`. Let's do it right away. We need to change the signature of the function, as well as introduce a `KeyboardController` in `WinMain`, clear it to zero and pass to our program. 
+
+For now, we can use the controller 0 from our `NewInput`. In order to clear to zero however, we'll need to create a new variable of type `game_controller_input`, clear that to zero, and then use the contents of that structure to zero out the contents of the `KeyboardController`:
+
+~~~~~~~ C++
+internal void
+~~~~~~~ C++ edit
+Win32ProcessPendingMessages(game_controller_input *KeyboardController)
+~~~~~~~ C++
+{
+    //... 
+}
+
+while (GlobalRunning)
+{
+    game_controller_input *KeyboardController = &NewInput->Controllers[0];
+    game_controller_input ZeroController = {};
+    *KeyboardController = ZeroController;
+
+    Win32ProcessPendingMessages(KeyboardController);
+    // ...
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Assigning keyboard controller.]
+
+This is a bit wanky, so we'll need to revisit it pretty soon. 
+
+One last thing that's missing is the `Win32ProcessKeyboardMessages` we assumed above. Let's create one based on `Win32ProcessXInputDigitalButton`, except it will be largely simplified: we need to do but a fraction of the work that the latter function does.
 
 ~~~~~~~ C++
 internal void
@@ -292,34 +385,13 @@ Win32ProcessKeyboardMessages(game_button_state *NewState, b32 IsDown)
     ++NewState->HalfTransitionCount;
 }
 ~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Defining `Win32ProcessKeyboardMessages`.]
 
-7. Add `KeyboardController` and clear it to zero. 
+Finally we can compile and run. It... somewhat works. If you repeatedly press the down arrow you will notice offset changing. However, this is less than ideal: we can't zero out everything because the up/down state will be wrong. You need to repeatedly hit the button if you want the game to react to it. That's not how the games work, and we want to be able to hold down a key. This might need requiring more changes. Additionally, right now we're hacking into the existing controller system, and we want a more complete solution.
 
-~~~~~~~ C++
-internal void
-~~~~~~~ C++ edit
-Win32ProcessPendingMessages(game_controller_input *KeyboardController)
-~~~~~~~ C++
-{
-    //... 
-}
+# Add a Fifth Controller (the Keyboard)
 
-while (GlobalRunning)
-{
-    game_controller_input *KeyboardController = &NewInput->Controllers[0];
-    // TODO(casey): Zeroing macro
-    game_controller_input ZeroController = {};
-    *KeyboardController = ZeroController;
-
-    Win32ProcessPendingMessages(KeyboardController);
-    // ...
-}
-~~~~~~~ 
-
-Compile and run. Problem: we can't zero out everything because the up/down state will be wrong. You need to repeatedly hit the button if you want the game to react to it. We want to be able to hold down a key. This might need requiring more changes.
-
-# Day 17
-
+If you recall, we have defined `XUSER_MAX_COUNT` controllers that our game would eventually loop through and pick the active one. As of time of the writing, Windows defines `XUSER_MAX_COUNT` to be four. 
 
 
 
@@ -366,11 +438,13 @@ In the _object-oriented_ programming, coding revolves around the idea of "object
 
 In such a context, functions are used almost exclusively as "methods", i.e. related to very specific usage in service of those structs. They usually only take a reference to the object they report to, maybe a few more parameters to affect it with, but what happens inside is invisible to you. State of something may change. Memory may be overwritten. You don't know what's going on. 
 
+What this means is that you can overwrite something that's not visible to you. Calling the function with side effects changes the permanent data store in a program in a way that, say, if you call that function twice in a row or in different order, those calls would yield different results. 
+
 As an example we have seen, think about DirectSound. You don't even see the functions you need to call: these are passed to you as pointers inside the DirectSound structs (a recurring theme in Object-Oriented Programming in and of itself). 
 
 On the other hand, think about a function which doesn't have any side effects or internal repercussions. Think about a sine function: you ask it a sine of a given number, it returns the sine of that number. This value will never change if the input never changes, no matter what. A programming paradigm which is constructed on such functions is called _functional programming_. 
 
-Where possible, we will be trying to employ functional programming throughout this course. While we will still have our _game state_ which will be most likely altered in some way, it's a good ideal to thrive towards, as the limited hidden functionality (if any at all) will prevent you many a headache later down the line. 
+Where possible, we will be trying to employ functional programming throughout this course. While we will still have our _game state_ which will be most likely altered in some way, it's a good ideal to thrive towards, as the limited hidden functionality (if any at all) will prevent you many a headache later down the line. The understandability and the reliability of the program will increase if you use functional programming. It's not our objective to make our code purely functional but maintaining the focus on it is important. 
 
 # Side Considerations 
 
