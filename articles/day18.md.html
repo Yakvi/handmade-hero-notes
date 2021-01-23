@@ -53,7 +53,7 @@ We can even say that there's time before 0. Game starts running and does all the
 ***************************************************************
 [Figure [x]: Actual game lifetime.]
 
-Now, during frame 0 (and, of course, before that) the game will display _nothing_. If anything, we've just cleared our window to blackness while we're working on frame 1. This technically allows us to push our count of frames to start _after_ we start displaying something.... it's something we can decide at a later point. 
+During frame 0 (and, of course, before that) the game will display _nothing_. If anything, we've just cleared our window to blackness while we're working on frame 1. This technically allows us to push our count of frames to start _after_ we start displaying something.... it's something we can decide at a later point. 
 
 If we zoom in a bit, we can see that during frame 0, we compute game's audio and video, after which we request "frame flip". In an ideal world, during frame 1 we'll see and hear what we computed.
 
@@ -72,7 +72,9 @@ If we zoom in a bit, we can see that during frame 0, we compute game's audio and
 **************************************************
 [Figure [x]: First frames work and output.]
 
-Now, before the first image is displayed and the first sound is played, an arbitrarily long amount of time can pass. Maybe not that much to annoy the user, but as far as the user is concerned they won't see or hear any glitches: the game is just starting up. However, for frame 0 onwards we do care about how much time has passed. Each frame will have a limited, **fixed** duration of time to compute the next one. 
+Before the first image is displayed and the first sound is played, an arbitrarily long amount of time can pass. Maybe not that much to annoy the user, but as far as the user is concerned they won't see or hear any glitches: the game is just starting up. However, for frame 0 onwards we do care about how much time has passed. Each frame will have a limited, **fixed** duration of time to compute the next one. 
+
+## Hardware Concern
 
 We need the duration of the frame to be fixed for the game to operate properly. One of the reasons for it is in the hardware. Usually monitors operate at a fixed refresh rate: 60Hz, 90Hz, 144Hz, and so on. If our isn't fixed, or differs significantly from the monitor's, eventually we will miss a frame: 
 
@@ -100,6 +102,8 @@ We need the duration of the frame to be fixed for the game to operate properly. 
 
 In conclusion, we want our framerate and the monitor framerate to be the same, or a multiple of it. With the same frequency, every time the monitor displays a new frame, we have a new frame for it to show. On another hand, if our game runs at 60 frames per second, and the monitor's refresh rate is 120 frames per second, this is fine since all our frames will always be two monitor's frames long. 
 
+## Variable Framerate Monitors
+
 Of course, you might say: why not think about a variable refresh rate monitor, like the ones adopting Nvidia's G-Sync technology? These monitors display the next frame after the game/graphics card asks them to. After all, their adoption rate grows and eventually we'll all have one. Well, first, that time hasn't arrived yet. But the biggest issue is that if you don't have a fixed point of reference for your frame, your animation for that frame will be all over the place. 
 
 Think of a situation where one of your frames takes 30ms to draw, another 16ms, the next one 20, and so on. If the physics engine needs to update the state of the world, it should do it for a specific amount of time:
@@ -118,38 +122,469 @@ Think of a situation where one of your frames takes 30ms to draw, another 16ms, 
 
 In a variable framerate world, if used as is the game wouldn't know how much a specific frame would take. Thus, it has to guess in some way, with more or less accuracy, and the resulting image will always be in some shape distorted. This doesn't mean we wouldn't take advantage of such technology if we found ourselves in front of it: having variable framerate would allow us to pick a fixed framerate of our preference (for performance reasons or what have you).
 
-That has been a long introduction, so let's define what we want to achieve: 
+## Audio
 
-* 
+We also should consider audio. In an ideal world, we would write exactly the amount of audio for how long we expect our frame to last. However, this would create audio skips should the frame preparation take longer than expected. We have several options here:
+
+1. Always get the audio there on time. Our framerate is a hard constraint, and we've written our game to never miss its framerate. 
+2. Write two frames at a time (current and the next one). If we wake up and see that we hit our previous target, we simply overwrite the next frame's audio. 
+3. We can simply write audio a whole frame ahead (i.e. have one frame of lag). This means that, when our graphics system works on preparing frame 0, we'd write audio for frame 1, and so on.
+4. Have a separate thread check if we hit our target (a guard thread). If we didn't, it would emergency fill the audio buffer with the next frame of sound.
+
+There may be also other methods but these are the most common. So which one would you rather pick? A simpler method (and one which forces some discipline) is just going with option 1. Always hit your framerate. 
+
+It's a good mentality to force yourself into. This way you won't have any temptation to give yourself any slack and allow framerate drops. We set out target framerate to, say, 30Hz, and if we don't hit that, we optimize until we do. 
+
+In reality, there's not a right answer. It's a matter of priorities, and those priorities will lead you to make a certain decision or another. 
+
+## Conclusion
+
+That has been a long introduction, so let's define exactly what we want to achieve: 
+
+* A frame loop knows the framerate it wants to hit ("Target Milliseconds").
+* Target ms drives our physics update.
+* After we complete all our update and rendering tasks, we wait until we're as close to the frame flip boundary as we can. We then go to the next iteration of the loop. 
+* This system would even work if we pipeline the rendering (i.e. send it to the GPU). In this case there might be one frame of delay while the graphics card is waiting for the monitor refresh but it's still fine.
+* Audio-wise, always write audio for exactly the expected frame length.
+
+This doesn't seem too bad. Let's make it happen! Today we'll focus on the video part.
+
+# Implement Enforced Video Frame Rate
+
+## (Not) Get Monitor Framerate
+
+One last concern before we move on. If we want to match a specific refresh rate of a monitor, first we'll need to know what it is. Unfortunately, Win32 API doesn't provide a reliable information for the multi-monitor setup from the get-go, so you need to go and hunt for it. 
+
+Win32 API does provide functions such as [GetDeviceCaps][] or [EnumDisplaySettings][], however the value you can get might be 0 or 1, representing the default refresh rate. It won't help us. 
+
+!!! 
+    Technically, in that case you could try and call DirectX to get the default refresh rate, but we aren't exploring this possibility here. [Further reading][Hot to Get the Refresh Rate for a Window].
+
+    Additionally, [DWM API][] also provides some avenues to resolve this issue.
+
+Ultimately, this matter isn't something we want to spend a lot of time on. Nowadays you often ask the graphics card to match the monitor's refresh rate, and then just time how much time passes between the frame flips to use it for the rest of your program. In the past, you used to use [DirectDraw][] API. 
+
+For now... we'll skip this part altogether. We'll just assume a framerate of 60 and leave a big `TODO` for a later stage. 
+
+## Code Everything Down
+
+At the very beginning of our `WinMain`, let's introduce a `MonitorRefreshHz` value. We'll make it the standard 60.
+
+We will also introduce `GameUpdateHz` deriving from the `MonitorRefreshHz`. As we said above, our game refresh rate can be a fraction of the monitor's refresh rate and still synchronize properly, so let's say we're currently targeting half of that, i.e. 30 FPS.
+
+While we're at it, we can also quickly calculate a value showing how many seconds each frame would take. This will be the actual target value we'll be using for frame timing. To calculate that, we simply need to divide 1 (second) over our target frame rate (frames per second). This will give us seconds per frame.
+
+~~~~~~~ C++
+LARGE_INTEGER PerfCountFrequencyResult;
+QueryPerformanceFrequency(&PerfCountFrequencyResult);
+s64 PerfCountFrequency = PerfCountFrequencyResult.QuadPart;
+
+Win32LoadXInput();
+
+Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
+
+WNDCLASS WindowClass = {0};
+
+WindowClass.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC ;
+WindowClass.lpfnWndProc = Win32MainWindowCallback;
+WindowClass.hInstance = Instance;
+// WindowClass.hIcon;
+WindowClass.lpszClassName = "HandmadeHeroWindowClass";
+    
+~~~~~~~ C++ add
+// TODO(casey): How do we reliably query on this on Windows?
+int MonitorRefreshHz = 60;
+int GameUpdateHz = MonitorRefreshHz / 2;
+f32 TargetSecondsPerFrame = 1.0f / (f32)GameUpdateHz;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Introducing target framerate.]
+
+On the other side of `WinMain`, we were computing our debug frame timings. 
+
+~~~~~~~ C++
+LARGE_INTEGER EndCounter;
+QueryPerformanceCounter(&EndCounter);
+
+u64 EndCycleCount = __rdtsc();
+
+s64 CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
+s64 CyclesElapsed = EndCycleCount - LastCycleCount;
+f32 MSPerFrame = 1000.0f*(f32)CounterElapsed / (f32)PerfCountFrequency;
+f32 FPS = (f32)PerfCountFrequency / (f32)CounterElapsed;
+f32 MegaCyclesPerFrame = (f32)CyclesElapsed / (1000.0f * 1000.0f);
+
+#if 0
+char Buffer[256];
+sprintf(Buffer, "%.02fms/f, %.02ff/s, %.02fMc/f\n", MSPerFrame, FPS, MegaCyclesPerFrame);
+OutputDebugStringA(Buffer);
+#endif
+~~~~~~~
+
+We can use this information to compute how many seconds did it take to do all the work. What we basically want is `MSPerFrame`, except we don't need to multiply the result by 1000. 
+
+Let's also rearrange our timers to see more clearly what's going on. We want `__rdtsc` snapshot at the _very end_ of our `GlobalRunning` loop, after everything else was completed. As a reminder, `__rdtsc` is very processor-specific, so we'll only use this counter for debug purposes only. We aren't interested in that yet. 
+
+On the other hand, `QueryPerformanceCounter` is a more user-facing solution we'll be using for timing our frames. 
+
+We can also "disable" all the debug timing code for now, not only the output part. We aren't interested in it.
+
+~~~~~~~ C++ delete
+u64 EndCycleCount = __rdtsc();
+~~~~~~~ C++
+LARGE_INTEGER EndCounter;
+QueryPerformanceCounter(&EndCounter);
+~~~~~~~ C++ delete
+s64 CyclesElapsed = EndCycleCount - LastCycleCount;
+~~~~~~~ C++
+s64 CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
+~~~~~~~ C++ add
+f32 SecondsElapsedForWork = (f32)CounterElapsed / (f32)PerfCountFrequency;
+~~~~~~~ C++ add
+
+#if 0
+// debug timing output
+~~~~~~~ C++
+
+f32 MSPerFrame = 1000.0f * (f32)CounterElapsed / (f32)PerfCountFrequency;
+f32 FPS = (f32)PerfCountFrequency / (f32)CounterElapsed;
+f32 MegaCyclesPerFrame = (f32)CyclesElapsed / (1000.0f * 1000.0f);
+~~~~~~~ C++ delete
+#if 0
+~~~~~~~ C++
+char Buffer[256];
+sprintf(Buffer, "%.02fms/f, %.02ff/s, %.02fMc/f\n", MSPerFrame, FPS, MegaCyclesPerFrame);
+OutputDebugStringA(Buffer);
+#endif
 
 
+~~~~~~~ C++
+game_input *Temp = NewInput;
+NewInput = OldInput;
+OldInput = Temp;
 
 
+~~~~~~~ C++ add
+u64 EndCycleCount = __rdtsc();
+s64 CyclesElapsed = EndCycleCount - LastCycleCount;
+~~~~~~~ C++
+LastCycleCount = EndCycleCount;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Calculating seconds elapsed and cleaning up.]
+
+This value will be different from our target (hopefully smaller!). So now we have to wait until we're over our target. The simplest, CPU-melting, solution would be to simply sit in a while loop and keep asking "Are we there yet?" over and over and over.
+
+~~~~~~~ C++
+LARGE_INTEGER EndCounter;
+QueryPerformanceCounter(&EndCounter);
+s64 CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
+
+f32 SecondsElapsedForWork = (f32)CounterElapsed / (f32)PerfCountFrequency;
+~~~~~~~ C++ add
+f32 SecondsElapsedForFrame = SecondsElapsedForWork;
+while (SecondsElapsedForFrame < TargetSecondsPerFrame)
+{
+    QueryPerformanceCounter(&EndCounter);
+    CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
+    SecondsElapsedForFrame = (f32)CounterElapsed / (f32)PerfCountFrequency;
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Just keep asking.]
+
+This works, and if you compile it, you'll notice that the game is now mostly running as previously, except now it has some pretty significant audio issues. To start fixing those, first we need to clean up our end-of-frame clocking section.
+
+## Refactor Clocking Stats
+
+Our current clocking part is quite opaque, and reading and understanding it can be quite tough, even it was us who wrote this thing. To render it a bit more readable, we can pull out and compress some parts of it. 
+
+As a first step, we can pull out the result of the `QueryPerformanceFrequency` and have it available throughout the whole program, i.e. make it global. We can do it in the same manner as we did with the other globals: 
+
+~~~~~~~ C++
+global_variable bool GlobalRunning;
+global_variable win32_offscreen_buffer GlobalBackbuffer;
+global_variable IDirectSoundBuffer *GlobalSecondaryBuffer;
+~~~~~~~ C++ add
+global_variable s64 GlobalPerfCountFrequency;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Making `PerfCountFrequency` a global variable.]
+
+Next, we can start using this global variable! Let's create a couple utility functions to quickly get wall clock, as well as calculate how many seconds have elapsed:
+
+~~~~~~~ C++ add
+inline LARGE_INTEGER
+Win32GetWallClock()
+{
+    LARGE_INTEGER Result;
+    QueryPerformanceCounter(&Result);
+    return (Result);
+}
+
+inline f32
+Win32GetSecondsElapsed(LARGE_INTEGER Start, LARGE_INTEGER End)
+{
+    f32 Result = (f32)(End.QuadPart - Start.QuadPart) /
+                 (f32)GlobalPerfCountFrequency;
+    
+    return (Result);
+}
+~~~~~~~ C++
+int CALLBACK WinMain(...)
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Adding two utility functions for timing.]
+
+Finally, let's go through all the WinMain and make use of these functions to clarify what's going on:
+
+~~~~~~~ C++
+int CALLBACK WinMain(...)
+{
+~~~~~~~ C++
+    LARGE_INTEGER PerfCountFrequencyResult;
+    QueryPerformanceFrequency(&PerfCountFrequencyResult);
+~~~~~~~ C++ edit
+    GlobalPerfCountFrequency = PerfCountFrequencyResult.QuadPart;
+~~~~~~~ C++
+    // ... 
+~~~~~~~ C++ edit
+    LARGE_INTEGER LastCounter = Win32GetWallClock();
+~~~~~~~ C++ delete
+    QueryPerformanceCounter(&LastCounter);
+~~~~~~~ C++
+    u64 LastCycleCount = __rdtsc();
+    GlobalRunning = true;
+    while (GlobalRunning)
+    {
+        // ... 
+        Win32DisplayBufferInWindow(...);
+~~~~~~~ C++ add
+        LARGE_INTEGER WorkCounter = Win32GetWallClock();
+        f32 WorkSecondsElapsed = Win32GetSecondsElapsed(LastCounter, WorkCounter);        
+~~~~~~~ C++ delete
+        LARGE_INTEGER EndCounter;
+        QueryPerformanceCounter(&EndCounter);
+        s64 CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
+        
+        f32 SecondsElapsedForWork = (f32)CounterElapsed / (f32)GlobalPerfCountFrequency;
+~~~~~~~ C++
+
+~~~~~~~ C++ edit
+        f32 SecondsElapsedForFrame = WorkSecondsElapsed;
+        while (SecondsElapsedForFrame < TargetSecondsPerFrame)
+~~~~~~~ C++
+        {
+~~~~~~~ C++ add
+            SecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter,
+                                                            Win32GetWallClock());
+~~~~~~~ C++ delete
+            QueryPerformanceCounter(&EndCounter);
+            CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
+            SecondsElapsedForFrame = (f32)CounterElapsed / (f32)GlobalPerfCountFrequency;
+~~~~~~~ C++
+        }
+        
+#if 0
+        // debug timing output
+        // ...
+#endif
+~~~~~~~ C++ delete
+        LastCounter = EndCounter;
+        LastCycleCount = EndCycleCount;
+
+~~~~~~~ C++
+        game_input *Temp = NewInput;
+        NewInput = OldInput;
+        OldInput = Temp;
 
 
+~~~~~~~ C++ add
+        LARGE_INTEGER EndCounter = Win32GetWallClock();
+        LastCounter = EndCounter;        
+~~~~~~~ C++
 
+        u64 EndCycleCount = __rdtsc();
+        s64 CyclesElapsed = EndCycleCount - LastCycleCount;
+        LastCycleCount = EndCycleCount;
+    }
+    //... 
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Refactoring.]
 
+The resulting code should look much neater and be more readable! Finally, and this is important for the reasons we outlined in Section 1, we need to wait first and display the frame after, and right now we're doing the other way round. Let's quickly fix that: 
 
+~~~~~~~ C++ delete
+win32_window_dimension Dimension = Win32GetWindowDimension(Window);
+Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext, Dimension.Width, Dimension.Height);
+~~~~~~~ C++
 
+LARGE_INTEGER WorkCounter = Win32GetWallClock();
+f32 WorkSecondsElapsed = Win32GetSecondsElapsed(LastCounter, WorkCounter);
 
-------------------------
-<!-- 
-[Listing [x]: <file>[]</file> .]
-![Figure [x]: .](../media/day16/.jpg) 
-[Figure [x]: .]
--->
-------------------------
+f32 SecondsElapsedForFrame = WorkSecondsElapsed;
+while (SecondsElapsedForFrame < TargetSecondsPerFrame)
+{
+    SecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter,
+                                                    Win32GetWallClock());
+}
+                    
+~~~~~~~ C++ add
+win32_window_dimension Dimension = Win32GetWindowDimension(Window);
+Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext, Dimension.Width, Dimension.Height);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Displaying the frame after we finished waiting.]
 
+## Check for Missed Target
 
+We're now making sure that our frame lasts at least our target time. But what if the frame actually lasts longer than we intended? In that case we have a problem: We missed our framerate. We can't really deal with it just yet, but we can set the stage to be able to deal with it in the future:
 
+~~~~~~~ C++ add
+if (SecondsElapsedForFrame < TargetSecondsPerFrame)
+{
+~~~~~~~ C++
+    while (SecondsElapsedForFrame < TargetSecondsPerFrame)
+    {
+        SecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter, Win32GetWallClock());
+    }
+~~~~~~~ C++ add
+}
+else
+{
+    // TODO(casey): MISSED FRAME RATE!
+    // TODO(casey): Logging
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Making sure we haven't missed our framerate.]
+
+# Sleep
+
+As we're standing now, we just keep spinning, making an absurd amount of wall clock checks. We're just wasting CPU time. There surely must be a better way! Ideally, we could request operating system to pause our process for the time being, and do some other useful work. Luckily, there's a [function][Sleep] in the Win32 API which does just that.
+
+[Sleep][] takes an amount of milliseconds we want to wait. So, in order to calculate that, we can simply do the following operation: 
+
+~~~~~~~ C++
+if (SecondsElapsedForFrame < TargetSecondsPerFrame)
+{
+    while (SecondsElapsedForFrame < TargetSecondsPerFrame)
+    {
+~~~~~~~ C++ add
+        DWORD SleepMS = (DWORD)(1000.0f * (TargetSecondsPerFrame - SecondsElapsedForFrame));
+        if (SleepMS > 0)
+        {
+            Sleep(SleepMS);
+        }
+~~~~~~~ C++
+        SecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter, Win32GetWallClock());
+    }
+}
+else
+{
+    // TODO(casey): MISSED FRAME RATE!
+    // TODO(casey): Logging
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Adding sleep and checking again.]
+
+There's a problem with this, however. The thread of our process will be put to sleep for the specified time but, once awake, it will have to wait a bit more until the Windows Scheduler actually assigns it to the processor to work with. 
+
+## Set Windows Scheduler Granularity
+
+Scheduler is a part of the operating system which allows it to be multitasking. It manages various threads and decides which of them can go and do useful work in the processor right now. But the scheduler also doesn't inspect each thread all the time, so if, for example you requested to sleep for 2 milliseconds, and the scheduler only checks every 15 milliseconds, you might end up waiting the full 15 milliseconds until your turn comes around again. 
+
+Can this be fixed? As it is usual in Windows, this can be fixed with some esoteric solution. Scheduler's granularity can be configured by using a function called [timeBeginPeriod][], and it allows resolution all the way down to 1 ms (which is fine by us). This can be set up at the beginning of the program's execution and used until we call `timeBeginPeriod` or exit. This function can also fail, so let's make sure that we have a good result before asking to sleep: 
+
+~~~~~~~ C++
+LARGE_INTEGER PerfCountFrequencyResult;
+QueryPerformanceFrequency(&PerfCountFrequencyResult);
+GlobalPerfCountFrequency = PerfCountFrequencyResult.QuadPart;
+
+~~~~~~~ C++ add
+// NOTE(casey): Set the Windows scheduler granularity to 1ms
+// so that our Sleep() can be more granular
+UINT DesiredSchedulerMS = 1;
+b32 SleepIsGranular = (timeBeginPeriod(DesiredSchedulerMS) == TIMERR_NOERROR);
+~~~~~~~ C++
+
+// ... 
+
+while (SecondsElapsedForFrame < TargetSecondsPerFrame)
+    {
+~~~~~~~ C++ add
+        if (SleepIsGranular)
+        {
+~~~~~~~ C++
+            DWORD SleepMS = (DWORD)(1000.0f * (TargetSecondsPerFrame - SecondsElapsedForFrame));
+            if (SleepMS > 0)
+            {
+                Sleep(SleepMS);
+            }
+~~~~~~~ C++ add
+        }
+~~~~~~~ C++
+        SecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter, Win32GetWallClock());
+    }
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Setting up scheduler granularity.]
+
+However, now our program will not compile: `timeBeginPeriod` requires a multi-media library. We have to link with it in order to be compilable: 
+
+~~~~~~~ batch
+:: WIN32 PLATFORM LIBRARIES
+set win32_libs=             user32.lib
+set win32_libs=%win32_libs% gdi32.lib
+~~~~~~~ batch add
+set win32_libs=%win32_libs% winmm.lib
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> Adding Windows Multi-Media Library. As usual, you can check library requirements at the end of each function's MSDN page.]
+
+## Test the Changes
+
+We've made a lot of changes, our sound is all over the place (we'll take care of it next time), so let's quickly re-enable our debug output code to see if it still works. We'll need to rearrange the code a bit further and update it with the new values though: 
+
+~~~~~~~ C++ delete
+#if 0
+// debug timing output
+
+f32 MSPerFrame = 1000.0f * WorkSecondsElapsed;
+f32 FPS = (f32)GlobalPerfCountFrequency / (f32)CounterElapsed;
+f32 MegaCyclesPerFrame = (f32)CyclesElapsed / (1000.0f * 1000.0f);
+
+char Buffer[256];
+sprintf(Buffer, "%.02fms/f, %.02ff/s, %.02fMc/f\n", MSPerFrame, FPS, MegaCyclesPerFrame);
+OutputDebugStringA(Buffer);
+#endif
+~~~~~~~ C++
+
+game_input *Temp = NewInput;
+NewInput = OldInput;
+OldInput = Temp;
+
+LARGE_INTEGER EndCounter = Win32GetWallClock();
+~~~~~~~ C++ add
+f32 MSPerFrame = 1000.0f * Win32GetSecondsElapsed(LastCounter, EndCounter);
+~~~~~~~ C++
+LastCounter = EndCounter;
+
+u64 EndCycleCount = __rdtsc();
+s64 CyclesElapsed = EndCycleCount - LastCycleCount;
+LastCycleCount = EndCycleCount;
+                    
+~~~~~~~ C++ add
+
+#if 1
+// debug timing output
+f32 FPS = 0.0f; // To be fixed later
+f32 MegaCyclesPerFrame = (f32)CyclesElapsed / (1000.0f * 1000.0f);
+
+char FPSBuffer[256];
+sprintf_s(FPSBuffer, sizeof(FPSBuffer), "%.02fms/f, %.02ff/s, %.02fMc/f\n", MSPerFrame, FPS, MegaCyclesPerFrame);
+OutputDebugStringA(FPSBuffer);
+#endif
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Re-enabling debug timing output.]
+
+If you run the game now, you can see in the `Output` window of your debugger that we roughly hit 33.33 ms/frame. 
 
 # Recap 
 
-# Exercises 
-
-# Programming Notions 
-
-# Side Considerations 
+We laid down some of the groundwork for the correct frame timing. Now, we'll need to spend more time tuning game sound, before we're ready to move on.
 
 # Navigation 
 

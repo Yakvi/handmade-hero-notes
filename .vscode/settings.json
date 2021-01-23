@@ -19,6 +19,7 @@
         "LRESULT",
         "MAXCOUNT",
         "MSVC",
+        "NOERROR",
         "OVERLAPPEDWINDOW",
         "OWNDC",
         "READWRITE",
@@ -26,8 +27,10 @@
         "SETCURSOR",
         "SYSKEYDOWN",
         "SYSKEYUP",
+        "TIMERR",
         "USEDEFAULT",
         "VREDRAW",
+        "VREFRESH",
         "Vcvarsall",
         "WINAPI",
         "WNDCLASS",
@@ -44,6 +47,7 @@
         "nologo",
         "platformness",
         "redistributables",
-        "stdint"
+        "stdint",
+        "winmm"
     ]
 }
