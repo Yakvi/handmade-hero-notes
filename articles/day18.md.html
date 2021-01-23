@@ -6,6 +6,132 @@ _Video Length (including Q&A): [XhXX](https://hero.handmade.network/episode/code
 
 (insert intro.md.html here) 
 
+We have a pretty big to-do item pending, that we will attempt at handling: we don't have a proper synchronized timing loop to drive our game. We want to tackle this item as soon as possible because all the decisions that we will be taking in game will be driven on the frame timing. So if we have that clocking wrong in the platform layer, we are at risk of getting a lot of tuning things incorrect, and we'll be forced to return and retune those things from the ground up. Let's make sure we won't need to do that.
+
+# Set the Goals
+
+Before we start doing any coding, we need to understand what we want to achieve. If you remember, this is how we were representing our game work over time:
+
+********************************************
+*         GameUpdateAndRender              *
+*            does its work                 *
+*        /     |      |     \              *
+*     .-+.   .-+.   .-+.   .-+.            *
+*    |    | |    | |    | |    |           *
+*   |      |      |      |      |     time *
+*   +------+------+------+------+------>   *
+*   |      |      |      |      |          *
+*   0      1      2     ...     N          *
+*   ^      ^      ^      ^      ^          *
+*   |       \      \     |     /           *
+*   |        \      \    |    /            *
+*  game       next frame is displayed      *
+*  starts                                  *
+*  running                                 *
+********************************************
+[Figure [x]: Game work over time.]
+
+We can even say that there's time before 0. Game starts running and does all the prep work: creates window, loads assets, reserves memory, etc., before entering into the main loop. At one point we will hit our first `QueryPerformanceCounter`, which will effectively be the spot for time counting for us: the frame zero.
+
+***************************************************************
+*                       GameUpdateAndRender                   *
+*  Lands Before Time       does its work                      *
+*         |            /     |      |     \                   *
+*   .----' '----.   .-+.   .-+.   .-+.   .-+.                 *
+*  |             | |    | |    | |    | |    |                *
+* |               |      |      |      |      |          time *
+* +---------------+------+------+------+------+------+---->   *
+* |               |      |      |      |      |      |        *
+*                 0      1      2     ...     N               *
+* ^               ^      ^      ^      ^      ^      ^        *
+* |               |       \      \     |     /       |        *
+* |               |        \      \    |    /        |        *
+* game           first    Next frame is displayed    game     *
+* starts         time           "frame flip"         exits    *
+* running        measurement                                  *
+*                (using QueryPerformanceCounter)              *
+***************************************************************
+[Figure [x]: Actual game lifetime.]
+
+Now, during frame 0 (and, of course, before that) the game will display _nothing_. If anything, we've just cleared our window to blackness while we're working on frame 1. This technically allows us to push our count of frames to start _after_ we start displaying something.... it's something we can decide at a later point. 
+
+If we zoom in a bit, we can see that during frame 0, we compute game's audio and video, after which we request "frame flip". In an ideal world, during frame 1 we'll see and hear what we computed.
+
+**************************************************
+*       |                 |                 |    *
+*  WORK | compute frame 0 | compute frame 1 |    *
+*       | audio and video | audio and video |    *
+*       +-----------------+-----------------+    *
+* OUTPUT|    BLACKNESS    |frame 0 displayed|    *
+*       |     silence     | audio reproduced|    *
+* ...---+-----------------+-----------------+--> *
+*       |                 |                 |  t *
+*       0                 0²               ...   *
+*    first look       first frame                *
+*     at QPC             flip                    *
+**************************************************
+[Figure [x]: First frames work and output.]
+
+Now, before the first image is displayed and the first sound is played, an arbitrarily long amount of time can pass. Maybe not that much to annoy the user, but as far as the user is concerned they won't see or hear any glitches: the game is just starting up. However, for frame 0 onwards we do care about how much time has passed. Each frame will have a limited, **fixed** duration of time to compute the next one. 
+
+We need the duration of the frame to be fixed for the game to operate properly. One of the reasons for it is in the hardware. Usually monitors operate at a fixed refresh rate: 60Hz, 90Hz, 144Hz, and so on. If our isn't fixed, or differs significantly from the monitor's, eventually we will miss a frame: 
+
+***************************************************************
+*                  |      |      |      |      |      |       *
+*   Game Frames    +------+------+------+------+------+---->  *
+*                  |      |      |      |      |      |    t  *
+*                                                             *
+*                   ^     ^      ^      ^                     *
+*                   |     |      +----.  \                    *
+*                    \     \     |     |  \                   *
+*                     \     \    |     |   \                  *
+*                      \     |   |     |    |                 *
+*                       |    |   +     |    |                 *
+*                  |    |    |    \    |    |                 *
+*  Monitor Refresh +----+----+----+----+----+---->            *
+*                  |    |    |    |    |    |    t            *
+*                                                             *
+*                                 |         |                 *
+*                                  '--. .--'                  *
+*                                      |                      *
+*                  same frame displayed for double the time   *
+***************************************************************
+[Figure [x]: Potential danger of not having the monitor's framerate.]
+
+In conclusion, we want our framerate and the monitor framerate to be the same, or a multiple of it. With the same frequency, every time the monitor displays a new frame, we have a new frame for it to show. On another hand, if our game runs at 60 frames per second, and the monitor's refresh rate is 120 frames per second, this is fine since all our frames will always be two monitor's frames long. 
+
+Of course, you might say: why not think about a variable refresh rate monitor, like the ones adopting Nvidia's G-Sync technology? These monitors display the next frame after the game/graphics card asks them to. After all, their adoption rate grows and eventually we'll all have one. Well, first, that time hasn't arrived yet. But the biggest issue is that if you don't have a fixed point of reference for your frame, your animation for that frame will be all over the place. 
+
+Think of a situation where one of your frames takes 30ms to draw, another 16ms, the next one 20, and so on. If the physics engine needs to update the state of the world, it should do it for a specific amount of time:
+
+*******************************************************
+*                  |        |    |     |      |       *
+*   Game Frames    +--------+----+-----+------+---->  *
+*                  |        |    |     |      |    t  *
+*                                                     *
+*                  |        |    |     |      |       *
+*                  '--------+----+-----+------'       *
+*                     30ms    16   20     30          *
+*                                                     *
+*******************************************************
+[Figure [x]: Variable framerate. The actual length of a frame wouldn't be known until after the frame is shown.]
+
+In a variable framerate world, if used as is the game wouldn't know how much a specific frame would take. Thus, it has to guess in some way, with more or less accuracy, and the resulting image will always be in some shape distorted. This doesn't mean we wouldn't take advantage of such technology if we found ourselves in front of it: having variable framerate would allow us to pick a fixed framerate of our preference (for performance reasons or what have you).
+
+That has been a long introduction, so let's define what we want to achieve: 
+
+* 
+
+
+
+
+
+
+
+
+
+
+
 ------------------------
 <!-- 
 [Listing [x]: <file>[]</file> .]
@@ -13,24 +139,6 @@ _Video Length (including Q&A): [XhXX](https://hero.handmade.network/episode/code
 [Figure [x]: .]
 -->
 ------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
