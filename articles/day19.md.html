@@ -6,6 +6,216 @@ _Video Length (including Q&A): [1h44](https://hero.handmade.network/episode/code
 
 (insert intro.md.html here) 
 
+When we left off last time, our audio had many issues. They came to light after we finished implementing our timed frame loops, so our objective for the next couple of days is to make them go away. 
+
+At the start of the program, we're opening a sound buffer which is outputting 48000 samples every second to the sound card. These are groups of one value for the left and one value for the right audio channel, representing sound amplitude at a point in time. We take 48000 amplitude points, pass them to the sound device which eventually reconstructs the wavelength to the speakers. 
+
+This really is just a first step in sound output, our values undergo a lot of transformations on the way out. While it's somewhat a topic for another day, we can say that the samples are but an approximation of what we will hear in the end. Additionally, it's not actually possible to perfectly synchronize sound output with what you see on the screen due to the delays happening at all stages, some of which external to the computer! In any case, our goal is to prevent _really bad_ sync issues, even before it gets to the hardware. 
+
+# Visualize the Cursors
+
+As we output the samples, we try to have some control on when they're going out. And our objective is for our sound to be as close to our target frame as possible. Some platforms have more support for this than the others, and on Windows we have to call `GetCurrentPosition`. This will return a position that the DirectSound _believes_ the audio is playing at ("Play Cursor"), and another one to which DirectSound is writing sound to ("Write Cursor"). 
+
+It will be easier for us to understand the issues if we had a way to visualize these in some way. Let's throw in a simple debug overlay which would draw the cursors over time. Just after we request to display our buffer, we'll write a new `#if` block that would only run if we're in debug mode (or, how we defined it on [day 14][], `HANDMADE_INTERNAL`):
+
+~~~~~~~ C++
+win32_window_dimension Dimension = Win32GetWindowDimension(Window);
+Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext, Dimension.Width, Dimension.Height);
+
+~~~~~~~ C++ add
+#if HANDMADE_INTERNAL
+// NOTE(casey): This is debug code
+{
+    DWORD DebugPlayCursor;
+    DWORD DebugWriteCursor;
+    GlobalSecondaryBuffer->GetCurrentPosition(&DebugPlayCursor, &DebugWriteCursor);
+}
+#endif
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Checking cursor position.]
+
+Since it's debug code, we don't really care to test whether the operation `SUCCEEDED` or not, so we'll skip it here. However, we wrapped this code in braces (`{}`) to make sure that any variables we declare won't escape and potentially interact with the rest of the code.
+
+We want to visualize more than one cursor, to show some progress. Let's say we want to look at all the cursor positions in the last second: simply take whatever our `GameUpdateHz` is and create an array of debug cursors of that size. We'll need to keep this array outside of the main loop so that the values are preserved. 
+
+We also need an index to the array so that we know where to write. The index will go from 0 to the size of our collection of cursors, to 0 again, and we'll use it to store the latest cursor position.
+
+![Figure [x]: Rolling buffer advances its index at each iteration.](../media/day19/rolling_buffer.gif) 
+
+~~~~~~~ C++
+// Just before the main loop
+game_input Input[2] = {};
+game_input* OldInput = &Input[0];
+game_input* NewInput = &Input[1];
+
+~~~~~~~ C++ add
+int DebugLastPlayCursorIndex = 0;
+DWORD DebugLastPlayCursor[GameUpdateHz] = {};
+~~~~~~~ C++
+
+LARGE_INTEGER LastCounter = Win32GetWallClock();
+u64 LastCycleCount = __rdtsc();
+GlobalRunning = true;
+while (GlobalRunning)
+{
+    // ... 
+    // Our main loop
+    // ... 
+
+#if HANDMADE_INTERNAL
+    // NOTE(casey): This is debug code
+    {
+        DWORD DebugPlayCursor;
+        DWORD DebugWriteCursor;
+        GlobalSecondaryBuffer->GetCurrentPosition(&DebugPlayCursor, &DebugWriteCursor);
+        
+~~~~~~~ C++ add
+        DebugLastPlayCursor[DebugLastPlayCursorIndex++] = DebugPlayCursor; 
+        if (DebugLastPlayCursorIndex > ArrayCount(DebugLastPlayCursor))
+        {
+            DebugLastPlayCursorIndex = 0;
+        }
+~~~~~~~ C++
+    }
+#endif
+    // ... 
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Capturing Cursor in a rolling buffer.]
+
+You'll notice however that this implementation isn't compilable. This is because C and C++ do not allow array length initialization from a variable (even if we never change that variable at runtime), the array size has to be known at compile time. For the time being, let's change `MonitorRefreshHz` and `GameUpdateHz` to `#define`s.
+
+~~~~~~~ C++
+WindowClass.lpszClassName = "HandmadeHeroWindowClass";
+    
+// TODO(casey): How do we reliably query on this on Windows?
+~~~~~~~ C++ edit
+#define MonitorRefreshHz 60
+#define GameUpdateHz (MonitorRefreshHz / 2)
+~~~~~~~ C++
+f32 TargetSecondsPerFrame = 1.0f / (f32)GameUpdateHz;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> You could also simply initialize `DebugLastPlayCursor` to be of length 30.]
+
+In order to display the results, we can draw straight to our render buffer, before we request page flip. Let's create a utility function to keep things well separated, called `Win32DebugSyncDisplay`. To keep things tidy, we'll also scope this inside `#if HANDMADE_INTERNAL`.
+
+For this function, we're going to need: 
+* Our render buffer, for the output
+* The cursors snapshot array
+* The size of the array. Unfortunately C or C++ don't provide a way to know the size of an array once you pass it to another function: what you actually pass is a simple pointer. We can call `ArrayCount` macro that we've defined previously we'll want to get the size separately.
+
+We'll also throw in our sound buffer and the `TargetSecondsPerFrame` that we might use later. We can always remove them later.
+
+~~~~~~~ C++
+win32_window_dimension Dimension = Win32GetWindowDimension(Window);
+~~~~~~~ C++ add
+#if HANDMADE_INTERNAL
+Win32DebugSyncDisplay(&GlobalBackbuffer, 
+                      ArrayCount(DebugLastPlayCursor), DebugLastPlayCursor,
+                      &SoundOutput, TargetSecondsPerFrame);
+#endif
+~~~~~~~ C++
+Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext, Dimension.Width, Dimension.Height);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Introducing `Win32DebugSyncDisplay`.]
+
+## `Win32DebugSyncDisplay`
+
+Let's focus on what's happening inside `Win32DebugSyncDisplay`. First, let's define the function just outside the `WinMain`:
+
+~~~~~~~ C++
+inline f32
+Win32GetSecondsElapsed(LARGE_INTEGER Start, LARGE_INTEGER End)
+{
+    // ... 
+}
+
+~~~~~~~ C++ add
+internal void
+Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
+                      int LastPlayCursorCount, DWORD *LastPlayCursor,
+                      win32_sound_output *SoundOutput, f32 TargetSecondsPerFrame)
+{
+}
+~~~~~~~ C++
+
+int CALLBACK
+WinMain(...)
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Defining `Win32DebugSyncDisplay`.]
+
+(We should now be compilable, with no changes to how our program operates. Take a second to fix all the outstanding errors you might have thus far.)
+
+FIXME: Bookmark at 23:34
+FIXME: Code to document
+
+
+~~~~~~~ C++ add
+int PadX = 16;
+int PadY = 16;
+
+int Top = PadY;
+int Bottom = Backbuffer->Height - PadY;
+
+f32 C = (f32)(Backbuffer->Width - 2 * PadX) / (f32)SoundOutput->SecondaryBufferSize;
+for (int PlayCursorIndex = 0;
+        PlayCursorIndex < LastPlayCursorCount;
+        ++PlayCursorIndex)
+{
+    int X = PadX + (int)(C * (f32)LastPlayCursor[PlayCursorIndex]);
+    Win32DebugDrawVertical(Backbuffer, X, Top, Bottom, 0xFFFFFFFF);
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32DebugSyncDisplay]</file> .]
+
+
+~~~~~~~ C++ add
+internal void
+Win32DebugDrawVertical(win32_offscreen_buffer *Backbuffer,
+                       int X, int Top, int Bottom, u32 Color)
+{
+    u8 *Pixel = (u8 *)Backbuffer->Memory +
+        X * Backbuffer->BytesPerPixel +
+        Top * Backbuffer->Pitch;
+    for (int Y = Top;
+         Y < Bottom;
+         ++Y)
+    {
+        *(u32 *)Pixel = Color;
+        Pixel += Backbuffer->Pitch;
+    }
+}
+~~~~~~~ C++
+
+internal void
+Win32DebugSyncDisplay(...)
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+
+~~~~~~~ C++
+struct win32_offscreen_buffer
+{
+    BITMAPINFO Info;
+    void *Memory;
+    int Width;
+    int Height;
+    int Pitch;
+~~~~~~~ C++ add
+    int BytesPerPixel;
+~~~~~~~ C++
+};
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.h]</file> .]
+
+~~~~~~~ C++
+WORD BytesPerPixel = 4;
+~~~~~~~ C++ add
+Buffer->BytesPerPixel = BytesPerPixel;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> .]
+    
+
+
 ------------------------
 <!-- 
 [Listing [x]: <file>[]</file> .]

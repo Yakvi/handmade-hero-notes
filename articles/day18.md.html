@@ -222,7 +222,7 @@ OutputDebugStringA(Buffer);
 
 We can use this information to compute how many seconds did it take to do all the work. What we basically want is `MSPerFrame`, except we don't need to multiply the result by 1000. 
 
-Let's also rearrange our timers to see more clearly what's going on. We want `__rdtsc` snapshot at the _very end_ of our `GlobalRunning` loop, after everything else was completed. As a reminder, `__rdtsc` is very processor-specific, so we'll only use this counter for debug purposes only. We aren't interested in that yet. 
+Let's also rearrange our timers to see more clearly what's going on. We want `__rdtsc` snapshot at the _very end_ of our `GlobalRunning` loop, after everything else was completed. As a reminder, `__rdtsc` is very processor-specific, so we'll only use this counter for debug purposes. We aren't interested in that yet. 
 
 On the other hand, `QueryPerformanceCounter` is a more user-facing solution we'll be using for timing our frames. 
 
