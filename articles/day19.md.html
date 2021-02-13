@@ -2,7 +2,7 @@
 <link rel="stylesheet" href="../css/style.css" />
 
 **Day 19. Improving Audio Synchronization** 
-_Video Length (including Q&A): [1h44](https://hero.handmade.network/episode/code/day019/)_ 
+_Video Length (including Q&A): [1h45](https://hero.handmade.network/episode/code/day019/)_ 
 
 (insert intro.md.html here) 
 
@@ -11,6 +11,142 @@ When we left off last time, our audio had many issues. They came to light after 
 At the start of the program, we're opening a sound buffer which is outputting 48000 samples every second to the sound card. These are groups of one value for the left and one value for the right audio channel, representing sound amplitude at a point in time. We take 48000 amplitude points, pass them to the sound device which eventually reconstructs the wavelength to the speakers. 
 
 This really is just a first step in sound output, our values undergo a lot of transformations on the way out. While it's somewhat a topic for another day, we can say that the samples are but an approximation of what we will hear in the end. Additionally, it's not actually possible to perfectly synchronize sound output with what you see on the screen due to the delays happening at all stages, some of which external to the computer! In any case, our goal is to prevent _really bad_ sync issues, even before it gets to the hardware. 
+
+## Proper Time Tracking
+
+One thing we need to get out of the way first though is a bug we introduced last time: we aren't timing our frames correctly. If you run the game and take a look at the timing outputs (in the `Output` window of your debugger), you'll notice that each frame always runs for more than 33.33ms/f we intend it for. This is because we currently have the following structure in our code: 
+
+~~~~~~~ C++
+// ...
+// Do some work
+// ...
+
+LARGE_INTEGER WorkCounter = Win32GetWallClock();
+f32 WorkSecondsElapsed = Win32GetSecondsElapsed(LastCounter, WorkCounter);
+
+f32 SecondsElapsedForFrame = WorkSecondsElapsed;
+if (SecondsElapsedForFrame < TargetSecondsPerFrame)
+{
+    // Go to sleep
+}
+
+// ... 
+// Do more work (blit)
+// ... 
+
+LARGE_INTEGER EndCounter = Win32GetWallClock();
+f32 MSPerFrame = 1000.0f * Win32GetSecondsElapsed(LastCounter, EndCounter);
+LastCounter = EndCounter;
+~~~~~~~
+
+What we really need is to snap our `LastCounter` directly after we finished sleeping. Even if it won't technically happen at the very end of the frame, when the program loops back the timing will be correct, and the sleep will happen for the correct amount of time: 
+
+~~~~~~~ C++
+LARGE_INTEGER WorkCounter = Win32GetWallClock();
+f32 WorkSecondsElapsed = Win32GetSecondsElapsed(LastCounter, WorkCounter);
+
+f32 SecondsElapsedForFrame = WorkSecondsElapsed;
+if (SecondsElapsedForFrame < TargetSecondsPerFrame)
+{
+    while (SecondsElapsedForFrame < TargetSecondsPerFrame)
+    {
+        if (SleepIsGranular)
+        {
+            DWORD SleepMS = (DWORD)(1000.0f * (TargetSecondsPerFrame -
+                                               SecondsElapsedForFrame));
+            if (SleepMS > 0)
+            {
+                Sleep(SleepMS);
+            }
+        }
+        
+        SecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter,
+                                                        Win32GetWallClock());
+    }
+}
+else
+{
+    // TODO(casey): MISSED FRAME RATE!
+    // TODO(casey): Logging
+}
+~~~~~~~ C++ add
+
+LARGE_INTEGER EndCounter = Win32GetWallClock();
+f32 MSPerFrame = 1000.0f * Win32GetSecondsElapsed(LastCounter, EndCounter);
+LastCounter = EndCounter;
+~~~~~~~ C++
+
+// ... 
+
+game_input *Temp = NewInput;
+NewInput = OldInput;
+OldInput = Temp;
+~~~~~~~ C++ delete
+
+LARGE_INTEGER EndCounter = Win32GetWallClock();
+f32 MSPerFrame = 1000.0f * Win32GetSecondsElapsed(LastCounter, EndCounter);
+LastCounter = EndCounter;
+~~~~~~~ C++
+
+u64 EndCycleCount = __rdtsc();
+s64 CyclesElapsed = EndCycleCount - LastCycleCount;
+LastCycleCount = EndCycleCount;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Timing frames correctly.]
+
+We also want to correct the sleep cycle itself. We already sleep for exact amount of _milliseconds_, so to prevent additional checks, we can just spin and wait until the last few _microseconds_ elapse: 
+
+~~~~~~~ C++
+f32 SecondsElapsedForFrame = WorkSecondsElapsed;
+if (SecondsElapsedForFrame < TargetSecondsPerFrame)
+{
+~~~~~~~ C++ edit
+    if (SleepIsGranular)
+    {
+        DWORD SleepMS = (DWORD)(1000.0f * (TargetSecondsPerFrame -
+                                            SecondsElapsedForFrame));
+        if (SleepMS > 0)
+        {
+            Sleep(SleepMS);
+        }
+    }
+        
+    while (SecondsElapsedForFrame < TargetSecondsPerFrame)
+    {
+        SecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter,
+                                                        Win32GetWallClock());
+    }
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Updating Sleep loop.]
+
+Finally, even this might not provide you with a 100% correct granularity. You will be missing some microseconds here and there, so let's have a quick test and eventually log and do something about it:
+
+~~~~~~~ C++
+if (SleepIsGranular)
+{
+    DWORD SleepMS = (DWORD)(1000.0f * (TargetSecondsPerFrame -
+                                        SecondsElapsedForFrame));
+    if (SleepMS > 0)
+    {
+        Sleep(SleepMS);
+    }
+}
+
+f32 TestSecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter, Win32GetWallClock());
+if(TestSecondsElapsedForFrame < TargetSecondsPerFrame)
+{
+    // TODO(casey): LOG MISSED SLEEP HERE
+}
+    
+while (SecondsElapsedForFrame < TargetSecondsPerFrame)
+{
+    SecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter,
+                                                    Win32GetWallClock());
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Finalizing Sleep Routine.]
 
 # Visualize the Cursors
 
@@ -50,7 +186,7 @@ game_input* NewInput = &Input[1];
 
 ~~~~~~~ C++ add
 int DebugLastPlayCursorIndex = 0;
-DWORD DebugLastPlayCursor[GameUpdateHz] = {};
+DWORD DebugLastPlayCursor[GameUpdateHz];
 ~~~~~~~ C++
 
 LARGE_INTEGER LastCounter = Win32GetWallClock();
@@ -119,7 +255,7 @@ Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext, Dimension.Width, Di
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Introducing `Win32DebugSyncDisplay`.]
 
-## `Win32DebugSyncDisplay`
+## Write the Line-drawing function
 
 Let's focus on what's happening inside `Win32DebugSyncDisplay`. First, let's define the function just outside the `WinMain`:
 
@@ -144,12 +280,24 @@ WinMain(...)
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Defining `Win32DebugSyncDisplay`.]
 
-(We should now be compilable, with no changes to how our program operates. Take a second to fix all the outstanding errors you might have thus far.)
+We should now be compilable, with no changes to how our program operates. Take a second to fix all the outstanding errors you might have thus far.
 
-FIXME: Bookmark at 23:34
-FIXME: Code to document
+We won't be doing anything fancy inside this function. We don't have any line drawing library just yet, and we certainly won't going implementing one here. What we want is to: 
 
+1. Find a horizontal point in our render buffer to represent our position in the sound buffer.
+2. Paint that pixel and several more below in white. 
 
+Deciding the X position requires:
+
+* Subtracting some padding from the left and right sides (so that visualization starts a bit more centered). Let's say for now it will be 16.
+* Dividing whatever the remaining width of the render buffer is by the size of the sound buffer. We want to store `C` as a floating-point number for better precision (as well as cast to float the dividends before the division). 
+
+This yields us the coefficient `C`. We can use it for calculating X positions of each play cursor we get (remember that we need to redraw all 30 cursors each frame!), by simply multiplying the cursor by `C` (which we cast back to integer) and adding the pad.
+
+As for the Y position, we don't really need to recalculate it. To draw a vertical line, we only need to know the top and bottom points which can be whichever. Let's say we simply add some pads to these as well and call it done. 
+
+~~~~~~~ C++
+// Win32DebugSyncDisplay
 ~~~~~~~ C++ add
 int PadX = 16;
 int PadY = 16;
@@ -163,11 +311,42 @@ for (int PlayCursorIndex = 0;
         ++PlayCursorIndex)
 {
     int X = PadX + (int)(C * (f32)LastPlayCursor[PlayCursorIndex]);
-    Win32DebugDrawVertical(Backbuffer, X, Top, Bottom, 0xFFFFFFFF);
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > Win32DebugSyncDisplay]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp > Win32DebugSyncDisplay]</file> Defining line-drawing logic.]
 
+But wait, you'll say, we still haven't _drawn_ anything yet! For simplicity sake, we'll separate line prepping and actual drawing to a separate function. We might use it for other purposes, so having a generic debug vertical line drawing function will always be handy. To this function we'll pass our render buffer, X position, as well as top and bottom boundaries we just defined. Maybe we can also specify the color here. 
+
+~~~~~~~ C++
+f32 C = (f32)(Backbuffer->Width - 2 * PadX) / (f32)SoundOutput->SecondaryBufferSize;
+for (int PlayCursorIndex = 0;
+        PlayCursorIndex < LastPlayCursorCount;
+        ++PlayCursorIndex)
+{
+    int X = PadX + (int)(C * (f32)LastPlayCursor[PlayCursorIndex]);
+~~~~~~~ C++ add
+    Win32DebugDrawVertical(Backbuffer, X, Top, Bottom, 0xFFFFFFFF);
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32DebugSyncDisplay]</file> Introducing a call to draw vertical line.]
+
+Speaking of drawing, since it's debug code we're going to do the simplest thing imaginable (probably the slowest as well): We'll calculate the starting byte of our top pixel and then loop over the buffer until we reach the bottom pixel, "painting" each pixel the color requested.
+
+A small refresher might be useful here. If you recall what we discussed on [day 5][], here's what we can say:
+
+* Each pixel is 4 bytes big
+* Each pixel has a permanent address in the backbuffer memory.
+* Each row is represented by `Pitch`, which is the size of all the pixels in a row
+* It's as many rows down as our Y number multiplied by Pitch 
+
+Using this information we can find any pixel we want by using only `X` and `Y` coordinates (or, in our case, `Top`):
+
+* Get the _base_ address of the whole buffer. Remember to convert it to `u8` so that all the advancements happen in single bytes.
+* Add to it however many rows we want to skip (`Top`) multiplied by `Pitch`.
+* Add to this address however many pixels on the final row we want to skip (`X`).
+
+Once we have completed our operation with the pixel (applied the color), we can simply add `Pitch` and move on to the next row (while preserving our X location). We continue this way until our Y coordinate reaches Bottom.
 
 ~~~~~~~ C++ add
 internal void
@@ -175,8 +354,8 @@ Win32DebugDrawVertical(win32_offscreen_buffer *Backbuffer,
                        int X, int Top, int Bottom, u32 Color)
 {
     u8 *Pixel = (u8 *)Backbuffer->Memory +
-        X * Backbuffer->BytesPerPixel +
-        Top * Backbuffer->Pitch;
+                Top * Backbuffer->Pitch +
+                X * Backbuffer->BytesPerPixel;
     for (int Y = Top;
          Y < Bottom;
          ++Y)
@@ -190,7 +369,9 @@ Win32DebugDrawVertical(win32_offscreen_buffer *Backbuffer,
 internal void
 Win32DebugSyncDisplay(...)
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Drawing vertical line.]
+
+This won't compile since we decided to remove `BytesPerPixel` from `win32_offscreen_buffer`. Let's add it back and initialize it properly in `Win32ResizeDIBSection`:
 
 ~~~~~~~ C++
 struct win32_offscreen_buffer
@@ -205,16 +386,41 @@ struct win32_offscreen_buffer
 ~~~~~~~ C++
 };
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.h]</file> .]
+[Listing [x]: <file>[win32_handmade.h]</file>]
 
 ~~~~~~~ C++
 WORD BytesPerPixel = 4;
 ~~~~~~~ C++ add
 Buffer->BytesPerPixel = BytesPerPixel;
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> .]
-    
+[Listing [x]: <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Reintroducing `BytesPerPixel` to `win32_offscreen_buffer`.]
 
+This should be compilable. Build, run and... crash. What happened? If you'd like to follow along on our debugging journey, head over to subsection [Access Violation in Win32DebugDrawVertical]. Or, you can try and find the bug yourself!
+
+In the end, we'll have our play cursors up and running.
+
+![Figure [x]: Play Cursor Display.](../media/day19/play_cursors.gif) 
+
+## Inspect Play Cursors
+
+Depending on your computer's sound latency, you might see old cursors overlapping with the new. In that case, you might want to reduce the array size from `GameUpdateHz` to `GameUpdateHz / 2`:
+
+~~~~~~~ C++
+int DebugLastPlayCursorIndex = 0;
+~~~~~~~ C++ edit
+DWORD DebugLastPlayCursor[GameUpdateHz  / 2] = {};
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> (Optional) Reducing amount of cursor positions stored / displayed.]
+
+Anyway, let's give a closer look at what we're seeing. We can observe several things:
+
+* Most of the time we're getting nice equally-spaced lines
+* Sometimes we get quite fat lines. This part is really not related to the sound: it's just an artifact from the buffer resizing.
+* Some gaps are quite significant, almost a double of the usual gaps
+
+// FIXME: 41:27
+ 
+![Figure [x]: A Better Look at Play Cursor Display.](../media/day19/cursor_inspection.jpg) 
 
 ------------------------
 <!-- 
@@ -247,11 +453,186 @@ Buffer->BytesPerPixel = BytesPerPixel;
 
 # Recap 
 
-# Exercises 
+# Debugging
+
+## Access Violation in `Win32DebugDrawVertical`
+
+We got an access violation while trying to write the color to `Pixel`. This probably means that we made a mistake somewhere along the calculation of our pixel location, so let's go thoroughly through everything that's happening. 
+
+### Inspect the Pixel Access Logic
+
+Our pixel access logic seems sound.
+
+~~~~~~~ C++
+u8 *Pixel = (u8 *)Backbuffer->Memory +
+            Top * Backbuffer->Pitch +
+            X * Backbuffer->BytesPerPixel;
+~~~~~~~
+
+We correctly cast to `u8` (which is exactly 1 byte long), so the offsets happen byte after byte. If we inspect `Backbuffer` in the `Watch` window, it will give us positive amounts, so we move forward each time: 
+
+
+|Name|Value|
+|---|---|
+|`Backbuffer`| |
+|`  > Info       ` |...
+|`  Memory       ` |0x... 
+|`  Width        ` |1280
+|`  Height       ` |720
+|`  Pitch        ` |5120
+|`  BytesPerPixel` |4
+[Table [x]: Inspection of Backbuffer values inside the `Watch` window.]
+
+However, if you inspect the difference between the Backbuffer `Memory` address and `Pixel` address, you will get some crazy number:
+
+|Name|Value|
+|---|---|
+|`Pixel - (unsigned char*)Backbuffer->Memory`| 45032324 |
+[Table [x]: Displaying Pixel Offset.]
+
+That's not good at all. Based on the numbers above, the relative address of the pixel should be somewhere between 0 and `(Height + 1) * Pitch * BytesPerPixel`, i.e. 14 766 080. Our number came in above 45 million, waaay above from it should have been.
+
+### Step Through
+
+Let's step through our the code. Stop the program, set a breakpoint (`F9`) before entering in `Win32DebugDrawVertical`, and inspect our logic as it comes in: 
+
+* Initially, our offset from the base memory address is somewhere within 80 000. We can quickly repeat the math by typing in the same calculations inside the `Watch` window:
+
+
+|Name|Value|
+|---|---|
+|`Pixel - (unsigned char*)Backbuffer->Memory`| 81996 |
+|`Top * Backbuffer->Pitch`| 81920 |
+|`X * Backbuffer->BytesPerPixel`| 76 |
+[Table [x]: Pixel Offset and X/Y offsets at our first run. (actual numbers might differ slightly on your machine)]
+
+You can repeat the same calculations directly: $1280 * 4 = 5120$, $19 * 5120 = 81920$. Looks correct for the start. 
+
+We then step through our Y loop and check our Pixel offset. It increases correctly... until we step out of function.
+
+We can now conclude that our function succeeded the first time through, so the issue must be somewhere else. 
+
+### Inspect Computation of X
+
+The only parameter that varies coming into `Win32DebugDrawVertical` is `X`. `X` is calculated on the fly at each iteration. Maybe our coefficient `C` calculation is incorrect? As long as our `X` is low, there're no issues inside the drawing routine.
+
+Let's verify this by clearing (`F9`) all the breakpoints and letting our program run until the crash. 
+
+|Name|Value|
+|---|---|
+|`X`| 11237601 |
+[Table [x]: Inspecting `X` value at the moment of crash.]
+
+
+There's your problem! That's nowhere near from where a realistic value should be (between 0 and buffer width, i.e. 1280). Let's take a step back, out from `Win32DebugDrawVertical` and check what's happening inside `Win32DebugSyncDisplay`. But before we do that, let's split our computation a bit more: we'll highlight the `PlayCursor` value as well as the real computation of `X` (without the pad and as a ${\rm I\!R}$ number)
+
+~~~~~~~ C++
+f32 C = (f32)(Backbuffer->Width - 2 * PadX) / (f32)SoundOutput->SecondaryBufferSize;
+for (int PlayCursorIndex = 0;
+        PlayCursorIndex < LastPlayCursorCount;
+        ++PlayCursorIndex)
+{
+~~~~~~~ C++ add
+    DWORD ThisPlayCursor = LastPlayCursor[PlayCursorIndex];
+    f32 XReal = C * (f32)ThisPlayCursor;
+~~~~~~~ C++ edit
+    int X = PadX + (int) XReal;
+~~~~~~~ C++
+    Win32DebugDrawVertical(Backbuffer, X, Top, Bottom, 0xFFFFFFFF);
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32DebugSyncDisplay]</file> Splitting computation for simpler debugging.]
+
+This preparation is absolutely not necessary, but it's setting us up for debugging success. Remember to stop debugging before recompiling!
+
+Let's set the breakpoint at `ThisPlayCursor` and step into (`F10) our program. 
+
+On the first round (and after they've been initialized), the values seem reasonable:
+
+|Name|Value|
+|---|---|
+|`ThisPlayCursor`| 1136 |
+|`XReal`| 3.6920002 |
+|`X`| 19 |
+[Table [x]: X Calculation at the first round.]
+
+However, if you run through the loop a few times (`F10` or `F5`), you'll eventually arrive to something like this:
+
+|Name|Value|
+|---|---|
+|`ThisPlayCursor`| 117702659 |
+|`XReal`| 765067.250 |
+|`X`| 765083 |
+[Table [x]: X Calculation before the crash.]
+
+That's... bizarre. It seems like the issue isn't even coming from `C` calculation, but from the `PlayCursor` itself! 
+
+Similarly to the `Pixel`, value, `PlayCursor` is always bound between a specific range: between 0 and `SecondaryBufferSize`. If you inspect the latter, it gives you `384000`, and the `PlayCursor` here is way outside of that range. 
+
+Actually, this is something that we always expect to be true, so let's drop an assertion which would check just that.
+
+~~~~~~~ C++
+DWORD ThisPlayCursor = LastPlayCursor[PlayCursorIndex];
+~~~~~~~ C++ add
+Assert(ThisPlayCursor < SoundOutput->SecondaryBufferSize);
+~~~~~~~ C++
+f32 XReal = C * (f32)ThisPlayCursor;
+int X = PadX + (int) XReal;
+Win32DebugDrawVertical(Backbuffer, X, Top, Bottom, 0xFFFFFFFF);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32DebugSyncDisplay]</file> Asserting the `PlayCursor` never goes outside the bounds.]
+
+As an aside, this in turn will lead to a compilation warning (signed/unsigned mismatch) which you can fix by changing the type of `SecondaryBufferSize` from `int` to `DWORD`. 
+
+~~~~~~~ C++
+struct win32_sound_output
+{
+    int SamplesPerSecond;
+    int BytesPerSample;
+~~~~~~~ C++ edit
+    DWORD SecondaryBufferSize;
+~~~~~~~ C++
+    u32 RunningSampleIndex;
+    int LatencySampleCount;
+};
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.h]</file> Setting up correct type for `SecondaryBufferSize`.]
+
+Anyway, once we run the program now, the assertion will just go off, notifying us of what we've suspected already: the array of `PlayCursors` was set up incorrectly, and some values are garbage. In fact, if you check where we (don't) initialize the `DebugLastPlayCursor`, we currently leave our variable at whatever values that memory segment had: 
+
+~~~~~~~ C++
+// Just before the main loop
+game_input Input[2] = {};
+game_input* OldInput = &Input[0];
+game_input* NewInput = &Input[1];
+
+int DebugLastPlayCursorIndex = 0;
+DWORD DebugLastPlayCursor[GameUpdateHz]; // <- Here's your problem!
+~~~~~~~
+
+So in order to fix the bug, we simply need to initialize the array to `0`: 
+
+~~~~~~~ C++
+int DebugLastPlayCursorIndex = 0;
+~~~~~~~ C++ edit
+DWORD DebugLastPlayCursor[GameUpdateHz] = {};
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Properly initializing DebugLastPlayCursor.]
+
+### Debug Conclusion
+
+We successfully found and fixed the issue of the uninitialized array. We stepped through the memory, compared the numbers to verify that the Y was computed properly, therefore we identified X as the culprit.
+
+_(Continue to subsection [Inspect Play Cursors])_
+
 
 # Programming Notions 
 
 # Side Considerations 
+
+## WASAPI
+
+// FIXME: https://hero.handmade.network/forums/code-discussion/t/102-day_19_-_audio_latency
 
 # Navigation 
 
