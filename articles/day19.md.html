@@ -152,6 +152,10 @@ while (SecondsElapsedForFrame < TargetSecondsPerFrame)
 
 As we output the samples, we try to have some control on when they're going out. And our objective is for our sound to be as close to our target frame as possible. Some platforms have more support for this than the others, and on Windows we have to call `GetCurrentPosition`. This will return a position that the DirectSound _believes_ the audio is playing at ("Play Cursor"), and another one to which DirectSound is writing sound to ("Write Cursor"). 
 
+## Display the Play Cursor
+
+### Write Usage Code First
+
 It will be easier for us to understand the issues if we had a way to visualize these in some way. Let's throw in a simple debug overlay which would draw the cursors over time. Just after we request to display our buffer, we'll write a new `#if` block that would only run if we're in debug mode (or, how we defined it on [day 14][], `HANDMADE_INTERNAL`):
 
 ~~~~~~~ C++
@@ -206,8 +210,9 @@ while (GlobalRunning)
         GlobalSecondaryBuffer->GetCurrentPosition(&DebugPlayCursor, &DebugWriteCursor);
         
 ~~~~~~~ C++ add
+        Assert(DebugLastPlayCursorIndex < ArrayCount(DebugLastPlayCursor));
         DebugLastPlayCursor[DebugLastPlayCursorIndex++] = DebugPlayCursor; 
-        if (DebugLastPlayCursorIndex > ArrayCount(DebugLastPlayCursor))
+        if (DebugLastPlayCursorIndex == ArrayCount(DebugLastPlayCursor))
         {
             DebugLastPlayCursorIndex = 0;
         }
@@ -238,7 +243,7 @@ In order to display the results, we can draw straight to our render buffer, befo
 For this function, we're going to need: 
 * Our render buffer, for the output
 * The cursors snapshot array
-* The size of the array. Unfortunately C or C++ don't provide a way to know the size of an array once you pass it to another function: what you actually pass is a simple pointer. We can call `ArrayCount` macro that we've defined previously we'll want to get the size separately.
+* The size of the array. Unfortunately C or C++ don't provide a way to know the size of an array once you pass it to another function: what you actually pass is a simple pointer. We can call `ArrayCount` macro that we've defined previously we'll want to get the size, and pass it separately.
 
 We'll also throw in our sound buffer and the `TargetSecondsPerFrame` that we might use later. We can always remove them later.
 
@@ -255,7 +260,7 @@ Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext, Dimension.Width, Di
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Introducing `Win32DebugSyncDisplay`.]
 
-## Write the Line-drawing function
+### Process the Play Cursors to Draw
 
 Let's focus on what's happening inside `Win32DebugSyncDisplay`. First, let's define the function just outside the `WinMain`:
 
@@ -331,6 +336,8 @@ for (int PlayCursorIndex = 0;
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > Win32DebugSyncDisplay]</file> Introducing a call to draw vertical line.]
 
+### Write the Line-drawing Function
+
 Speaking of drawing, since it's debug code we're going to do the simplest thing imaginable (probably the slowest as well): We'll calculate the starting byte of our top pixel and then loop over the buffer until we reach the bottom pixel, "painting" each pixel the color requested.
 
 A small refresher might be useful here. If you recall what we discussed on [day 5][], here's what we can say:
@@ -401,8 +408,6 @@ In the end, we'll have our play cursors up and running.
 
 ![Figure [x]: Play Cursor Display.](../media/day19/play_cursors.gif) 
 
-## Inspect Play Cursors
-
 Depending on your computer's sound latency, you might see old cursors overlapping with the new. In that case, you might want to reduce the array size from `GameUpdateHz` to `GameUpdateHz / 2`:
 
 ~~~~~~~ C++
@@ -412,48 +417,717 @@ DWORD DebugLastPlayCursor[GameUpdateHz  / 2] = {};
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> (Optional) Reducing amount of cursor positions stored / displayed.]
 
-Anyway, let's give a closer look at what we're seeing. We can observe several things:
+## Display the Write Cursor
+
+Another thing that we can do is to expand our debug drawing function to also draw the write cursor.
+
+### Compress Time Markers Into a Struct
+
+First, we'll introduce a new structure that called `win32_time_marker`. 
+
+~~~~~~~ C++
+struct win32_sound_output
+{
+    int SamplesPerSecond;
+    int BytesPerSample;
+    DWORD SecondaryBufferSize;
+    u32 RunningSampleIndex;
+    int LatencySampleCount;
+};
+
+~~~~~~~ C++ add
+struct win32_debug_time_marker
+{
+    DWORD PlayCursor;
+    DWORD WriteCursor;
+};
+~~~~~~~ C++
+
+#define WIN32_HANDMADE_H
+#endif
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.h]</file> Introducing `win32_debug_time_marker` structure.]
+
+As you can probably tell, this will be the structure we'll use as our array. We had one value that we were displaying, and now that we want to have more than one value displayed at a time we can simply throw them in a single structure and record them this way. 
+
+Our `Win32DebugSyncDisplay` becomes thus the following:
+
+~~~~~~~ C++
+internal void
+Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
+~~~~~~~ C++ edit
+                      int MarkerCount, win32_debug_time_marker *Markers,
+~~~~~~~ C++
+                      win32_sound_output *SoundOutput, f32 TargetSecondsPerFrame)
+{
+    int PadX = 16;
+    int PadY = 16;
+    
+    int Top = PadY;
+    int Bottom = Backbuffer->Height - PadY;
+    
+    f32 C = (f32)(Backbuffer->Width - 2 * PadX) / (f32)SoundOutput->SecondaryBufferSize;
+~~~~~~~ C++ edit
+    for (int MarkerIndex = 0;
+         MarkerIndex < MarkerCount;
+         ++MarkerIndex)
+~~~~~~~ C++
+    {
+~~~~~~~ C++ edit
+        win32_debug_time_marker *ThisMarker = &Markers[MarkerIndex];
+        Assert (ThisMarker->PlayCursor < SoundOutput->SecondaryBufferSize);
+        f32 XReal = C * (f32)ThisMarker->PlayCursor;
+~~~~~~~ C++
+        int X = PadX + (int)XReal;
+        Win32DebugDrawVertical(Backbuffer, X, Top, Bottom, 0xFFFFFFFF);
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Using `win32_debug_time_marker` structure. Simple renaming and dereferencing for now, no change of functionality.]
+
+Finally, inside `WinMain` you will see something like this: 
+
+~~~~~~~ C++
+game_input Input[2] = {};
+game_input* OldInput = &Input[0];
+game_input* NewInput = &Input[1];
+
+~~~~~~~ C++ edit
+int DebugTimeMarkerIndex = 0;
+win32_debug_time_marker DebugTimeMarkers[GameUpdateHz / 2] = {};
+~~~~~~~ C++
+
+LARGE_INTEGER LastCounter = Win32GetWallClock();
+u64 LastCycleCount = __rdtsc();
+GlobalRunning = true;
+// ... 
+// Most of main loop 
+// ... 
+#if HANDMADE_INTERNAL
+Win32DebugSyncDisplay(&GlobalBackbuffer,
+~~~~~~~ C++ edit
+                      ArrayCount(DebugTimeMarkers), DebugTimeMarkers,
+~~~~~~~ C++
+                      &SoundOutput, TargetSecondsPerFrame);
+#endif
+Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext, Dimension.Width, Dimension.Height);
+
+#if HANDMADE_INTERNAL
+// NOTE(casey): This is debug code
+{
+~~~~~~~ C++ delete
+    DWORD DebugPlayCursor;
+    DWORD DebugWriteCursor;
+    GlobalSecondaryBuffer->GetCurrentPosition(&DebugPlayCursor, &DebugWriteCursor);
+    
+    DebugLastPlayCursor[DebugLastPlayCursorIndex++] = DebugPlayCursor;
+~~~~~~~ C++ edit
+    Assert(DebugTimeMarkerIndex < ArrayCount(DebugTimeMarkers));
+~~~~~~~ C++ add
+    win32_debug_time_marker *Marker = &DebugTimeMarkers[DebugTimeMarkerIndex++];
+~~~~~~~ C++ edit
+    if (DebugTimeMarkerIndex == ArrayCount(DebugTimeMarker))
+    {
+        DebugTimeMarkerIndex = 0;
+    }
+~~~~~~~ C++ add
+    GlobalSecondaryBuffer->GetCurrentPosition(&Marker->PlayCursor, &Marker->WriteCursor);
+~~~~~~~ C++    
+}
+#endif
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Changing `DebugPlayCursors` array to an array of `win32_debug_time_marker`s and using them.]
+
+We managed to reduce the amount of lines in this code, while increasing functionality! This is what you can call "Compression-Oriented Programming" style, in which you first write what you need, and the code marches towards better over time. Each time it just gets a little bit better, a little bit cleaner, a little bit more flexible as you go, and everything (hopefully) works out for the best. 
+
+### Introduce `Win32DrawSoundBufferMarker`
+
+Now we can quickly compile (to ensure that our old functionality is preserved) and move on. To make use of the new functionality, we can pull out the X-calculating to a separate function and call it twice from `Win32DebugSyncDisplay`: 
+
+~~~~~~~ C++ add
+inline void
+Win32DrawSoundBufferMarker(win32_offscreen_buffer *Backbuffer,
+                           win32_sound_output *SoundOutput,
+                           f32 C, int PadX, int Top, int Bottom)
+{
+    Assert (ThisMarker->PlayCursor < SoundOutput->SecondaryBufferSize);
+    f32 XReal = C * (f32)ThisMarker->PlayCursor;
+    int X = PadX + (int)XReal;
+    Win32DebugDrawVertical(Backbuffer, X, Top, Bottom, 0xFFFFFFFF);
+}
+~~~~~~~ C++
+
+internal void
+Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
+                      int MarkerCount, win32_debug_time_marker *Markers,
+                      win32_sound_output *SoundOutput, f32 TargetSecondsPerFrame)
+{
+    int PadX = 16;
+    int PadY = 16;
+    
+    int Top = PadY;
+    int Bottom = Backbuffer->Height - PadY;
+    
+    f32 C = (f32)(Backbuffer->Width - 2 * PadX) / (f32)SoundOutput->SecondaryBufferSize;
+    for (int MarkerIndex = 0;
+         MarkerIndex < MarkerCount;
+         ++MarkerIndex)
+    {
+        win32_debug_time_marker *ThisMarker = &Markers[MarkerIndex];
+~~~~~~~ C++ delete
+        Assert (ThisMarker->PlayCursor < SoundOutput->SecondaryBufferSize);
+        f32 XReal = C * (f32)ThisMarker->PlayCursor;
+        int X = PadX + (int)XReal;
+        Win32DebugDrawVertical(Backbuffer, X, Top, Bottom, 0xFFFFFFFF);
+~~~~~~~ C++ add
+        Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom);
+        Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom);
+~~~~~~~ C++
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Introducing `Win32DrawSoundBufferMarker`.]
+
+!!!
+    You will notice that `Win32DrawSoundBufferMarker` is an _inline_ function. This means that instead of having its own space in the program and being referred to each time this function is called, it's "copied and pasted" in its entirety by the compiler directly in the places where the call happens. 
+    
+    Usually compiler may decide to inline a function on its own, but here it's small enough that we can suggest it on our part.
+
+### Add WriteCursor Display
+
+Having a separate function allows us to modify it to include variable values that we can pass to it: 
+
+~~~~~~~ C++
+inline void
+Win32DrawSoundBufferMarker(win32_offscreen_buffer *Backbuffer,
+                           win32_sound_output *SoundOutput,
+                           f32 C, int PadX, int Top, int Bottom,
+~~~~~~~ C++ edit
+                           DWORD Value, u32 Color)
+~~~~~~~ C++
+{
+~~~~~~~ C++ edit
+    Assert (Value < SoundOutput->SecondaryBufferSize);
+    f32 XReal = C * (f32)Value;
+~~~~~~~ C++
+    int X = PadX + (int)XReal;
+~~~~~~~ C++ edit
+    Win32DebugDrawVertical(Backbuffer, X, Top, Bottom, Color);
+~~~~~~~ C++
+}
+
+internal void
+Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
+                      int MarkerCount, win32_debug_time_marker *Markers,
+                      win32_sound_output *SoundOutput, f32 TargetSecondsPerFrame)
+{
+    int PadX = 16;
+    int PadY = 16;
+    
+    int Top = PadY;
+    int Bottom = Backbuffer->Height - PadY;
+    
+    f32 C = (f32)(Backbuffer->Width - 2 * PadX) / (f32)SoundOutput->SecondaryBufferSize;
+    for (int MarkerIndex = 0;
+         MarkerIndex < MarkerCount;
+         ++MarkerIndex)
+    {
+        win32_debug_time_marker *ThisMarker = &Markers[MarkerIndex];
+
+~~~~~~~ C++ edit
+        Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom, ThisMarker->PlayCursor, 0xFFFFFFFF);
+        Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom, ThisMarker->WriteCursor, 0xFFFF0000);
+~~~~~~~ C++
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Using `Win32DrawSoundBufferMarker` to draw different values in different colors.]
+
+This should give us what we want, let's compile and verify.
+
+![Figure [x]: Debug display of the PlayCursor (white) and WriteCursor (red).](../media/day19/write_cursor.jpg) 
+
+These lines, which represent position of the cursors in the sound buffer as the time goes by, are not looking pretty. Similarly to the `PlayCursor`s, `WriteCursor`s are spread unevenly across time. Moreover, we can see that the amount of write cursors is distinctly lower than the amount of play cursors.
+
+Now, if we want to expand this display, we only need to add more members to the `win32_debug_time_marker` struct (and of course write data to them). Similarly, if don't need one or both marker types that we already have, we can simply comment out (`//`) the respective calls to `Win32DrawSoundBufferMarker`. 
+
+# Address Debug Output Results
+
+## Inspect Play Cursors
+
+Let's give a closer look at what we're seeing. If we only enable `PlayCursor`s (comment out the line drawing `WriteCursor` inside `Win32DebugSyncDisplay`), we can observe several things:
 
 * Most of the time we're getting nice equally-spaced lines
 * Sometimes we get quite fat lines. This part is really not related to the sound: it's just an artifact from the buffer resizing.
 * Some gaps are quite significant, almost a double of the usual gaps
 
-// FIXME: 41:27
- 
 ![Figure [x]: A Better Look at Play Cursor Display.](../media/day19/cursor_inspection.jpg) 
 
-------------------------
-<!-- 
-[Listing [x]: <file>[]</file> .]
-![Figure [x]: .](../media/day16/.jpg) 
-[Figure [x]: .]
--->
-------------------------
+The best bet for now would be go and investigate what's going on with those gaps.
 
+## Check Documentation on MSDN
 
+The first place to start searching would be in the DirectSound configuration. Maybe we missed something that could help us here? 
 
+The page detailing contents of the [DSBCAPS][] structure lists all the possible flags you might pass to a buffer. Among others, a suitable candidate is the flag `DSBCAPS_GETCURRENTPOSITION2`: 
 
+> The buffer uses the new behavior of the play cursor when 
+> IDirectSoundBuffer8::GetCurrentPosition is called. In the first version of DirectSound, 
+> the play cursor was significantly ahead of the actual playing sound on emulated sound 
+> cards; it was directly behind the write cursor. Now, if the DSBCAPS_GETCURRENTPOSITION2 
+> flag is specified, the application can get a more accurate play cursor. If this flag is 
+> not specified, the old behavior is preserved for compatibility. This flag affects only 
+> emulated devices; if a DirectSound driver is present, the play cursor is accurate for 
+> DirectSound in all versions of DirectX.
 
+This seems like a long shot, but let's try it anyway. 
 
+~~~~~~~ C++
+// NOTE(casey): "Create" a secondary buffer
+DSBUFFERDESC BufferDescription = {};
+BufferDescription.dwSize = sizeof(BufferDescription);
+~~~~~~~ C++ add
+BufferDescription.dwFlags = DSBCAPS_GETCURRENTPOSITION2;
+~~~~~~~ C++
+BufferDescription.dwBufferBytes = BufferSize;
+BufferDescription.lpwfxFormat = &WaveFormat;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32InitDSound]</file> Adding an extra flag to the secondary buffer.]
 
+... No changes. Oh well, it was worth a try. No other flag looks particularly useful for our situation. 
 
+Another thing we could try is to check whether we pass `PlayCursor` and `WriteCursor` in a right order to [GetCurrentPosition][]. Maybe `WriteCursor` should go first? Let's check documentation:
 
+~~~~~~~ C++
+HRESULT GetCurrentPosition( LPDWORD lpdwCurrentPlayCursor, LPDWORD lpdwCurrentWriteCursor );
+~~~~~~~
 
+Nope, the order is correct. What else it could be?
 
+## Inspect Sound Stream
 
+We know we have to write from the last position we wrote to for the sound to be continuous. That's what we're doing here: 
 
+~~~~~~~ C++
+game_sound_output_buffer SoundBuffer = {};
+SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
+SoundBuffer.SampleCount = BytesToWrite / SoundOutput.BytesPerSample;
+SoundBuffer.Samples = Samples;
 
+// ... 
+// Preparing render buffer
+// ... 
 
+GameUpdateAndRender(&GameMemory, NewInput, &Buffer, &SoundBuffer);
 
+if(SoundIsValid)
+{
+    Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite, &SoundBuffer);
+}
+~~~~~~~
 
+With the sound buffer, we're providing our game with the information of how many samples should we write. The game writes the samples through `GameUpdateAndRender` to our own `Samples` memory block. Afterwards, we transfer the written samples to DirectSound buffers and ultimately to the hardware (in `Win32FillSoundBuffer`). So this covers most of the _writing_ phase. But how early ahead of the Play Cursor should we be writing?
 
+## Change PlayCursor Snapshot
 
+Now, before we move on and analyze the debug output thoroughly, there's another potential bug hiding in our code. Similarly to the timing issues we encountered earlier, it's possible there's a snapshot timing matter. 
 
+Instead of capturing the Play Cursor just before we send it to the game, we probably should calculate it at the frame flip. We're already doing it in our recently added debug code section, so parts of it will be promoted to non-debug code. We'll be still using them for our debug purposes. 
 
+Now, because it's no longer debug code, we'll need to test whether the `GetCurrentPosition` succeeded. We can't allow a failure condition in code exposed to the user, should `GetCurrentPosition` fail, we'll simply mark our `SoundIsValid` as false and ignore anything sound-related.
+
+~~~~~~~ C++
+#if HANDMADE_INTERNAL
+Win32DebugSyncDisplay(&GlobalBackbuffer,
+                        ArrayCount(DebugTimeMarkers), DebugTimeMarkers,
+                        &SoundOutput, TargetSecondsPerFrame);
+#endif
+Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext, Dimension.Width, Dimension.Height);
+
+~~~~~~~ C++ add
+DWORD PlayCursor = 0;
+DWORD WriteCursor= 0;
+if (SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
+{
+    LastPlayCursor = PlayCursor;
+    SoundIsValid = true;
+}
+else
+{
+    SoundIsValid = false;
+}
+~~~~~~~ C++
+#if HANDMADE_INTERNAL
+// NOTE(casey): This is debug code
+{
+    Assert(DebugTimeMarkerIndex < ArrayCount(DebugTimeMarkers));
+    win32_debug_time_marker *Marker = &DebugTimeMarkers[DebugTimeMarkerIndex++];
+    if (DebugTimeMarkerIndex == ArrayCount(DebugTimeMarkers))
+    {
+        DebugTimeMarkerIndex = 0;
+    }
+~~~~~~~ C++ edit
+    Marker->PlayCursor = PlayCursor;
+    Marker->WriteCursor = WriteCursor;
+~~~~~~~ C++
+}
+#endif
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Capturing the cursors at the end of frame.]
+
+!!! 
+    Instead of `SUCCEEDED(GetCurrentPosition())`, you can also write `GetCurrentPosition() == DS_OK`.
+
+While we're at it, we can handle the case where the sound is valid now, but it wasn't valid before. At that point, we should simply reset our `RunningSampleIndex` (storing the position in the DirectSound buffer to write to) to whatever our WriteCursor is (divided by bytes per sample since we write in samples). 
+
+~~~~~~~ C++
+if (SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
+{
+    LastPlayCursor = PlayCursor;
+~~~~~~~ C++ add
+    if (!SoundIsValid)
+    {
+        SoundOutput.RunningSampleIndex = WriteCursor / SoundOutput.BytesPerSample;
+~~~~~~~ C++
+        SoundIsValid = true;
+~~~~~~~ C++ add
+    }
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Adding sound initialization.]
+
+You might have noticed `LastPlayCursor` to which we register the `PlayCursor`'s value. This will work similar to how the counters work: `LastPlayCursor` will live outside the `GlobalRunning` loop, so that its value can be preserved from one frame to the next. We will also move `SoundIsValid` up there.
+
+~~~~~~~ C++
+int DebugTimeMarkerIndex = 0;
+win32_debug_time_marker DebugTimeMarkers[GameUpdateHz / 2] = {};
+
+~~~~~~~ C++ add
+DWORD LastPlayCursor = 0;
+b32 SoundIsValid = false;
+
+~~~~~~~ C++
+LARGE_INTEGER LastCounter = Win32GetWallClock();
+u64 LastCycleCount = __rdtsc();
+GlobalRunning = true;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Initializing `LastPlayCursor`.]
+
+Coming into the cursor logic section, we can start simplifying things significantly. We no longer need to capture `PlayCursor` here, and we can just check if the sound is valid to proceed with the computation using the last play cursor: 
+
+~~~~~~~ C++ add
+// NOTE(casey): Compute how much sound to write and where
+~~~~~~~ C++
+DWORD ByteToLock = 0;
+DWORD TargetCursor = 0;
+DWORD BytesToWrite = 0;
+~~~~~~~ C++ delete
+DWORD PlayCursor = 0;
+DWORD WriteCursor = 0;
+b32 SoundIsValid = false;
+// TODO(casey): Tighten up sound logic so that we know where we should be
+// writing to and can anticipate the time spent in the game updates.
+~~~~~~~ C++ edit
+if (SoundIsValid)
+~~~~~~~ C++
+{
+    ByteToLock = ((SoundOutput.RunningSampleIndex * SoundOutput.BytesPerSample)
+                    % SoundOutput.SecondaryBufferSize);
+~~~~~~~ C++ edit
+    TargetCursor = ((LastPlayCursor +
+~~~~~~~ C++
+                        (SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample))
+                    % SoundOutput.SecondaryBufferSize);
+    
+    if(ByteToLock > TargetCursor)
+    {
+        BytesToWrite = SoundOutput.SecondaryBufferSize - ByteToLock;
+        BytesToWrite += TargetCursor;
+    }
+    else
+    {
+        BytesToWrite = TargetCursor - ByteToLock;
+    }
+    
+~~~~~~~ C++ delete
+    SoundIsValid = true;
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Updating cursor logic section.]
+
+Speaking of latency, we currently defined it as:
+
+~~~~~~~ C++
+SoundOutput.LatencySampleCount = SoundOutput.SamplesPerSecond / (GameUpdateHz / 2);
+~~~~~~~
+
+This looks a bit confusing, as double division usually is. We could rewrite it to make it clearer that it's 2 frames worth of sound. We simply calculate what's the latency of one frame, and then multiply by however many frames we need.
+
+~~~~~~~ C++ add
+#define FramesOfAudioLatency 2
+~~~~~~~ C++
+#define MonitorRefreshHz 60
+#define GameUpdateHz (MonitorRefreshHz / 2)
+~~~~~~~ C++
+    // ... 
+
+// NOTE(casey): Sound test
+win32_sound_output SoundOutput = {};
+SoundOutput.SamplesPerSecond = 48000;
+SoundOutput.BytesPerSample = sizeof(s16) * 2;
+SoundOutput.SecondaryBufferSize = 2 * SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample;
+SoundOutput.RunningSampleIndex = 0;
+SoundOutput.LatencySampleCount = FramesOfAudioLatency *
+                                (SoundOutput.SamplesPerSecond / GameUpdateHz);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Updating Latency notation.]
+
+Overall, this refactoring should be a bit more sane in fixing our issue. Let's compile and test it. Yep, the sound bug is still there.
+
+## Inspect Cursor Logic
+
+Let's dive deep into our cursor logic block (eventually we could pull it out to a separate function but for now we'll leave it there).
+
+~~~~~~~ C++
+DWORD ByteToLock = 0;
+DWORD TargetCursor = 0;
+DWORD BytesToWrite = 0;
+if (SoundIsValid)
+{
+    ByteToLock = ((SoundOutput.RunningSampleIndex * SoundOutput.BytesPerSample)
+                    % SoundOutput.SecondaryBufferSize);
+    
+    TargetCursor = ((LastPlayCursor +
+                        (SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample))
+                    % SoundOutput.SecondaryBufferSize);
+    
+    if(ByteToLock > TargetCursor)
+    {
+        BytesToWrite = SoundOutput.SecondaryBufferSize - ByteToLock;
+        BytesToWrite += TargetCursor;
+    }
+    else
+    {
+        BytesToWrite = TargetCursor - ByteToLock;
+    }
+}
+
+game_sound_output_buffer SoundBuffer = {};
+// ... 
+~~~~~~~
+
+In this block we calculate `ByteToLock` (start point of our write), `TargetCursor` (end point of the write) and `BytesToWrite` (total written this frame). We got `LastPlayCursor` position during last frame, by asking Windows directly.
+
+******************************************************
+*                  Latency                           *
+*                     |                              *
+*         .----------' '----------.                  *
+*        |                         |                 *
+*     PlayCursor                   |                 *
+*        |                         |                 *
+*  |     v                         |             |   *
+*  +-----*-------*-----------------*--------...--+   *
+*  |             ^                 ^             |   *
+*                |                 |                 *
+*             ByteToLock     TargetCursor            *
+*                |                 |                 *
+*                 '------. .------'                  *
+*                         |                          *
+*  |                BytesToWrite                 |   *
+*   '--------------------. .---------------...--'    *
+*                         |                          *
+*           DirectSound secondary buffer             *
+******************************************************
+[Figure [x]: Our cursor logic if `BytesToWrite` is behind the `TargetCursor`. There is also `WriteCursor` but we don't care about it here.]
+
+* `ByteToLock` is defined by us. We want to be continuously writing to the buffer, so we invented the concept of `RunningSampleIndex`, a number that grows forever. `ByteToLock` is effectively this index, translated from samples to bytes and confined within the buffer space (`% SecondaryBufferSize`).
+* `TargetCursor` is largely defined by the `PlayCursor`. We want to write _at least_ until the play cursor and then some (for what we're calling latency). This value would still be ahead of `ByteToLock` (before being also confined within the buffer space) and in the general vicinity of the actual `WriteCursor`.
+* `BytesToWrite` thus depends on whether or not `ByteToLock` is ahead or behind the `TargetCursor`:
+    * If it's ahead, it means that we're wrapping the circular buffer. We want to write until the end of the buffer, and then from 0 to the `TargetCursor`.
+    * If it's equal or behind, we want to write for however big is the space between the two (see figure above). If the values are equal, we write 0 bytes.
+
+All of this seems correct. 
+
+## Print Out Cursor Logic Values
+
+To better understand what's going on, we can make another one of those debug printouts, to better compare different values over time. We'll put it next to the sound filling buffer routine. If you prefer, you can also disable the FPS printout.
+
+~~~~~~~ C++
+game_offscreen_buffer Buffer = {};
+// ...
+
+GameUpdateAndRender(&GameMemory, NewInput, &Buffer, &SoundBuffer);
+
+if(SoundIsValid)
+{
+    Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite, &SoundBuffer);
+    
+~~~~~~~ C++ add
+#if HANDMADE_INTERNAL
+    DWORD PlayCursor;
+    DWORD WriteCursor;
+    GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor);
+    char TextBuffer[256];
+    sprintf_s(TextBuffer, sizeof(TextBuffer), "PC:%u BTL:%u TC:%u BTW:%u\n", PlayCursor, ByteToLock, TargetCursor, BytesToWrite);
+    OutputDebugStringA(TextBuffer);
+#endif
+~~~~~~~ C++
+}
+                    
+// ... 
+                    
+~~~~~~~ C++ edit
+#if 0
+~~~~~~~ C++
+// debug timing output
+
+f32 FPS = 0.0f; // To be fixed later
+f32 MegaCyclesPerFrame = (f32)CyclesElapsed / (1000.0f * 1000.0f);
+
+char FPSBuffer[256];
+sprintf_s(FPSBuffer, sizeof(FPSBuffer), "%.02fms/f, %.02ff/s, %.02fMc/f\n", MSPerFrame, FPS, MegaCyclesPerFrame);
+OutputDebugStringA(FPSBuffer);
+#endif
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Printing cursor values.]
+
+What we will get when we compile and run the game inside the debugger is the progressively increasing `PlayCursor`, `ByteToLock`, `TargetCursor`. As for the `BytesToWrite`, on our machine it oscillates between 5780 and 7680 bytes. This is indicative of less than precise granularity. 
+
+## Determine Sound Card Granularity
+
+If we wanted to calculate the sound card granularity precisely, we can do it by locking ourselves in an infinite loop. Let's have some fun! Just before entering our main `GlobalRunning` loop, we'll write a new, fake, one:
+
+~~~~~~~ C++
+GlobalRunning = true;
+                
+~~~~~~~ C++ add
+while (GlobalRunning)
+{
+    DWORD PlayCursor;
+    DWORD WriteCursor;
+    GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor);
+    
+    char TextBuffer[256];
+    _snprintf_s(TextBuffer, sizeof(TextBuffer),
+                "PC:%u WC:%u\n", PlayCursor, WriteCursor);
+    OutputDebugStringA(TextBuffer);
+}
+~~~~~~~ C++
+while (GlobalRunning) // actual game loop
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Printing more cursor values.]
+
+After compiling, make sure to run the game from the debugger! You'll only be able to close it by stopping debugging (`Ctrl-F5` from the debugger). Let it run for a couple of seconds and stop. 
+
+You will see an output similar to this one: 
+
+~~~~~~~ batch
+PC:65280 WC:71040
+PC:65280 WC:71040
+PC:65280 WC:71040
+PC:67200 WC:72960
+PC:67200 WC:72960
+PC:67200 WC:72960
+PC:67200 WC:72960
+PC:67200 WC:72960
+PC:67200 WC:72960
+~~~~~~~
+
+Now you'll notice that each time you call `GetCurrentPosition` the system reports the same exact position for a while, until it shifts significantly. If we take two subsequent values and find the difference, we'll see it's $72960 - 71040 = 1920$ _bytes_. How does this translate to our game?
+
+We know that we have 4 bytes per sample (2 for each channel). So we can make a division $\frac{1920}{4} = 480$ _samples_. We also set our sound card frequency to 48000 samples per second, so with a framerate of 30 frames per second, we fill $\frac{48000}{30} = 1600$ _samples per frame_. This means that, with granularity of 480, the cursors should advance $\frac{1600}{480} \approx 3.33$ times each frame. 
+
+That doesn't sound too bad. For what we're trying to do, this should be enough to work. Ok, let's `#if 0` our mini loop so that we can re-enable it in the future if needed.
+
+~~~~~~~ C++ add
+#if 0
+// NOTE(casey): This tests the PlayCursor/WriteCursor update frequency
+// On the Handmade Hero machine, it was 480 samples.
+~~~~~~~ C++
+while (GlobalRunning)
+{
+    DWORD PlayCursor;
+    DWORD WriteCursor;
+    GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor);
+    
+    char TextBuffer[256];
+    _snprintf_s(TextBuffer, sizeof(TextBuffer),
+                "PC:%u WC:%u\n", PlayCursor, WriteCursor);
+    OutputDebugStringA(TextBuffer);
+}
+~~~~~~~ C++ add
+#endif
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Restoring our game functionality.]
+
+Recompiling should give us back our beautiful gradient and terrible sound, just as we expected.
+
+## Inspect Write Cursors
+
+Let's check our cursors again as they're drawn: 
+
+![Figure [x]: Debug display of the PlayCursor (white) and WriteCursor (red).](../media/day19/write_cursor.jpg) 
+
+A distinct possibility is that we're still writing too close to the write cursor. This isn't good, as trying to read while writing is never a good idea. So let's expand our text printout to include not only the last play cursor, but also the latest, as well as the write cursor.
+
+~~~~~~~ C++
+if(SoundIsValid)
+{
+    Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite, &SoundBuffer);
+    
+#if HANDMADE_INTERNAL
+    DWORD PlayCursor;
+    DWORD WriteCursor;
+    GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor);
+    char TextBuffer[256];
+~~~~~~~ C++ edit
+    sprintf_s(TextBuffer, sizeof(TextBuffer), "LPC:%u BTL:%u TC:%u BTW:%u - PC:%u WC:%u\n", 
+                                  LastPlayCursor, ByteToLock, TargetCursor, BytesToWrite,
+                                  PlayCursor, WriteCursor);
+~~~~~~~ C++
+    OutputDebugStringA(TextBuffer);
+#endif
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Printing more cursor values.]
+
+Which will give us the printout similar to this: 
+
+~~~~~~~ batch
+LPC:86400 BTL:93440 TC:99200 BTW:5760 - PC:88320 WC:94080
+LPC:94080 BTL:99200 TC:106880 BTW:7680 - PC:101760 WC:107520
+LPC:105600 BTL:112640 TC:118400 BTW:5760 - PC:107520 WC:113280
+~~~~~~~
+
+We can see that our `PlayCursor` advances nicely each frame (as LPC and PC values indicate on each line). However, the `WriteCursor` is significantly far ahead compared to our hypothetic `ByteToLock` (and even `TargetCursor`!). This isn't good news because, in Windows' books, any space between `PlayCursor` and `WriteCursor` is unsafe territory, where bad things happen. 
+
+In fact, if you calculate the gap between the `WriteCursor` and `PlayCursor`, you will get an astonishing $113280 - 107520 = 5760$ _bytes_! That's 1440 samples, almost a full frame! Which means our dream of having synchronous frame flip for both audio and video at the same time (immediately after this frame) seems quite slim indeed.
+
+Let's just test our hypothesis and increase our latency from 2 to 3 frames.
+
+~~~~~~~ C++ edit
+#define FramesOfAudioLatency 3
+~~~~~~~ C++
+#define MonitorRefreshHz 60
+#define GameUpdateHz (MonitorRefreshHz / 2)
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Testing higher latency.]
+
+If we compile and run... the bug would disappear, and you'll hear nice and clean sound. Yay us?
 
 # Recap 
 
-# Debugging
+After a long and strenuous investigation day, we can finally conclude that our sound issues were indeed related to low latency. Having such a big delay between the image and the sound is far from perfect, even more so when we transition from 30 to 60 frames per second. 
+
+This unfortunately is a sad conclusion, which we will try to overcome next time. We want that ultimately our game wouldn't think of any issues that the platform layer might be facing, and work with pure (and immediate) sound stream. There might be also additional bugs that we may uncover which would help us!
+
+Ultimately, it's not as bad as at sounds. Human brain is quite forgiving for any lag between what you see and what you hear, and tends to synchronize those together. Unless we're going for a beat-matching game, we should be fine. Still, narrowing the latency it makes it subjectively better to feel. 
+
+Additionally, we still need to clean up all the loose ends before we are ready to commit to our game layer.
+
+# Side Debugging
 
 ## Access Violation in `Win32DebugDrawVertical`
 
@@ -625,20 +1299,19 @@ We successfully found and fixed the issue of the uninitialized array. We stepped
 
 _(Continue to subsection [Inspect Play Cursors])_
 
-
-# Programming Notions 
-
 # Side Considerations 
 
-## WASAPI
+## Windows Core Audio
 
-// FIXME: https://hero.handmade.network/forums/code-discussion/t/102-day_19_-_audio_latency
+The Windows [Core Audio API][] and its sub-API [Windows Audio Session API (WASAPI)][WASAPI] are relatively recent audio APIs which were introduced in Windows Vista. DirectSound and other older APIs are all emulated on Core Audio, so eliminating the middle man does have an immediate positive effect on audio latency. 
+
+To learn more about the API and how to implement it in Handmade Hero, check out [this discussion on Handmade Network](https://hero.handmade.network/forums/code-discussion/t/102-day_19_-_audio_latency).
 
 # Navigation 
 
 Previous: [Day 18. Enforcing a Video Frame Rate][day 18]
 
-<!--Up Next: [Day 20. ][day 20]-->
+Up Next: [Day 20. Debugging the Audio Sync][day 20]
 
 [Back to Index](../index.md.html)
 
