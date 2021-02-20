@@ -6,6 +6,8 @@ body#md {
     font-family: Arial, Helvetica, "sans serif";
     text-align: left;
     line-height: 170%;
+    width: 1000;
+    display: inline-block;
 }
 
 
