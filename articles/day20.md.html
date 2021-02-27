@@ -6,6 +6,149 @@ _Video Length (including Q&A): [2h46](https://hero.handmade.network/episode/code
 
 (insert intro.md.html here) 
 
+If you got this far, congratulations! Debugging sound issues may well be among the most tedious tasks one would face (unless that's exactly your cup of tea). However, we aren't out of the woods yet; the system we have in our hands is still quite latent, and there's room for improvement even at this early stage. The root of our concern is the following: sure, with the default sound API and the integrated sound module, audio is laggy. But what if someone is an audio junkie and has a powerful sound card with zero latency? We want to support them as well! And today we need to think real hard to make it happen.
+
+You might have noticed a trend throughout this series: we think first, and type after. If you understand at least on assumption level the code that you're writing, it will be much easier for you to, first, translate your thoughts into good code and, later, actually be able to read and edit it. That said, you never want to go too deep down the rabbit hole and define every single scrupulous detail: at that point, you might as well write the code directly! Leave yourself some space for a good surprise.
+
+# Deep Dive into the Issue
+
+## Define the Problem
+
+Let's go back into our favorite timeline. 
+
+***************************************************************
+*                     Next Frame Preparation                  *
+*                (User Input processing, World update,        *
+*                Graphics rendering and writing Audio)        *
+*                      /     |      |     \                   *
+*                   .-+.   .-+.   .-+.   .-+.                 *
+*                  |    | |    | |    | |    |                *
+* |               |      |      |      |      |          time *
+* +---------------+------+------+------+-....-+------+---->   *
+* |               |      |      |      |      |      |        *
+*                 0      1      2     ...     N               *
+* ^               ^      ^      ^      ^      ^      ^        *
+* |               |       \      \     |     /       |        *
+* |               |        \      \    |    /        |        *
+* game           first    Next frame is displayed    game     *
+* starts         frame          "frame flip"         exits    *
+* running        is displayed                                 *
+*                                                             *
+***************************************************************
+[Figure [x]: Game lifetime. Everything on it should be familiar to you by now.]
+
+We have decided to aim at 30 frames per second for the time being. This means that every second (or every 1000 milliseconds) we aim to output 30 frames. Thus, each frame only has $\frac{1000}{30} \approx 33.3$ milliseconds to do all the work. 
+
+Each frame we do the work to display the image and the sound of our next frame. In an ideal world, both would go out at the same time: at the magical moment in time that we call "frame flip". 
+
+***************************************************************
+*               .---. image is                                *
+*               | 🕺 | displayed                               *
+*               '---'                                         *
+*                audio is played                              *
+*               +~~~~~~~~~~~~~                                *
+* |   frame 0   |   frame 1   |   frame 2   |   ...      time *
+* +---+---------+-------------+-------------+------------->   *
+* |   ^         ^                                             *
+*     |         |                                             *
+*     +--------'                                              *
+*     |         Frame                                         *
+*    Work       Flip                                          *
+*   starts                                                    *
+*                                                             *
+*                                                             *
+***************************************************************
+[Figure [x]: Frame flip workflow in an ideal world.]
+
+This work happens some time after the frame begins: before we get started on rendering, we need to collect the user input update our world state, and maybe do some additional preparations as necessary. Even further still, we're currently writing audio just before the frame flip, at the last possible moment in fact. The idea being that the moment we send something to the hardware, it will be reproduced to the user.
+
+*******************************************************************
+*                                                                 *
+*        Update game world                                        *
+*        Prepare for render                        wait           *
+*              |                                    |             *
+*           .--+---.                           .----+---.         *
+*    |     |        |                         |          | repeat *
+* ---+-----+--------+-------------------------+----------+-->     *
+*    |     |        |                         |          ^        *
+*     '-+-'          '-----------+-----------'           |        *
+*       |                        |                   frame flip   *
+*   gather input               Render                             *
+* (keyboard, mouse,                                               *
+*     gamepad)                                                    *
+*                                                                 *
+*******************************************************************
+[Figure [x]: Breakdown of the work within a single frame. Proportions of game update/render times will differ. Of course, some of these tasks may run in parallel in the future.]
+
+Unfortunately for us, hardware lag exists. Furthermore, DirectSound (on our specific machine) is not cooperating with us. The API has a delay on the order of 30-33ms! That's in fact a full frame of ours! So this is what happens with our frames in practice: 
+
+***************************************************************
+*               .---. image is                                *
+*               | 🕺 | displayed                               *
+*               '---'                                         *
+*               |            audio is played                  *
+*               |           +~~~~~~~~~~~~~                    *
+* |   frame 0   |  frame 1  | |   frame 2   |   ...      time *
+* +---+---------+-----------+-+-------------+------------->   *
+* |   ^       ^ |             |             |                 *
+*     |       | ^                                             *
+*     |       |  \                                            *
+*    Work     |   '----expected                               *
+*   starts    |       frame flip                              *
+*             |                                               *
+*           Send work to                                      *
+*           the hardware                                      *
+*                                                             *
+***************************************************************
+[Figure [x]: Frame flip workflow in our reality.]
+
+As you can see, by the time audio starts playing, it's almost time for the next frame to flip! And, when we blindly assumed low latency scenario, this is what created the audible clicks for us: information kept getting overwritten from under the Play Cursor.
+
+If we want to avoid latency, we'd ideally have to send audio data before our rendering work on a frame even starts! This isn't necessarily impossible but would introduce frame lag anyway, since the new user input and world state wouldn't be accounted in the old sound... On surface this seems like an exercise in chasing one's own tail.
+
+## Evaluate the Options
+
+At the end of the day, under the current system there's no way to compute sound for a frame and have it reproduced together with its image. This leaves us with the following options: 
+
+* Accept the reality that our audio will always be a couple frames behind the image. After all, so many games already do this! This would simply regress our audio to be latent by design.
+* Have a "low latency mode" which would take over on a machine with a great sound card and low latency; do things the slow way otherwise. 
+* Continue tinkering on the inner workings of our platform layer.
+* Fix latency issues by essentially getting input and world state a frame before. This would introduce input lag, which seems like a worse tradeoff in an action game like ours. 
+
+The input lag option in our particular case seems like the worst of all, so we can rule it out right away. In fact, we want to push the input capture as close to the frame flip as possible, so that the user doesn't get a feeling of an unresponsive game.
+
+## Draft an Action Plan
+
+Let's start with the simplest solution we might imagine. We write our sound to the hardware as soon as we have it, without waiting for frame flip. So if, for instance, audio is sent out 15ms after the frame starts, it will be reproduced ~15ms after the frame flip happened. 
+
+The game won't know of this happening: platform will lie to the game saying that the audio will be reproduced at the frame flip. 
+
+***************************************************************
+*               .---. image is                                *
+*               | 🕺 | displayed                               *
+*               '---'                                         *
+*               |       audio is played                       *
+*               |      +~~~~~~~~~~~~~                         *
+* |             |      |      |             |   ...      time *
+* +------+------+------+------+-------------+------------->   *
+* |      ^      |             |             |                 *
+*        |      ^                                             *
+*        |      |                                             *
+* Calculate and |                                             *
+* send audio    |                                             *
+*               |                                             *
+*           frame flip                                        *
+*                                                             *
+***************************************************************
+[Figure [x]: Sending the audio out as soon as it's ready.]
+
+!!! Trivia 
+    Unfortunately, this kind of unsynchronized audio loop is common in the industry. It's a bit sloppy but better than the alternative of pushing audio to the next frame and have a whole frame of buffering instead of roughly a half. 
+
+This solution also opens the road for the "low latency mode" we proposed above. If we determine that we're playing on the extremely performant hardware, the sound will be target the frame flip instead of whenever it's ready.
+
+
+
 ------------------------
 <!-- 
 [Listing [x]: <file>[]</file> .]
