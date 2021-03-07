@@ -147,7 +147,237 @@ The game won't know of this happening: platform will lie to the game saying that
 
 This solution also opens the road for the "low latency mode" we proposed above. If we determine that we're playing on the extremely performant hardware, the sound will be target the frame flip instead of whenever it's ready.
 
+// FIXME: Undocumented code edits start
 
+~~~~~~~ C++ delete
+#define FramesOfAudioLatency 3
+~~~~~~~ C++
+    // TODO(casey): How do we reliably query on monitor refresh rate on Windows?
+#define MonitorRefreshHz 60
+#define GameUpdateHz (MonitorRefreshHz / 2)
+
+// ... 
+
+// NOTE(casey): Sound test
+win32_sound_output SoundOutput = {};
+SoundOutput.SamplesPerSecond = 48000;
+SoundOutput.BytesPerSample = sizeof(s16) * 2;
+SoundOutput.SecondaryBufferSize = 2 * SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample;
+SoundOutput.RunningSampleIndex = 0;
+~~~~~~~ C++ add
+// TODO(casey): Get rid of LatencySampleCount
+~~~~~~~ C++ edit
+SoundOutput.LatencySampleCount = 3 *(SoundOutput.SamplesPerSecond / GameUpdateHz);           
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+This is a circular buffer so we need to account for when the write cursor is in front.
+
+~~~~~~~ C++
+#if HANDMADE_INTERNAL
+DWORD PlayCursor;
+DWORD WriteCursor;
+GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor);
+
+~~~~~~~ C++ add
+DWORD UnwrappedWriteCursor = WriteCursor;
+if (UnwrappedWriteCursor < PlayCursor)
+{
+    UnwrappedWriteCursor += SoundOutput.SecondaryBufferSize;
+}
+DWORD AudioLatencyBytes = UnwrappedWriteCursor - PlayCursor;
+~~~~~~~ C++
+
+char TextBuffer[256];
+~~~~~~~ C++ edit
+sprintf_s(TextBuffer, sizeof(TextBuffer), "LPC:%u BTL:%u TC:%u BTW:%u - PC:%u WC:%u DELTA:%u\n",
+            LastPlayCursor, ByteToLock, TargetCursor, BytesToWrite,
+            PlayCursor, WriteCursor, AudioLatencyBytes);
+~~~~~~~ C++
+OutputDebugStringA(TextBuffer);
+#endif
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+DELTA is nice and stable at 5760, and circular buffer hack works well. 
+
+~~~~~~~ C++
+DWORD UnwrappedWriteCursor = WriteCursor;
+if (UnwrappedWriteCursor < PlayCursor)
+{
+    UnwrappedWriteCursor += SoundOutput.SecondaryBufferSize;
+}
+DWORD AudioLatencyBytes = UnwrappedWriteCursor - PlayCursor;
+~~~~~~~ C++ add
+f32 AudioLatencySeconds = ((f32)AudioLatencyBytes / (f32)SoundOutput.BytesPerSample) / 
+                           (f32)SoundOutput.SamplesPerSecond;
+~~~~~~~ C++
+char TextBuffer[256];
+~~~~~~~ C++ edit
+sprintf_s(TextBuffer, sizeof(TextBuffer), "LPC:%u BTL:%u TC:%u BTW:%u - PC:%u WC:%u DELTA:%u (%fs)\n",
+            LastPlayCursor, ByteToLock, TargetCursor, BytesToWrite,
+            PlayCursor, WriteCursor, AudioLatencyBytes, AudioLatencySeconds);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+Note about printf values. `%.2f` makes it so it's only 2 decimal points.
+
+Dimensional analysis aside: Bytes * (Sample / Bytes) * (Seconds / Samples). Simple to work out in the head but also can use the trick on paper if necessary. In fact, let's place a todo to simplify similar calculations in the future.
+
+~~~~~~~ C++
+struct win32_sound_output
+{
+    int SamplesPerSecond;
+    int BytesPerSample;
+    DWORD SecondaryBufferSize;
+    u32 RunningSampleIndex;
+    int LatencySampleCount;
+~~~~~~~ C++ add
+    // TODO(casey): Math get simpler if we add a "bytes per second" field? 
+~~~~~~~ C++
+};
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.h]</file> .]
+
+Now, pull them out from the game loop, these are useful values that we want to keep track of between frames.
+
+~~~~~~~ C++
+// ... 
+// Just before the main loop
+// ... 
+
+int DebugTimeMarkerIndex = 0;
+win32_debug_time_marker DebugTimeMarkers[GameUpdateHz / 2] = {};
+
+DWORD LastPlayCursor = 0;
+b32 SoundIsValid = false;
+~~~~~~~ C++ add
+DWORD AudioLatencyBytes = 0;
+f32 AudioLatencySeconds = 0;
+~~~~~~~ C++
+
+LARGE_INTEGER LastCounter = Win32GetWallClock();
+u64 LastCycleCount = __rdtsc();
+GlobalRunning = true;
+
+// ... 
+// Most of the main loop
+// ... 
+
+DWORD UnwrappedWriteCursor = WriteCursor;
+if (UnwrappedWriteCursor < PlayCursor)
+{
+    UnwrappedWriteCursor += SoundOutput.SecondaryBufferSize;
+}
+~~~~~~~ C++ edit
+AudioLatencyBytes = UnwrappedWriteCursor - PlayCursor;
+AudioLatencySeconds = ((f32)AudioLatencyBytes / (f32)SoundOutput.BytesPerSample) / 
+                           (f32)SoundOutput.SamplesPerSecond;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+Having values gather around like this is a good indication that we're going to start gathering them together and we might do that soon, just not yet. It's better to wait until you're completely happy with how something works until you start gathering things together and pulling them out, otherwise you will fall in a lot of additional typing. Don't be too horrible! 
+
+## Review target bytes calculation
+
+We set our `ByteToLock` to be whatever our `RunningSampleIndex` was. We then calculate target cursor which takes into account latency. Now we want to finally start tracking the DirectSound's write cursor. up until now we were ignoring it.
+
+~~~~~~~ C++
+DWORD LastPlayCursor = 0;
+~~~~~~~ C++ add
+DWORD LastWriteCursor = 0;
+~~~~~~~ C++
+b32 SoundIsValid = false;
+DWORD AudioLatencyBytes = 0;
+f32 AudioLatencySeconds = 0;
+
+// ... 
+// Towards the end of the main loop
+// ... 
+
+DWORD PlayCursor = 0;
+DWORD WriteCursor= 0;
+if (SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
+{
+    LastPlayCursor = PlayCursor;
+~~~~~~~ C++ add
+    LastWriteCursor = WriteCursor;
+~~~~~~~ C++
+    if (!SoundIsValid)
+    {
+        SoundOutput.RunningSampleIndex = WriteCursor / SoundOutput.BytesPerSample;
+        SoundIsValid = true;
+    }
+}
+else
+{
+    SoundIsValid = false;
+}
+
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+*****************************************************************************
+*                                                                           *
+*              Set TargetCursor                                             *
+*             to the end of frame         Set TargetCursor                  *
+*                    .-----.                 .-----.                        *
+*                   |       |               |       |                       *
+*    |              |       v|              |       v|                      *
+*    +------+-------+--------+------+-------+--------+------------->        *
+*    |      ^       ^        |      ^       ^        |                      *
+*    .---.  |       |        .---.  |       |        .---.                  *
+*    | 🕺 |  |       |        | 🕺 |  |       |        | 🕺 |                  *
+*    '---'  |       |        '---'  |       |        '---'                  *
+*     Ask where the |        |      |       |        |                      *
+*      DirectSound  |        |   Wake up    |        |      ...             *
+*      cursors are  |        |   and ask    |        |                      *
+*        |          |        |    |         |        |                      *
+*        +-->  WriteCursor   |    +-->  WriteCursor  |                      *
+*      PlayCursor            |  PlayCursor           |                      *
+*                            +~~~~~~~~~~~~~~~~~~~~~~~+~~~~~~~~~~~~~~~~~~~   *
+*                            audio is playing for exactly one frame         *
+*                            rinse and repeat for infinite sound            *
+*                                                                           *
+*****************************************************************************
+[Figure [x]: Low latency path idea. 🕺 represents frame flips.]
+
+Need to adjust by however much the clock consumes, so need to calculate _average_ wc movement instead of going straight to the end of frame.
+
+If inside frame WC then always write average WC motion amount
+
+I HATE PROGRAMMING 
+I HATE PROGRAMMING 
+    IT WORKS!
+I LOVE PROGRAMMING 
+
+*****************************************************************************
+*                                                                           *
+*                     Set TargetCursor to be slightly further ahead         *
+*                                from the WriteCursor                       *
+*                     (just a safety margin, don't wait until flip)         *
+*                                      .-----.                              *
+*                                     |       |                             *
+*    |                                |       v      |                      *
+*    +------+----------------+--------+--------------+------------->        *
+*    |      ^                |        ^       |      |                      *
+*    .---.  |                .---.    |       |      .---.                  *
+*    | 🕺 |  |                | 🕺 |    |       |      | 🕺 |                  *
+*    '---'  |                '---'    |       |      '---'                  *
+*     Ask where the                   |       |                             *
+*      DirectSound                    |       |                             *
+*      cursors are                    |       |                             *
+*        |                            |       |                             *
+*        +-------------------->  WriteCursor  |                             *
+*     PlayCursor                              |                             *
+*                                             +~~~~~~~~~~~~~~~~~~~          *
+*                            audio is still playing for exactly one frame   *
+*                             but it's scheduled one frame in advance       *
+*                                                                           *
+*****************************************************************************
+[Figure [x]: High latency path.]
+
+// FIXME: 01:07
 
 ------------------------
 <!-- 
