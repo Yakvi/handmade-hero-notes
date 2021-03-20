@@ -1182,44 +1182,183 @@ if (!GlobalPause)
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Implementing Global Pause.]
 
-// FIXME: 02:06
+## Display Expected Frame Flip Time
 
-------------------------
-<!-- 
-[Listing [x]: <file>[]</file> .]
-![Figure [x]: .](../media/day16/.jpg) 
-[Figure [x]: .]
--->
-------------------------
+We want to see if our estimate lines up at all
+
+~~~~~~~ C++
+struct win32_debug_time_marker
+{
+    DWORD OutputPlayCursor;
+    DWORD OutputWriteCursor;
+    DWORD OutputLocation;
+    DWORD OutputByteCount;
+~~~~~~~ C++ add
+    DWORD ExpectedFlipPlayCursor;
+~~~~~~~ C++
+    
+    DWORD FlipPlayCursor;
+    DWORD FlipWriteCursor;
+};
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.h]</file> Expanding `win32_debug_time_marker`.]
+
+~~~~~~~ C++
+win32_debug_time_marker *Marker = &DebugTimeMarkers[DebugTimeMarkerIndex];
+Marker->OutputPlayCursor = PlayCursor;
+Marker->OutputWriteCursor = WriteCursor;
+Marker->OutputLocation = ByteToLock;
+Marker->OutputByteCount = BytesToWrite;
+~~~~~~~ C++ add
+Marker->ExpectedFlipPlayCursor = ExpectedFrameBoundaryByte;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Recording calculated frame flip cursor.]
+
+~~~~~~~ C++
+DWORD PlayColor = 0xFFFFFFFF;         // White
+DWORD WriteColor = 0xFFFF0000;        // Red
+~~~~~~~ C++ add
+DWORD ExpectedFlipColor = 0xFFFFFF00; // Yellow
+~~~~~~~ C++
+
+int Top = PadY;
+int Bottom = PadY + LineHeight;
+
+if (MarkerIndex == CurrentMarkerIndex)
+{
+    Top += LineHeight + PadY;
+    Bottom += LineHeight + PadY;
+    
+    Win32DrawSoundBufferMarker(..., ThisMarker->OutputPlayCursor, PlayColor);
+    Win32DrawSoundBufferMarker(..., ThisMarker->OutputWriteCursor, WriteColor);
+    
+    Top += LineHeight + PadY;
+    Bottom += LineHeight + PadY;
+    
+    Win32DrawSoundBufferMarker(..., ThisMarker->OutputLocation, PlayColor);
+    Win32DrawSoundBufferMarker(..., ThisMarker->OutputLocation + ThisMarker->OutputByteCount, WriteColor);
+    
+    Top += LineHeight + PadY;
+    Bottom += LineHeight + PadY;
+    
+~~~~~~~ C++ add
+    Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, PadY, Bottom, 
+                               ThisMarker->ExpectedFlipPlayCursor, ExpectedFlipColor);
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32DebugSyncDisplay]</file> Displaying flip play cursor.]
 
 
+However, upon giving a closer look at `ExpectedFrameBoundaryByte`, we can see that the computation is wrong:
 
+~~~~~~~~ C++
+DWORD ExpectedFrameBoundaryByte = PlayCursor + ExpectedSoundBytesPerFrame;
+~~~~~~~~
 
+That's not what we set out to do! This doesn't take into account whatever amount of time has already elapsed since the frame started. Let's fix this. 
 
+~~~~~~~ C++
+// Before the main loop
+DWORD AudioLatencyBytes = 0;
+f32 AudioLatencySeconds = 0;
+b32 SoundIsValid = false;
 
+LARGE_INTEGER LastCounter = Win32GetWallClock();
+~~~~~~~ C++ add
+LARGE_INTEGER FlipWallClock = Win32GetWallClock();
+~~~~~~~ C++
 
+u64 LastCycleCount = __rdtsc();
+GlobalRunning = true;
+win32_window_dimension Dimension = Win32GetWindowDimension(Window);
 
+// ... 
+// At the end of the main loop
+// ... 
 
+#if HANDMADE_INTERNAL
+Win32DebugSyncDisplay(...);
+#endif
+Win32DisplayBufferInWindow(...);
 
+~~~~~~~ C++ add
+FlipWallClock = Win32GetWallClock();
+~~~~~~~ C++
 
+#if HANDMADE_INTERNAL
+// More debug code
+// ... 
+#endif
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Getting the actual frame flip timing.]
 
+~~~~~~~ C++
+GameUpdateAndRender(&GameMemory, NewInput, &Buffer);
+                        
+~~~~~~~ C++ add
+LARGE_INTEGER AudioWallClock = Win32GetWallClock();
+f32 FromBeginToAudioSeconds = Win32GetSecondsElapsed(FlipWallClock, AudioWallClock);
+~~~~~~~ C++
 
+DWORD PlayCursor;
+DWORD WriteCursor;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Calculating correct frame boundary byte.]
 
+## Display Play Window
 
+~~~~~~~ C++
+DWORD PlayColor = 0xFFFFFFFF;
+DWORD WriteColor = 0xFFFF0000;
+DWORD ExpectedFlipColor = 0xFFFFFF00;
+~~~~~~~ C++ add
+DWORD PlayWindowColor = 0xFFFF00FF;
+~~~~~~~ C++
 
+int Top = PadY;
+int Bottom = PadY + LineHeight;
 
+if (MarkerIndex == CurrentMarkerIndex)
+{
+    // ...
+}
 
-
-
-
+Win32DrawSoundBufferMarker(..., ThisMarker->FlipPlayCursor, PlayColor);
+~~~~~~~ C++ add
+Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom, 
+                           ThisMarker->FlipPlayCursor + (480 * SoundOutput->BytesPerSample), 
+                           PlayWindowColor);
+~~~~~~~ C++
+Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom, ThisMarker->FlipWriteCursor, WriteColor);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32DebugSyncDisplay]</file> Calculating play window.]
 
 # Recap 
+
+Audio is tough, and it's hard to find topics harder than this in programming. However, if you got this far, congratulations! From here on it should be a breeze. 
 
 # Exercises 
 
 # Programming Notions 
 
-# Side Considerations 
+# Bugfix: Sound Changing Pitch
+
+~~~~~~~ C++
+f32 SineValue = sinf(tSine);
+s16 SampleValue = (s16)(SineValue * ToneVolume);
+
+*SampleOut++ = SampleValue;
+*SampleOut++ = SampleValue;
+tSine += 2.0f * Pi32 * 1.0f / (f32)WavePeriod;
+
+~~~~~~~ C++ add
+if (tSine > 2.0f * Pi32)
+{
+    tSine -= 2.0f * Pi32;
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameSoundOutput]</file> Normalizing `tSine`.]
 
 # Navigation 
 
