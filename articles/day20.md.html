@@ -1,25 +1,35 @@
 <meta charset="utf-8" />
 <link rel="stylesheet" href="../css/style.css" />
+<script type="text/x-mathjax-config">
+MathJax.Hub.Register.StartupHook("TeX Jax Ready",function () {
+  MathJax.Hub.Insert(MathJax.InputJax.TeX.Definitions.macros,{
+    cancel: ["Extension","cancel"],
+    bcancel: ["Extension","cancel"],
+  });
+});
+</script>
 
 **Day 20. Debugging the Audio Sync** 
 _Video Length (including Q&A): [2h46](https://hero.handmade.network/episode/code/day020/)_ 
 
 (insert intro.md.html here) 
 
-If you got this far, congratulations! Debugging sound issues may well be among the most tedious tasks one would face (unless that's exactly your cup of tea). However, we aren't out of the woods yet; the system we have in our hands is still quite latent, and there's room for improvement even at this early stage. The root of our concern is the following: sure, with the default sound API and the integrated sound module, audio is laggy. But what if someone is an audio junkie and has a powerful sound card with zero latency? We want to support them as well! And today we need to think real hard to make it happen.
+If you've got this far, congratulations! Debugging sound issues may well be among the most tedious tasks one would face (even if that's your cup of tea). However, we aren't out of the woods yet; the system we have in our hands right now is still quite latent, and there's room for improvement even at this early stage. Sure, with the default sound API and the integrated sound module, audio is laggy. But what about the sound junkies who have powerful cards with close to zero latency on the sound output? We want to support them as well! And today we need to think real hard to make it happen.
 
-You might have noticed a trend throughout this series: we think first, and type after. If you understand at least on assumption level the code that you're writing, it will be much easier for you to, first, translate your thoughts into good code and, later, actually be able to read and edit it. That said, you never want to go too deep down the rabbit hole and define every single scrupulous detail: at that point, you might as well write the code directly! Leave yourself some space for a good surprise.
+You might have noticed a trend throughout this series: think first, and type after. If you understand at least on assumption level the code that you're about to write, it will be much easier for you to  translate your thoughts into good code. And the benefits don't stop here! You will actually be able to read and edit it after a while. That said, you never want to go too deep and define every single scrupulous detail in advance: at that point, you might as well write the code directly! Leave yourself some space for a good surprise.
+
+Today however, we will mix the two together. It's a complex topic that we can simplify by performing one step at a time, instead of trying to do the whole thing at once. If we find out that we were incorrect initially, the fix shouldn't be too difficult to make.
 
 # Deep Dive into the Issue
 
 ## Define the Problem
 
-Let's go back into our favorite timeline. 
+Let's go back to our favorite timeline chart. We have our video frames which update every "frame flip" until the game stops running.
 
 ***************************************************************
 *                     Next Frame Preparation                  *
-*                (User Input processing, World update,        *
-*                Graphics rendering and writing Audio)        *
+*             (User Input processing, World update,           *
+*             Graphics rendering and writing Audio)           *
 *                      /     |      |     \                   *
 *                   .-+.   .-+.   .-+.   .-+.                 *
 *                  |    | |    | |    | |    |                *
@@ -37,9 +47,9 @@ Let's go back into our favorite timeline.
 ***************************************************************
 [Figure [x]: Game lifetime. Everything on it should be familiar to you by now.]
 
-We have decided to aim at 30 frames per second for the time being. This means that every second (or every 1000 milliseconds) we aim to output 30 frames. Thus, each frame only has $\frac{1000}{30} \approx 33.3$ milliseconds to do all the work. 
+For the moment, we're aiming at 30 frames per second frequency of the frame flips. This means that every second (or every 1000 milliseconds) we output 30 frames. Thus each frame only has $\frac{1000}{30} \approx 33.3$ milliseconds to do all the work. 
 
-Each frame we do the work to display the image and the sound of our next frame. In an ideal world, both would go out at the same time: at the magical moment in time that we call "frame flip". 
+Each frame we want to display the image and the sound of our next frame. In an ideal world, both would go out at the same time. 
 
 ***************************************************************
 *               .---. image is                                *
@@ -60,7 +70,7 @@ Each frame we do the work to display the image and the sound of our next frame. 
 ***************************************************************
 [Figure [x]: Frame flip workflow in an ideal world.]
 
-This work happens some time after the frame begins: before we get started on rendering, we need to collect the user input update our world state, and maybe do some additional preparations as necessary. Even further still, we're currently writing audio just before the frame flip, at the last possible moment in fact. The idea being that the moment we send something to the hardware, it will be reproduced to the user.
+This work happens some time after the frame begins: before we get started on rendering, we need to collect the user input, update our world state, etc. Even further still, we're currently writing audio just before the frame flip, at the last possible moment in fact. The idea being that the moment we send something to the hardware, it will be reproduced to the user.
 
 *******************************************************************
 *                                                                 *
@@ -80,7 +90,7 @@ This work happens some time after the frame begins: before we get started on ren
 *******************************************************************
 [Figure [x]: Breakdown of the work within a single frame. Proportions of game update/render times will differ. Of course, some of these tasks may run in parallel in the future.]
 
-Unfortunately for us, hardware lag exists. Furthermore, DirectSound (on our specific machine) is not cooperating with us. The API has a delay on the order of 30-33ms! That's in fact a full frame of ours! So this is what happens with our frames in practice: 
+Unfortunately for us, hardware lag exists, so things do not happen immediately. Furthermore, DirectSound (on our specific machine) is not cooperating with us. Last time, we determined that the API has a delay of 30ms! That's in fact almost full frame! So this is what happens with our frames in reality: 
 
 ***************************************************************
 *               .---. image is                                *
@@ -90,36 +100,69 @@ Unfortunately for us, hardware lag exists. Furthermore, DirectSound (on our spec
 *               |           +~~~~~~~~~~~~~                    *
 * |   frame 0   |  frame 1  | |   frame 2   |   ...      time *
 * +---+---------+-----------+-+-------------+------------->   *
-* |   ^       ^ |             |             |                 *
-*     |       | ^                                             *
-*     |       |  \                                            *
+* |   ^       ^ |           | |             |                 *
+*     |       | ^           |                                 *
+*     |       |  \          |                                 *
 *    Work     |   '----expected                               *
 *   starts    |       frame flip                              *
-*             |                                               *
-*           Send work to                                      *
-*           the hardware                                      *
-*                                                             *
+*             |             |                                 *
+*         Send audio        |                                 *
+*       samples to the      |                                 *
+*      Operating System     |                                 *
+*             |             |                                 *
+*              '----. .----'                                  *
+*                    |                                        *
+*         Windows/Hardware route audio                        *
+*             for reproduction                                *
 ***************************************************************
 [Figure [x]: Frame flip workflow in our reality.]
 
-As you can see, by the time audio starts playing, it's almost time for the next frame to flip! And, when we blindly assumed low latency scenario, this is what created the audible clicks for us: information kept getting overwritten from under the Play Cursor.
+As you can see, by the time audio starts playing, it's almost time for the next frame to flip! And, when we blindly assumed low latency scenario, this is what created the audible clicks for us: information kept getting overwritten from under the Play Cursor. 
 
-If we want to avoid latency, we'd ideally have to send audio data before our rendering work on a frame even starts! This isn't necessarily impossible but would introduce frame lag anyway, since the new user input and world state wouldn't be accounted in the old sound... On surface this seems like an exercise in chasing one's own tail.
+What this means is that, when we were writing audio, we were telling to write waaay before it was safe. DirectSound API works on two cursors: Play Cursor and Write Cursor. The API reads the audio bytes from the area _around_ the Play Cursor, with the Write Cursor represents the first _safe_ point user can write to. We're ignoring the write cursor for the time being and write to wherever we feel is appropriate to our needs. 
+
+That's why we needed to add the additional frames of latency: simply to allow the write cursor to advance. Even further still, currently we're asking for the cursors location at the end of _previous_ frame. This means that, by the time we get to compute audio, the cursors have advanced even further, resulting in a whopping 3 frames of latency!
+
+****************************************************************************
+*                                                                          *
+*                           "Ignore" the WriteCursor and define our own    *
+*           +--------------> TargetCursor based on expected frame flip;    *
+*           |               offset it by a specific latency to always be   *
+*           |                         in the "safe zone"                   *
+*           |                                                    |         *
+*    |      |                                                    v         *
+* -+-+------+------------+--------+----------+--------+----------+---->    *
+*  ^ |      |            |        ^          |                   |         *
+*  | .---.  |            .---.    |          .---.               .---.     *
+*  | | 🕺 |  |            | 🕺 |    |          | 🕺 |               | 🕺 |     *
+*  | '---'  |            '---'    |          '---'               '---'     *
+* Ask where the                   |          |                             *
+*  DirectSound                    |          |                             *
+*  cursors are                    |          |                             *
+*           |                     |          |                             *
+*       PlayCursor           WriteCursor     |                             *
+*                                            |                             *
+*                                            +~~~~~~~~~~~~~~~~~~~          *
+*                                    Audio will play until the             *
+*                                TargetCursor, for exactly one frame       *
+*                                                                          *
+****************************************************************************
+[Figure [x]: Our current approach. 🕺 represents frame flips.]
+
+If we want to avoid latency, we'd ideally have to send audio data before our rendering work on a frame even starts! This isn't necessarily impossible but would introduce frame lag anyway, since the new user input and world state wouldn't be accounted in the old sound... On surface this seems like chasing one's own tail.
 
 ## Evaluate the Options
 
-At the end of the day, under the current system there's no way to compute sound for a frame and have it reproduced together with its image. This leaves us with the following options: 
+At the end of the day, under the current system there's no way to compute sound for a frame and have it reproduced together with its image when we intend it to. This leaves us with the following options: 
 
 * Accept the reality that our audio will always be a couple frames behind the image. After all, so many games already do this! This would simply regress our audio to be latent by design.
 * Have a "low latency mode" which would take over on a machine with a great sound card and low latency; do things the slow way otherwise. 
 * Continue tinkering on the inner workings of our platform layer.
-* Fix latency issues by essentially getting input and world state a frame before. This would introduce input lag, which seems like a worse tradeoff in an action game like ours. 
+* Fix latency issues by essentially getting input and world state a frame before. This, however, would introduce input lag, which seems like a worse tradeoff in an action game like ours will be. 
 
-The input lag option in our particular case seems like the worst of all, so we can rule it out right away. In fact, we want to push the input capture as close to the frame flip as possible, so that the user doesn't get a feeling of an unresponsive game.
+The last option in our particular case seems to be the worst of all, so we can rule it out straight away. In fact, we want to push the input capture as close to the frame flip as possible, so that the user doesn't get a feeling of an unresponsive game.
 
-## Draft an Action Plan
-
-Let's start with the simplest solution we might imagine. We write our sound to the hardware as soon as we have it, without waiting for frame flip. So if, for instance, audio is sent out 15ms after the frame starts, it will be reproduced ~15ms after the frame flip happened. 
+Let's start with the simplest solution we might imagine. We write our sound to the hardware as soon as we have it, without waiting for frame flip. So if, for instance, audio is sent out 15ms after the frame starts, it will be reproduced ~15ms after the frame flip occurred. 
 
 The game won't know of this happening: platform will lie to the game saying that the audio will be reproduced at the frame flip. 
 
@@ -145,33 +188,11 @@ The game won't know of this happening: platform will lie to the game saying that
 !!! Trivia 
     Unfortunately, this kind of unsynchronized audio loop is common in the industry. It's a bit sloppy but better than the alternative of pushing audio to the next frame and have a whole frame of buffering instead of roughly a half. 
 
-This solution also opens the road for the "low latency mode" we proposed above. If we determine that we're playing on the extremely performant hardware, the sound will be target the frame flip instead of whenever it's ready.
+This solution also opens the road for the "low latency mode" we proposed above. If we determine that we're playing on an extremely performant hardware, the sound will be target the frame flip instead.
 
-// FIXME: Undocumented code edits start
+## Tracking Audio Latency
 
-~~~~~~~ C++ delete
-#define FramesOfAudioLatency 3
-~~~~~~~ C++
-    // TODO(casey): How do we reliably query on monitor refresh rate on Windows?
-#define MonitorRefreshHz 60
-#define GameUpdateHz (MonitorRefreshHz / 2)
-
-// ... 
-
-// NOTE(casey): Sound test
-win32_sound_output SoundOutput = {};
-SoundOutput.SamplesPerSecond = 48000;
-SoundOutput.BytesPerSample = sizeof(s16) * 2;
-SoundOutput.SecondaryBufferSize = 2 * SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample;
-SoundOutput.RunningSampleIndex = 0;
-~~~~~~~ C++ add
-// TODO(casey): Get rid of LatencySampleCount
-~~~~~~~ C++ edit
-SoundOutput.LatencySampleCount = 3 *(SoundOutput.SamplesPerSecond / GameUpdateHz);           
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
-
-This is a circular buffer so we need to account for when the write cursor is in front.
+We calculated last time our latency by subtracting the write cursor from the play cursor. We did it on calculator, so let's capture it in our debug output for simplicity. We can do this by simply subtracting the write cursor from the play cursor:
 
 ~~~~~~~ C++
 #if HANDMADE_INTERNAL
@@ -180,12 +201,7 @@ DWORD WriteCursor;
 GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor);
 
 ~~~~~~~ C++ add
-DWORD UnwrappedWriteCursor = WriteCursor;
-if (UnwrappedWriteCursor < PlayCursor)
-{
-    UnwrappedWriteCursor += SoundOutput.SecondaryBufferSize;
-}
-DWORD AudioLatencyBytes = UnwrappedWriteCursor - PlayCursor;
+DWORD AudioLatencyBytes = WriteCursor - PlayCursor;
 ~~~~~~~ C++
 
 char TextBuffer[256];
@@ -197,9 +213,54 @@ sprintf_s(TextBuffer, sizeof(TextBuffer), "LPC:%u BTL:%u TC:%u BTW:%u - PC:%u WC
 OutputDebugStringA(TextBuffer);
 #endif
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Tracking audio delta.]
 
-DELTA is nice and stable at 5760, and circular buffer hack works well. 
+However, we need to remember that audio buffer is a circular buffer so the value we'll get sometimes might be negative. This happens when the write cursor "wraps around" to the beginning of the buffer while the play cursor is still at the end. In order to circumvent this issue, we can "unwrap" the `WriteCursor` value in those cases, by simply adding to it the length of the secondary buffer. It's a simple trick but quite effective. We'll use in another instance later today.
+
+**********************************************************************
+*                                                                    *
+*                       UnwrappedWriteCursor                         *
+*                               |                                    *
+*  |                          | v                        |           *
+*  +-+---------------------+--+⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯+           *
+*  | ^                     ^  |                          |           *
+*    |                     |                                         *
+* WriteCursor          PlayCursor                                    *
+*                                                                    *
+**********************************************************************
+[Figure [x]: If we add the circular buffer's length to the value of Write Cursor, we effectively unwrap it.]
+
+This is a circular buffer so we need to account for when the write cursor is in front.
+
+~~~~~~~ C++ add
+DWORD UnwrappedWriteCursor = WriteCursor;
+if (UnwrappedWriteCursor < PlayCursor)
+{
+    UnwrappedWriteCursor += SoundOutput.SecondaryBufferSize;
+}
+~~~~~~~ C++ edit
+DWORD AudioLatencyBytes = UnwrappedWriteCursor - PlayCursor;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Accounting for circular buffer wrap.]
+
+Let's compile and run our program in the debugger. You should see a static DELTA value, which on our machine is 5760 bytes:
+
+~~~~~~~ batch
+BTL:373332 TC:379093 BTW:5761 - PC:364800 WC:370560 DELTA:5760
+BTL:379092 TC:2773 BTW:7681 - PC:372480 WC:378240 DELTA:5760
+BTL:2772 TC:8533 BTW:5761 - PC:378240 WC:0 DELTA:5760
+BTL:8532 TC:14293 BTW:5761 - PC:0 WC:5760 DELTA:5760
+BTL:14292 TC:21973 BTW:7681 - PC:7680 WC:13440 DELTA:5760
+~~~~~~~
+[Listing [x]: <file>[Debug Output]</file> You will notice that delta is calculated correctly in case of buffer wrap, as we anticipated.]
+
+We could go even further, and calculate how many seconds does this amount of bytes translate to. Using some dimensional analysis you can quickly derive the following: 
+
+$$ bytes \times (\frac{samples}{bytes}) \times (\frac{seconds}{samples}) = $$
+$$\frac{\bcancel{bytes} \times \bcancel{samples} \times seconds}{1 \times \bcancel{bytes} \times \bcancel {samples}} =$$
+$$ seconds $$
+
+Since we don't have SamplesPerBytes and SecondsPerSample but the contrary, we'll need to do division instead. We will store the resulting value as a real (${\rm I\!R}$) number inside a float. When we'll pass it to `sprintf_s` function, we can use `%f` operator to read the float, or even `%.3f` to only display the first 3 decimal points (and round the rest).
 
 ~~~~~~~ C++
 DWORD UnwrappedWriteCursor = WriteCursor;
@@ -214,147 +275,78 @@ f32 AudioLatencySeconds = ((f32)AudioLatencyBytes / (f32)SoundOutput.BytesPerSam
 ~~~~~~~ C++
 char TextBuffer[256];
 ~~~~~~~ C++ edit
-sprintf_s(TextBuffer, sizeof(TextBuffer), "LPC:%u BTL:%u TC:%u BTW:%u - PC:%u WC:%u DELTA:%u (%fs)\n",
+sprintf_s(TextBuffer, sizeof(TextBuffer), "LPC:%u BTL:%u TC:%u BTW:%u - PC:%u WC:%u DELTA:%u (%.3fs)\n",
             LastPlayCursor, ByteToLock, TargetCursor, BytesToWrite,
             PlayCursor, WriteCursor, AudioLatencyBytes, AudioLatencySeconds);
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Displaying latency in seconds.]
 
-Note about printf values. `%.2f` makes it so it's only 2 decimal points.
+!!! Note 
+    We've encountered already an operation where we need to divide by samples per second. In fact, it's quite prone to error and we might want to pull out these calculations in the future. For the time being, let's place a todo for the future us to add a bytes per second field:
 
-Dimensional analysis aside: Bytes * (Sample / Bytes) * (Seconds / Samples). Simple to work out in the head but also can use the trick on paper if necessary. In fact, let's place a todo to simplify similar calculations in the future.
-
-~~~~~~~ C++
-struct win32_sound_output
-{
-    int SamplesPerSecond;
-    int BytesPerSample;
-    DWORD SecondaryBufferSize;
-    u32 RunningSampleIndex;
-    int LatencySampleCount;
-~~~~~~~ C++ add
-    // TODO(casey): Math get simpler if we add a "bytes per second" field? 
-~~~~~~~ C++
-};
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.h]</file> .]
-
-Now, pull them out from the game loop, these are useful values that we want to keep track of between frames.
-
-~~~~~~~ C++
-// ... 
-// Just before the main loop
-// ... 
-
-int DebugTimeMarkerIndex = 0;
-win32_debug_time_marker DebugTimeMarkers[GameUpdateHz / 2] = {};
-
-DWORD LastPlayCursor = 0;
-b32 SoundIsValid = false;
-~~~~~~~ C++ add
-DWORD AudioLatencyBytes = 0;
-f32 AudioLatencySeconds = 0;
-~~~~~~~ C++
-
-LARGE_INTEGER LastCounter = Win32GetWallClock();
-u64 LastCycleCount = __rdtsc();
-GlobalRunning = true;
-
-// ... 
-// Most of the main loop
-// ... 
-
-DWORD UnwrappedWriteCursor = WriteCursor;
-if (UnwrappedWriteCursor < PlayCursor)
-{
-    UnwrappedWriteCursor += SoundOutput.SecondaryBufferSize;
-}
-~~~~~~~ C++ edit
-AudioLatencyBytes = UnwrappedWriteCursor - PlayCursor;
-AudioLatencySeconds = ((f32)AudioLatencyBytes / (f32)SoundOutput.BytesPerSample) / 
-                           (f32)SoundOutput.SamplesPerSecond;
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
-
-Having values gather around like this is a good indication that we're going to start gathering them together and we might do that soon, just not yet. It's better to wait until you're completely happy with how something works until you start gathering things together and pulling them out, otherwise you will fall in a lot of additional typing. Don't be too horrible! 
-
-## Review target bytes calculation
-
-We set our `ByteToLock` to be whatever our `RunningSampleIndex` was. We then calculate target cursor which takes into account latency. Now we want to finally start tracking the DirectSound's write cursor. up until now we were ignoring it.
-
-~~~~~~~ C++
-DWORD LastPlayCursor = 0;
-~~~~~~~ C++ add
-DWORD LastWriteCursor = 0;
-~~~~~~~ C++
-b32 SoundIsValid = false;
-DWORD AudioLatencyBytes = 0;
-f32 AudioLatencySeconds = 0;
-
-// ... 
-// Towards the end of the main loop
-// ... 
-
-DWORD PlayCursor = 0;
-DWORD WriteCursor= 0;
-if (SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
-{
-    LastPlayCursor = PlayCursor;
-~~~~~~~ C++ add
-    LastWriteCursor = WriteCursor;
-~~~~~~~ C++
-    if (!SoundIsValid)
+    ~~~~~~~ C++
+    struct win32_sound_output
     {
-        SoundOutput.RunningSampleIndex = WriteCursor / SoundOutput.BytesPerSample;
-        SoundIsValid = true;
-    }
-}
-else
-{
-    SoundIsValid = false;
-}
+        int SamplesPerSecond;
+        int BytesPerSample;
+        DWORD SecondaryBufferSize;
+        u32 RunningSampleIndex;
+        int LatencySampleCount;
+    ~~~~~~~ C++ add
+        // TODO(casey): Math get simpler if we add a "bytes per second" field? 
+    ~~~~~~~ C++
+    };
+    ~~~~~~~
+    [Listing [x]: <file>[win32_handmade.h]</file> Adding a todo for the future.]
 
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+## Review Target Bytes calculation
+
+If you remember, this is how we define how many samples do we want to send to the buffer.
+
+* `ByteToLock` defines from which point on should we start writing.
+* `TargetCursor` defines until where we're writing. 
+* `BytesToWrite` is the difference between the two (considering circular buffer wrap).
+
+Up until now, we were setting our `ByteToLock` to be whatever our `RunningSampleIndex` was. We would then calculate target cursor which would be the last known play cursor's location. We wouldn't really consider where the Write Cursor, just leave enough room (`LatencySampleCount`) for us to surely get ahead of it. 
+
+Now we will start taking into account the DirectSound's write cursor. If it's within this frame's boundaries, we can assume that we are on a low latency hardware, and get on the "Low Latency Path". In this case, we presume that we're able to write up from the frame flip, so we offset the `TargetCursor` until the next frame's boundary so that audio will always goes out with the image.
 
 *****************************************************************************
 *                                                                           *
-*              Set TargetCursor                                             *
-*             to the end of frame         Set TargetCursor                  *
-*                    .-----.                 .-----.                        *
-*                   |       |               |       |                       *
-*    |              |       v|              |       v|                      *
-*    +------+-------+--------+------+-------+--------+------------->        *
-*    |      ^       ^        |      ^       ^        |                      *
-*    .---.  |       |        .---.  |       |        .---.                  *
-*    | 🕺 |  |       |        | 🕺 |  |       |        | 🕺 |                  *
-*    '---'  |       |        '---'  |       |        '---'                  *
-*     Ask where the |        |      |       |        |                      *
-*      DirectSound  |        |   Wake up    |        |      ...             *
-*      cursors are  |        |   and ask    |        |                      *
-*        |          |        |    |         |        |                      *
-*        +-->  WriteCursor   |    +-->  WriteCursor  |                      *
-*      PlayCursor            |  PlayCursor           |                      *
-*                            +~~~~~~~~~~~~~~~~~~~~~~~+~~~~~~~~~~~~~~~~~~~   *
+*                        Set TargetCursor                                   *
+*                       to the end of next frame                            *
+*                    .------------------------------.                       *
+*                   |                               |                       *
+*    |              |        |                      v|                      *
+*    +------+-------+--------+-----------------------+------------->        *
+*    |      ^       ^        |                       |                      *
+*    .---.  |       |        .---.                   .---.                  *
+*    | 🕺 |  |       |        | 🕺 |                   | 🕺 |                  *
+*    '---'  |       |        '---'                   '---'                  *
+*     Ask where the |        |                                              *
+*      DirectSound  |        |                                              *
+*      cursors are  |        |                                              *
+*        |          |        |                                              *
+*        +-->  WriteCursor   |                                              *
+*      PlayCursor            |                                              *
+*                            +~~~~~~~~~~~~~~~~~~~~~~~                       *
 *                            audio is playing for exactly one frame         *
 *                            rinse and repeat for infinite sound            *
 *                                                                           *
 *****************************************************************************
-[Figure [x]: Low latency path idea. 🕺 represents frame flips.]
+[Figure [x]: Low latency path idea.]
 
-Need to adjust by however much the clock consumes, so need to calculate _average_ wc movement instead of going straight to the end of frame.
-
-If inside frame WC then always write average WC motion amount
+If the Write Cursor is beyond this frame, we assume that the latency is high. Then we won't wait until the frame flip, and the `TargetCursor` can be whatever our `WriteCursor` would be after one frame. We will offset it by but a small safety margin (a few milliseconds) to account for potential variability in the latency between now and the output.
 
 *****************************************************************************
 *                                                                           *
 *                     Set TargetCursor to be slightly further ahead         *
 *                                from the WriteCursor                       *
 *                     (just a safety margin, don't wait until flip)         *
-*                                      .-----.                              *
-*                                     |       |                             *
-*    |                                |       v      |                      *
-*    +------+----------------+--------+--------------+------------->        *
+*                                      .------------------------.           *
+*                                     |                          |          *
+*    |                                |              |           v          *
+*    +------+----------------+--------+--------------+-----------+->        *
 *    |      ^                |        ^       |      |                      *
 *    .---.  |                .---.    |       |      .---.                  *
 *    | 🕺 |  |                | 🕺 |    |       |      | 🕺 |                  *
@@ -367,45 +359,18 @@ If inside frame WC then always write average WC motion amount
 *     PlayCursor                              |                             *
 *                                             +~~~~~~~~~~~~~~~~~~~          *
 *                            audio is still playing for exactly one frame   *
-*                             but it's scheduled one frame in advance       *
+*                             but it's scheduled one frame earlier          *
 *                                                                           *
 *****************************************************************************
 [Figure [x]: High latency path.]
 
-~~~~~~~ C++ add
-/* NOTE(casey):
+All of this wouldn't impact our `ByteToLock` or `BytesToWrite` calculation (or, at least, not directly). However, given that `TargetCursor` will move depending on the hardware's latency, the rest of these values will move accordingly.
 
-   Here is how sound output computation works.
+# Implement the Two Audio Paths
 
-   We define a safety value that is the number 
-   of samples we think our game update loop 
-   may vary by (let's say up to 2ms). 
+## Clean Up the Old Code
 
-   When we wake up to write audio, we will look
-   and see what the play cursor position is and we
-   will forecast ahead where we think the
-   play cursor will be on the next frame boundary.
-
-   We will then look to see if the write cursor is
-   before that by at least our safety value. If it is, the
-   target fill position is that frame boundary
-   plus one frame. This gives us us perfect audio
-   sync in the case of a card that has low enough
-   latency.
-
-   If the write cursor is _after_ that safety 
-   margin, then we assume we can never sync the
-   audio perfectly, so we will write one frame's
-   worth of audio plus the safety margin's worth
-   of guard samples.
-*/
-~~~~~~~ C++
-DWORD ByteToLock = 0;
-DWORD TargetCursor = 0;
-DWORD BytesToWrite = 0;
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
-
+Alright, let's get cracking. First of all, let's get rid of the `LastPlayCursor`, it's gone. We'll need to remove it from the beginning of our `WinMain`, as well as any usage we encounter along the way. We won't need it anymore, because we'll do all the computations as soon as we get the cursor values.
 
 ~~~~~~~ C++
 int DebugTimeMarkerIndex = 0;
@@ -413,11 +378,8 @@ win32_debug_time_marker DebugTimeMarkers[GameUpdateHz / 2] = {};
 
 ~~~~~~~ C++ delete
 DWORD LastPlayCursor = 0;
-DWORD LastWriteCursor = 0;
 ~~~~~~~ C++
 b32 SoundIsValid = false;
-DWORD AudioLatencyBytes = 0;
-f32 AudioLatencySeconds = 0;
 
 // ... 
 // Towards the end of WinMain
@@ -429,7 +391,6 @@ if (SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCurso
 {
 ~~~~~~~ C++ delete
     LastPlayCursor = PlayCursor;
-    LastWriteCursor = WriteCursor;
 ~~~~~~~ C++
     if (!SoundIsValid)
     {
@@ -440,7 +401,7 @@ if (SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCurso
 
 //... 
 ~~~~~~~ C++
-AudioLatencySeconds = ((f32)AudioLatencyBytes / (f32)SoundOutput.BytesPerSample) /
+f32 AudioLatencySeconds = ((f32)AudioLatencyBytes / (f32)SoundOutput.BytesPerSample) /
                             (f32)SoundOutput.SamplesPerSecond;
 char TextBuffer[256];
 ~~~~~~~ C++ edit
@@ -450,16 +411,17 @@ sprintf_s(TextBuffer, sizeof(TextBuffer), "BTL:%u TC:%u BTW:%u - PC:%u WC:%u DEL
 ~~~~~~~ C++
 OutputDebugStringA(TextBuffer);
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Retiring `LastPlayCursor`.]
 
+We can now consolidate the blocks dealing with the audio. For our debug code capturing the markers for visual display, we will have the own position calculation. Since it will happen quite close to the frame flip, we might as well consider these cursors as the Flip Cursors. 
+
+The sound initialization block can be removed for now, we'll move it to another section in a second.
 
 ~~~~~~~ C++ delete
 DWORD PlayCursor = 0;
 DWORD WriteCursor= 0;
 if (SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
 {
-    LastPlayCursor = PlayCursor;
-    LastWriteCursor = WriteCursor;
     if (!SoundIsValid)
     {
         SoundOutput.RunningSampleIndex = WriteCursor / SoundOutput.BytesPerSample;
@@ -495,7 +457,9 @@ else
 }
 #endif
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Simplifying blocks structure.]
+
+Next, we will delete the whole block calculating the cursors. Not all of this code is obsolete though, `ByteToLock` will still be useful. We will recreate it further down below.
 
 ~~~~~~~ C++ delete
 DWORD ByteToLock = 0;
@@ -527,14 +491,22 @@ game_sound_output_buffer SoundBuffer = {};
 SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond;
 SoundBuffer.SampleCount = BytesToWrite / SoundOutput.BytesPerSample;
 SoundBuffer.Samples = Samples;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Removing previous cursor calculation routine.]
 
-game_offscreen_buffer Buffer = {};
-Buffer.Memory = GlobalBackbuffer.Memory;
-Buffer.Width = GlobalBackbuffer.Width;
-Buffer.Height = GlobalBackbuffer.Height;
-Buffer.Pitch = GlobalBackbuffer.Pitch;
+Finally, a bit further below, immediately after `GameUpdateAndRender`, we will house our new code for the audio calculation. We will add here all the pieces that were useful in the past, all in one place:
 
-GameUpdateAndRender(&GameMemory, NewInput, &Buffer, &SoundBuffer);
+1. Capture position of the Play and Write cursors.
+2. If the sound is not valid (we've just started, or something happened), initialize the `RunningSampleIndex`. This functionality is the same as we had before.
+3. Calculate `ByteToLock` (same as before).
+4. Calculate `TargetCursor` (same as before, for a moment, but already set up for eventual change).
+5. Calculate `BytesToWrite` (same as before).
+6. Fill the sound buffer with the samples we collected during `GameUpdateAndRender`.
+7. If we're in debug mode (`HANDMADE_INTERNAL`), print out the various values we computed above.
+8. Last, if by any chance `GetCurrentPosition` fails, we will do nothing of the above and simply mark `SoundIsValid` false.
+
+~~~~~~~ C++
+GameUpdateAndRender(...);
 
 ~~~~~~~ C++ add
 DWORD PlayCursor;
@@ -546,7 +518,6 @@ if (GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor) == DS_O
         SoundOutput.RunningSampleIndex = WriteCursor / SoundOutput.BytesPerSample;
         SoundIsValid = true;
     }
-
     
     DWORD ByteToLock = ((SoundOutput.RunningSampleIndex * SoundOutput.BytesPerSample)
                         % SoundOutput.SecondaryBufferSize);
@@ -584,11 +555,12 @@ if(SoundIsValid)
     {
         UnwrappedWriteCursor += SoundOutput.SecondaryBufferSize;
     }
-    AudioLatencyBytes = UnwrappedWriteCursor - PlayCursor;
-    AudioLatencySeconds = ((f32)AudioLatencyBytes / (f32)SoundOutput.BytesPerSample) /
-        (f32)SoundOutput.SamplesPerSecond;
+    DWORD AudioLatencyBytes = UnwrappedWriteCursor - PlayCursor;
+    f32 AudioLatencySeconds = ((f32)AudioLatencyBytes / (f32)SoundOutput.BytesPerSample) /
+                               (f32)SoundOutput.SamplesPerSecond;
     char TextBuffer[256];
-    sprintf_s(TextBuffer, sizeof(TextBuffer), "LPC:%u BTL:%u TC:%u BTW:%u - PC:%u WC:%u DELTA:%u (%.2fs)\n",
+    sprintf_s(TextBuffer, sizeof(TextBuffer), 
+                "LPC:%u BTL:%u TC:%u BTW:%u - PC:%u WC:%u DELTA:%u (%.2fs)\n",
                 LastPlayCursor, ByteToLock, TargetCursor, BytesToWrite,
                 PlayCursor, WriteCursor, AudioLatencyBytes, AudioLatencySeconds);
     OutputDebugStringA(TextBuffer);
@@ -601,6 +573,58 @@ if(SoundIsValid)
 }
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Simplifying and combining audio blocks.]
+
+Last, we want to record our theory for the audio paths, so let's annotate what we decided: 
+
+~~~~~~~ C++
+DWORD PlayCursor;
+DWORD WriteCursor;
+if (GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor) == DS_OK)
+{
+~~~~~~~ C++ add
+    /* NOTE(casey):
+
+    Here is how sound output computation works.
+
+    We define a safety value that is the number 
+    of samples we think our game update loop 
+    may vary by (let's say up to 2ms). 
+
+    When we wake up to write audio, we will look
+    and see what the play cursor position is and we
+    will forecast ahead where we think the
+    play cursor will be on the next frame boundary.
+
+    We will then look to see if the write cursor is
+    before that by at least our safety value. If it is, the
+    target fill position is that frame boundary
+    plus one frame. This gives us perfect audio
+    sync in the case of a card that has low enough
+    latency.
+
+    If the write cursor is _after_ that safety 
+    margin, then we assume we can never sync the
+    audio perfectly, so we will write one frame's
+    worth of audio plus the safety margin's worth
+    of guard samples.
+    */
+~~~~~~~ C++
+if (!SoundIsValid)
+{
+    SoundOutput.RunningSampleIndex = WriteCursor / SoundOutput.BytesPerSample;
+    SoundIsValid = true;
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Noting down our theory.]
+
+## Change `TargetCursor` Calculation
+
+Everything is set up, let's go ahead with the changes we need. We'll write how we imagine target cursor calculation first, and think about making it happen later.
+
+* For the fast path (low latency card), we would position ourselves at the expected frame boundary of the next frame.
+* For the slow path the write cursor position, move by one frame's length and add some safety bytes.
+
+In both cases the resulting value may be greater than the size of our buffer, so in order to bind it to the buffer, we'll simply _modulo_ it against the buffer size. As a reminder, _modulo_ operator (`%`) keeps the remainder of a given division.
 
 ~~~~~~~ C++
 DWORD TargetCursor = 0;
@@ -619,10 +643,12 @@ TargetCursor = TargetCursor % SoundOutput.SecondaryBufferSize;
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Preparing two cases for TargetCursor calculation.]
 
-Now we just have to compute all those new values. Let's start with `AudioCardIsLowLatency`.
+Now we just have to compute all those new values. 
+
+Let's start with `AudioCardIsLowLatency`. We define the latency by taking `ExpectedFrameBoundaryByte` and check if it's greater than the write cursor with the safety margin.
 
 ~~~~~~~ C++ add
-b32 AudioCardIsLowLatency = false;
+b32 AudioCardIsLowLatency = true;
 DWORD SafeWriteCursor = WriteCursor + SoundOutput.SafetyBytes;
 if (SafeWriteCursor >= ExpectedFrameBoundaryByte)
 {
@@ -648,7 +674,7 @@ if (AudioCardIsLowLatency)
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> A more concise notation of the above.]
 
-However, there's always the circular buffer issue that we need to take into account: if the write cursor is behind the play cursor, it means the buffer wrapped, and we need to "unwrap" the cursor as we've done before (simply add the sound buffer size to write cursor's value).
+However, there's always the circular buffer issue that we need to take into account: if the write cursor is behind the play cursor, it means the buffer wrapped, and we need to "unwrap" the cursor as we've done earlier: simply add the sound buffer size to write cursor's value.
 
 ~~~~~~~ C++ edit
 DWORD SafeWriteCursor = WriteCursor;
@@ -663,6 +689,8 @@ SafeWriteCursor += SoundOutput.SafetyBytes;
 b32 AudioCardIsLowLatency = SafeWriteCursor < ExpectedFrameBoundaryByte;
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Normalizing write cursor.]
+
+// BOOKMARK
 
 `ExpectedFrameBoundaryByte`: 
 
@@ -684,8 +712,22 @@ DWORD SafeWriteCursor = WriteCursor;
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Calculating expected sound bytes per frame.]
 
 ~~~~~~~ C++ delete
-// TODO(casey): Get rid of LatencySampleCount
-SoundOutput.LatencySampleCount = 3 *(SoundOutput.SamplesPerSecond / GameUpdateHz);
+#define FramesOfAudioLatency 3
+~~~~~~~ C++
+// TODO(casey): How do we reliably query on monitor refresh rate on Windows?
+#define MonitorRefreshHz 60
+#define GameUpdateHz (MonitorRefreshHz / 2)
+
+// ... 
+
+// NOTE(casey): Sound test
+win32_sound_output SoundOutput = {};
+SoundOutput.SamplesPerSecond = 48000;
+SoundOutput.BytesPerSample = sizeof(s16) * 2;
+SoundOutput.SecondaryBufferSize = 2 * SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample;
+SoundOutput.RunningSampleIndex = 0;
+~~~~~~~ C++ delete
+SoundOutput.LatencySampleCount = FramesOfAudioLatency *(SoundOutput.SamplesPerSecond / GameUpdateHz);
 ~~~~~~~ C++ add
 // TODO(casey): Actually compute this variance and see 
 // what the lowest reasonable value is.
@@ -1260,8 +1302,6 @@ That's not what we set out to do! This doesn't take into account whatever amount
 
 ~~~~~~~ C++
 // Before the main loop
-DWORD AudioLatencyBytes = 0;
-f32 AudioLatencySeconds = 0;
 b32 SoundIsValid = false;
 
 LARGE_INTEGER LastCounter = Win32GetWallClock();
@@ -1340,9 +1380,9 @@ Audio is tough, and it's hard to find topics harder than this in programming. Ho
 
 # Exercises 
 
-# Programming Notions 
+# Side Considerations
 
-# Bugfix: Sound Changing Pitch
+## Bugfix: Sound Changing Pitch
 
 ~~~~~~~ C++
 f32 SineValue = sinf(tSine);
