@@ -14,11 +14,11 @@ _Video Length (including Q&A): [2h46](https://hero.handmade.network/episode/code
 
 (insert intro.md.html here) 
 
-If you've got this far, congratulations! Debugging sound issues may well be among the most tedious tasks one would face (even if that's your cup of tea). However, we aren't out of the woods yet; the system we have in our hands right now is still quite latent, and there's room for improvement even at this early stage. Sure, with the default sound API and the integrated sound module, audio is laggy. But what about the sound junkies who have powerful cards with close to zero latency on the sound output? We want to support them as well! And today we need to think real hard to make it happen.
+Suppose you've got this far, congratulations! Debugging sound issues may well be among the most tedious tasks one would face (even if that's your cup of tea). However, we aren't out of the woods yet; the system we have in our hands right now is still much latent, and there's room for improvement even at this early stage. Sure, with the default sound API and the integrated sound module, audio is laggy. But what about the sound junkies who have powerful cards with close to zero latency on the sound output? We want to support them as well! And today, we need to think real hard to make it happen.
 
-You might have noticed a trend throughout this series: think first, and type after. If you understand at least on assumption level the code that you're about to write, it will be much easier for you to  translate your thoughts into good code. And the benefits don't stop here! You will actually be able to read and edit it after a while. That said, you never want to go too deep and define every single scrupulous detail in advance: at that point, you might as well write the code directly! Leave yourself some space for a good surprise.
+You might have noticed a trend throughout this series: think first, and type after. If you understand the code you're about to write at least on an assumption level, it will be much easier for you to translate your thoughts into good code. And the benefits don't stop here! You will actually be able to read and edit it after a while. That said, you never want to go too deep and define every single scrupulous detail in advance: at that point, you might as well write the code directly! Leave yourself some space for a good surprise.
 
-Today however, we will mix the two together. It's a complex topic that we can simplify by performing one step at a time, instead of trying to do the whole thing at once. If we find out that we were incorrect initially, the fix shouldn't be too difficult to make.
+Today, however, we will mix the two together. It's a complex topic that we can simplify by performing one step at a time instead of trying to do the whole thing at once. If we find out that we were incorrect initially, the fix shouldn't be too difficult to make.
 
 # Deep Dive into the Issue
 
@@ -47,9 +47,9 @@ Let's go back to our favorite timeline chart. We have our video frames which upd
 ***************************************************************
 [Figure [x]: Game lifetime. Everything on it should be familiar to you by now.]
 
-For the moment, we're aiming at 30 frames per second frequency of the frame flips. This means that every second (or every 1000 milliseconds) we output 30 frames. Thus each frame only has $\frac{1000}{30} \approx 33.3$ milliseconds to do all the work. 
+For the moment, we're aiming at 30 frames per second frequency of the frame flips. This means that every second (or every 1000 milliseconds), we output 30 frames. Thus each frame only has $\frac{1000}{30} \approx 33.3$ milliseconds to do all the work. 
 
-Each frame we want to display the image and the sound of our next frame. In an ideal world, both would go out at the same time. 
+For each frame, we want to prepare the image and the sound of our next frame. In an ideal world, both would go out at the same time. 
 
 ***************************************************************
 *               .---. image is                                *
@@ -70,7 +70,7 @@ Each frame we want to display the image and the sound of our next frame. In an i
 ***************************************************************
 [Figure [x]: Frame flip workflow in an ideal world.]
 
-This work happens some time after the frame begins: before we get started on rendering, we need to collect the user input, update our world state, etc. Even further still, we're currently writing audio just before the frame flip, at the last possible moment in fact. The idea being that the moment we send something to the hardware, it will be reproduced to the user.
+This work happens sometime after the frame begins: before we get started on rendering, we need to collect the user input, update our world state, etc. Even further still, we're currently writing audio just before the frame flip, at the last possible moment, in fact. The idea is that the moment we send something to the hardware, it will be reproduced to the user.
 
 *******************************************************************
 *                                                                 *
@@ -90,7 +90,7 @@ This work happens some time after the frame begins: before we get started on ren
 *******************************************************************
 [Figure [x]: Breakdown of the work within a single frame. Proportions of game update/render times will differ. Of course, some of these tasks may run in parallel in the future.]
 
-Unfortunately for us, hardware lag exists, so things do not happen immediately. Furthermore, DirectSound (on our specific machine) is not cooperating with us. Last time, we determined that the API has a delay of 30ms! That's in fact almost full frame! So this is what happens with our frames in reality: 
+Unfortunately for us, hardware lag exists, so things do not happen immediately. Furthermore, DirectSound (on our specific machine) is not cooperating with us. Last time, we determined that the API has a delay of 30ms! That's, in fact, almost full frame! So this is what happens with our frames in reality: 
 
 ***************************************************************
 *               .---. image is                                *
@@ -117,11 +117,11 @@ Unfortunately for us, hardware lag exists, so things do not happen immediately. 
 ***************************************************************
 [Figure [x]: Frame flip workflow in our reality.]
 
-As you can see, by the time audio starts playing, it's almost time for the next frame to flip! And, when we blindly assumed low latency scenario, this is what created the audible clicks for us: information kept getting overwritten from under the Play Cursor. 
+As you can see, by the time audio starts playing, it's almost time for the next frame to flip! When we blindly assumed a low latency scenario, this created the audible clicks for us: information kept getting overwritten from under the Play Cursor. 
 
-What this means is that, when we were writing audio, we were telling to write waaay before it was safe. DirectSound API works on two cursors: Play Cursor and Write Cursor. The API reads the audio bytes from the area _around_ the Play Cursor, with the Write Cursor represents the first _safe_ point user can write to. We're ignoring the write cursor for the time being and write to wherever we feel is appropriate to our needs. 
+This means that, when we were writing audio, we were told to write way before it was safe. DirectSound API works on two cursors: Play Cursor and Write Cursor. The API reads the audio bytes from the area _around_ the Play Cursor, with the Write Cursor represents the first _safe_ point user can write to. We're ignoring the write cursor for the time being and write to wherever we feel appropriate to our needs. 
 
-That's why we needed to add the additional frames of latency: simply to allow the write cursor to advance. Even further still, currently we're asking for the cursors location at the end of _previous_ frame. This means that, by the time we get to compute audio, the cursors have advanced even further, resulting in a whopping 3 frames of latency!
+That's why we needed to add the additional frames of latency: simply to allow the write cursor to advance. Even further still, currently, we're asking for the cursor's location at the end of _previous_ frame. This means that, by the time we get to compute audio, the cursors have advanced even further, resulting in a whopping 3 frames of latency!
 
 ****************************************************************************
 *                                                                          *
@@ -149,22 +149,22 @@ That's why we needed to add the additional frames of latency: simply to allow th
 ****************************************************************************
 [Figure [x]: Our current approach. 🕺 represents frame flips.]
 
-If we want to avoid latency, we'd ideally have to send audio data before our rendering work on a frame even starts! This isn't necessarily impossible but would introduce frame lag anyway, since the new user input and world state wouldn't be accounted in the old sound... On surface this seems like chasing one's own tail.
+If we want to avoid latency, we'd ideally have to send audio data before our rendering work on a frame even starts! This isn't necessarily impossible but would introduce frame lag anyway since the new user input and world state wouldn't account for the old sound... On the surface, this seems like chasing one's own tail.
 
 ## Evaluate the Options
 
-At the end of the day, under the current system there's no way to compute sound for a frame and have it reproduced together with its image when we intend it to. This leaves us with the following options: 
+At the end of the day, under the current system, there's no way to compute sound for a frame and have it reproduced together with its image when we intend it to. This leaves us with the following options: 
 
 * Accept the reality that our audio will always be a couple frames behind the image. After all, so many games already do this! This would simply regress our audio to be latent by design.
-* Have a "low latency mode" which would take over on a machine with a great sound card and low latency; do things the slow way otherwise. 
+* Have a "low latency mode" that would take over on a machine with a great sound card and low latency; do things the slow way otherwise. 
 * Continue tinkering on the inner workings of our platform layer.
 * Fix latency issues by essentially getting input and world state a frame before. This, however, would introduce input lag, which seems like a worse tradeoff in an action game like ours will be. 
 
-The last option in our particular case seems to be the worst of all, so we can rule it out straight away. In fact, we want to push the input capture as close to the frame flip as possible, so that the user doesn't get a feeling of an unresponsive game.
+The last option in our particular case seems to be the worst of all, so we can rule it out straight away. In fact, we want to push the input capture as close to the frame flip as possible so that the user doesn't feel that the game is unresponsive.
 
-Let's start with the simplest solution we might imagine. We write our sound to the hardware as soon as we have it, without waiting for frame flip. So if, for instance, audio is sent out 15ms after the frame starts, it will be reproduced ~15ms after the frame flip occurred. 
+Let's start with the simplest solution we might imagine. We write our sound to the hardware as soon as we have it, without waiting for frame flip. If, for instance, audio is sent out 15ms after the frame starts, it will be reproduced ~15ms after the frame flip occurred. 
 
-The game won't know of this happening: platform will lie to the game saying that the audio will be reproduced at the frame flip. 
+The game won't know of this happening: the platform will lie to the game, saying that the audio will be reproduced at the frame flip. 
 
 ***************************************************************
 *               .---. image is                                *
@@ -186,13 +186,13 @@ The game won't know of this happening: platform will lie to the game saying that
 [Figure [x]: Sending the audio out as soon as it's ready.]
 
 !!! Trivia 
-    Unfortunately, this kind of unsynchronized audio loop is common in the industry. It's a bit sloppy but better than the alternative of pushing audio to the next frame and have a whole frame of buffering instead of roughly a half. 
+    Unfortunately, this kind of unsynchronized audio loop is customary in the industry. It's a bit sloppy but better than the alternative of pushing audio to the next frame and have a much more significant delay. 
 
-This solution also opens the road for the "low latency mode" we proposed above. If we determine that we're playing on an extremely performant hardware, the sound will be target the frame flip instead.
+This solution also opens the road for the "low latency mode" we proposed above. If we determine that we're playing on extremely performant hardware, the sound will be targeting the frame flip instead.
 
 ## Tracking Audio Latency
 
-We calculated last time our latency by subtracting the write cursor from the play cursor. We did it on calculator, so let's capture it in our debug output for simplicity. We can do this by simply subtracting the write cursor from the play cursor:
+We calculated our latency last time by subtracting the write cursor from the play cursor. We did it on a calculator, so let's capture it in our debug output for simplicity. We can do this by simply subtracting the write cursor from the play cursor:
 
 ~~~~~~~ C++
 #if HANDMADE_INTERNAL
@@ -215,7 +215,7 @@ OutputDebugStringA(TextBuffer);
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Tracking audio delta.]
 
-However, we need to remember that audio buffer is a circular buffer so the value we'll get sometimes might be negative. This happens when the write cursor "wraps around" to the beginning of the buffer while the play cursor is still at the end. In order to circumvent this issue, we can "unwrap" the `WriteCursor` value in those cases, by simply adding to it the length of the secondary buffer. It's a simple trick but quite effective. We'll use in another instance later today.
+However, we need to remember that the audio buffer is circular, so the value we'll get sometimes might be negative. This happens when the write cursor "wraps" to the beginning of the buffer while the play cursor is still at the end. To circumvent this issue, we can "unwrap" the `WriteCursor` value in those cases by simply adding to it the length of the secondary buffer. It's a simple trick but quite effective. We'll use it in another instance later today.
 
 **********************************************************************
 *                                                                    *
@@ -230,7 +230,7 @@ However, we need to remember that audio buffer is a circular buffer so the value
 **********************************************************************
 [Figure [x]: If we add the circular buffer's length to the value of Write Cursor, we effectively unwrap it.]
 
-This is a circular buffer so we need to account for when the write cursor is in front.
+This is a circular buffer, so we need to account for when the write cursor is in front.
 
 ~~~~~~~ C++ add
 DWORD UnwrappedWriteCursor = WriteCursor;
@@ -260,7 +260,7 @@ $$ bytes \times (\frac{samples}{bytes}) \times (\frac{seconds}{samples}) = $$
 $$\frac{\bcancel{bytes} \times \bcancel{samples} \times seconds}{1 \times \bcancel{bytes} \times \bcancel {samples}} =$$
 $$ seconds $$
 
-Since we don't have SamplesPerBytes and SecondsPerSample but the contrary, we'll need to do division instead. We will store the resulting value as a real (${\rm I\!R}$) number inside a float. When we'll pass it to `sprintf_s` function, we can use `%f` operator to read the float, or even `%.3f` to only display the first 3 decimal points (and round the rest).
+Since we don't have SamplesPerBytes and SecondsPerSample, we'll need to invert the values we have. We will store the resulting value as a real (${\rm I\!R}$) number inside a float. When we pass it to the `sprintf_s` function, we can use the `%f` operator to read the float, or even `%.3f` to only display the first 3 decimal points (and round the rest).
 
 ~~~~~~~ C++
 DWORD UnwrappedWriteCursor = WriteCursor;
@@ -282,7 +282,7 @@ sprintf_s(TextBuffer, sizeof(TextBuffer), "LPC:%u BTL:%u TC:%u BTW:%u - PC:%u WC
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Displaying latency in seconds.]
 
 !!! Note 
-    We've encountered already an operation where we need to divide by samples per second. In fact, it's quite prone to error and we might want to pull out these calculations in the future. For the time being, let's place a todo for the future us to add a bytes per second field:
+    We've already encountered an operation where we need to divide by samples per second. In fact, it's quite prone to error, and we might want to pull out these calculations in the future. For the time being, let's place a todo for the future us to add the "bytes per second" field:
 
     ~~~~~~~ C++
     struct win32_sound_output
@@ -293,7 +293,7 @@ sprintf_s(TextBuffer, sizeof(TextBuffer), "LPC:%u BTL:%u TC:%u BTW:%u - PC:%u WC
         u32 RunningSampleIndex;
         int LatencySampleCount;
     ~~~~~~~ C++ add
-        // TODO(casey): Math get simpler if we add a "bytes per second" field? 
+        // TODO(casey): Math gets simpler if we add a "bytes per second" field? 
     ~~~~~~~ C++
     };
     ~~~~~~~
@@ -301,15 +301,15 @@ sprintf_s(TextBuffer, sizeof(TextBuffer), "LPC:%u BTL:%u TC:%u BTW:%u - PC:%u WC
 
 ## Review Target Bytes calculation
 
-If you remember, this is how we define how many samples do we want to send to the buffer.
+If you remember, we define how many samples we want to send to the buffer in the following manner:
 
-* `ByteToLock` defines from which point on should we start writing.
-* `TargetCursor` defines until where we're writing. 
+* `ByteToLock` represents the point from which we should start writing.
+* `TargetCursor` defines where we're writing until. 
 * `BytesToWrite` is the difference between the two (considering circular buffer wrap).
 
-Up until now, we were setting our `ByteToLock` to be whatever our `RunningSampleIndex` was. We would then calculate target cursor which would be the last known play cursor's location. We wouldn't really consider where the Write Cursor, just leave enough room (`LatencySampleCount`) for us to surely get ahead of it. 
+Until now, we were setting our `ByteToLock` to be whatever our `RunningSampleIndex` was. We would then calculate the target cursor, which would be the last known play cursor's location. We wouldn't really consider where the Write Cursor was. What mattered to us was just leaving enough room (`LatencySampleCount`) to surely get ahead of it. 
 
-Now we will start taking into account the DirectSound's write cursor. If it's within this frame's boundaries, we can assume that we are on a low latency hardware, and get on the "Low Latency Path". In this case, we presume that we're able to write up from the frame flip, so we offset the `TargetCursor` until the next frame's boundary so that audio will always goes out with the image.
+Now we will start taking into account the DirectSound's write cursor. If it's within this frame's boundaries, we can assume that we are on low latency hardware and get on the "Low Latency Path." In this case, we presume that we can write up from the frame flip, so we offset the `TargetCursor` until the next frame's boundary so that audio will always go out with the image.
 
 *****************************************************************************
 *                                                                           *
@@ -370,7 +370,7 @@ All of this wouldn't impact our `ByteToLock` or `BytesToWrite` calculation (or, 
 
 ## Clean Up the Old Code
 
-Alright, let's get cracking. First of all, let's get rid of the `LastPlayCursor`, it's gone. We'll need to remove it from the beginning of our `WinMain`, as well as any usage we encounter along the way. We won't need it anymore, because we'll do all the computations as soon as we get the cursor values.
+Alright, let's get cracking. First of all, let's get rid of the `LastPlayCursor`; it's gone. We'll need to remove it from the beginning of our `WinMain` and any usage we encounter along the way. We won't need it anymore because we'll do all the computations as soon as we get the cursor values.
 
 ~~~~~~~ C++
 int DebugTimeMarkerIndex = 0;
@@ -448,7 +448,7 @@ struct win32_sound_output
 ~~~~~~~ C++ delete
     int LatencySampleCount;
 ~~~~~~~ C++
-    // TODO(casey): Math get simpler if we add a "bytes per second" field?
+    // TODO(casey): Math gets simpler if we add a "bytes per second" field?
 };
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.h]</file> Removing latency tracking.]
@@ -456,7 +456,7 @@ struct win32_sound_output
 
 We can now consolidate the blocks dealing with the audio. For our debug code capturing the markers for visual display, we will have the own position calculation. Since it will happen quite close to the frame flip, we might as well consider these cursors as the Flip Cursors. 
 
-The sound initialization block can be removed for now, we'll move it to another section in a second.
+The sound initialization block can be removed for now, and we'll move it to another section in a second.
 
 ~~~~~~~ C++ delete
 DWORD PlayCursor = 0;
@@ -500,7 +500,7 @@ else
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Simplifying blocks structure.]
 
-Next, we will delete the whole block calculating the cursors. Not all of this code is obsolete though, `ByteToLock` will still be useful. We will recreate it further down below.
+Next, we will delete the whole block where the cursors are calculated. Not all of this code is obsolete though, `ByteToLock` part is still relevant. We will recreate it further down below.
 
 ~~~~~~~ C++ delete
 DWORD ByteToLock = 0;
@@ -624,30 +624,30 @@ if (GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor) == DS_O
 {
 ~~~~~~~ C++ add
     /* NOTE(casey):
-
-    Here is how sound output computation works.
-
-    We define a safety value that is the number 
-    of samples we think our game update loop 
-    may vary by (let's say up to 2ms). 
-
-    When we wake up to write audio, we will look
-    and see what the play cursor position is and we
-    will forecast ahead where we think the
-    play cursor will be on the next frame boundary.
-
-    We will then look to see if the write cursor is
-    before that by at least our safety value. If it is, the
-    target fill position is that frame boundary
-    plus one frame. This gives us perfect audio
-    sync in the case of a card that has low enough
-    latency.
-
-    If the write cursor is _after_ that safety 
-    margin, then we assume we can never sync the
-    audio perfectly, so we will write one frame's
-    worth of audio plus the safety margin's worth
-    of guard samples.
+    //  
+    //  Here is how sound output computation works.
+    //
+    //  We define a safety value that is the number 
+    //  of samples we think our game update loop 
+    //  may vary by (let's say up to 2ms). 
+    //
+    //  When we wake up to write audio, we will look
+    //  and see what the play cursor position is and we
+    //  will forecast ahead where we think the
+    //  play cursor will be on the next frame boundary.
+    //
+    //  We will then look to see if the write cursor is
+    //  before that by at least our safety value. If it is, the
+    //  target fill position is that frame boundary
+    //  plus one frame. This gives us perfect audio
+    //  sync in the case of a card that has low enough
+    //  latency.
+    //
+    //  If the write cursor is _after_ that safety 
+    //  margin, then we assume we can never sync the
+    //  audio perfectly, so we will write one frame's
+    //  worth of audio plus the safety margin's worth
+    //  of guard samples.
     */
 ~~~~~~~ C++
 if (!SoundIsValid)
@@ -660,12 +660,12 @@ if (!SoundIsValid)
 
 ## Change `TargetCursor` Calculation
 
-Everything is set up, let's go ahead with the changes we need. We'll write how we imagine target cursor calculation first, and think about making it happen later.
+Everything is set up. Let's go ahead with the changes we need. We'll write how we imagine target cursor calculation first and think about making it happen later.
 
-* For the fast path (low latency card), we would position ourselves at the expected frame boundary of the next frame.
-* For the slow path the write cursor position, move by one frame's length and add some safety bytes.
+* For the fast path (low latency card), we would position ourselves at the next frame's expected boundary.
+* For the slow approach, the write cursor position would be moved by one frame's length (with some added safety bytes).
 
-In both cases the resulting value may be greater than the size of our buffer, so in order to bind it to the buffer, we'll simply _modulo_ it against the buffer size. As a reminder, _modulo_ operator (`%`) keeps the remainder of a given division.
+In both cases, the resulting value may be greater than our buffer's size, so to bind it, we'll simply _modulo_ it against the buffer size. As a reminder, _modulo_ operator (`%`) keeps the remainder of a given division.
 
 ~~~~~~~ C++
 DWORD TargetCursor = 0;
@@ -735,10 +735,10 @@ b32 AudioCardIsLowLatency = SafeWriteCursor < ExpectedFrameBoundaryByte;
 
 ### ExpectedFrameBoundaryByte
 
-`ExpectedFrameBoundaryByte` seems fairly straightforward. We capture the play cursor already which represents our current position in time. Therefore, we simply add to it the whatever amount of sound bytes we expect per frame and get our expected frame boundary.
+`ExpectedFrameBoundaryByte` seems reasonably straightforward. We capture the play cursor already, which represents our current position in time. Therefore, we simply add whatever amount of sound bytes we expect per frame.
 
 !!! 
-    If you spotted mistake in our logic here, well done! We will return to this at the end of the chapter.
+    If you spotted a mistake in our logic here, well done! We will return to this at the end of the chapter as it will prove key to a bug.
 
 ~~~~~~~ C++ add
 DWORD ExpectedFrameBoundaryByte = PlayCursor + ExpectedSoundBytesPerFrame;
@@ -775,9 +775,9 @@ DWORD SafeWriteCursor = WriteCursor;
 
 ### SafetyBytes
 
-Finally, we need to decide what do we consider a safety margin. What is a safety margin? Well, it's a potential variance in frame length, or how much does a frame can go outside of its intended frequency.
+Finally, we need to decide what do we consider a safety margin. What is a safety margin? It's a potential variance in frame length or how much a frame can go outside of its intended frequency.
 
-It would be a fairly small length but not inconsiderate: we could say it's a third of a frame. We can adjust this value later on if necessary, and maybe even compute the variance in the future.
+It would be a relatively small length but not inconsiderate: we could say it's a third of a frame. We can adjust this value later on if necessary and maybe even compute the variance in the future.
 
 We already know how to calculate sound bytes per frame, so let's simply say it's that value divided by three.
 
@@ -808,7 +808,7 @@ struct win32_sound_output
 ~~~~~~~ C++ add
     DWORD SafetyBytes;
 ~~~~~~~ C++
-    // TODO(casey): Math get simpler if we add a "bytes per second" field?
+    // TODO(casey): Math gets simpler if we add a "bytes per second" field?
 };
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.h]</file> Updating `win32_sound_output` structure.]
@@ -817,17 +817,17 @@ This should be the end of it. We would now be compilable, so take your time to f
 
 # Introduce `GameGetSoundSamples`
 
-Up until now we've been working based off an assumption that we know how long each frame is going to take. But we don't really, we only have an estimate based on the previous frames' data. We already moved the sound calculation after `GameUpdateAndRender` to try and mitigate this issue, but what this does is that we only prepare the target cursor for the next frame (in hopes that it will be as long as the current one). It doesn't really address the core issue. 
+Until now, we've been working based on the assumption that we know how current frame's length. But we don't really; we only have an estimate based on the previous frames' data. We already moved the target cursor calculation after `GameUpdateAndRender` to mitigate this issue, but what this does is merely preparing the target cursor for the next frame (hoping that it will be as long as the current one). It doesn't really address the core issue. 
 
-This all should be fine since we know the _expected_ frame time and we have our safety margins and we're preparing ourselves for the victory and it's all nice and simple. 
+This all should be fine since we know the _expected_ frame time and we have our safety margins, and we're preparing ourselves for the victory, and it's all nice and straightforward. 
 
 Right?
 
-Getting real audio sync is complicated. We need to sync two clocks - game clock and audio device clock. We also need to know how many bytes to ask from the game but in order to know that we need to prepare the samples... so it's getting into a bit of a vicious cycle.
+Getting real audio sync is complicated. We need to sync two clocks - the game clock and the audio API clock. We also need to know the number of bytes to ask from the game; to discover that we need to prepare the samples... so it's getting into a bit of a vicious cycle.
 
 Maybe it's time for a big decision. We will separate game writing audio from the game doing the world update and rendering!
 
-Let's make it happen. First of all, we will introduce the new function declaration inside `handmade.h`. It will largely be the same as `GameUpdateAndRender`, except it will take a sound buffer instead of input and render buffer.
+Let's make it happen. First of all, we will introduce the new function declaration inside `handmade.h`. It will essentially be the same as `GameUpdateAndRender`, except it will take a sound buffer instead of input and render buffer.
 
 We will also remove the sound buffer from `GameUpdateAndRender`, like so: 
 
@@ -922,19 +922,19 @@ GameGetSoundSamples(game_memory* Memory, game_sound_output_buffer *SoundBuffer)
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Defining `GameGetSoundSamples`.]
 
-And... that's all there was to it. Our game updates the state of the world, and then the sound system comes in and writes the sound based on to it. 
+And... that's all there was to it. Our game updates the world state, and then the sound system comes in and writes the sound based on it. 
 
-However, it's not over yet. We have written tons of code up until now, so there're probably some bugs to catch. 
+However, it's not over yet. We have written tons of code until now, so we can probably find some bugs to catch. 
 
 # Even More Debugging
 
-Let's have some fun! We want to finish debugging sound, but also avoid having to spend tons of time reading our logs. On the other hand, we have our debug line drawing routine that we can leverage. 
+Let's have some fun! We want to finish debugging sound and avoid having to spend tons of time reading our logs. On the other hand, we have our debug line drawing routine that we can leverage. 
 
 ## Add Global Pause Key
 
-The first thing that we will do though is not drawing. Right now our graph is running quite fast, so a pause button which would stop the simulation altogether would be great for this case and potentially for the future. 
+The first thing that we will do, though, is not drawing. Our graph is running quite fast, so a pause button that would stop the simulation altogether would be great for this case and potentially for the future. 
 
-Currently, we have our main loop is based on the global variable `GlobalRunning`. We could introduce a new global for pause purposes.
+Currently, we have our main loop based on the global variable `GlobalRunning`. We could introduce a new global for pause purposes.
 
 ~~~~~~~ C++
 global_variable b32 GlobalRunning;
@@ -947,7 +947,7 @@ global_variable s64 GlobalPerfCountFrequency;
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Introducing Global Pause.]
 
-Now we can toggle this pause state on and off by pressing a key, say 'P'. If the pause is on, it will be toggled off, and the contrary.
+Now we can toggle this paused state on and off by pressing a key, say 'P'. If the pause is on, it will be toggled off, and the contrary.
 
 ~~~~~~~ C++
 else if (VKCode == VK_BACK)
@@ -999,14 +999,14 @@ if (!GlobalPause)
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Implementing Global Pause.]
 
 !!! Warning
-    This is not how you should make your final game pause state! Keep in mind that, with this pause, our sleep-based frame cycle goes straight out of the window. It's a quick and easy tool to help us with the debugging.
+    This is not how you should make your final game pause state! Keep in mind that, with this pause, our sleep-based frame cycle goes straight out of the window. It's a quick and easy tool to help us with debugging.
 
-![Figure [x]: If your `WinMain` block nesting is confusing you, this is how the end of file should look like.](../media/day20/global_pause.jpg) 
+![Figure [x]: If your `WinMain` block nesting is confusing you, this is how the end of the file should look like.](../media/day20/global_pause.jpg) 
 
 
 ## Highlight Latest Marker
 
-Now, at this moment we're visualizing all the markers containing play and write cursors at the same level. We can highlight the latest one to give it a bit more importance. Let's say there's a current marker index, and if we hit it, we draw it a bit lower. 
+Currently, we're visualizing all the markers containing play and writing cursors at the same level. We can highlight the latest one to give it a bit more importance. Let's say there's a current marker index, and if we hit it, we draw that marker under the rest. 
 
 This is how it would look in our drawing routine: 
 
@@ -1058,9 +1058,9 @@ Win32DebugSyncDisplay(win32_offscreen_buffer *Backbuffer,
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Improving `Win32DebugSyncDisplay`.]
 
-To get it work, we need to pass the current marker index to the function. Since we're advancing `DebugTimeMarkerIndex` to write the markers, we can simply pass it as is. 
+To get it to work, we need to pass the current marker index to the function. Since we're advancing `DebugTimeMarkerIndex` to write the markers, we can simply give it as is. 
 
-It somewhat introduces a bug on the 0th index (as it underflows to the maximum number), but since it's debug code we don't really care. We'll leave a todo for the time being.
+It somewhat introduces a bug on the 0th index (as it underflows to the maximum number), but we don't really care since it's the debug code. We'll leave a todo for the time being.
 
 ~~~~~~~ C++
 #if HANDMADE_INTERNAL
@@ -1081,7 +1081,7 @@ Compile and run to make sure that everything is working
 
 ## Record More Values
 
-We have this newly found space for our current marker that we can utilize to display more values. Heck, we can even go all in and get to display as many values that we have.
+We have this newfound space for our current marker that we can utilize to display more values. Heck, we can even go all in and get to show as many values that we have.
 
 ~~~~~~~ C++
 struct win32_debug_time_marker
@@ -1100,9 +1100,9 @@ struct win32_debug_time_marker
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.h]</file> Updating old values and adding some new ones.]
 
-We have our play cursor and write cursor at the frame flip time (that we'll call `FlipPlayCursor` and `FlipWriteCursor`), cursors at the output time, byte to lock and how many bytes to write. 
+We have our play cursor and write cursor at the frame flip time (that we'll call `FlipPlayCursor` and `FlipWriteCursor`), cursors at the output time, byte to lock, and how many bytes to write. 
 
-However, since we now utilize a marker in more than one place, we can't really advance the `DebugTimeMarkerIndex` when we access it. We'll do it at the very end of our frame, before we're ready to flip.
+However, since we now utilize a marker in more than one place, we can't really advance the `DebugTimeMarkerIndex` when we access it. We'll do it at the very end of our frame before we're ready to flip.
 
 ~~~~~~~ C++
 #if HANDMADE_INTERNAL
@@ -1146,7 +1146,7 @@ if (DebugTimeMarkerIndex == ArrayCount(DebugTimeMarkers))
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Making sure time marker index is only updated once per frame.]
 
-Now that we have a more permanent marker index, we can access the marker from our sound code. Let's do it in the `HANDMADE_INTERNAL` section where we print out the values to the Output console.
+Now that we have a more permanent marker index, we can access the marker from our sound code. Let's do it in the `HANDMADE_INTERNAL` section, where we print out the values to the Output console.
 
 ~~~~~~~ C++
 GameGetSoundSamples(&GameMemory, &SoundBuffer);
@@ -1183,7 +1183,7 @@ Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > Win32DebugSyncDisplay]</file> Making us compilable.]
 
-So far, we're recording the new values but we don't display them. You can compile and test it out: now changes yet. Let's add the newly recorded values to our debug display. Instead of having too many colors, we'll simply reuse the `PlayColor` and `WriteColor` we already have, simply offset those down.
+So far, we're recording the new values, but we don't display them. You can compile and test it out: now changes yet. Let's add the newly registered values to our debug display. Instead of having too many colors, we'll simply reuse the `PlayColor` and `WriteColor` we already have, merely offset those down.
 
 ~~~~~~~ C++ add
 win32_debug_time_marker *ThisMarker = &Markers[MarkerIndex];
@@ -1258,7 +1258,7 @@ Win32DebugDrawVertical(win32_offscreen_buffer *Backbuffer,
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Making sure we never go out of bounds.]
 
-Also now that we're passing potentially out-of-bounds values we won't be able to flat assert value correctness. Instead, we can assert the individual values on a case-by-case basis.
+Now that we're passing potentially out-of-bounds values, we won't be able to flat assert value correctness. Instead, we can do it for the individual values on a case-by-case basis.
 
 ~~~~~~~ C++
 inline void
@@ -1304,7 +1304,7 @@ If you compile and run now, you'll see something like this:
  
 ## Display Expected Frame Flip Time
 
-At this point, we want to see if our estimate lines up at all. We assume that the frame flip happens as close to the current frame's `FlipPlayCursor` as possible (bottom white line). Let's put our `FrameBoundaryByte` as the expected flip play cursor and see if they are even close.
+At this point, we want to see if our estimate lines up at all. We assume that the frame flip happens as close to the current frame's `FlipPlayCursor` as possible (white bottom line). Let's put our `FrameBoundaryByte` as the expected flip play cursor and see if they are even close.
 
 Again, we first add the new member to `win32_debug_time_marker` structure:
 
@@ -1381,7 +1381,7 @@ if (MarkerIndex == CurrentMarkerIndex)
 
 The actual flip play cursor and the expected one don't really line up perfectly. What's going on? 
 
-One possibility is that the update lag of DirectSound itself doesn't allow correct visualization. If you recall, we calculated that the cursors move every 480 samples, or ~3.3 times per frame. It implies that the actual cursor we get is more of a _window_ in time rather than a _point_ in time. Let's visualize it as well, this time in a nice magenta.
+One possibility is that the update lag of DirectSound itself doesn't allow correct visualization. We calculated that the cursors move every 480 samples or ~3.3 times per frame, if you recall. It implies that the cursor we get is more of a _window_ in time than a _point_ in time. Let's visualize it as well, this time in a lovely magenta.
 
 ~~~~~~~ C++
 DWORD PlayColor = 0xFFFFFFFF;
@@ -1411,7 +1411,7 @@ Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom, ThisMa
 
 ### Fixing the ExpectedFrameBoundaryByte calculation.
 
-If our data is correct, the `ExpectedFrameBoundaryByte` should always fall between those values. But it's not. If you look closely, it's very rarely inside the window, and more often than not it floats away. What's going on? 
+If our data is correct, the `ExpectedFrameBoundaryByte` should always fall between those values. But it's not. If you look closely, it's very rarely inside the window, and more often than not, it floats away. What's going on? 
 
 After giving a closer look at the `ExpectedFrameBoundaryByte`, we can see that the computation is wrong:
 
@@ -1421,7 +1421,7 @@ DWORD ExpectedFrameBoundaryByte = PlayCursor + ExpectedSoundBytesPerFrame;
 
 That's not what we set out to do! This doesn't take into account whatever amount of time has already elapsed since the frame started. Let's fix this. 
 
-First, we need to introduce a very precise wall clock snapshot, going off exactly at the frame flip time. Our current `LastCounter` is more liberal in this regard, because it's measuring itself at every cycle, so it doesn't need precise placement at the frame flip. Flip wall clock should snap immediately after we send the render buffer to Windows: 
+First, we need to introduce an exact wall clock snapshot, going off exactly at the frame flip time. Our current `LastCounter` is more liberal in this regard because it's measuring itself at every cycle, so it doesn't need precise placement at the frame flip. Flip wall clock should snap after we send the render buffer to Windows: 
 
 ~~~~~~~ C++
 // Before the main loop
@@ -1487,19 +1487,19 @@ if (GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor) == DS_O
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Calculating correct frame boundary byte.]
 
-If we compile and run now, we'll see that the flip play cursor and the expected flip play cursor line up almost perfectly! Mission accomplished.
+If we compile and run now, we'll see that the flip play cursor and the calculated flip play cursor line up almost perfectly! Mission accomplished.
 
 # Recap 
 
-Audio is tough, and it's hard to find topics harder than this in programming. However, if you got this far, congratulations! From here on it should be a breeze. 
+Audio is tricky to get right, and it's hard to find topics harder than this in programming. However, if you got this far, congratulations! From here on, it should be a breeze. 
 
 # Side Considerations
 
 ## Bugfix: Sound Changing Pitch
 
-If you listen to the game output for long enough, you'll quickly hear that it changes in pitch over time, without any input from the user.
+If you listen to the game output for long enough, you'll quickly hear that it changes in pitch over time, without any user input.
 
-This is due to the loss of precision of the floating point. It turns out that with the running sample index `tSine` becomes less and less precise very quickly indeed. We can fix this using a very simple operation as showcased below.
+This is due to the loss of precision of the floating-point value. It turns out that with the running sample index, `tSine` becomes less and less precise very quickly indeed. We can fix this using a straightforward operation such as showcased below.
 
 ~~~~~~~ C++
 f32 SineValue = sinf(tSine);
