@@ -8,45 +8,138 @@ _Video Length (including Q&A): [1h43](https://hero.handmade.network/episode/code
 
 People often ask: are we going to use a scripting language for Handmade Hero? We definitely won't use an existing one, maybe will eventually develop one. But the correct question is: is it a great idea in first place? 
 
-# About Scripting Languages
+# Plan For Today
+
+## About Scripting Languages
 
 To answer this question, we need to ask ourselves what we'd be using a scripting language for, and whether or not it covers the downsides. And the downsides, if you look closely, are many: 
 
-* You need to optimize that scripting language end ensure it's performant.
-* How are you going to go with debugging? 
-* Are there any other tools you need to develop?
+* You need to optimize that scripting language and ensure it's performant.
+* You need to develop a debugging solution if there isn't one readily available. 
+* There might be other tools you potentially need to develop.
 
-To recap, it's not to say that using a scripting language is a no-go. It should just be evaluated on a case-by-case basis. For Handmade Hero, it's definitely a no-go. 
+If you look at these, it's not really a matter of 'scripting languages' are _bad_. However, it takes a lot of time to get all those things right, so such a use should just be evaluated on a case-by-case basis. For Handmade Hero, it's definitely a no-go. 
 
-Maybe we can simply get all the benefits without having to do all the hard work? Speaking of, when you think of a scripting language you are probably thinking about the following benefits (compared to the programming language the engine is developed on):
+But maybe we can get all the benefits without having to do all the hard work? When you think of a scripting language, these benefits come to your mind (compared to the programming language the engine is developed on):
 
 * __It's perceived to be easier to write in a scripting language__.
 
-This is a preconception. It seems to be coming rather from bad API practices in the programming languages rather than the strengths of the scripting ones. Since we're going to really focus on writing good API for our game, we should fine in C.
+This is a debatable point really. It seems to be coming rather from bad API practices in the programming languages rather than the strengths of the scripting ones. Since we're going to really focus on writing good API for our game, we should be fine in C.
 
 * __You can edit the script while the game is running__.
 
-In many cases, this is a great bonus. You can tune variables live, on the fly, without the need of: exit the game, modify the necessary values, recompile, restart the game, jump to whatever encounter you were fine-tuning, realize the edit wasn't perfect, jump back.... This indeed can become very old very quickly, and the ability to edit code right at the middle of the game can be pretty valuable. 
+Now this is a great tool to have. When it comes to fine-tuning the game, having the game running while you modify its values can save a lot of time. Otherwise you need to exit the game, modify the necessary values, recompile, restart the game, jump to whatever encounter you were tuning, realize the edit wasn't perfect, jump back.... This indeed can become very old very quickly. 
 
-// BOOKMARK: Insert chart
+*******************************************
+*                                         *
+*          .----------------.             *
+*      .-->| Start the game |             *
+*     |    '-------+--------'             *
+*     |            |                      *
+*     |            v                      *
+*     |    .----------------.             *
+*     |    |   Skip to the  |             *
+*     |    |  desired level |             *
+*     |    '-------+--------'             *
+*     |            |                      *
+*     |            v                      *
+*     |    .----------------.             *
+*     |    |    Playtest    |             *
+*     |    '-------+--------'             *
+*     |            |                      *
+*     |            v                      *
+*     |    .----------------.             *
+*     |    |  Find a value  |             *
+*     |    |     to fix     |             *
+*     |    '-------+--------'             *
+*     |            |                      *
+*     |            v                      *
+*     |    .----------------.             *
+*     |    | Stop the game  |             *
+*     |    '-------+--------'             *
+*     |            |                      *
+*     |            v                      *
+*     |    .----------------.             *
+*     |    |   Go to the    |             *
+*     |    |   game code    |             *
+*     |    '-------+--------'             *
+*     |            |                      *
+*     |            v                      *
+*     |    .----------------.             *
+*     |    |   Fix desired  |             *
+*     |    |      value     |             *
+*     |    '-------+--------'             *
+*     |            |                      *
+*     |            v                      *
+*     |    .----------------.             *
+*     |    |   Recompile    |             *
+*     |    '-------+--------'             *
+*     |            |                      *
+*      '----------'                       *
+*   repeat until happy                    *
+*                                         *
+*******************************************
+[Figure [x]: A nightmare game tuning session.]
 
-Of course, some debuggers, like Visual Studio, have "Edit and Continue" functionality, where you could set a breakpoint, edit a variable, and continue from where you left. Unfortunately, this functionality is usually quite limited and in more complex situations it doesn't really work.
+Of course, some debuggers, like Visual Studio, have "Edit and Continue" functionality, where you could set a breakpoint, edit a variable, and continue from where you left. Unfortunately, this functionality is usually quite limited and doesn't really work in more complex situations.
 
 Maybe we could implement our own fool-proof version of "Edit and Continue"? Something that would allow us to replicate the same functionality of Change the code live -> Recompile without breaking or exiting the game -> Continue tuning! 
 
-// BOOKMARK: Insert chart
+*******************************************
+*                                         *
+*          .----------------.             *
+*          | Start the game |             *
+*          '-------+--------'             *
+*                  |                      *
+*                  v                      *
+*          .----------------.             *
+*          |   Skip to the  |             *
+*          |  desired level |             *
+*          '-------+--------'             *
+*                  |                      *
+*                  v                      *
+*          .----------------.             *
+*      .-->|    Playtest    |             *
+*     |    '-------+--------'             *
+*     |            |                      *
+*     |            v                      *
+*     |    .----------------.             *
+*     |    |  Find a value  |             *
+*     |    |     to fix     |             *
+*     |    '-------+--------'             *
+*     |            |                      *
+*     |            v                      *
+*     |    .----------------.             *
+*     |    |   Go to the    |             *
+*     |    |   game code    |             *
+*     |    '-------+--------'             *
+*     |            |                      *
+*     |            v                      *
+*     |    .----------------.             *
+*     |    |   Fix desired  |             *
+*     |    |      value     |             *
+*     |    '-------+--------'             *
+*     |            |                      *
+*     |            v                      *
+*     |    .----------------.             *
+*     |    |   Recompile    |             *
+*     |    '-------+--------'             *
+*     |            |                      *
+*      '----------'                       *
+*   repeat until happy                    *
+*                                         *
+*******************************************
+[Figure [x]: Our ideal debugging session. No more start-stop for us!]
+
+## Hot Reloading
 
 We're just out of a very complex sound debugging part, so it's about time for us to do something fun! Let's see if we can use Windows to help us do it.
 
-# Separate Game from Platform
-
-## Plan the Action
-
-If you review our game code structure so far, you'll see that it's already separating Windows (platform-specific layer) from the our core game functionality. So, in order to start implementing the live code editing, we first should ask ourselves: could we split those two things apart entirely? You'll have the platform code (containing WinMain and other platform-specific code) compiled separately from the game code. 
+If you review our game code structure so far, you'll see that it's already quite neatly separating Windows (platform-specific layer) from the our core game functionality. So, in order to start implementing the live code editing, we first should ask ourselves: could we split those two things apart entirely? You'll have the platform code (containing WinMain and other platform-specific code) compiled separately from the game code. 
 
 And then, will it be possible to unload the game part without killing the main executable? 
 
-If you look back, you'll see that the answer is "yes" to both of these questions. We already have ability of loading libraries for our XInput code as we implemented in `Win32LoadXInput`.
+The answer is "yes" to both of these questions. We already have ability of loading libraries that we implemented for our XInput code when we were working on the controller input: 
 
 ~~~~~~~ C++
 internal void
@@ -70,38 +163,159 @@ Win32LoadXInput()
 }
 ~~~~~~~
 
-In here, we first call `LoadLibraryA` to load a DLL. After we ensure that it's loaded fine, we load the necessary functions using `GetProcAddress`. After this, we can simply call the function.
+Here, we first call `LoadLibraryA` to load a DLL. After we ensure that it's loaded fine, we load the necessary functions using `GetProcAddress`. After this, we can simply call the function.
 
-If we want, we can just do it with our own code. Instead of compiling our program [monolithically][monolithic], we will compile the program as two separate _translation units_. In simpler terms, we will run our compilation on two separate code chunks separately: one for platform, and one for game. The platform-independent code will be loaded as a `.dll` to call into to do whatever we need to do. 
+If we want, we can just do it with our own code. Instead of compiling our program [monolithically][monolithic], we will compile the program as two separate _translation units_. In simpler terms, we will run our compilation on two separate code chunks separately: one for platform, and one for game. The platform-independent code will be loaded as a `.dll` to do whatever we need. 
 
-When we refresh our game code, we will simply unload the DLL (using the corresponding call `FreeLibrary`), recompile and reload the new version of the DLL without having to kill the executable. It should just work! 
+When we refresh our game code, we will simply unload the DLL (using the corresponding to `LoadLibrary` call `FreeLibrary`), recompile that and reload the new version of the DLL without having to kill the executable. It should just work! 
 
-The main thing that allows us to do it is that we pass our game memory as a single chunk. We said in the past that there're many good reasons of doing it, well, that's one of them: since we're passing in all of the game memory, the game itself doesn't interact with Windows memory management systems at all. So if we simply hold on to the memory that we allocated, when we pass it to DLL when it needs to run, we can unload the DLL and still have all the memory. So when the new version of the DLL will be loaded, we can simply pass to it whatever memory we had before and it should still read it. And poof! The game will keep running as before. 
+What really enables us to do it this way is passing memory to the game in a single chunk. We said in the past that there're many good reasons of doing it, well, that's one of them. Our platform layer reserves the memory and passes the whole chunk to the game. When the game is done doing its work, the memory is preserved for the next iteration of the main loop. This allows us to unload the game, swap the game code with the new version, and give it the memory the previous guy was using. And poof! The game will keep running as before. 
 
-// BOOKMARK: insert chart
+************************************************************
+*                      Cross-platform                      *
+*                       API boundary                       *
+*                            |                             *
+*                            |                             *
+*                            |                             *
+* .------------.             |              .------------. *
+* |            | ------>   Input   ------>  |            | *
+* |  Platform  | ------>  File I/O ------>  |    Game    | *
+* | executable | ------>   Memory  ------>  |   Library  | *
+* |            |             |              |            | *
+* |            |             |              |            | *
+* |            | <------  Graphics <------- |            | *
+* |            | <------   Sound   <------- |            | *
+* '------------'             |              '------------' *
+*                            |                             *
+*                            |                             *
+*                            |                             *
+************************************************************
+[Figure [x]: The API boundary will now be complete.]
 
-Now, there're a couple of caveats at times when it doesn't magically run as it was before. For instance, if the structures changed (members were added or removed), this can potentially affect the memory layout using those structures, so the game wouldn't be able to read old memory anymore. However, at least for the time being, it's a pretty simple way of envisioning how such a code would work.
+Now, there're a couple of caveats where the magic won't work in all places. For instance, if the structures have changed (members were added or removed), this can potentially affect the layout of the memory using those structures, so the game wouldn't be able to read old memory anymore and will require restart. However, at least for the time being, it's a simple way of envisioning how such a code would work.
 
-## Change `build.bat`
+Another issue that one can think about are the compile times. Some projects are notoriously slow to build, but this comes from bad programming practices, rather than the complexity of a codebase. If your code takes more than 10 seconds to compile, you're doing it wrong! 
 
-// BOOKMARK: mostly undocumented code changes
+# Change `build.bat`
 
+The first step on our journey would be updating our `build.bat`. 
 
-cl can build dlls we need to find stuff to pass to it so it builds one.
+## Clean Up Build Variables
 
-[LD][]
+[Last time][day 16], we might have gone a little bit overboard with the variables. Our `cl` line currently looks like this: 
+
+~~~~~~~ batch
+cl -Od %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %code_path%win32_handmade.cpp %win32_libs% /link %win32_link%
+~~~~~~~
+
+where: 
+
+* `%compiler%` contains various compiler flags.
+* `%defines%` stands for the defines for `-DHANDMADE_INTERNAL=1` and `-DHANDMADE_SLOW=1`.
+* `%debug%` adds a couple flags for debug mode (`-FC` and `-Z7`).
+* `%code_path% is a shortcut to our code path, should it change.
+* `%win32_libs%` contains all the libraries we need to compile on Windows.
+* `%win32_link%` contains a couple switches to pass to linker.
+
+Now, the last one can be reworked. We only have 1 Windows-specific flag, the subsystem, which we can pass directly instead of a variable, while the common linker flags can be grouped and expanded together. We want to add `-incremental:no` flag to the linker flags, simply to make sure we do the complete recompile each time.
+
+~~~~~~~ batch
+:: WIN32 PLATFORM LIBRARIES
+set win32_libs=             user32.lib
+set win32_libs=%win32_libs% gdi32.lib
+set win32_libs=%win32_libs% winmm.lib
+~~~~~~~ batch add
+:: COMMON LINKER SWITCHES
+set link=                   -opt:ref               &:: Remove unused functions
+set link=%link%             -incremental:no        &:: Perform full link each time
+~~~~~~~ batch delete
+:: WIN32 LINKER SWITCHES
+set win32_link=             -subsystem:windows,5.2 &:: subsystem, 5.1 for x86
+set win32_link=%win32_link% -opt:ref               &:: Remove unused functions
+~~~~~~~ batch
+
+:: No optimizations (slow): -Od; all optimizations (fast): -O2
+
+~~~~~~~ batch edit
+cl -Od %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %code_path%win32_handmade.cpp %win32_libs% /link %link% -subsystem:windows,5.2
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> Updating linker flag variables.]
+
+Remember that you still need to add `/link` so that the compiler knows it needs to pass the flags that follow to the linker.
+
+Feel free to expand or change the variables as you feel appropriate to your workflow.
+
+## Request `handmade.dll` Compilation
+
+Because we want to make two separate _things_, we want to call the compiler, `cl`, twice. This will, in return, produce two files (aside from a bunch of debug files and build artifacts): 
+
+* `win32_handmade.exe` will contain the Windows platform code.
+* `handmade.dll` will contain the cross-platform game code.
+
+In the new line, we can specify: 
+
+* Most of the common compiler flags we already do for `win32_handmade.cpp`.
+* As the file name, we'll pass our `handmade.cpp`, the map file will also have a different name.
+* A special flag [-LD] for building an DLL instead of an executable. 
+* The common linker flags we just highlighted out.
 
 ~~~~~~~ batch
 :: No optimizations (slow): -Od; all optimizations (fast): -O2
 
 ~~~~~~~ batch add
-cl -Od %compiler% %defines% %debug% -Fmhandmade.map %code_path%handmade.cpp -LD
+cl -Od %compiler% %defines% %debug% -Fmhandmade.map %code_path%handmade.cpp -LD /link %link%
 ~~~~~~~ batch
-cl -Od %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %code_path%win32_handmade.cpp %win32_libs% /link %win32_link%
+cl -Od %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %code_path%win32_handmade.cpp %win32_libs% /link %link% -subsystem:windows,5.2
 ~~~~~~~
-[Listing [x]: <file>[build.bat]</file> .]
+[Listing [x]: <file>[build.bat]</file> Requesting to build `handmade.dll`.]
 
-## Separate Two Compilation Units
+We miss one last step here.
+
+## Export Functions
+
+DLL is not much different from an EXE. It essentially contains executable code, like an `.exe`. What makes it different though, is that a DLL has a table of functions available for execution from the outside, to whoever asks for it. It's this table that a function `GetProcAddress` goes to read, in an attempt to find a specific location to call. This allows linking at runtime, dynamically (hence the name Dynamically Linked Library, or DLL for short). 
+
+In order to allow such a functionality on our side, we need to tell the linker which functions we're exporting. There're a couple of ways to do this: 
+
+* You can prefix the function you're exporting with a specific attribute. In Visual Studio, this is `__declspec(dllexport)`. 
+* You can simply specify the exports at compile time, in our case inside `build.bat`. 
+
+First method seems like quite simple except it has a number of drawbacks. The attribute is not standardized, so different operating systems (and even different compilers!) have their own designations. So by using a specific attribute inside the code file we're essentially tying ourselves to the Microsoft's compiler, and that's not necessarily something that we'd love to do.
+
+We don't have many functions to export. We only want to export the functions `GameUpdateAndRender` and `GameGetSoundSamples`, so let's go with the second option. 
+
+The keyword we're after is [\EXPORT][]. Inside the `build.bat` file, you can write directly on the compile line, or you can add another variable to use for simpler reading later on like we did below. 
+
+~~~~~~~ batch
+:: COMMON LINKER SWITCHES
+set link=                   -opt:ref               &:: Remove unused functions
+set link=%link%             -incremental:no        &:: Perform full link each time
+~~~~~~~ batch add
+:: DLL LINKER SWITCHES
+set dll_link=               /EXPORT:GameUpdateAndRender
+set dll_link=%dll_link%     /EXPORT:GameGetSoundSamples
+~~~~~~~ batch
+
+:: No optimizations (slow): -Od; all optimizations (fast): -O2
+
+~~~~~~~ batch edit
+cl -Od %compiler% %defines% %debug% -Fmhandmade.map %code_path%handmade.cpp -LD /link %link% %dll_link%
+~~~~~~~ batch
+cl -Od %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %code_path%win32_handmade.cpp %win32_libs% /link %link% -subsystem:windows,5.2
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> Adding functions to export.]
+
+Of course, if we try to build now, the compiler will complain loudly of all the things it doesn't like. Let's get to finishing separating the two layers.
+
+# Separate Game from Platform
+
+Up until now, we were building the game and the platform layer together, even if they were separated in different files. We have some common items that we have between the two, but we also have some things that should never talk with each other. 
+
+Let's unify the common and separate even further specific code.
+
+## Move Common Types
+
+The first step would be to move the type definitions and common includes away from `win32_handmade.cpp` header. We also want to remove any reference from `handmade.cpp`:
 
 ~~~~~~~ C++ delete
 // TODO(casey): Implement sine ourselves
@@ -139,7 +353,9 @@ typedef double f64;
 
 #include "win32_handmade.h"
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Removing non-Windows specific `typedef`s and `#include`s.]
+
+Our `handmade.h` currently fulfills the role of a common interface quite nicely. Let's move all this cut code on top of the file (except `handmade.cpp` include, we don't want circular includes!).
 
 ~~~~~~~ C++
 #if !defined(HANDMADE_H)
@@ -189,11 +405,18 @@ typedef double f64;
 #endif
 
 ~~~~~~~
-[Listing [x]: <file>[handmade.h]</file> .]
+[Listing [x]: <file>[handmade.h]</file> Adding common `#define`s, `typedef`s and `#include`s.]
 
-Let's try to compile. 
+## Update API
 
-This is the first time we'll have exported functions.
+Let's try to compile and let the compiler errors guide us. The first error that we get is actually compiler warning! It's a good thing that we increased our warning level and asked compiler to treat all warnings as errors:
+
+~~~~~~~ batch
+handmade.h(178) : warning C4505: 'GameUpdateAndRender' : unreferenced local function has been removed
+handmade.h(178) : warning C4505: 'GameGetSoundSamples' : unreferenced local function has been removed
+~~~~~~~
+
+That's a good warning to catch! The keyword we're looking at here is `local`. We already asked `build.bat` to export these functions as publicly available, but in our code we still mark them as `internal` (or `static` if we go back to `internal` definition). Let's fix that! We need to update both `handmade.h` and `handmade.cpp`: 
 
 ~~~~~~~ C++ edit
 void GameUpdateAndRender(game_memory *Memory, game_input *Input, game_offscreen_buffer* Buffer);
@@ -206,7 +429,7 @@ void GameUpdateAndRender(game_memory *Memory, game_input *Input, game_offscreen_
 ~~~~~~~ C++ edit
 void GameGetSoundSamples(game_memory *Memory, game_sound_output_buffer *SoundBuffer);
 ~~~~~~~
-[Listing [x]: <file>[handmade.h]</file> .]
+[Listing [x]: <file>[handmade.h]</file> Removing `internal` from the function declarations.]
 
 
 ~~~~~~~ C++ edit
@@ -225,16 +448,16 @@ GameGetSoundSamples(game_memory* Memory, game_sound_output_buffer *SoundBuffer)
     // ... 
 }
 ~~~~~~~
-[Listing [x]: <file>[handmade.cpp]</file> .]
+[Listing [x]: <file>[handmade.cpp]</file> Removing `internal` from the function definitions.]
 
-In the same manner, we should update the debug services we provide to the game: for now, it's only file I/O (reading/writing files).
+If we look at the compiler errors further down, you'll see that we have similar warnings for the debug services we provide to the game: for now, it's only file I/O (reading/writing files), but this might change in the future. Let's update make them non-static, as well. 
 
 ~~~~~~~ C++ edit
 debug_read_file_result DEBUGPlatformReadEntireFile(char *Filename);
 void DEBUGPlatformFreeFileMemory(void *Memory);
 b32 DEBUGPlatformWriteEntireFile(char *Filename, u32 MemorySize, void *Memory);
 ~~~~~~~
-[Listing [x]: <file>[handmade.h]</file> .]
+[Listing [x]: <file>[handmade.h]</file> Updating debug services declarations.]
 
 ~~~~~~~ C++ edit
 void
@@ -260,7 +483,11 @@ DEBUGPlatformWriteEntireFile(char *Filename, u32 MemorySize, void *Memory)
     // ...
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Updating debug services definitions.]
+
+We don't need to export these functions through `build.bat` though. We'll do something else to pass them to the game though. 
+
+## Inspect Linker Errors
 
 If you've done everything correctly, the compiler will spit out something scary-looking like this: 
 
@@ -269,26 +496,33 @@ handmade.cpp
 handmade.obj : error LNK2019: unresolved external symbol "struct debug_read_file_result __cdecl DEBUGPlatformReadEntireFile(char *)" (?DEBUGPlatformReadEntireFile@@YA?AUdebug_read_file_result@@PEAD@Z) referenced in function "void __cdecl GameUpdateAndRender(struct game_memory *,struct game_input *,struct game_offscreen_buffer *)" (?GameUpdateAndRender@@YAXPEAUgame_memory@@PEAUgame_input@@PEAUgame_offscreen_buffer@@@Z)
 handmade.obj : error LNK2019: unresolved external symbol "void __cdecl DEBUGPlatformFreeFileMemory(void *)" (?DEBUGPlatformFreeFileMemory@@YAXPEAX@Z) referenced in function "void __cdecl GameUpdateAndRender(struct game_memory *,struct game_input *,struct game_offscreen_buffer *)" (?GameUpdateAndRender@@YAXPEAUgame_memory@@PEAUgame_input@@PEAUgame_offscreen_buffer@@@Z)
 handmade.obj : error LNK2019: unresolved external symbol "int __cdecl DEBUGPlatformWriteEntireFile(char *,unsigned int,void *)" (?DEBUGPlatformWriteEntireFile@@YAHPEADIPEAX@Z) referenced in function "void __cdecl GameUpdateAndRender(struct game_memory *,struct game_input *,struct game_offscreen_buffer *)" (?GameUpdateAndRender@@YAXPEAUgame_memory@@PEAUgame_input@@PEAUgame_offscreen_buffer@@@Z)
-handmade.exe : fatal error LNK1120: 3 unresolved externals
-win32_handmade.cpp
-win32_handmade.obj : error LNK2019: unresolved external symbol "void __cdecl GameUpdateAndRender(struct game_memory *,struct game_input *,struct game_offscreen_buffer *)" (?GameUpdateAndRender@@YAXPEAUgame_memory@@PEAUgame_input@@PEAUgame_offscreen_buffer@@@Z) referenced in function WinMain
-win32_handmade.obj : error LNK2019: unresolved external symbol "void __cdecl GameGetSoundSamples(struct game_memory *,struct game_sound_output_buffer *)" (?GameGetSoundSamples@@YAXPEAUgame_memory@@PEAUgame_sound_output_buffer@@@Z) referenced in function WinMain
-win32_handmade.exe : fatal error LNK1120: 2 unresolved externals
+handmade.dll : fatal error LNK1120: 3 unresolved externals
 ~~~~~~~
 
-Don't worry, these are simply linker errors. In practice, each error says: hey, you tried to call this function "bla bla bla" (symbol name %@scary#looking#!bla@bla#bla%!%!), you even declared it here: "bla bla bla" (more scary symbols), but I tried to search everywhere and didn't find it. Where is it? 
+Don't worry, these are simply linker errors, and it's good news for us! First, it means that compiler doesn't have anything to complain about, and it passed the work to the linker. Linker, on the other hand, has its own set of errors marked by `LNK[error number]`. 
+
+This this case, each error says: 
+
+> "Hey, you tried to call this function "bla bla bla" 
+> (symbol name %@scary#looking#something!%!), 
+> you even declared it here: "bla bla bla" 
+> (more scary symbols), but I didn't find it anywhere. Where is it?"
+> 
+>      -- Linker
 
 These are the places where the two halves of our code call each other, and they cannot find respective code to execute. We have to find a way to resolve these.
 
-## Implement Stub Functions
+## Load Game Code
 
-On `win32_handmade.cpp` side, we pretty much have the infrastructure ready: we'll simply replicate the behavior of `Win32LoadXInput` function, as well as repeat the magic of the stub functions.
+On `win32_handmade.cpp` side, we pretty much have the infrastructure ready to load the game code: we'll simply replicate the behavior of `Win32LoadXInput` function, as well as repeat the magic of the stub functions.
 
 Let's start with the stub functions first. If you remember, this is what we needed to do: 
 
-* `#define` a macro creating functions of a specific _signature_ (takes some stuff and returns some stuff). 
+* `#define` a macro creating functions of a specific _signature_ ("if I say in code `FUNCTION(FunctionName)` I really mean `void FunctionName(int something)`"). 
 * `typedef` a new type of this exact signature.
-* Create a stub function of this signature.
+* Create a stub function of this signature which does nothing.
+
+We can do it for both `GameUpdateAndRender` and `GameGetSoundSamples`. Also we can remove the function declarations we had earlier because they are no longer necessary.
 
 ~~~~~~~ C++ add
 #define GAME_UPDATE_AND_RENDER(name) void name(game_memory *Memory, game_input *Input, game_offscreen_buffer* Buffer)
@@ -308,9 +542,9 @@ GAME_GET_SOUND_SAMPLES(GameGetSoundSamplesStub) { }
 ~~~~~~~ C++ delete
 void GameGetSoundSamples(game_memory *Memory, game_sound_output_buffer *SoundBuffer);
 ~~~~~~~
-[Listing [x]: <file>[handmade.h]</file> .]
+[Listing [x]: <file>[handmade.h]</file> Implementing stub functions for game functions.]
 
-We now also have an added benefit in that, should our function signature ever change, we only need to modify it in one place (instead of editing both the `.h` file and the `.cpp` file.). Let's edit our `GameUpdateAndRender` and `GameGetSoundSamples` one last time to enable this: 
+We now also have an added benefit in that, should our function signature ever change, we only need to modify it in one place (instead of editing both the `.h` file and the `.cpp` file.). Let's edit our `GameUpdateAndRender` and `GameGetSoundSamples` function declarations one last time to enable this: 
 
 ~~~~~~~ C++ edit
 GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
@@ -326,11 +560,9 @@ GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
     // ...
 }
 ~~~~~~~
-[Listing [x]: <file>[handmade.cpp]</file> .]
+[Listing [x]: <file>[handmade.cpp]</file> Using signature shortcuts.]
 
-Hopefully you can see what's going on here. If not, don't spend too much time trying to understand this! You will eventually, with enough practice.
-
-## Load Game Code
+Hopefully you can see what's going on here. Instead of writing `void GameUpdateAndRender(...)` we say `GAME_UPDATE_AND_RENDER(GameUpdateAndRender)` and define the actual function signature elsewhere.
 
 Now that we have the necessary types and stubs we can easily use them in our platform code. Let's write a function to load the game code.
 
@@ -350,19 +582,29 @@ Win32LoadGameCode()
 internal void
 Win32LoadXInput()
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Loading game code from the DLL.]
 
-Let's try something different this time. Instead of using global variables, we can think of a `win_game_code` structure which is initialized and returned directly from this function. Furthermore, we want also to add a failsafe our code is valid.
+For XInput, we used global variables to store the function calls. Let's try something different this time. Instead of using globals, we can think of a `win_game_code` structure which is initialized and returned directly from this function. Furthermore, this allows us to store the DLL module handle and a failsafe to make sure our code is valid. Let's add all this to `win32_handmade.h`: 
+
+~~~~~~~ C++
+struct win32_debug_time_marker
+{
+    // ...
+};
 
 ~~~~~~~ C++ add
 struct win32_game_code
 {
-    HMODULE GameDLLCode;
+    HMODULE GameCodeDLL;
     game_update_and_render *UpdateAndRender;
     game_get_sound_samples *GetSoundSamples;
-
+    
     b32 IsValid;
 };
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.h]</file> Introducing `win32_game_code`.]
+
+We can now use this new structure in `Win32LoadGameCode`: we will return it as a result of our function, and we'll also make sure that the result is valid.
 
 ~~~~~~~ C++ edit
 internal win32_game_code
@@ -393,17 +635,35 @@ Win32LoadGameCode()
 ~~~~~~~ C++
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Using `win32_game_code`.]
 
-To get things going, let's just load this as the very first thing we do. Of course, later we'll need to move it since we'll be using it on the fly, but for the time being it should suffice.
+Let's load the game code before going into `GlobalRunning`. Later we might need to move it since we'll be swapping it on the fly, but for the time being it should suffice. We'll then replace the previous calls to the game code we had to use our `Game`. 
 
-~~~~~~~ C++
-int CALLBACK
-WinMain(...)
+While we're at it, let's remove our debug code for determining sound update frequency. 
+
+~~~~~~~ C++ delete
+#if 0
+// NOTE(casey): This tests the PlayCursor/WriteCursor update frequency
+// On the Handmade Hero machine, it was 480 samples.
+while (GlobalRunning)
 {
+    DWORD PlayCursor;
+    DWORD WriteCursor;
+    GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor);
+    
+    char TextBuffer[256];
+    _snprintf_s(TextBuffer, sizeof(TextBuffer),
+                "PC:%u WC:%u\n", PlayCursor, WriteCursor);
+    OutputDebugStringA(TextBuffer);
+}
+#endif
 ~~~~~~~ C++ add
-    win32_game_code Game = Win32LoadGameCode();
+win32_game_code Game = Win32LoadGameCode();
 ~~~~~~~ C++
+                
+u64 LastCycleCount = __rdtsc();
+while (GlobalRunning)
+{
     // ... 
     game_offscreen_buffer Buffer = {};
     Buffer.Memory = GlobalBackbuffer.Memory;
@@ -422,10 +682,12 @@ WinMain(...)
     
 ~~~~~~~ C++ edit
     Game.GetSoundSamples(&GameMemory, &SoundBuffer);
+    // ...
+}
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> Loading Game Code.]
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Loading Game Code during the game's execution.]
 
-Now our Win32 platform layer should compile properly. We're loading game code successfully if the latter is available. 
+Now our Win32 platform layer should compile properly. We're loading game code successfully if the latter is available. Even further, if you run it, it should display the debug sound lines because these are all calculated on the platform side, but there will be no gradient nor sound.
 
 ## Services to the Game
 
@@ -433,9 +695,11 @@ For what it might concern the game code, we have a major roadblock to overcome: 
 
 We _could_ load the executable in the DLL, load a handle for it and then reverse call the functions but is it really necessary? 
 
-Thing is, when we call `GameUpdateAndRender` or `GameGetSoundSamples` we pass a bunch of different services: things like memory, or the buffers to fill. We could simply pass the pointers to whichever platform function the game might want to call. We've seen this already: if you think about the DirectSound buffers, they also come with the respective function pointers to call (things like `SecondaryBuffer->GetCurrentPosition()`). 
+Thing is, when we call `GameUpdateAndRender` or `GameGetSoundSamples` we pass a bunch of different services: things like memory, or the buffers to fill. We could simply pass the pointers to whichever platform function the game might want to call. We've seen this already: if you think about the DirectSound buffers, they also come with the respective function pointers to call (things like the famous `SecondaryBuffer->GetCurrentPosition(...)`). 
 
-In practice, this will result in the exact same syntax we have for things like XInput or GameUpdateAndRender. Except this time, instead of calling Windows' function `GetProcAddress`, we'll straight up pass the function to the game, so we won't even need the stub functions.
+In practice, this will result in the exact same syntax we have for things like XInput or GameUpdateAndRender. Except this time, instead of calling Windows' function `GetProcAddress`, we'll straight up pass the function pointers to the game.
+
+As an added benefit, we won't even need the stub functions. 
 
 ~~~~~~~ C++
 #if HANDMADE_INTERNAL
@@ -464,45 +728,11 @@ b32 DEBUGPlatformWriteEntireFile(char *Filename, u32 MemorySize, void *Memory);
 ~~~~~~~
 [Listing [x]: <file>[handmade.h]</file> Introducing types for our file signatures.]
 
-~~~~~~~ C++
-struct game_memory
-{
-    u64 PermanentStorageSize;
-    void *PermanentStorage;
-    u64 TransientStorageSize;
-    void *TransientStorage;
-    b32 IsInitialized;
-    
-~~~~~~~ C++ add
-    debug_platform_free_file_memory *DEBUGPlatformFreeFileMemory;
-    debug_platform_read_entire_file *DEBUGPlatformReadEntireFile;
-    debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;
-~~~~~~~ C++
-};
-~~~~~~~
-[Listing [x]: <file>[handmade.h]</file> Introducing types for our file signatures.]
+These somewhat verbose names should however be quite descriptive in what they do. They are Debug, so the they shouldn't be used in user-facing code, They're platform-independent, and they do a specific operation, like reading file, writing file, or freeing its memory.
 
-We should pass over the function pointers so that we don't crash and burn painfully. 
+What this does is allowing passing the function pointers as if they were other types: `int`, `DWORD`, `u32`... `debug_platform_write_entire_file` has now become just another _type_.
 
-~~~~~~~ C++
-game_memory GameMemory = {};
-GameMemory.PermanentStorageSize = Megabytes(64);
-GameMemory.TransientStorageSize = Gigabytes(1);
-~~~~~~~ C++ add
-GameMemory.DEBUGPlatformFreeFileMemory = DEBUGPlatformFreeFileMemory;
-GameMemory.DEBUGPlatformReadEntireFile = DEBUGPlatformReadEntireFile;
-GameMemory.DEBUGPlatformWriteEntireFile = DEBUGPlatformWriteEntireFile;
-~~~~~~~ C++
-u64 TotalStorageSize = (GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize);
-
-GameMemory.PermanentStorage = VirtualAlloc(BaseAddress, (size_t)TotalStorageSize,
-                                            MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-GameMemory.TransientStorage = ((u8 *)GameMemory.PermanentStorage +
-                                GameMemory.PermanentStorageSize);
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> Passing function pointers.]
-
-Finally, (and this is an optional step) let's replace the signature of the function definitions in `win32_handmade.cpp` with our macros: 
+Again, as an optional step to potentially prevent headaches in the future, let's replace the signature of the function definitions in `win32_handmade.cpp` with our macros: 
 
 ~~~~~~~ C++ edit
 DEBUG_PLATFORM_FREE_FILE_MEMORY(DEBUGPlatformFreeFileMemory)
@@ -525,60 +755,61 @@ DEBUG_PLATFORM_WRITE_ENTIRE_FILE(DEBUGPlatformWriteEntireFile)
     // ...
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Using signature shortcuts.]
 
-What we did here is a much simpler version of something called a VTable in C++, almost a Memory Dispatch of sorts. The major difference is that, in C++, all of this happens under the hood. While usually developer has no influence on this process, we remove this functionality from its proverbial black box so that we can see and do whatever we want with it. 
+Now, how do we pass these to the game? Well, we are passing the memory by packaging it in `game_memory` structure. We can expand it to include the pointers to these functions as follows: 
 
-## Export Functions
-
-DLL is something that essentially contains executable code, like an `.exe` has. Additionally, it has a table of functions available for execution publicly, to whoever asks for it. It's this table that something like `GetProcAddress` goes into to find the specific location to call. This allows linking at runtime, dynamically (hence the name Dynamically Linked Library, or DLL for short). 
-
-In order to allow such a functionality on our side, we're need to tell the linker which functions we're exporting. There're a couple of ways to this: 
-
-* You can prefix the function you're exporting with a specific attribute such as `__declspec(dllexport)`. Unfortunately, this attribute is not standardized, and different operating systems (and even different compilers!) have their own designations. 
-* You can simply specify the exports at compile time, in our case inside `build.bat`. 
-
-Since we don't have many functions to export, let's go with the second option. By using a specific attribute inside the code file we're essentially tying ourselves to the Microsoft's compiler, and that's not necessarily something that we'd love to do.
-
-The keyword we're after is [\EXPORT][]. Inside our `build.bat` file, you can write directly on the compile line, or you can add another variable to use for simpler reading later on like we did below. 
-
-On this note, we should actually do some reshuffling of our `build.bat`. Some of win32 linker flags can be useful in dll as well, while %win32_link% can be removed (we only have one remaining flag anyway). We also want to introduce `-incremental:no` flag to make sure we do the complete recompile each time.
-
-~~~~~~~ batch
-:: WIN32 PLATFORM LIBRARIES
-set win32_libs=             user32.lib
-set win32_libs=%win32_libs% gdi32.lib
-set win32_libs=%win32_libs% winmm.lib
-~~~~~~~ batch add
-:: COMMON LINKER SWITCHES
-set link=                   -opt:ref               &:: Remove unused functions
-set link=%link%             -incremental:no        &:: Perform full link each time
-~~~~~~~ batch delete
-:: WIN32 LINKER SWITCHES
-set win32_link=             -subsystem:windows,5.2 &:: subsystem, 5.1 for x86
-~~~~~~~ batch add
-:: DLL LINKER SWITCHES
-set dll_link=               /EXPORT:GameUpdateAndRender
-set dll_link=%dll_link%     /EXPORT:GameGetSoundSamples
-~~~~~~~ batch
-
-:: No optimizations (slow): -Od; all optimizations (fast): -O2
-
-~~~~~~~ batch edit
-cl -Od %compiler% %defines% %debug% -Fmhandmade.map %code_path%handmade.cpp -LD /link %link% %dll_link%
-cl -Od %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %code_path%win32_handmade.cpp %win32_libs% /link %link% -subsystem:windows,5.2
+~~~~~~~ C++
+struct game_memory
+{
+    u64 PermanentStorageSize;
+    void *PermanentStorage;
+    u64 TransientStorageSize;
+    void *TransientStorage;
+    b32 IsInitialized;
+    
+~~~~~~~ C++ add
+    debug_platform_free_file_memory *DEBUGPlatformFreeFileMemory;
+    debug_platform_read_entire_file *DEBUGPlatformReadEntireFile;
+    debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;
+~~~~~~~ C++
+};
 ~~~~~~~
-[Listing [x]: <file>[build.bat]</file> .]
+[Listing [x]: <file>[handmade.h]</file> Introducing type pointers for our file signatures.]
+
+Of course, we should remember to actually pass the pointers so that we don't crash and burn painfully (Attempting to call a function located at sector 0 is a good way to crash, that's how we do our `Assert` right now).
+
+~~~~~~~ C++
+game_memory GameMemory = {};
+GameMemory.PermanentStorageSize = Megabytes(64);
+GameMemory.TransientStorageSize = Gigabytes(1);
+~~~~~~~ C++ add
+GameMemory.DEBUGPlatformFreeFileMemory = DEBUGPlatformFreeFileMemory;
+GameMemory.DEBUGPlatformReadEntireFile = DEBUGPlatformReadEntireFile;
+GameMemory.DEBUGPlatformWriteEntireFile = DEBUGPlatformWriteEntireFile;
+~~~~~~~ C++
+u64 TotalStorageSize = (GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize);
+
+GameMemory.PermanentStorage = VirtualAlloc(BaseAddress, (size_t)TotalStorageSize,
+                                            MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+GameMemory.TransientStorage = ((u8 *)GameMemory.PermanentStorage +
+                                GameMemory.PermanentStorageSize);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Passing function pointers.]
+
+And... that's it.
+
+What we did here is a much simpler version of something called a VTable in C++, almost a Memory Dispatch of sorts. The major difference is that, in C++, all of this happens under the hood. Here, we remove this functionality from its proverbial black box so that we can see what it does and do whatever we want with it. 
 
 But there's still one caveat we haven't discussed yet: name mangling.
 
-## Guarding Against Name Mangling
+## Guard Against Name Mangling
 
-If you remember, we recently encountered the absolutely out of the world names in our linker errors: something like `GameUpdateAndRender@@YAXPEAUgame_memory@@PEAUgame_input@@PEAUgame_offscreen_buffer@@@Z`. This is called [name mangling][] and it's a compiler technique to distinguish functions with the same name but different signatures. It becomes even more necessary in a universe where you have classes, namespaces, each maybe have multiple instances of the same function name.... Something that you see a lot in C++.
+If you remember, we recently encountered the absolutely out of the world names in our linker errors: something like `GameUpdateAndRender@@YAXPEAUgame_memory@@PEAUgame_input@@PEAUgame_offscreen_buffer@@@Z`. As we discussed on [day 16][], this is called [name mangling][] and it's a compiler technique to distinguish functions with the same name but different signatures. It becomes even more necessary in a universe where you have classes, namespaces, each maybe have multiple instances of the same function name.... Something that you see a lot in C++.
 
 We don't need any of this, even less so in our exported functions. Luckily, there's a way to disable name mangling for specific functions (or even bigger code blocks). To do that you need to use a very unique function prefix `extern "C"`. This effectively regresses whatever code block you're using from C++ to C, and the latter doesn't support function overloading nor allows name mangling. Problem solved, right? 
 
-Well, yes and no. You see, now this code cannot be compiled in C anymore. So what you need to do is to verify first if the program is being compiled in C++ mode! Luckily, there's a handy macro defined by the compiler just for that, so the final code becomes like this: 
+Well, yes and no. You see, now this code cannot be compiled in C anymore. So what you need to do is to verify first if the program is being compiled in C++ mode! The final code becomes like this: 
 
 ~~~~~~~ C++ add
 #if defined __cplusplus
@@ -600,13 +831,15 @@ GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
     // ... 
 }
 ~~~~~~~
-[Listing [x]: <file>[handmade.cpp]</file> .]
+[Listing [x]: <file>[handmade.cpp]</file> Avoiding name mangling.]
 
 Finally, we can compile everything and run. Success!
 
 # Dynamic Reloading
 
-So far, we didn't do a whole lot. We basically replicated functionality that we had already. Now let's go in and add the thing we set off doing in first place: dynamic code reloading! 
+So far, we didn't do a whole lot. We basically replicated functionality that we had already of the game functions loading with the rest of the game. But now we can go in and add the thing we set off doing in first place: dynamic code reloading! 
+
+Today we won't make the full thing. Some parts of it will need to be fleshed out next time, we'll just make the quick and dirty change.
 
 ## Unload Game Code
 
@@ -634,75 +867,138 @@ Win32UnloadGameCode(win32_game_code *GameCode)
     GameCode->GetSoundSamples = GameGetSoundSamplesStub;
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Introducing `Win32UnloadGameCode`.]
 
-Let's do something incredibly silly, and do the game loading and unloading at each frame. While we're at it, let's remove our debug code for determining sound update frequency. 
+Let's do something incredibly silly, and do the game loading and unloading at each frame. 
 
 ~~~~~~~ C++
-int CALLBACK
-WinMain(...)
+win32_game_code Game = Win32LoadGameCode();
+            
+u64 LastCycleCount = __rdtsc();
+while (GlobalRunning)
 {
-~~~~~~~ C++ delete
-    win32_game_code Game = Win32LoadGameCode();
-~~~~~~~ C++    
+~~~~~~~ C++ add
+    Win32UnloadGameCode(&Game);
+    Game = Win32LoadGameCode();
     // ... 
-~~~~~~~ C++ delete
-#if 0
-    // NOTE(casey): This tests the PlayCursor/WriteCursor update frequency
-    // On the Handmade Hero machine, it was 480 samples.
-    while (GlobalRunning)
-    {
-        DWORD PlayCursor;
-        DWORD WriteCursor;
-        GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor);
-        
-        char TextBuffer[256];
-        _snprintf_s(TextBuffer, sizeof(TextBuffer),
-                    "PC:%u WC:%u\n", PlayCursor, WriteCursor);
-        OutputDebugStringA(TextBuffer);
-    }
-#endif
-~~~~~~~ C++ add
-    win32_game_code Game = Win32LoadGameCode();
-~~~~~~~ C++
-                
-    u64 LastCycleCount = __rdtsc();
-    while (GlobalRunning)
-    {
-~~~~~~~ C++ add
-        Win32UnloadGameCode(&Game);
-        Game = Win32LoadGameCode();
-~~~~~~~ C++
-        // TODO(casey): Zeroing macro
-        game_controller_input *OldKeyboardController = GetController(OldInput, 0);
-        game_controller_input *NewKeyboardController = GetController(NewInput, 0);
-
-        // ... 
-    }
-    //...
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Reloading the game code at each frame.]
 
-This will break your sound though. Module loading is not a cheap process so really we should do it sporadically, so the sound might be breaking because we aren't hitting our frame targets. We'll fix this in a moment.
+It works! Somewhat. We still cannot reap the benefits since the change happens so quickly that we don't have any time to recompile the code. Also you might uncover a sound bug. Let's investigate it. 
 
-## Remove Static Variables from the DLL
+!!! Warning 
+    Feel free to find the bug yourself and then check the solution in subsection [fix sound issue].
 
-Another thing that probably impacts our framerate is the fact that `tSine`, a variable we use to calculate the sound oscillation in our debug code, is a static variable (`local_persist`). When a DLL is reloaded, all its static variable data is effectively lost, so really it's time for our `tSine` to move to `GameState`, the dedicated block of memory that we give for our game code.
+## Slow Down Reloading
+
+Right now we are reloading our DLL 30 times per second. That's a lot of unnecessary I/O. In the future, we'll try to find a way to detect changes in the DLL, but for now, let's simply add a timer, so that the DLL reload attempt happens only every few seconds: 
+
+~~~~~~~ C++
+win32_game_code Game = Win32LoadGameCode();
+~~~~~~~ C++ add 
+u32 LoadCounter = 0;
+~~~~~~~ C++
+
+u64 LastCycleCount = __rdtsc();
+while (GlobalRunning)
+{
+~~~~~~~ C++ add
+    if (LoadCounter++ > 120)
+    {
+~~~~~~~ C++
+        Win32UnloadGameCode(&Game);
+        Game = Win32LoadGameCode();
+~~~~~~~ C++ add
+        LoadCounter = 0;
+    }
+~~~~~~~ C++
+    // ... 
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Adding `LoadCounter`.]
+
+## Allow DLL Rewriting
+
+For now, even if the reloading is happening every few seconds, we still can't recompile them, because unloading and loading happens back to back. 
+
+We can add a quick and dirty solution now, and flesh it out next time. This solution won't work inside the debugger for a number of reasons, but it will work if you simply run `win32_handmade.exe` from Windows.
+
+The solution is simply to copy our DLL to another location, and load it from there. To do this, we'll use the aptly named `CopyFile` function ([MSDN][CopyFile] reference) inside `Win32LoadGameCode`: 
+
+~~~~~~~ C++
+win32_game_code Result = {};
+    
+~~~~~~~ C++ add
+CopyFile("handmade.dll", "handmade_temp.dll", FALSE);
+~~~~~~~ C++ edit
+Result.GameCodeDLL = LoadLibraryA("handmade_temp.dll");
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32LoadGameCode]</file> Copying file for loading.]
+
+If you've done everything correctly, you can now do live code editing as on the video below!
+
+![Figure [x]: Live code editing!](../media/day21/live_editing.gif) 
+
+# Recap 
+
+We can now edit our game on the fly, and the state is preserved! And the work done is almost non-existent, almost as good as having a scripting language. 
+
+The system is not perfect yet though. For the time being, we can't use our debugger, besides there're other things to potentially tune up (like waiting 4 seconds before reloading).
+
+We'll do it all next time.
+
+# Side Debugging
+
+## Fix Sound Issue
+
+Let's inspect our sound code inside `handmade.cpp`:
+
+~~~~~~~ C++
+internal void
+GameSoundOutput(game_sound_output_buffer *SoundBuffer, int ToneHz)
+{
+    local_persist f32 tSine;
+    s16 ToneVolume = 3000;
+    int WavePeriod = SoundBuffer->SamplesPerSecond / ToneHz;
+    
+    s16 *SampleOut = SoundBuffer->Samples;
+    for (int SampleIndex = 0;
+         SampleIndex < SoundBuffer->SampleCount;
+         ++SampleIndex)
+    {
+        f32 SineValue = sinf(tSine);
+        s16 SampleValue = (s16)(SineValue * ToneVolume);
+        
+        *SampleOut++ = SampleValue;
+        *SampleOut++ = SampleValue;
+        tSine += 2.0f * Pi32 * 1.0f / (f32)WavePeriod;
+        
+        if (tSine > 2.0f * Pi32)
+        {
+            tSine -= 2.0f * Pi32;
+        }
+    }
+}
+~~~~~~~
+
+After a short inspection, it's clear to us that the culprit is `tSine`, a variable we use to calculate the sound oscillation in our debug code. It's a static variable (`local_persist`) and, as such, it has its own block of memory allocated on the stack. When the DLL is reloaded, all of its static data is reset, and `tSine` resets to zero, thus producing sound bug.
+
+It's time for our `tSine` to move to `GameState`, the dedicated block of memory that we take from the persistent memory and will use for our game code. 
 
 ~~~~~~~ C++
 struct game_state
 {
     int ToneHz;
-    int XOffset;
-    int YOffset;
-    
 ~~~~~~~ C++ add
     f32 tSine;
 ~~~~~~~ C++
+
+    int XOffset;
+    int YOffset;   
 };
 ~~~~~~~
-[Listing [x]: <file>[handmade.h]</file> .]
+[Listing [x]: <file>[handmade.h]</file> Updating `game_state` structure.]
 
 Now we can change our `GameSoundOutput` code to actually use the correct `tSine`. We also need to pass the pointer to the game state, something that you'll grow to do by default as this course progresses.
 
@@ -743,9 +1039,6 @@ GameSoundOutput(game_state *GameState, game_sound_output_buffer *SoundBuffer, in
 
 // ... 
 
-#if defined __cplusplus
-extern "C"
-#endif
 GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
 {
     game_state *GameState = (game_state*)Memory;
@@ -754,64 +1047,12 @@ GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
 ~~~~~~~ C++
 }
 ~~~~~~~
-[Listing [x]: <file>[handmade.cpp]</file> .]
+[Listing [x]: <file>[handmade.cpp]</file> Using `tSine` stored in the game state.]
 
-Once the coded is recompiled, you'll notice that the sound bug has gone away. Modern computers are _fast_ (and our code is small). 
+Once the coded is recompiled, you'll notice that the sound bug has gone away. Modern computers are _fast_ (and our code is small)!
 
-Additionally, we can also add a timer, so that the DLL reload attempt happens only every few seconds: 
+_(Continue to Subsection [Slow Down Reloading])_
 
-~~~~~~~ C++
-win32_game_code Game = Win32LoadGameCode();
-~~~~~~~ C++ add 
-u32 LoadCounter = 0;
-~~~~~~~ C++
-
-u64 LastCycleCount = __rdtsc();
-while (GlobalRunning)
-{
-~~~~~~~ C++ add
-    if (LoadCounter++ > 120)
-    {
-~~~~~~~ C++
-        Win32UnloadGameCode(&Game);
-        Game = Win32LoadGameCode();
-~~~~~~~ C++ add
-        LoadCounter = 0;
-    }
-~~~~~~~ C++
-    // ... 
-}
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
-
-## Allow DLL Rewriting
-
-In theory, we should now have possibility to recompile our DLL on the fly. However, if you try to change a value (e.g. change the Red value from `0` to `128` in `RenderWeirdGradient` function), you'll notice that the game won't let you do it. This is because loading and unloading is happening so fast. 
-
-We can add a quick and dirty solution now, and flesh it out tomorrow. This solution won't work inside the debugger for a number of reasons, but it will work if you simply run `win32_handmade.cpp` from Windows.
-
-The solution is simply to copy our DLL to another location, and load from there. To do this, we'll use the aptly named `CopyFile` function ([MSDN][CopyFile] reference) inside `Win32LoadGameCode`: 
-
-~~~~~~~ C++
-win32_game_code Result = {};
-    
-~~~~~~~ C++ add
-CopyFile("handmade.dll", "handmade_temp.dll", FALSE);
-~~~~~~~ C++ edit
-Result.GameCodeDLL = LoadLibraryA("handmade_temp.dll");
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > Win32LoadGameCode]</file> .]
-
-
-![Figure [x]: Live code editing!](../media/day21/live_editing.gif) 
-
-# Recap 
-
-We can now edit our game on the fly, and the state is preserved! We don't need to do anything, almost as good as having a scripting language. 
-
-The system is not perfect yet though. For the time being, we can't use our debugger, besides there're other things to potentially tune up (like waiting 4 seconds before reloading).
-
-We'll do it all next time.
 
 # Navigation 
 
