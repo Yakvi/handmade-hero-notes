@@ -726,7 +726,8 @@ Finally, a bit further below, immediately after <code>GameUpdateAndRender</code>
 <span class="line">                PlayCursor, WriteCursor, AudioLatencyBytes, AudioLatencySeconds);</span>
 <span class="line">    OutputDebugStringA(TextBuffer);</span>
 <span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span>
-<span class="line">}</span><div class=" add"><span class="line">{</span>
+<span class="line">}</span><div class=" add"><span class="line"><span class="hljs-keyword">else</span></span>
+<span class="line">{</span>
 <span class="line">    <span class="hljs-comment">// GetCurrentPosition didn't succeed</span></span>
 <span class="line">    SoundIsValid = <span class="hljs-literal">false</span>;</span>
 <span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;11:</b> <file>[win32_handmade.cpp > WinMain]</file> Simplifying and combining audio blocks.</div></center>
@@ -904,7 +905,7 @@ Also, we can incorporate the result as a part of the sound output structure.
 <span class="line">SoundOutput.SecondaryBufferSize = <span class="hljs-number">2</span> * SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample;</span>
 <span class="line">SoundOutput.RunningSampleIndex = <span class="hljs-number">0</span>;</span><div class=" add"><span class="line"><span class="hljs-comment">// TODO(casey): Actually compute this variance and see </span></span>
 <span class="line"><span class="hljs-comment">// what the lowest reasonable value is.</span></span>
-<span class="line">SoundOutput.SafetyBytes = (SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample) </span>
+<span class="line">SoundOutput.SafetyBytes = ((SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample) </span>
 <span class="line">    / GameUpdateHz) / <span class="hljs-number">3</span>;</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;19:</b> <file>[win32_handmade.cpp > WinMain]</file> Calculating safety bytes.</div></center>
 <pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_sound_output</span></span>
 <span class="line">{</span></span>
@@ -916,14 +917,14 @@ Also, we can incorporate the result as a part of the sound output structure.
 <p>
 
 
-This should be the end of it. We would now be compilable, so take your time to fix any typing errors you might have and make sure your game is running as before.
+We would now be mostly compilable, except we left one piece hanging in <code>SoundBuffer.SampleCount</code> definition. Take your time to fix any other errors you might have before moving one.
 
 </p>
 <a class="target" name="introducegamegetsoundsamples">&nbsp;</a><a class="target" name="introducegamegetsoundsamples">&nbsp;</a><a class="target" name="toc3">&nbsp;</a><h1>Introduce <code>GameGetSoundSamples</code></h1>
 <p>
 
 
-Until now, we've been working based on the assumption that we know how current frame's length. But we don't really; we only have an estimate based on the previous frames' data. We already moved the target cursor calculation after <code>GameUpdateAndRender</code> to mitigate this issue, but what this does is merely preparing the target cursor for the next frame (hoping that it will be as long as the current one). It doesn't really address the core issue. 
+Until now, we've been working based on the assumption that we know the current frame's length. But we don't really; we only have an estimate based on the previous frames' data. We already moved the target cursor calculation after <code>GameUpdateAndRender</code> to mitigate this issue, but what this does is merely preparing the target cursor for the next frame (hoping that it will be as long as the current one). It doesn't really address the core issue. 
 
 </p><p>
 
@@ -1056,9 +1057,8 @@ Now we can toggle this paused state on and off by pressing a key, say 'P'. If th
 <span class="line">        GlobalPause = !GlobalPause;</span>
 <span class="line">    }</span>
 <span class="line">}</span>
-<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span>
-<span class="line"></span>
-<span class="line">b32 AltKeyWasDown = ((Message.lParam &amp; (<span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">29</span>)) != <span class="hljs-number">0</span>);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;25:</b> <file>[win32_handmade.cpp > Win32ProcessPendingMessages]</file> Adding Global Pause Hotkey.</div></center>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div>
+<span class="line">b32 AltKeyWasDown = ((Message.lParam &amp; (<span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">29</span>)) != <span class="hljs-number">0</span>);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;25:</b> <file>[win32_handmade.cpp > Win32ProcessPendingMessages]</file> Adding Global Pause Hotkey.</center>
 <p>
 
 
@@ -1223,7 +1223,7 @@ For what it might concern <code>Win32DebugSyncDisplay</code>, first we'll need t
 <p>
 
 
-So far, we're recording the new values, but we don't display them. You can compile and test it out: now changes yet. Let's add the newly registered values to our debug display. Instead of having too many colors, we'll simply reuse the <code>PlayColor</code> and <code>WriteColor</code> we already have, merely offset those down.
+So far, we're recording the new values, but we don't display them. You can compile and test it out: no changes yet. Let's add the newly registered values to our debug display. Instead of having too many colors, we'll simply reuse the <code>PlayColor</code> and <code>WriteColor</code> we already have, merely offset those down.
 
 </p><pre class="listing tilde"><code><div class=" add"><span class="line">win32_debug_time_marker *ThisMarker = &amp;Markers[MarkerIndex];</span></div><span class="line"></span>
 <span class="line">DWORD PlayColor = <span class="hljs-number">0xFFFFFFFF</span>;</span>

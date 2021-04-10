@@ -178,11 +178,11 @@ Finally, even this might not provide you with a 100% correct granularity. You wi
 <span class="line">    }</span>
 <span class="line">}</span>
 <span class="line"></span>
-<span class="line">f32 TestSecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter, Win32GetWallClock());</span>
+<span class="line"></span><div class=" add"><span class="line">f32 TestSecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter, Win32GetWallClock());</span>
 <span class="line"><span class="hljs-keyword">if</span>(TestSecondsElapsedForFrame &lt; TargetSecondsPerFrame)</span>
 <span class="line">{</span>
 <span class="line">    <span class="hljs-comment">// TODO(casey): LOG MISSED SLEEP HERE</span></span>
-<span class="line">}</span>
+<span class="line">}</span></div><span class="line">    </span>
 <span class="line">    </span>
 <span class="line"><span class="hljs-keyword">while</span> (SecondsElapsedForFrame &lt; TargetSecondsPerFrame)</span>
 <span class="line">{</span>
@@ -862,8 +862,8 @@ This looks a bit confusing, as double division usually is. We could rewrite it t
 <span class="line">SoundOutput.BytesPerSample = <span class="hljs-keyword">sizeof</span>(s16) * <span class="hljs-number">2</span>;</span>
 <span class="line">SoundOutput.SecondaryBufferSize = <span class="hljs-number">2</span> * SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample;</span>
 <span class="line">SoundOutput.RunningSampleIndex = <span class="hljs-number">0</span>;</span>
-<span class="line">SoundOutput.LatencySampleCount = FramesOfAudioLatency *</span>
-<span class="line">                                (SoundOutput.SamplesPerSecond / GameUpdateHz);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;25:</b> <file>[win32_handmade.cpp > WinMain]</file> Updating Latency notation.</div></center>
+<span class="line">SoundOutput.RunningSampleIndex = <span class="hljs-number">0</span>;</span><div class=" edit"><span class="line">SoundOutput.LatencySampleCount = FramesOfAudioLatency *</span>
+<span class="line">                                (SoundOutput.SamplesPerSecond / GameUpdateHz);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;25:</b> <file>[win32_handmade.cpp > WinMain]</file> Updating Latency notation.</div></center>
 <p>
 
 
@@ -1130,7 +1130,7 @@ This unfortunately is a sad conclusion, which we will try to overcome next time.
 
 </p><p>
 
-Ultimately, it's not as bad as at sounds. Human brain is quite forgiving for any lag between what you see and what you hear, and tends to synchronize those together. Unless we're going for a beat-matching game, we should be fine. Still, narrowing the latency it makes it subjectively better to feel. 
+Ultimately, it's not as bad as it sounds. Human brain is quite forgiving for any lag between what you see and what you hear, and tends to synchronize those together. Unless we're going for a beat-matching game, we should be fine. Still, narrowing the latency it makes it subjectively better to feel. 
 
 </p><p>
 

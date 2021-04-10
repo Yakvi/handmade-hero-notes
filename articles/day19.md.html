@@ -134,11 +134,13 @@ if (SleepIsGranular)
     }
 }
 
+~~~~~~~ C++ add
 f32 TestSecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter, Win32GetWallClock());
 if(TestSecondsElapsedForFrame < TargetSecondsPerFrame)
 {
     // TODO(casey): LOG MISSED SLEEP HERE
 }
+~~~~~~~ C++
     
 while (SecondsElapsedForFrame < TargetSecondsPerFrame)
 {
@@ -879,6 +881,7 @@ SoundOutput.SamplesPerSecond = 48000;
 SoundOutput.BytesPerSample = sizeof(s16) * 2;
 SoundOutput.SecondaryBufferSize = 2 * SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample;
 SoundOutput.RunningSampleIndex = 0;
+~~~~~~~ C++ edit
 SoundOutput.LatencySampleCount = FramesOfAudioLatency *
                                 (SoundOutput.SamplesPerSecond / GameUpdateHz);
 ~~~~~~~
@@ -1123,7 +1126,7 @@ After a long and strenuous investigation day, we can finally conclude that our s
 
 This unfortunately is a sad conclusion, which we will try to overcome next time. We want that ultimately our game wouldn't think of any issues that the platform layer might be facing, and work with pure (and immediate) sound stream. There might be also additional bugs that we may uncover which would help us!
 
-Ultimately, it's not as bad as at sounds. Human brain is quite forgiving for any lag between what you see and what you hear, and tends to synchronize those together. Unless we're going for a beat-matching game, we should be fine. Still, narrowing the latency it makes it subjectively better to feel. 
+Ultimately, it's not as bad as it sounds. Human brain is quite forgiving for any lag between what you see and what you hear, and tends to synchronize those together. Unless we're going for a beat-matching game, we should be fine. Still, narrowing the latency it makes it subjectively better to feel. 
 
 Additionally, we still need to clean up all the loose ends before we are ready to commit to our game layer.
 

@@ -608,6 +608,7 @@ if(SoundIsValid)
 #endif
 }
 ~~~~~~~ C++ add
+else
 {
     // GetCurrentPosition didn't succeed
     SoundIsValid = false;
@@ -792,7 +793,7 @@ SoundOutput.RunningSampleIndex = 0;
 ~~~~~~~ C++ add
 // TODO(casey): Actually compute this variance and see 
 // what the lowest reasonable value is.
-SoundOutput.SafetyBytes = (SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample) 
+SoundOutput.SafetyBytes = ((SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample) 
     / GameUpdateHz) / 3;
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Calculating safety bytes.]
@@ -813,11 +814,11 @@ struct win32_sound_output
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.h]</file> Updating `win32_sound_output` structure.]
 
-This should be the end of it. We would now be compilable, so take your time to fix any typing errors you might have and make sure your game is running as before.
+We would now be mostly compilable, except we left one piece hanging in `SoundBuffer.SampleCount` definition. Take your time to fix any other errors you might have before moving one.
 
 # Introduce `GameGetSoundSamples`
 
-Until now, we've been working based on the assumption that we know how current frame's length. But we don't really; we only have an estimate based on the previous frames' data. We already moved the target cursor calculation after `GameUpdateAndRender` to mitigate this issue, but what this does is merely preparing the target cursor for the next frame (hoping that it will be as long as the current one). It doesn't really address the core issue. 
+Until now, we've been working based on the assumption that we know the current frame's length. But we don't really; we only have an estimate based on the previous frames' data. We already moved the target cursor calculation after `GameUpdateAndRender` to mitigate this issue, but what this does is merely preparing the target cursor for the next frame (hoping that it will be as long as the current one). It doesn't really address the core issue. 
 
 This all should be fine since we know the _expected_ frame time and we have our safety margins, and we're preparing ourselves for the victory, and it's all nice and straightforward. 
 
@@ -964,6 +965,7 @@ else if (VKCode == 'P')
     }
 }
 #endif
+~~~~~~~ C++
 
 b32 AltKeyWasDown = ((Message.lParam & (1 << 29)) != 0);
 ~~~~~~~
@@ -1183,7 +1185,7 @@ Win32DrawSoundBufferMarker(Backbuffer, SoundOutput, C, PadX, Top, Bottom,
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > Win32DebugSyncDisplay]</file> Making us compilable.]
 
-So far, we're recording the new values, but we don't display them. You can compile and test it out: now changes yet. Let's add the newly registered values to our debug display. Instead of having too many colors, we'll simply reuse the `PlayColor` and `WriteColor` we already have, merely offset those down.
+So far, we're recording the new values, but we don't display them. You can compile and test it out: no changes yet. Let's add the newly registered values to our debug display. Instead of having too many colors, we'll simply reuse the `PlayColor` and `WriteColor` we already have, merely offset those down.
 
 ~~~~~~~ C++ add
 win32_debug_time_marker *ThisMarker = &Markers[MarkerIndex];
