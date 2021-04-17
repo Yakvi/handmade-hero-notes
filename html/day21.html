@@ -921,8 +921,45 @@ Well, yes and no. You see, now this code cannot be compiled in C anymore. So wha
 <span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;20:</b> <file>[handmade.cpp]</file> Avoiding name mangling.</div></center>
 <p>
 
+Finally, we can compile everything without errors. If you want to verify that the necessary functions are exported correctly, Visual Studio packages the utility <code>dumpbin</code> that you can call for this exact purpose. Simply type `dumpbin /exports [path-to-dll]/handmade.dll in your console to hopefully see the following: 
 
-Finally, we can compile everything and run it. Success!
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">W:\handmade&gt;dumpbin /exports build\handmade.dll</span></div><span class="line">Microsoft (R) COFF/PE Dumper Version XX.XX.XXXXX.X</span>
+<span class="line">Copyright (C) Microsoft Corporation.  All rights reserved.</span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line">Dump of file build\handmade.dll</span>
+<span class="line"></span>
+<span class="line">File Type: DLL</span>
+<span class="line"></span>
+<span class="line">  Section contains the following exports for handmade.dll</span>
+<span class="line"></span>
+<span class="line">    00000000 characteristics</span>
+<span class="line">    FFFFFFFF time date stamp</span>
+<span class="line">        0.00 version</span>
+<span class="line">           1 ordinal base</span>
+<span class="line">           2 number of functions</span>
+<span class="line">           2 number of names</span>
+<span class="line"></span>
+<span class="line">    ordinal hint RVA      name</span>
+<span class="line"></span>
+<span class="line">          1    0 000014D0 GameGetSoundSamples = GameGetSoundSamples</span>
+<span class="line">          2    1 00001270 GameUpdateAndRender = GameUpdateAndRender</span>
+<span class="line"></span>
+<span class="line">  Summary</span>
+<span class="line"></span>
+<span class="line">        2000 .data</span>
+<span class="line">        1000 .pdata</span>
+<span class="line">        A000 .rdata</span>
+<span class="line">        1000 .reloc</span>
+<span class="line">        C000 .text</span>
+<span class="line">        1000 _RDATA</span></code></pre><center><div class="listingcaption tilde"><file>[Command Prompt]</file></div></center>
+<p>
+
+If you see the exported functions <code>GameUpdateAndRender</code> and <code>GameGetSoundSamples</code>, great! If not, the game will not see them and <code>GetProcAddress</code> will fail. In such case verify if, for example, you included <code>%dll_link%</code> in your <code>build.bat</code> file.
+
+</p><p>
+
+If everything's in order, run the game. Success!
 
 </p>
 <a class="target" name="dynamicreloading">&nbsp;</a><a class="target" name="dynamicreloading">&nbsp;</a><a class="target" name="toc4">&nbsp;</a><h1>Dynamic Reloading</h1>

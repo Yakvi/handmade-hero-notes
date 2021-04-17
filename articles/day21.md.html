@@ -882,7 +882,47 @@ GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
 ~~~~~~~
 [Listing [x]: <file>[handmade.cpp]</file> Avoiding name mangling.]
 
-Finally, we can compile everything and run it. Success!
+Finally, we can compile everything without errors. If you want to verify that the necessary functions are exported correctly, Visual Studio packages the utility `dumpbin` that you can call for this exact purpose. Simply type `dumpbin /exports [path-to-dll]/handmade.dll in your console to hopefully see the following: 
+
+~~~~~~~ batch add
+W:\handmade>dumpbin /exports build\handmade.dll
+~~~~~~~ batch
+Microsoft (R) COFF/PE Dumper Version XX.XX.XXXXX.X
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+Dump of file build\handmade.dll
+
+File Type: DLL
+
+  Section contains the following exports for handmade.dll
+
+    00000000 characteristics
+    FFFFFFFF time date stamp
+        0.00 version
+           1 ordinal base
+           2 number of functions
+           2 number of names
+
+    ordinal hint RVA      name
+
+          1    0 000014D0 GameGetSoundSamples = GameGetSoundSamples
+          2    1 00001270 GameUpdateAndRender = GameUpdateAndRender
+
+  Summary
+
+        2000 .data
+        1000 .pdata
+        A000 .rdata
+        1000 .reloc
+        C000 .text
+        1000 _RDATA
+~~~~~~~
+[<file>[Command Prompt]</file>]
+
+If you see the exported functions `GameUpdateAndRender` and `GameGetSoundSamples`, great! If not, the game will not see them and `GetProcAddress` will fail. In such case verify if, for example, you included `%dll_link%` in your `build.bat` file.
+
+If everything's in order, run the game. Success!
 
 # Dynamic Reloading
 
