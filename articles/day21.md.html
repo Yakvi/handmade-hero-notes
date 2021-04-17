@@ -604,7 +604,9 @@ struct win32_game_code
 ~~~~~~~ 
 [Listing [x]: <file>[win32_handmade.h]</file> Introducing `win32_game_code`.]
 
-We can now use this new structure in `Win32LoadGameCode`: we will return it as the result of our function, and we'll also make sure that this result is valid.
+We can now use this new structure in `Win32LoadGameCode`: we will return it as the result of our function, and we'll also make sure that this result is valid. 
+
+The validity will be determined by whether or not we successfully load the functions. If `GetProcAddress` returns 0 at least for one of the exports, the whole `win32_game_code` will be flagged as invalid.
 
 ~~~~~~~ C++ edit
 internal win32_game_code
@@ -615,12 +617,17 @@ Win32LoadGameCode()
     win32_game_code Result = {};
 ~~~~~~~ C++ edit
     Result.GameCodeDLL = LoadLibraryA("handmade.dll");
-    if(GameCodeDLL)
+    if(Result.GameCodeDLL)
+~~~~~~~ C++
     {
+~~~~~~~ C++ edit
         Result.UpdateAndRender = 
             (game_update_and_render *)GetProcAddress(Result.GameCodeDLL, "GameUpdateAndRender");
         Result.GetSoundSamples = 
             (game_get_sound_samples *)GetProcAddress(Result.GameCodeDLL, "GameGetSoundSamples");
+
+~~~~~~~ C++ add
+        Result.IsValid = Result.GetSoundSamples && Result.UpdateAndRender;
 ~~~~~~~ C++
     }
 
@@ -687,7 +694,21 @@ while (GlobalRunning)
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Loading Game Code during the game's execution.]
 
-Now our Win32 platform layer should compile correctly. We're loading game code successfully if the latter is available. If you run it, it should display the debug sound lines because these are all calculated on the platform side. Of course, you'll also note a distinct lack of the gradient or sound.
+Now our Win32 platform layer should compile correctly. When compiling you should see the output like this: 
+
+~~~~~~~ batch
+handmade.cpp
+   Creating library handmade.lib and object handmade.exp
+handmade.obj : error LNK2019: [linker error description]
+handmade.obj : error LNK2019: [linker error description]
+handmade.obj : error LNK2019: [linker error description]
+handmade.dll : fatal error LNK1120: 3 unresolved externals
+win32_handmade.cpp
+~~~~~~~
+
+This means that we couldn't compile `handmade.dll` because there were 3 linker errors. On the other hand, `win32_handmade.cpp` compiled without any issues.
+
+`Win32_handmade.exe` will be loading game code if the latter is available. But, if you run it, the program should execute its main loop anyway. It display only the debug sound lines because these are all calculated on the platform side. Of course, all the DLL-side functionality will be missing: you'll also a distinct lack of the gradient or sound, and the lines will eventually overlap because we don't clear the screen to black at each frame.
 
 ## Services to the Game
 
@@ -797,6 +818,34 @@ GameMemory.TransientStorage = ((u8 *)GameMemory.PermanentStorage +
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Passing function pointers.]
 
+Finally, we need to actually use these functions in the game. We aren't doing anything useful with them right now, we simply have this block for testing: 
+
+~~~~~~~ C++
+debug_read_file_result FileData = DEBUGPlatformReadEntireFile(__FILE__);
+if (FileData.Contents)
+{
+    DEBUGPlatformWriteEntireFile("test.out", FileData.ContentsSize, FileData.Contents);
+    DEBUGPlatformFreeFileMemory(FileData.Contents);
+}
+~~~~~~~
+[<file>[handmade.cpp]</file>]
+
+We pass `game_memory` as a pointer named `Memory`. So, in order to use the functions we will simply _dereference_ them from the pointer (with the `->` operator).
+
+~~~~~~~ C++ edit
+debug_read_file_result FileData = Memory->DEBUGPlatformReadEntireFile(__FILE__);
+~~~~~~~ C++
+if (FileData.Contents)
+{
+~~~~~~~ C++ edit
+    Memory->DEBUGPlatformWriteEntireFile("test.out", FileData.ContentsSize, FileData.Contents);
+    Memory->DEBUGPlatformFreeFileMemory(FileData.Contents);
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Using function pointers.]
+
+
 And... that's it.
 
 What we did here is a much simpler version of something called a VTable in C++, almost a Memory Dispatch of sorts. The major difference is that, in C++, all of this happens under the hood. Here, we remove this functionality from its proverbial black box so that we can see what it does and do whatever we want with it. 
@@ -881,6 +930,7 @@ while (GlobalRunning)
     Win32UnloadGameCode(&Game);
     Game = Win32LoadGameCode();
     // ... 
+~~~~~~~ C++
 }
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Reloading the game code at each frame.]
