@@ -6,6 +6,339 @@ _Video Length (including Q&A): [1h53](https://hero.handmade.network/episode/code
 
 (insert intro.md.html here) 
 
+We hope you've been enjoying the course so far; even if you mainly code in Python, or JavaScript, or C#, it's never a bad idea to learn stuff at low level to understand better what's going up higher up.
+
+Yesterday we laid down foundation for live code editing. However, there are many limitations to our current implementation: first, the code reloading isn't instantaneous; currently the game only tries to reload the code every 120 seconds. Second, you can't debug and live code reload; the debugger won't let you recompile, plus it can have trouble finding `handmade.dll`.
+
+# Variable PDB Name
+
+The debugger would lock the `.pdb` file used to load the game symbols, disallowing the recompile of the DLL. Solution? We already rename our `.dll` file to `temp_handmade.dll`, we might do the same thing for the PDB.
+
+[-FD][] compiler option seems to be what we're looking for but it's not
+
+[-PDB][] linker option is what we need
+
+%date:~-4,4%%date:~-10,2%%date:~-7,2%_%time:~0,2%%time:~3,2%%time:~6,2%
+%random%
+
+
+~~~~~~~ batch edit
+cl -Od %compiler% %defines% %debug% -Fmhandmade.map %code_path%handmade.cpp -LD /link /pdb:handmade%random%.pdb %link% %dll_link%
+~~~~~~~ batch
+cl -Od %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %code_path%win32_handmade.cpp %win32_libs% /link %link% -subsystem:windows,5.2
+~~~~~~~
+
+
+~~~~~~~ batch add
+del *.pdb
+
+~~~~~~~ batch
+cl -Od %compiler% %defines% %debug% -Fmhandmade.map %code_path%handmade.cpp -LD /link /pdb:handmade%random%.pdb %link% %dll_link%
+cl -Od %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %code_path%win32_handmade.cpp %win32_libs% /link %link% -subsystem:windows,5.2
+~~~~~~~
+
+Commands from consoles have two different streams: standard out and standard error, and they can be redirected separately. You can also "pipe" the stuff around.
+
+
+~~~~~~~ batch edit
+del *.pdb > NUL 2> NUL
+
+~~~~~~~ batch
+cl -Od %compiler% %defines% %debug% -Fmhandmade.map %code_path%handmade.cpp -LD /link /pdb:handmade%random%.pdb %link% %dll_link%
+cl -Od %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %code_path%win32_handmade.cpp %win32_libs% /link %link% -subsystem:windows,5.2
+~~~~~~~
+
+# Remove Delay between Reloads
+
+~~~~~~~ C++
+win32_game_code Result = {};
+
+~~~~~~~ C++ add
+char *SourceDLLName = "handmade.dll";
+char *TempDLLName = "handmade_temp.dll";
+
+~~~~~~~ C++ edit
+CopyFile(SourceDLLName, TempDLLName, FALSE);
+~~~~~~~ C++
+Result.GameCodeDLL = LoadLibraryA(TempDLLName);
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > Win32LoadGameCode]</file> .]
+
+~~~~~~~ C++
+internal win32_game_code
+~~~~~~~ C++ edit
+Win32LoadGameCode(char *SourceDLLName)
+~~~~~~~ C++
+{
+    win32_game_code Result = {};
+    
+    char *TempDLLName = "handmade_temp.dll";
+    
+~~~~~~~ C++ edit
+    CopyFile(SourceDLLName, TempDLLName, FALSE);
+~~~~~~~ C++
+    Result.GameCodeDLL = LoadLibraryA(TempDLLName);
+    // ...
+}
+
+int CALLBACK WinMain(...)
+{
+    // ... 
+~~~~~~~ C++ add
+    char *SourceDLLName = "handmade.dll";
+~~~~~~~ C++ edit
+    win32_game_code Game = Win32LoadGameCode(SourceDLLName);
+~~~~~~~ C++
+    u32 LoadCounter = 0;
+    
+    u64 LastCycleCount = __rdtsc();
+    while (GlobalRunning)
+    {
+        if (LoadCounter++ > 120)
+        {
+            Win32UnloadGameCode(&Game);
+~~~~~~~ C++ edit
+            Game = Win32LoadGameCode(SourceDLLName);
+~~~~~~~ C++
+            LoadCounter = 0;
+        }
+        // ... 
+    }
+    // ... 
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+    
+    
+[FindFirstFileA][]
+[WIN32_FIND_DATAA][]
+[FindClose][]
+
+~~~~~~~ C++
+struct win32_game_code
+{
+    HMODULE GameCodeDLL;
+~~~~~~~ C++ add
+    FILETIME DLLLastWriteTime;
+~~~~~~~
+    
+    game_update_and_render *UpdateAndRender;
+    game_get_sound_samples *GetSoundSamples;
+    
+    b32 IsValid;
+};
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.h]</file> .]
+
+~~~~~~~ C++ add
+inline FILETIME
+Win32GetLastWriteTime(char *Filename)
+{
+    FILETIME LastWriteTime = {};
+    
+    WIN32_FIND_DATA FindData;
+    HANDLE FileHandle = FindFirstFileA(Filename, &FindData);
+    if (FileHandle != INVALID_HANDLE_VALUE)
+    {
+        LastWriteTime = FindData.ftLastWriteTime;
+        FindClose(FileHandle);
+    }
+    
+    return (LastWriteTime);
+}
+~~~~~~~ C++
+internal win32_game_code
+Win32LoadGameCode(char *SourceDLLName)
+{
+    win32_game_code Result = {};
+    
+    char *TempDLLName = "handmade_temp.dll";
+    
+~~~~~~~ C++ edit
+    Result.DLLLastWriteTime = Win32GetLastWriteTime(SourceDLLName);
+~~~~~~~ C++
+    
+    CopyFile(SourceDLLName, TempDLLName, FALSE);
+    Result.GameCodeDLL = LoadLibraryA(TempDLLName);  
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+
+No changes yet, we're still latent; but now we're in position to fix that latency.
+
+~~~~~~~ C++
+char *SourceDLLName = "handmade.dll";
+win32_game_code Game = Win32LoadGameCode(SourceDLLName);
+~~~~~~~ C++ delete
+u32 LoadCounter = 0;
+~~~~~~~ C++
+
+u64 LastCycleCount = __rdtsc();
+while (GlobalRunning)
+{
+~~~~~~~ C++ add
+    FILETIME NewDLLWriteTime = Win32GetLastWriteTime(SourceDLLName);
+~~~~~~~ C++ edit
+    if (NewDLLWriteTime != Game.DLLLastWriteTime)
+~~~~~~~ C++
+    {
+~~~~~~~ C++ add
+        Game.DLLLastWriteTime = NewDLLWriteTime;
+~~~~~~~ C++
+        Win32UnloadGameCode(&Game);
+        Game = Win32LoadGameCode(SourceDLLName);
+~~~~~~~ C++ delete
+        LoadCounter = 0;
+~~~~~~~ C++
+    }
+    // ...
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+Unfortunately, this won't really compile. `FILETIME` is a compound structure, and C++ doesn't allow direct comparison of these. While we can certainly make a relevant comparison function ourselves, we can use one from the Windows API called [CompareFileTime][].
+
+`CompareFileTime` returns 0 if the two filetimes are equal.
+
+~~~~~~~ C++
+FILETIME NewDLLWriteTime = Win32GetLastWriteTime(SourceDLLName);
+~~~~~~~ C++ edit
+if (CompareFileTime(&NewDLLWriteTime, &Game.DLLLastWriteTime))
+~~~~~~~ C++
+{
+    Game.DLLLastWriteTime = NewDLLWriteTime;
+    Win32UnloadGameCode(&Game);
+    Game = Win32LoadGameCode(SourceDLLName);
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+# Re-enable Debugger Support
+
+`LoadLibraryA` has an implicit search path. Unfortunately, that's not the case for some other file I/O functions, such as `FindFirstFileA` and even `CopyFile`. This function will go and search from the _working directory_, which we set to be `handmade/data` back during day 1.
+
+We can remedy this by rebuilding the correct path from the executable path. For this there's a handy function [GetModuleFileNameA][] which does just that. 
+
+`GetModuleFileNameA` needs a module handle. You might remember from the first days of this course that a module handle is non other than `HINSTANCE Instance` which is passed to us in `WinMain` (it's not even necessary, you can simply pass 0). 
+
+`MAX_PATH`: there's a define which specifies what's a maximum possible filename can be. It's not the safest thing in the world and it could produce buffer overruns. 
+
+TODO: Split these into chunks.
+
+~~~~~~~ C++ 
+int WinMain(...)
+{
+~~~~~~~ C++ add
+    // NOTE(casey): Never use MAX_PATH in code that is user-facing, because it
+    // can be dangerous and lead to bad results.
+    char EXEFilename[MAX_PATH];
+    DWORD SizeOfFilename = GetModuleFileNameA(0, EXEFilename, sizeof(EXEFilename));
+    char *OnePastLastSlash = EXEFilename;
+    for (char *Scan = EXEFilename;
+            *Scan;
+            ++Scan)
+    {
+        if (*Scan == '\\')
+        {
+            OnePastLastSlash = Scan + 1;
+        }
+    }
+
+    char SourceGameCodeDLLFilename[] = "handmade.dll";
+    char SourceGameCodeDLLFullPath[MAX_PATH];
+
+    CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, 
+                sizeof(SourceGameCodeDLLFilename) - 1, SourceGameCodeDLLFilename, 
+                sizeof(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);
+
+    char TempGameCodeDLLFilename[] = "handmade_temp.dll";
+    char TempGameCodeDLLFullPath[MAX_PATH];
+
+    CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, 
+                sizeof(TempGameCodeDLLFilename) - 1, TempGameCodeDLLFilename, 
+                sizeof(TempGameCodeDLLFullPath), TempGameCodeDLLFullPath);
+~~~~~~~ C++
+    //...
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+
+
+~~~~~~~ C++
+internal win32_game_code
+~~~~~~~ C++ edit
+Win32LoadGameCode(char *SourceDLLName, char *TempDLLName)
+~~~~~~~ C++
+{
+    win32_game_code Result = {};
+    
+~~~~~~~ C++ delete
+    char *TempDLLName = "handmade_temp.dll";
+    
+~~~~~~~ C++
+    Result.DLLLastWriteTime = Win32GetLastWriteTime(SourceDLLName);
+    
+    // ...
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+
+
+
+~~~~~~~ C++ delete
+char *SourceDLLName = "handmade.dll";
+~~~~~~~ C++ edit
+win32_game_code Game = Win32LoadGameCode(SourceGameCodeDLLFullPath, 
+                                         TempGameCodeDLLFullPath);
+~~~~~~~ C++
+
+u64 LastCycleCount = __rdtsc();
+while (GlobalRunning)
+{
+    FILETIME NewDLLWriteTime = Win32GetLastWriteTime(SourceGameCodeDLLFullPath);
+    if (CompareFileTime(&NewDLLWriteTime, &Game.DLLLastWriteTime))
+    {
+        Game.DLLLastWriteTime = NewDLLWriteTime;
+        Win32UnloadGameCode(&Game);
+~~~~~~~ C++ edit
+        Game = Win32LoadGameCode(SourceGameCodeDLLFullPath, 
+                                 TempGameCodeDLLFullPath);
+~~~~~~~ C++
+    }
+    // ...
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+Probably the worst possible implementation of string concatenation routine
+
+~~~~~~~ C++ add
+internal void
+CatStrings(size_t SourceACount, char *SourceA, 
+           size_t SourceBCount, char *SourceB,
+           size_t DestCount, char *Dest)
+{
+    // TODO(casey): Dest bounds checking!
+    for (int Index = 0;
+         Index < SourceACount; 
+         ++Index)
+    {
+        *Dest++ = *SourceA++;
+    }
+    
+    for (int Index = 0;
+         Index < SourceBCount; 
+         ++Index)
+    {
+        *Dest++ = *SourceB++;
+    }
+    
+    *Dest++ = 0;
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+
+
 ------------------------
 <!-- 
 [Listing [x]: <file>[]</file> .]
@@ -36,6 +369,12 @@ _Video Length (including Q&A): [1h53](https://hero.handmade.network/episode/code
 
 
 # Recap 
+
+All of what we've done today probably won't make it into the final game we ship. However, it will help us the developer along the way to make it happen.
+
+You might have noticed that we made all of this almost trivially, by just moving some things around. It comes as a result of architecturing our code well: separating platform and cross-platform code, memory handling, etc. This comes as a result of an approach known as _semantic compression_, and you can read more about it [here][semantic compression].
+
+You will see next time how a bunch of other decisions we made in the past will prove useful.
 
 # Exercises 
 
