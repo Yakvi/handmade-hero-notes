@@ -4,8 +4,664 @@
 <link rel="stylesheet" href="../css/html-style.css">
 <link rel="stylesheet" href="../css/style.css">
 
+<span class="md"><p><title>Day 22. Instantaneous Live Code Editing</title><div class="title"> Day 22. Instantaneous Live Code Editing </div>
+
+<div class="afterTitles"></div>
+<em class="underscore">Video Length (including Q&A): <a href="https://hero.handmade.network/episode/code/day022/">1h53</a></em> 
+
+</p><p>
+
+Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with no external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
+
+</p><p>
+
+We hope you've been enjoying the course so far; even if you mainly code in Python, JavaScript, or C#, it's never a bad idea to learn low-level programming to better understand what's going higher up.
+
+</p><p>
+
+Yesterday we laid down the foundation for live code editing. However, there are many limitations to our current implementation: first, the code reloading isn't instantaneous; currently, the game only tries to reload the code every 120 frames. Second, you can't debug and use this feature; the debugger won't let you recompile, plus it can have trouble finding handmade.dll.
+
+</p>
 <div class="longTOC"><p align="center">
     <span align="right"><a href="day21.html">Day 21</a></span>
     <a href="../index.html"><img src = "../media/logo.png"></a>
     <span align="left"><a href="day23.html">Day 23</a></span>
 </p><p><a href="#" class="tocTop">(Top)</a><br/>
+
+<a href="#variablepdbname" class="level1"><span class="tocNumber">1&nbsp; </span>Variable PDB Name</a><br/>
+&nbsp;&nbsp;<a href="#variablepdbname/addabilitytoeditdllpdbname" class="level2"><span class="tocNumber">1.1&nbsp; </span>Add Ability to Edit DLL PDB Name</a><br/>
+&nbsp;&nbsp;<a href="#variablepdbname/randomizedllpdbname" class="level2"><span class="tocNumber">1.2&nbsp; </span>Randomize DLL PDB Name</a><br/>
+<a href="#re-enabledebuggersupport" class="level1"><span class="tocNumber">2&nbsp; </span>Re-enable Debugger Support</a><br/>
+&nbsp;&nbsp;<a href="#re-enabledebuggersupport/retrievemodulefilename" class="level2"><span class="tocNumber">2.1&nbsp; </span>Retrieve Module Filename</a><br/>
+&nbsp;&nbsp;<a href="#re-enabledebuggersupport/determinemodulepathwithoutfilename" class="level2"><span class="tocNumber">2.2&nbsp; </span>Determine Module Path Without Filename</a><br/>
+&nbsp;&nbsp;<a href="#re-enabledebuggersupport/getdesiredfilenames" class="level2"><span class="tocNumber">2.3&nbsp; </span>Get Desired Filenames</a><br/>
+&nbsp;&nbsp;<a href="#re-enabledebuggersupport/usenewstrings" class="level2"><span class="tocNumber">2.4&nbsp; </span>Use New Strings</a><br/>
+<a href="#removedelaybetweenreloads" class="level1"><span class="tocNumber">3&nbsp; </span>Remove Delay Between Reloads</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#removedelaybetweenreloads//getlastwritetime" class="level3"><span class="tocNumber">3.0.1&nbsp; </span>Get Last Write Time</a><br/>
+&nbsp;&nbsp;<a href="#removedelaybetweenreloads/storethelastwritetime" class="level2"><span class="tocNumber">3.1&nbsp; </span>Store the Last Write Time</a><br/>
+&nbsp;&nbsp;<a href="#removedelaybetweenreloads/removelatency" class="level2"><span class="tocNumber">3.2&nbsp; </span>Remove Latency</a><br/>
+<a href="#recap" class="level1"><span class="tocNumber">4&nbsp; </span>Recap</a><br/>
+<a href="#programmingnotions" class="level1"><span class="tocNumber">5&nbsp; </span>Programming Notions</a><br/>
+&nbsp;&nbsp;<a href="#programmingnotions/metaprogramming" class="level2"><span class="tocNumber">5.1&nbsp; </span>Metaprogramming</a><br/>
+<a href="#navigation" class="level1"><span class="tocNumber">6&nbsp; </span>Navigation</a><br/>
+</p></div><a class="target" name="variablepdbname">&nbsp;</a><a class="target" name="variablepdbname">&nbsp;</a><a class="target" name="toc1">&nbsp;</a><h1>Variable PDB Name</h1>
+
+<a class="target" name="addabilitytoeditdllpdbname">&nbsp;</a><a class="target" name="variablepdbname/addabilitytoeditdllpdbname">&nbsp;</a><a class="target" name="toc1.1">&nbsp;</a><h2>Add Ability to Edit DLL PDB Name</h2>
+<p>
+
+
+When we left off, we couldn't debug our game correctly. This was for a couple of reasons that really we should address first. Debugging is an essential part of programming, so restoring that functionality is paramount.
+
+</p><p>
+
+First of all, whenever you recompile a program (be it executable or a DLL), the compiler generates multiple files: 
+
+</p><p>
+
+<ul>
+<li class="asterisk"><code>.exe</code> or <code>.dll</code>: of course, the final product of the compilation and linking.
+</li>
+<li class="asterisk"><code>.map</code>: a text file containing all the <em class="underscore">symbols</em> of your program. This is optional, and we enabled these files using the <code>-Fm</code> parameter in the build line.
+</li>
+<li class="asterisk"><code>.obj</code> is the machine code of your program immediately after compilation. It's passed to the linker, which then proceeds to link this code with other libraries and external symbols as necessary.
+</li>
+<li class="asterisk">More relevant to us, <code>.pdb</code> (Program DataBase or symbol) files are generated to allow the debugger to properly interact with the program. It will enable things like breakpoints in code or visualizing on which line of your code you're currently paused. Otherwise, you'd need to read the assembly code!</li></ul>
+
+</p><p>
+
+When compiling, all of the potential files should be available for writing. We already tried to circumvent this issue by copying handmade.dll instead of loading it directly. However, the .pdb file often remains locked by the debugger until the end of the debugging session.
+
+</p><p>
+
+That said, we don't have to always name the <code>.pdb</code> file with the same name. What if, instead of handmade.pdb, would it have a completely random name? This way, the debugger can keep all the symbol files it wants open, and we can rewrite the <code>.pdb</code> as many times as we like.
+
+</p><p>
+
+As usual, there seem to be multiple solutions to this problem. First of all, a quick search on MSDN shows us that there're two flags related to the <code>.pdb</code> file names: 
+
+</p><p>
+
+<ul>
+<li class="asterisk"><a href="https://docs.microsoft.com/en-us/cpp/build/reference/fd-program-database-file-name?view=msvc-160">-FD</a> is a compiler option allowing to set the name of the <code>.pdb</code>. Seems what we're looking for, yet on a closer inspection, you realize that it's not renaming the correct <code>.pdb</code>. We don't even have that, thanks to the <code>-Z7</code> option we pass!
+</li>
+<li class="asterisk"><a href="https://docs.microsoft.com/en-us/cpp/build/reference/pdb-use-program-database?view=msvc-160">-PDB</a> is a linker option that we need. It allows setting the name of the primary program database.</li></ul>
+
+</p><p>
+
+This allows us to change our <code>cl</code> line for <code>handmade.cpp</code> (not to be confused with <code>win32_handmade.cpp</code>) in the following manner: 
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">cl -Od %compiler% %defines% %debug% -Fmhandmade.map %code_path%handmade.cpp -LD /link /pdb:handmade.pdb %link% %dll_link%</span></div><span class="line">cl -Od %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %code_path%win32_handmade.cpp %win32_libs% /link %link% -subsystem:windows,5.2</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;1:</b> <file>[build.bat]</file> Allowing PDB naming.</div></center>
+
+<a class="target" name="randomizedllpdbname">&nbsp;</a><a class="target" name="variablepdbname/randomizedllpdbname">&nbsp;</a><a class="target" name="toc1.2">&nbsp;</a><h2>Randomize DLL PDB Name</h2>
+<p>
+
+
+Now we can control the naming of the PDB files. But how can we add an element of randomness to it? Shell language to the rescue!
+
+</p><p>
+
+The Command Prompt has a surprising amount of functionality, legacy of its DOS past. You already know things like <code>%variable_name%</code> which is effectively a variable inside the shell, but it also has things like current time or even more obscure functionality. In fact, this lengthy string: 
+
+</p><pre class="listing tilde"><code><span class="line">%date:~-4,4%%date:~-10,2%%date:~-7,2%_%time:~0,2%%time:~3,2%%time:~6,2%</span></code></pre><p>
+
+will print you the current date in time in <code>YYYYMMdd_HHmmss</code> format. You can use this one if you like; we'll limit ourselves to the simple <code>%random%</code>: 
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">cl -Od %compiler% %defines% %debug% -Fmhandmade.map %code_path%handmade.cpp -LD /link /pdb:handmade%random%.pdb %link% %dll_link%</span></div><span class="line">cl -Od %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %code_path%win32_handmade.cpp %win32_libs% /link %link% -subsystem:windows,5.2</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;2:</b> <file>[build.bat]</file> Random PDB naming.</div></center>
+<p>
+
+
+If you now build your program several times, you'll notice that you get several <code>.pdb</code> files with the names like <code>handmade1297.pdb</code>. That's what we want: a unique name for each pdb.
+
+</p><p>
+
+There's just one more issue. These files will keep piling up. You can delete them once in a while yourself, but why do something manually when you can automate it? Let's simply clean up all the <code>.pdb</code> files each time we're about to recompile: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">del *.pdb</span>
+<span class="line"></span></div><span class="line">cl -Od %compiler% %defines% %debug% -Fmhandmade.map %code_path%handmade.cpp -LD /link /pdb:handmade%random%.pdb %link% %dll_link%</span>
+<span class="line">cl -Od %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %code_path%win32_handmade.cpp %win32_libs% /link %link% -subsystem:windows,5.2</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;3:</b> <file>[build.bat]</file> Cleaning up before recompilation.</div></center>
+<p>
+
+
+This solution comes with a new issue: open <code>.pdb</code> files won't be deletable, so the <code>del</code> function will complain about it clogging your console. It's not <em class="underscore">that</em> big of a deal, but we can remedy this as well! Simply pipe out the output of the <code>del</code> command. 
+
+</p><p>
+
+What does that &ldquo;pipe&rdquo; even mean? 
+
+</p><p>
+
+Console commands can have multiple output streams: <code>standard output</code> and <code>standard error</code> are the most common, and they can be redirected (or &ldquo;piped&rdquo;) separately. &ldquo;Pipe&rdquo; name literally comes from the symbol <code>|</code> (read as &ldquo;pipe&rdquo;), which is used in format <code>commandA  |  commandB</code>, meaning &ldquo;Send the output from <code>commandA</code> as input to <code>commandB</code>". You can find more information in the <a href="https://ss64.com/nt/syntax-redirection.html">cmd redirection syntax</a> article. 
+
+</p><p>
+
+In any case, we won't get too deep into all of this. Shell scripting is a completely separate topic in and of itself that you can study separately. Suffice to say that we want to suppress all the messages of <code>del</code> command, so we pipe them both to the magic <code>NUL</code> file. This looks like this:
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">del *.pdb &gt; NUL 2&gt; NUL</span>
+<span class="line"></span></div><span class="line">cl -Od %compiler% %defines% %debug% -Fmhandmade.map %code_path%handmade.cpp -LD /link /pdb:handmade%random%.pdb %link% %dll_link%</span>
+<span class="line">cl -Od %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %code_path%win32_handmade.cpp %win32_libs% /link %link% -subsystem:windows,5.2</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;4:</b> <file>[build.bat]</file> Cleaning up delete messages.</div></center>
+<p>
+
+
+And there you have it, you will hear no more from the <code>del</code> command.
+
+</p>
+<a class="target" name="re-enabledebuggersupport">&nbsp;</a><a class="target" name="re-enabledebuggersupport">&nbsp;</a><a class="target" name="toc2">&nbsp;</a><h1>Re-enable Debugger Support</h1>
+
+<a class="target" name="retrievemodulefilename">&nbsp;</a><a class="target" name="re-enabledebuggersupport/retrievemodulefilename">&nbsp;</a><a class="target" name="toc2.1">&nbsp;</a><h2>Retrieve Module Filename</h2>
+<p>
+
+
+With the pdb issue out of the way, we still cannot use our debugger. Frustrating! Why is that? 
+
+</p><p>
+
+Early in the course, <a href="../html/day1.html">very early</a>, we asked the debugger to set the <em class="underscore">working directory</em> of our game to be <code>handmade\data</code>. This means that our game effectively starts in <code>handmade\data</code> instead of <code>handmade\build</code> where our dll and executable are.
+
+</p><p>
+
+<code>LoadLibraryA</code> that we were using for loading files up until now doesn't see it as an issue. This function has an implicit search path. Unfortunately, that's not the case for some other file I/O functions, such as <code>FindFirstFileA</code> and even <code>CopyFile</code>. This function will go and search from the <em class="underscore">working directory</em> instead.
+
+</p><p>
+
+We can remedy this by rebuilding the correct path from the executable path. For this, there's a handy function <a href="https://docs.microsoft.com/en-gb/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulefilenamea">GetModuleFileNameA</a> which does just that. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">DWORD <span class="hljs-title">GetModuleFileNameA</span><span class="hljs-params">(</span>
+<span class="line">    HMODULE hModule,</span>
+<span class="line">    LPSTR   lpFilename,</span>
+<span class="line">    DWORD   nSize</span>
+<span class="line">)</span></span>;</span></code></pre><p>
+
+
+<ul>
+<li class="asterisk"><code>hModule</code>: optional handle to the module. From the first days of this course, you might remember that a module handle is non-other than <code>HINSTANCE Instance</code>, passed to us in <code>WinMain</code>. It is optional, though, so we simply give 0.
+</li>
+<li class="asterisk"><code>lpFilename</code>: text buffer to contain the path. 
+</li>
+<li class="asterisk"><code>nSize</code>: the size of the text buffer.</li></ul>
+
+</p><p>
+
+We don't know where the executable might the live in file system, so let's reserve a buffer with a magic <code>MAX_PATH</code> value. It's a Windows <code>#define</code> which specifies what's a maximum possible filename length can be.
+
+</p><p>
+
+<div class="admonition warning">Keep in mind that <code>MAX_PATH</code> is not the safest thing in the world and could produce buffer overruns. Do not use it in production code!</div>
+
+</p><p>
+
+Additionally, this function returns the size of the executable. Let's keep it as it might become useful as well. 
+
+</p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">WinMain</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span></div><div class=" add"><span class="line">    <span class="hljs-comment">// NOTE(casey): Never use MAX_PATH in code that is user-facing, because it</span></span>
+<span class="line">    <span class="hljs-comment">// can be dangerous and lead to bad results.</span></span>
+<span class="line">    <span class="hljs-keyword">char</span> EXEFilename[MAX_PATH];</span>
+<span class="line">    DWORD SizeOfFilename = GetModuleFileNameA(<span class="hljs-number">0</span>, EXEFilename, <span class="hljs-keyword">sizeof</span>(EXEFilename));</span></div><span class="line">    <span class="hljs-comment">//...</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;5:</b> <file>[win32_handmade.cpp]</file> Retrieving the executable path.</div></center>
+
+<a class="target" name="determinemodulepathwithoutfilename">&nbsp;</a><a class="target" name="re-enabledebuggersupport/determinemodulepathwithoutfilename">&nbsp;</a><a class="target" name="toc2.2">&nbsp;</a><h2>Determine Module Path Without Filename</h2>
+<p>
+
+
+Now, what do we want? Ask yourself this question often. The issue we're facing is that <code>GetModuleFileNameA</code> returns a complete path, <em class="underscore">including the filename</em> itself. That's not what we want! If our module filename is <code>w:\handmade\build\win32_handmade.exe</code>, we want to know only the <code>w:\handmade\build\ </code>part! And, to be even more precise, we want to get the <em class="underscore">position</em> of the last slash: this way, we can add to the path <code>handmade.dll</code> to become <code>w:\handmade\build\handmade.dll</code>.
+
+</p><p>
+
+String manipulation is complex. It might be a more straightforward task in a higher-level language, but many things happen under the hood.
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="240" width="416" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 40,112 L 40,128 " style="fill:none;"/>
+<path d="M 56,64 L 56,96 " style="fill:none;"/>
+<path d="M 56,128 L 56,160 " style="fill:none;"/>
+<path d="M 200,16 L 200,96 " style="fill:none;"/>
+<path d="M 200,136 L 200,192 " style="fill:none;"/>
+<path d="M 352,112 L 352,128 " style="fill:none;"/>
+<path d="M 40,128 L 352,128 " style="fill:none;"/>
+<polygon points="208,136 196,130.4 196,141.6 "  style="stroke:none" transform="rotate(270,200,136 )"/>
+<polygon points="208,96 196,90.4 196,101.6 "  style="stroke:none" transform="rotate(90,200,96 )"/>
+<polygon points="64,96 52,90.4 52,101.6 "  style="stroke:none" transform="rotate(90,56,96 )"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="144" y="4">O</text><text text-anchor="middle" x="152" y="4">n</text><text text-anchor="middle" x="160" y="4">e</text><text text-anchor="middle" x="168" y="4">P</text><text text-anchor="middle" x="176" y="4">a</text><text text-anchor="middle" x="184" y="4">s</text><text text-anchor="middle" x="192" y="4">t</text><text text-anchor="middle" x="200" y="4">L</text><text text-anchor="middle" x="208" y="4">a</text><text text-anchor="middle" x="216" y="4">s</text><text text-anchor="middle" x="224" y="4">t</text><text text-anchor="middle" x="232" y="4">S</text><text text-anchor="middle" x="240" y="4">l</text><text text-anchor="middle" x="248" y="4">a</text><text text-anchor="middle" x="256" y="4">s</text><text text-anchor="middle" x="264" y="4">h</text><text text-anchor="middle" x="280" y="4">p</text><text text-anchor="middle" x="288" y="4">o</text><text text-anchor="middle" x="296" y="4">i</text><text text-anchor="middle" x="304" y="4">n</text><text text-anchor="middle" x="312" y="4">t</text><text text-anchor="middle" x="320" y="4">e</text><text text-anchor="middle" x="328" y="4">r</text><text text-anchor="middle" x="24" y="52">E</text><text text-anchor="middle" x="32" y="52">X</text><text text-anchor="middle" x="40" y="52">E</text><text text-anchor="middle" x="48" y="52">F</text><text text-anchor="middle" x="56" y="52">i</text><text text-anchor="middle" x="64" y="52">l</text><text text-anchor="middle" x="72" y="52">e</text><text text-anchor="middle" x="80" y="52">n</text><text text-anchor="middle" x="88" y="52">a</text><text text-anchor="middle" x="96" y="52">m</text><text text-anchor="middle" x="104" y="52">e</text><text text-anchor="middle" x="120" y="52">p</text><text text-anchor="middle" x="128" y="52">o</text><text text-anchor="middle" x="136" y="52">i</text><text text-anchor="middle" x="144" y="52">n</text><text text-anchor="middle" x="152" y="52">t</text><text text-anchor="middle" x="160" y="52">e</text><text text-anchor="middle" x="168" y="52">r</text><text text-anchor="middle" x="56" y="116">w</text><text text-anchor="middle" x="64" y="116">:</text><text text-anchor="middle" x="72" y="116">\</text><text text-anchor="middle" x="80" y="116">h</text><text text-anchor="middle" x="88" y="116">a</text><text text-anchor="middle" x="96" y="116">n</text><text text-anchor="middle" x="104" y="116">d</text><text text-anchor="middle" x="112" y="116">m</text><text text-anchor="middle" x="120" y="116">a</text><text text-anchor="middle" x="128" y="116">d</text><text text-anchor="middle" x="136" y="116">e</text><text text-anchor="middle" x="144" y="116">\</text><text text-anchor="middle" x="152" y="116">b</text><text text-anchor="middle" x="160" y="116">u</text><text text-anchor="middle" x="168" y="116">i</text><text text-anchor="middle" x="176" y="116">l</text><text text-anchor="middle" x="184" y="116">d</text><text text-anchor="middle" x="192" y="116">\</text><text text-anchor="middle" x="200" y="116">w</text><text text-anchor="middle" x="208" y="116">i</text><text text-anchor="middle" x="216" y="116">n</text><text text-anchor="middle" x="224" y="116">3</text><text text-anchor="middle" x="232" y="116">2</text><text text-anchor="middle" x="240" y="116">_</text><text text-anchor="middle" x="248" y="116">h</text><text text-anchor="middle" x="256" y="116">a</text><text text-anchor="middle" x="264" y="116">n</text><text text-anchor="middle" x="272" y="116">d</text><text text-anchor="middle" x="280" y="116">m</text><text text-anchor="middle" x="288" y="116">a</text><text text-anchor="middle" x="296" y="116">d</text><text text-anchor="middle" x="304" y="116">e</text><text text-anchor="middle" x="312" y="116">.</text><text text-anchor="middle" x="320" y="116">e</text><text text-anchor="middle" x="328" y="116">x</text><text text-anchor="middle" x="336" y="116">e</text><text text-anchor="middle" x="24" y="180">M</text><text text-anchor="middle" x="32" y="180">o</text><text text-anchor="middle" x="40" y="180">d</text><text text-anchor="middle" x="48" y="180">u</text><text text-anchor="middle" x="56" y="180">l</text><text text-anchor="middle" x="64" y="180">e</text><text text-anchor="middle" x="80" y="180">f</text><text text-anchor="middle" x="88" y="180">i</text><text text-anchor="middle" x="96" y="180">l</text><text text-anchor="middle" x="104" y="180">e</text><text text-anchor="middle" x="112" y="180">n</text><text text-anchor="middle" x="120" y="180">a</text><text text-anchor="middle" x="128" y="180">m</text><text text-anchor="middle" x="136" y="180">e</text><text text-anchor="middle" x="112" y="212">D</text><text text-anchor="middle" x="120" y="212">e</text><text text-anchor="middle" x="128" y="212">s</text><text text-anchor="middle" x="136" y="212">i</text><text text-anchor="middle" x="144" y="212">r</text><text text-anchor="middle" x="152" y="212">e</text><text text-anchor="middle" x="160" y="212">d</text><text text-anchor="middle" x="176" y="212">&quot;</text><text text-anchor="middle" x="184" y="212">c</text><text text-anchor="middle" x="192" y="212">u</text><text text-anchor="middle" x="200" y="212">r</text><text text-anchor="middle" x="208" y="212">s</text><text text-anchor="middle" x="216" y="212">o</text><text text-anchor="middle" x="224" y="212">r</text><text text-anchor="middle" x="232" y="212">&quot;</text><text text-anchor="middle" x="248" y="212">P</text><text text-anchor="middle" x="256" y="212">o</text><text text-anchor="middle" x="264" y="212">s</text><text text-anchor="middle" x="272" y="212">i</text><text text-anchor="middle" x="280" y="212">t</text><text text-anchor="middle" x="288" y="212">i</text><text text-anchor="middle" x="296" y="212">o</text><text text-anchor="middle" x="304" y="212">n</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;1:</b> Retrieving the desired position in a file string.</div></center>
+
+</p><p>
+
+So what we need to do is to scan the string that we get and see whether or not we find the last slash. Then we move one step further and say that this would be our &ldquo;cursor&rdquo; position: one past the last slash. We repeat this until we run until the end of the string (determined by the <em class="underscore">null terminator</em>: <code>0</code>) and use the last value we found.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-comment">// NOTE(casey): Never use MAX_PATH in code that is user-facing, because it</span></span>
+<span class="line"><span class="hljs-comment">// can be dangerous and lead to bad results.</span></span>
+<span class="line"><span class="hljs-keyword">char</span> EXEFilename[MAX_PATH];</span>
+<span class="line">DWORD SizeOfFilename = GetModuleFileNameA(<span class="hljs-number">0</span>, EXEFilename, <span class="hljs-keyword">sizeof</span>(EXEFilename));</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-keyword">char</span> *OnePastLastSlash = EXEFilename;</span>
+<span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">char</span> *Scan = EXEFilename;</span>
+<span class="line">        *Scan;</span>
+<span class="line">        ++Scan)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">if</span> (*Scan == <span class="hljs-string">'\\'</span>)</span>
+<span class="line">    {</span>
+<span class="line">        OnePastLastSlash = Scan + <span class="hljs-number">1</span>;</span>
+<span class="line">    }</span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;6:</b> <file>[win32_handmade.cpp > WinMain]</file> Retrieving desired cursor position.</div></center>
+<p>
+
+
+<code>*Scan</code> condition can also be written as <code>*Scan != 0</code>: While the value of <code>Scan</code> is not 0, continue scanning.
+
+</p>
+<a class="target" name="getdesiredfilenames">&nbsp;</a><a class="target" name="re-enabledebuggersupport/getdesiredfilenames">&nbsp;</a><a class="target" name="toc2.3">&nbsp;</a><h2>Get Desired Filenames</h2>
+<p>
+
+
+Let's suppose that we have a magic function, <code>CatStrings</code>, which allows us to conCATenate two strings together in a third string.
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="272" width="496" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 128,208 L 128,240 " style="fill:none;"/>
+<path d="M 392,208 L 392,240 " style="fill:none;"/>
+<path d="M 160,48 L 200,48 " style="fill:none;"/>
+<path d="M 232,48 L 264,48 " style="fill:none;"/>
+<path d="M 160,144 L 176,144 " style="fill:none;"/>
+<path d="M 208,144 L 216,144 " style="fill:none;"/>
+<path d="M 128,208 L 392,208 " style="fill:none;"/>
+<path d="M 128,240 L 392,240 " style="fill:none;"/>
+<path d="M 160,48 C 143.2,48 144,32 144,32 " style="fill:none;"/>
+<path d="M 200,48 C 216.8,48 216,64 216,64 " style="fill:none;"/>
+<path d="M 232,48 C 215.2,48 216,64 216,64 " style="fill:none;"/>
+<path d="M 264,48 C 280.8,48 280,32 280,32 " style="fill:none;"/>
+<path d="M 160,144 C 143.2,144 144,128 144,128 " style="fill:none;"/>
+<path d="M 176,144 C 192.8,144 192,160 192,160 " style="fill:none;"/>
+<path d="M 208,144 C 191.2,144 192,160 192,160 " style="fill:none;"/>
+<path d="M 216,144 C 232.8,144 232,128 232,128 " style="fill:none;"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="56" y="20">S</text><text text-anchor="middle" x="64" y="20">t</text><text text-anchor="middle" x="72" y="20">r</text><text text-anchor="middle" x="80" y="20">i</text><text text-anchor="middle" x="88" y="20">n</text><text text-anchor="middle" x="96" y="20">g</text><text text-anchor="middle" x="112" y="20">A</text><text text-anchor="middle" x="144" y="20">w</text><text text-anchor="middle" x="152" y="20">:</text><text text-anchor="middle" x="160" y="20">\</text><text text-anchor="middle" x="168" y="20">h</text><text text-anchor="middle" x="176" y="20">a</text><text text-anchor="middle" x="184" y="20">n</text><text text-anchor="middle" x="192" y="20">d</text><text text-anchor="middle" x="200" y="20">m</text><text text-anchor="middle" x="208" y="20">a</text><text text-anchor="middle" x="216" y="20">d</text><text text-anchor="middle" x="224" y="20">e</text><text text-anchor="middle" x="232" y="20">\</text><text text-anchor="middle" x="240" y="20">b</text><text text-anchor="middle" x="248" y="20">u</text><text text-anchor="middle" x="256" y="20">i</text><text text-anchor="middle" x="264" y="20">l</text><text text-anchor="middle" x="272" y="20">d</text><text text-anchor="middle" x="280" y="20">\</text><text text-anchor="middle" x="288" y="20">w</text><text text-anchor="middle" x="296" y="20">i</text><text text-anchor="middle" x="304" y="20">n</text><text text-anchor="middle" x="312" y="20">3</text><text text-anchor="middle" x="320" y="20">2</text><text text-anchor="middle" x="328" y="20">_</text><text text-anchor="middle" x="336" y="20">h</text><text text-anchor="middle" x="344" y="20">a</text><text text-anchor="middle" x="352" y="20">n</text><text text-anchor="middle" x="360" y="20">d</text><text text-anchor="middle" x="368" y="20">m</text><text text-anchor="middle" x="376" y="20">a</text><text text-anchor="middle" x="384" y="20">d</text><text text-anchor="middle" x="392" y="20">e</text><text text-anchor="middle" x="400" y="20">.</text><text text-anchor="middle" x="408" y="20">e</text><text text-anchor="middle" x="416" y="20">x</text><text text-anchor="middle" x="424" y="20">e</text><text text-anchor="middle" x="432" y="20">\</text><text text-anchor="middle" x="440" y="20">0</text><text text-anchor="middle" x="176" y="84">t</text><text text-anchor="middle" x="184" y="84">e</text><text text-anchor="middle" x="192" y="84">x</text><text text-anchor="middle" x="200" y="84">t</text><text text-anchor="middle" x="216" y="84">t</text><text text-anchor="middle" x="224" y="84">o</text><text text-anchor="middle" x="240" y="84">c</text><text text-anchor="middle" x="248" y="84">o</text><text text-anchor="middle" x="256" y="84">p</text><text text-anchor="middle" x="264" y="84">y</text><text text-anchor="middle" x="56" y="116">S</text><text text-anchor="middle" x="64" y="116">t</text><text text-anchor="middle" x="72" y="116">r</text><text text-anchor="middle" x="80" y="116">i</text><text text-anchor="middle" x="88" y="116">n</text><text text-anchor="middle" x="96" y="116">g</text><text text-anchor="middle" x="112" y="116">B</text><text text-anchor="middle" x="144" y="116">h</text><text text-anchor="middle" x="152" y="116">a</text><text text-anchor="middle" x="160" y="116">n</text><text text-anchor="middle" x="168" y="116">d</text><text text-anchor="middle" x="176" y="116">m</text><text text-anchor="middle" x="184" y="116">a</text><text text-anchor="middle" x="192" y="116">d</text><text text-anchor="middle" x="200" y="116">e</text><text text-anchor="middle" x="208" y="116">.</text><text text-anchor="middle" x="216" y="116">d</text><text text-anchor="middle" x="224" y="116">l</text><text text-anchor="middle" x="232" y="116">l</text><text text-anchor="middle" x="240" y="116">\</text><text text-anchor="middle" x="248" y="116">0</text><text text-anchor="middle" x="152" y="180">t</text><text text-anchor="middle" x="160" y="180">e</text><text text-anchor="middle" x="168" y="180">x</text><text text-anchor="middle" x="176" y="180">t</text><text text-anchor="middle" x="192" y="180">t</text><text text-anchor="middle" x="200" y="180">o</text><text text-anchor="middle" x="216" y="180">c</text><text text-anchor="middle" x="224" y="180">o</text><text text-anchor="middle" x="232" y="180">p</text><text text-anchor="middle" x="240" y="180">y</text><text text-anchor="middle" x="56" y="228">R</text><text text-anchor="middle" x="64" y="228">e</text><text text-anchor="middle" x="72" y="228">s</text><text text-anchor="middle" x="80" y="228">u</text><text text-anchor="middle" x="88" y="228">l</text><text text-anchor="middle" x="96" y="228">t</text><text text-anchor="middle" x="144" y="228">w</text><text text-anchor="middle" x="152" y="228">:</text><text text-anchor="middle" x="160" y="228">\</text><text text-anchor="middle" x="168" y="228">h</text><text text-anchor="middle" x="176" y="228">a</text><text text-anchor="middle" x="184" y="228">n</text><text text-anchor="middle" x="192" y="228">d</text><text text-anchor="middle" x="200" y="228">m</text><text text-anchor="middle" x="208" y="228">a</text><text text-anchor="middle" x="216" y="228">d</text><text text-anchor="middle" x="224" y="228">e</text><text text-anchor="middle" x="232" y="228">\</text><text text-anchor="middle" x="240" y="228">b</text><text text-anchor="middle" x="248" y="228">u</text><text text-anchor="middle" x="256" y="228">i</text><text text-anchor="middle" x="264" y="228">l</text><text text-anchor="middle" x="272" y="228">d</text><text text-anchor="middle" x="280" y="228">\</text><text text-anchor="middle" x="288" y="228">h</text><text text-anchor="middle" x="296" y="228">a</text><text text-anchor="middle" x="304" y="228">n</text><text text-anchor="middle" x="312" y="228">d</text><text text-anchor="middle" x="320" y="228">m</text><text text-anchor="middle" x="328" y="228">a</text><text text-anchor="middle" x="336" y="228">d</text><text text-anchor="middle" x="344" y="228">e</text><text text-anchor="middle" x="352" y="228">.</text><text text-anchor="middle" x="360" y="228">d</text><text text-anchor="middle" x="368" y="228">l</text><text text-anchor="middle" x="376" y="228">l</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;2:</b> Hypothetical CatStrings functionality.</div></center>
+
+</p><p>
+
+We need to figure out how much text we want to copy from String A. <code>OnePastLastSlash</code> gives us a pointer, a numerical <em class="underscore">address</em>. We know already that we can manipulate that to our advantage. <code>OnePastLastSlash</code> is precisely the <em class="underscore">desired length</em> amount of bytes longer than the pointer to <code>EXEFilename</code>. This allows us simply to subtract one from the other to get the desired size. 
+
+</p><p>
+
+All this said, and assuming <code>CatStrings</code> will take the parameters in order (<code>StringA Character Count</code>, <code>StringA</code>, <code>StringB Character Count</code>, <code>StringB</code>, <code>Result Character Count</code>, <code>Result</code>), we can draft the following code:
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">char</span> *OnePastLastSlash = EXEFilename;</span>
+<span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">char</span> *Scan = EXEFilename;</span>
+<span class="line">        *Scan;</span>
+<span class="line">        ++Scan)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">if</span> (*Scan == <span class="hljs-string">'\\'</span>)</span>
+<span class="line">    {</span>
+<span class="line">        OnePastLastSlash = Scan + <span class="hljs-number">1</span>;</span>
+<span class="line">    }</span>
+<span class="line">}</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-keyword">char</span> SourceGameCodeDLLFilename[] = <span class="hljs-string">"handmade.dll"</span>;</span>
+<span class="line"><span class="hljs-keyword">char</span> SourceGameCodeDLLFullPath[MAX_PATH];</span>
+<span class="line"></span>
+<span class="line">CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(SourceGameCodeDLLFilename), SourceGameCodeDLLFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;7:</b> <file>[win32_handmade.cpp > WinMain]</file> Calculating full path of the source game DLL.</div></center>
+<p>
+
+
+We also need to make sure that we don't add the <em class="underscore">null terminator</em> (0 put automatically at the end of each C string) of the <code>handmade.dll</code>, so we need to subtract 1 from its size. <code>CatStrings</code> will add its own null terminator. <code>StringA</code> is already incomplete so it won't have a null terminator.
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-keyword">char</span> SourceGameCodeDLLFilename[] = <span class="hljs-string">"handmade.dll"</span>;</span>
+<span class="line"><span class="hljs-keyword">char</span> SourceGameCodeDLLFullPath[MAX_PATH];</span>
+<span class="line"></span>
+<span class="line">CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(SourceGameCodeDLLFilename) - <span class="hljs-number">1</span>, SourceGameCodeDLLFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;8:</b> <file>[win32_handmade.cpp > WinMain]</file> Removing null terminator from the source strings.</div></center>
+<p>
+
+
+Since we copy the game DLL file to <code>handmade_temp.dll</code>, we can repeat the same operation for it as well:
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">char</span> SourceGameCodeDLLFilename[] = <span class="hljs-string">"handmade.dll"</span>;</span>
+<span class="line"><span class="hljs-keyword">char</span> SourceGameCodeDLLFullPath[MAX_PATH];</span>
+<span class="line"></span>
+<span class="line">CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(SourceGameCodeDLLFilename) - <span class="hljs-number">1</span>, SourceGameCodeDLLFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-keyword">char</span> TempGameCodeDLLFilename[] = <span class="hljs-string">"handmade_temp.dll"</span>;</span>
+<span class="line"><span class="hljs-keyword">char</span> TempGameCodeDLLFullPath[MAX_PATH];</span>
+<span class="line"></span>
+<span class="line">CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(TempGameCodeDLLFilename) - <span class="hljs-number">1</span>, TempGameCodeDLLFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(TempGameCodeDLLFullPath), TempGameCodeDLLFullPath);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;9:</b> <file>[win32_handmade.cpp > WinMain]</file> Calculating full path of the game copy DLL.</div></center>
+<p>
+
+
+Speaking of <code>CatStrings</code>, what we'll make is probably the worst possible implementation of a string concatenation routine. However, it's fast to write and easy to wrap your head around to do for our purposes. Besides, this is all developer-only code: if you needed to write a string processing routine for the game, we'd definitely spend more effort on this.
+
+</p><p>
+
+We have Source A, Source B, Destination, and the respective character counts. We'll simply iterate over source A until we reach its count copying its character over, then do the same thing with source B. Finally, we'll add the null terminator. 
+
+</p><p>
+
+If you notice, we won't be doing anything with the character count of the destination buffer. Ideally, we'd need to validate that we can fit both strings inside it, but we will just trust this thing works for now. Hey, we'll even drop a TODO for it!
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">CatStrings</span><span class="hljs-params">(<span class="hljs-keyword">size_t</span> SourceACount, <span class="hljs-keyword">char</span> *SourceA, </span>
+<span class="line">           <span class="hljs-keyword">size_t</span> SourceBCount, <span class="hljs-keyword">char</span> *SourceB,</span>
+<span class="line">           <span class="hljs-keyword">size_t</span> DestCount, <span class="hljs-keyword">char</span> *Dest)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// TODO(casey): Dest bounds checking!</span></span>
+<span class="line">    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> Index = <span class="hljs-number">0</span>;</span>
+<span class="line">         Index &lt; SourceACount; </span>
+<span class="line">         ++Index)</span>
+<span class="line">    {</span>
+<span class="line">        *Dest++ = *SourceA++;</span>
+<span class="line">    }</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> Index = <span class="hljs-number">0</span>;</span>
+<span class="line">         Index &lt; SourceBCount; </span>
+<span class="line">         ++Index)</span>
+<span class="line">    {</span>
+<span class="line">        *Dest++ = *SourceB++;</span>
+<span class="line">    }</span>
+<span class="line">    </span>
+<span class="line">    *Dest++ = <span class="hljs-number">0</span>;</span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;10:</b> <file>[win32_handmade.cpp]</file> Defining <code>CatStrings</code> function.</div></center>
+
+<a class="target" name="usenewstrings">&nbsp;</a><a class="target" name="re-enabledebuggersupport/usenewstrings">&nbsp;</a><a class="target" name="toc2.4">&nbsp;</a><h2>Use New Strings</h2>
+<p>
+
+
+Hurray, we have the working strings containing the full path of our DLLs! Let's fix our code to make use of them.
+
+</p><p>
+
+First, we need to pass both the <code>SourceDLLName</code> and the <code>TempDLLName</code> to <code>Win32LoadGameCode</code> instead of defining them directly in the code:
+
+</p><pre class="listing tilde"><code><span class="line">internal win32_game_code</span><div class=" edit"><span class="line">Win32LoadGameCode(<span class="hljs-keyword">char</span> *SourceDLLName, <span class="hljs-keyword">char</span> *TempDLLName)</span></div><span class="line">{</span>
+<span class="line">    win32_game_code Result = {};</span>
+<span class="line"></span><div class=" edit"><span class="line">    CopyFile(SourceDLLName, TempDLLName, FALSE);</span>
+<span class="line">    Result.GameCodeDLL = LoadLibraryA(TempDLLName);</span></div><span class="line">    Result.DLLLastWriteTime = Win32GetLastWriteTime(SourceDLLName);</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;11:</b> <file>[win32_handmade.cpp]</file> Passing both file names to <code>Win32LoadGameCode</code>.</div></center>
+<p>
+
+
+Then, we need to adapt the usage of it inside <code>WinMain</code>, both inside the <code>GlobalRunning</code> loop and outside of it:
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">win32_game_code Game = Win32LoadGameCode(SourceGameCodeDLLFullPath, </span>
+<span class="line">                                         TempGameCodeDLLFullPath);</span></div><span class="line">u32 LoadCounter = <span class="hljs-number">0</span>;</span>
+<span class="line"></span>
+<span class="line">u64 LastCycleCount = __rdtsc();</span>
+<span class="line"><span class="hljs-keyword">while</span> (GlobalRunning)</span>
+<span class="line">{</span>
+<span class="line">    FILETIME NewDLLWriteTime = Win32GetLastWriteTime(SourceGameCodeDLLFullPath);</span>
+<span class="line">    <span class="hljs-keyword">if</span> (LoadCounter++ &gt; <span class="hljs-number">120</span>)</span>
+<span class="line">    {</span>
+<span class="line">        Win32UnloadGameCode(&amp;Game);</span><div class=" edit"><span class="line">        Game = Win32LoadGameCode(SourceGameCodeDLLFullPath, </span>
+<span class="line">                                 TempGameCodeDLLFullPath);</span></div><span class="line">        LoadCounter = <span class="hljs-number">0</span>;</span>
+<span class="line">    }</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;12:</b> <file>[win32_handmade.cpp > WinMain]</file> Using full file paths.</div></center>
+<p>
+
+
+If you followed along so far, you should be good and compilable. You can finally boot up your debugger, run the game and edit its various features <em class="underscore">almost</em> real-time. Try it now by changing the value of <code>Pixel</code> inside <code>handmade.cpp &gt; RenderWeirdGradient</code> and recompiling the game without exiting!
+
+</p>
+<a class="target" name="removedelaybetweenreloads">&nbsp;</a><a class="target" name="removedelaybetweenreloads">&nbsp;</a><a class="target" name="toc3">&nbsp;</a><h1>Remove Delay Between Reloads</h1>
+<p>
+
+
+At this point, we still flat-out reload the game every 4 seconds. We don't really want this. If we make a change, we want it to appear whenever we hit the &ldquo;compile&rdquo; button. Instantaneously, immediately, right away.
+
+</p><p>
+
+The way of achieving this that we will adopt is comparing the last write time of the source DLL. If it changed, reload the DLL. This can be done easily, using Windows API.
+
+</p>
+<a class="target" name="getlastwritetime">&nbsp;</a><a class="target" name="removedelaybetweenreloads//getlastwritetime">&nbsp;</a><a class="target" name="toc3.0.1">&nbsp;</a><h3>Get Last Write Time</h3>
+<p>
+
+
+First we need to find the file to use. We can do it using<a href="https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-findfirstfilea">FindFirstFileA</a> function:
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">HANDLE <span class="hljs-title">FindFirstFileA</span><span class="hljs-params">(</span>
+<span class="line">    LPCSTR             lpFileName,</span>
+<span class="line">    LPWIN32_FIND_DATAA lpFindFileData</span>
+<span class="line">)</span></span>;</span></code></pre><p>
+
+
+<ul>
+<li class="asterisk"><code>lpFileName</code>: The full path of the file to find. It can use various wildcards like <code>*.dll</code> or something but we know exactly where and what file to find.
+</li>
+<li class="asterisk"><code>lpFindFileData</code>: Pointer to <a href="https://docs.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-win32_find_dataa">WIN32_FIND_DATAA</a> structure. Along with the handle to the found file, Windows will return to us a filled structure containing a wealth of information about the file.</li></ul>
+
+</p><p>
+
+We're after this find data. Among other things, it contains <code>FILETIME</code> of <code>ftLastWriteTime</code> that we can store and use for comparison.
+
+</p><p>
+
+One thing to remember that while we can work with the find data directly, we still get the handle to the file. We must not forget to close the handle using the <a href="https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-findclose">FindClose</a> function. 
+
+</p><p>
+
+Let's write a quick helper function so that we never forget what to do. This function will take a filename and return the <code>FILETIME</code>. You can find it below; hopefully everything that it does is clear to you by now.
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-function"><span class="hljs-keyword">inline</span> FILETIME</span>
+<span class="line"><span class="hljs-title">Win32GetLastWriteTime</span><span class="hljs-params">(<span class="hljs-keyword">char</span> *Filename)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    FILETIME LastWriteTime = {};</span>
+<span class="line">    </span>
+<span class="line">    WIN32_FIND_DATA FindData;</span>
+<span class="line">    HANDLE FileHandle = FindFirstFileA(Filename, &amp;FindData);</span>
+<span class="line">    <span class="hljs-keyword">if</span> (FileHandle != INVALID_HANDLE_VALUE)</span>
+<span class="line">    {</span>
+<span class="line">        LastWriteTime = FindData.ftLastWriteTime;</span>
+<span class="line">        FindClose(FileHandle);</span>
+<span class="line">    }</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">return</span> (LastWriteTime);</span>
+<span class="line">}</span></div><span class="line"></span>
+<span class="line"><span class="hljs-function">internal win32_game_code</span>
+<span class="line"><span class="hljs-title">Win32LoadGameCode</span><span class="hljs-params">(<span class="hljs-keyword">char</span> *SourceDLLName, <span class="hljs-keyword">char</span> *TempDLLName)</span></span>
+<span class="line"><span class="hljs-comment">//...</span></span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;13:</b> <file>[win32_handmade.cpp]</file> Defining <code>Win32GetLastWriteTime</code>.</div></center>
+
+<a class="target" name="storethelastwritetime">&nbsp;</a><a class="target" name="removedelaybetweenreloads/storethelastwritetime">&nbsp;</a><a class="target" name="toc3.1">&nbsp;</a><h2>Store the Last Write Time</h2>
+<p>
+
+
+To compare the write times, we need to store the last write time first. We have our <code>win32_game_code</code> structure; we could expand it to do so. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_game_code</span></span>
+<span class="line">{</span></span>
+<span class="line">    HMODULE GameCodeDLL;</span><div class=" add"><span class="line">    FILETIME DLLLastWriteTime;</span></div><span class="line">    </span>
+<span class="line">    game_update_and_render *UpdateAndRender;</span>
+<span class="line">    game_get_sound_samples *GetSoundSamples;</span>
+<span class="line">    </span>
+<span class="line">    b32 IsValid;</span>
+<span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;14:</b> <file>[win32_handmade.h]</file> Expanding <code>win32_game_code</code> to include last write time.</div></center>
+<p>
+
+
+Now we can simply save the write time of the source DLL whenever we load the game code. 
+
+</p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-function"><span class="hljs-keyword">inline</span> FILETIME</span>
+<span class="line"><span class="hljs-title">Win32GetLastWriteTime</span><span class="hljs-params">(<span class="hljs-keyword">char</span> *Filename)</span></span>
+<span class="line"></span>{</span>
+<span class="line">   <span class="hljs-comment">//...</span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal win32_game_code</span>
+<span class="line"><span class="hljs-title">Win32LoadGameCode</span><span class="hljs-params">(<span class="hljs-keyword">char</span> *SourceDLLName, <span class="hljs-keyword">char</span> *TempDLLName)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    win32_game_code Result = {};</span>
+<span class="line">    </span></div><div class=" add"><span class="line">    Result.DLLLastWriteTime = Win32GetLastWriteTime(SourceDLLName);</span></div><span class="line">    </span>
+<span class="line">    CopyFile(SourceDLLName, TempDLLName, FALSE);</span>
+<span class="line">    Result.GameCodeDLL = LoadLibraryA(TempDLLName);  </span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;15:</b> <file>[win32_handmade.cpp]</file> Saving last write time. .</div></center>
+
+<a class="target" name="removelatency">&nbsp;</a><a class="target" name="removedelaybetweenreloads/removelatency">&nbsp;</a><a class="target" name="toc3.2">&nbsp;</a><h2>Remove Latency</h2>
+<p>
+
+
+So far, we haven't made any changes to the core functionality. We're still latent. However, we're now in a position to fix that. With one fell swoop, we can get rid of the <code>LoadCounter</code> and look at the write time instead. If the current write time and the stored write times are not equal, we reload the code. 
+
+</p><pre class="listing tilde"><code><span class="line">win32_game_code Game = Win32LoadGameCode(SourceGameCodeDLLFullPath, </span>
+<span class="line">                                         TempGameCodeDLLFullPath);</span><div class=" delete"><span class="line">u32 LoadCounter = <span class="hljs-number">0</span>;</span></div><span class="line"></span>
+<span class="line">u64 LastCycleCount = __rdtsc();</span>
+<span class="line"><span class="hljs-keyword">while</span> (GlobalRunning)</span>
+<span class="line">{</span><div class=" add"><span class="line">    FILETIME NewDLLWriteTime = Win32GetLastWriteTime(SourceDLLName);</span></div><div class=" edit"><span class="line">    <span class="hljs-keyword">if</span> (NewDLLWriteTime != Game.DLLLastWriteTime)</span></div><span class="line">    {</span><div class=" add"><span class="line">        Game.DLLLastWriteTime = NewDLLWriteTime;</span></div><span class="line">        Win32UnloadGameCode(&amp;Game);</span>
+<span class="line">        Game = Win32LoadGameCode(SourceGameCodeDLLFullPath, </span>
+<span class="line">                                 TempGameCodeDLLFullPath);</span><div class=" delete"><span class="line">        LoadCounter = <span class="hljs-number">0</span>;</span></div><span class="line">    }</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;16:</b> <file>[win32_handmade.cpp > WinMain]</file> Using last write time to reload the code.</div></center>
+<p>
+
+
+Unfortunately, this won't really compile. <code>FILETIME</code> is a compound structure (&ldquo;struct&rdquo;), and C++ doesn't allow direct comparison of these. While we can certainly make a relevant comparison function ourselves, we can use one from the Windows API called <a href="https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-comparefiletime">CompareFileTime</a>.
+
+</p><p>
+
+<code>CompareFileTime</code> returns 0 if the two file times are equal. This is perfect for us since we only want to reload the code if they're not. 
+
+</p><pre class="listing tilde"><code><span class="line">FILETIME NewDLLWriteTime = Win32GetLastWriteTime(SourceDLLName);</span><div class=" edit"><span class="line"><span class="hljs-keyword">if</span> (CompareFileTime(&amp;NewDLLWriteTime, &amp;Game.DLLLastWriteTime))</span></div><span class="line">{</span>
+<span class="line">    Game.DLLLastWriteTime = NewDLLWriteTime;</span>
+<span class="line">    Win32UnloadGameCode(&amp;Game);</span>
+<span class="line">    Game = Win32LoadGameCode(SourceGameCodeDLLFullPath, </span>
+<span class="line">                             TempGameCodeDLLFullPath);</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;17:</b> <file>[win32_handmade.cpp > WinMain]</file> Comparing file times.</div></center>
+<p>
+
+
+And this is all there's to it. If you compile the platform code now, you will see that live reloading is instantaneous.
+
+</p>
+<a class="target" name="recap">&nbsp;</a><a class="target" name="recap">&nbsp;</a><a class="target" name="toc4">&nbsp;</a><h1>Recap</h1>
+<p>
+
+
+All of what we've done today probably won't make it into the final game we ship. However, it will help us, the developer, along the way to make it happen.
+
+</p><p>
+
+You might have noticed that we made all of this almost trivially by just moving some things around. It comes from defining our code architecture well: separating platform and cross-platform code, memory handling, etc. This comes from an approach known as <em class="underscore">semantic compression</em>, and you can read more about it <a href="https://caseymuratori.com/blog_0015">here</a>.
+
+</p><p>
+
+Next time, you will see how many other decisions we made in the past will prove helpful.
+
+</p>
+<a class="target" name="programmingnotions">&nbsp;</a><a class="target" name="programmingnotions">&nbsp;</a><a class="target" name="toc5">&nbsp;</a><h1>Programming Notions</h1>
+
+<a class="target" name="metaprogramming">&nbsp;</a><a class="target" name="programmingnotions/metaprogramming">&nbsp;</a><a class="target" name="toc5.1">&nbsp;</a><h2>Metaprogramming</h2>
+<p>
+
+
+Metaprogramming is writing programs that write programs. In C specifically, it is a viable alternative for some missing features (like listing possible members of a struct).
+
+</p><p>
+
+In its most basic form, a meta-program looks something like this: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;stdio.h&gt;</span></span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">main</span> <span class="hljs-params">(<span class="hljs-keyword">int</span> argc, <span class="hljs-keyword">char</span> **argv)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    FILE *CFile = fopen(<span class="hljs-string">"out.cpp"</span>, <span class="hljs-string">"w"</span>);</span>
+<span class="line">    <span class="hljs-built_in">fprintf</span>(CFile, <span class="hljs-string">"int main(int argc, char **argv)\n"</span>);</span>
+<span class="line">    <span class="hljs-built_in">fprintf</span>(CFile, <span class="hljs-string">"{\n"</span>);</span>
+<span class="line">    <span class="hljs-built_in">fprintf</span>(CFile, <span class="hljs-string">"}\n"</span>);</span>
+<span class="line">}</span></code></pre><p>
+
+That's it. First, you compile this program, run it, it will write you <code>out.cpp</code> so you can compile that. Of course, such a program wouldn't do anything special in its current shape, but as you expand it more and more with complex functionality, things will start getting interesting.
+
+</p>
+<a class="target" name="navigation">&nbsp;</a><a class="target" name="navigation">&nbsp;</a><a class="target" name="toc6">&nbsp;</a><h1>Navigation</h1>
+<p>
+
+
+Previous: <a href="../html/day21.html">Day 21. Loading Game Code Dynamically</a>
+
+</p><p>
+
+Up Next: <a href="../html/day23.html">Day 23. Looped Live Code Editing</a>
+
+</p><p>
+
+<a href="../index.md.html">Back to Index</a>
+
+</p>
+<div class="nonumberh1">Glossary </div>
+<p>
+
+
+<ul>
+<li class="asterisk">Metaprogramming
+</li>
+<li class="asterisk">Null terminator
+</li>
+<li class="asterisk">Semantic compression
+</li>
+<li class="asterisk">String manipulation
+</li>
+<li class="asterisk">Working directly</li></ul>
+
+</p>
+<div class="nonumberh1">Compiler flags</div>
+<p>
+
+
+<a href="https://docs.microsoft.com/en-us/cpp/build/reference/fd-program-database-file-name?view=msvc-160">-FD</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/cpp/build/reference/pdb-use-program-database?view=msvc-160">-PDB</a>
+
+</p>
+<div class="nonumberh1">Win32 API</div>
+<p>
+
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-comparefiletime">CompareFileTime</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-findfirstfilea">FindFirstFileA</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-findclose">FindClose</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-gb/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulefilenamea">GetModuleFileNameA</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-win32_find_dataa">WIN32_FIND_DATAA structure</a>
+
+</p>
+<div class="nonumberh1">Articles</div>
+<p>
+
+
+<a href="https://caseymuratori.com/blog_0015">Semantic Compression</a>
+
+</p><p>
+
+<a href="https://ss64.com/nt/syntax-redirection.html">CMD redirection syntax</a>
+
+</p><p>
+
+<style class="fallback">
+  body {
+    visibility: hidden;
+    font-family: sans-serif;
+  }
+</style>
+
+</p><p>
+
+<script>
+  markdeepOptions = { tocStyle: 'long' };
+  window.alreadyProcessedMarkdeep ||
+    (document.body.style.visibility = 'visible');
+</script>
+</stdio.h></p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.10&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div>
