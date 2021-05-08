@@ -303,7 +303,7 @@ CatStrings(size_t SourceACount, char *SourceA,
 
 Hurray, we have the working strings containing the full path of our DLLs! Let's fix our code to make use of them.
 
-First of all, we need to pass both the `SourceDLLName` and `TempDLLName` to `Win32LoadGameCode`:
+First of all, we need to pass both the `SourceDLLName` and `TempDLLName` to `Win32LoadGameCode` instead of defining them directly in the code:
 
 ~~~~~~~ C++
 internal win32_game_code
@@ -312,10 +312,10 @@ Win32LoadGameCode(char *SourceDLLName, char *TempDLLName)
 ~~~~~~~ C++
 {
     win32_game_code Result = {};
-    
-~~~~~~~ C++ delete
-    char *TempDLLName = "handmade_temp.dll";
-    
+
+~~~~~~~ C++ edit
+    CopyFile(SourceDLLName, TempDLLName, FALSE);
+    Result.GameCodeDLL = LoadLibraryA(TempDLLName);
 ~~~~~~~ C++
     Result.DLLLastWriteTime = Win32GetLastWriteTime(SourceDLLName);
     
@@ -324,27 +324,26 @@ Win32LoadGameCode(char *SourceDLLName, char *TempDLLName)
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Passing both file names to `Win32LoadGameCode`.]
 
-Then, we need to adapt the usage of it, both inside the `GlobalRunning` loop and outside:
+Then, we need to adapt the usage of it inside `WinMain`, both inside the `GlobalRunning` loop and outside of it:
 
-~~~~~~~ C++ delete
-char *SourceDLLName = "handmade.dll";
 ~~~~~~~ C++ edit
 win32_game_code Game = Win32LoadGameCode(SourceGameCodeDLLFullPath, 
                                          TempGameCodeDLLFullPath);
 ~~~~~~~ C++
+u32 LoadCounter = 0;
 
 u64 LastCycleCount = __rdtsc();
 while (GlobalRunning)
 {
     FILETIME NewDLLWriteTime = Win32GetLastWriteTime(SourceGameCodeDLLFullPath);
-    if (CompareFileTime(&NewDLLWriteTime, &Game.DLLLastWriteTime))
+    if (LoadCounter++ > 120)
     {
-        Game.DLLLastWriteTime = NewDLLWriteTime;
         Win32UnloadGameCode(&Game);
 ~~~~~~~ C++ edit
         Game = Win32LoadGameCode(SourceGameCodeDLLFullPath, 
                                  TempGameCodeDLLFullPath);
 ~~~~~~~ C++
+        LoadCounter = 0;
     }
     // ...
 }
@@ -353,91 +352,31 @@ while (GlobalRunning)
 
 If you followed along so far, you should be good and compilable. You can finally boot up your debugger, run the game and edit its various features in _almost_ real time. Try it now, by changing the value of `Pixel` inside `handmade.cpp > RenderWeirdGradient` and recompiling the game without exiting!
 
-
 # Remove Delay between Reloads
 
-~~~~~~~ C++
-win32_game_code Result = {};
+At this point we still flat-out reload the game every 4 seconds. We don't really want this. If we make the change, we want it to appear the moment we hit "compile" button. Instantaneously, immediately, right away.
 
-~~~~~~~ C++ add
-char *SourceDLLName = "handmade.dll";
-char *TempDLLName = "handmade_temp.dll";
+The way of achieving this that we will adopt is comparing the last write time of the source DLL. If the last write time changed, reload the DLL. This can be done easily using Windows API.
 
-~~~~~~~ C++ edit
-CopyFile(SourceDLLName, TempDLLName, FALSE);
+### Get Last Write Time
+
+First we need to find the file to use. We can do it using[FindFirstFileA][] function:
+
 ~~~~~~~ C++
-Result.GameCodeDLL = LoadLibraryA(TempDLLName);
+HANDLE FindFirstFileA(
+    LPCSTR             lpFileName,
+    LPWIN32_FIND_DATAA lpFindFileData
+);
 ~~~~~~~ 
-[Listing [x]: <file>[win32_handmade.cpp > Win32LoadGameCode]</file> .]
 
-~~~~~~~ C++
-internal win32_game_code
-~~~~~~~ C++ edit
-Win32LoadGameCode(char *SourceDLLName)
-~~~~~~~ C++
-{
-    win32_game_code Result = {};
-    
-    char *TempDLLName = "handmade_temp.dll";
-    
-~~~~~~~ C++ edit
-    CopyFile(SourceDLLName, TempDLLName, FALSE);
-~~~~~~~ C++
-    Result.GameCodeDLL = LoadLibraryA(TempDLLName);
-    // ...
-}
+* `lpFileName`: The full path of the file to find. It can use various wildcards like `*.dll` or something but we know exactly where and what file to find.
+* `lpFindFileData`: Pointer to [WIN32_FIND_DATAA][] structure. Along with the handle to the found file, Windows will return to us a filled structure containing a wealth of information about the file. 
 
-int CALLBACK WinMain(...)
-{
-    // ... 
-~~~~~~~ C++ add
-    char *SourceDLLName = "handmade.dll";
-~~~~~~~ C++ edit
-    win32_game_code Game = Win32LoadGameCode(SourceDLLName);
-~~~~~~~ C++
-    u32 LoadCounter = 0;
-    
-    u64 LastCycleCount = __rdtsc();
-    while (GlobalRunning)
-    {
-        if (LoadCounter++ > 120)
-        {
-            Win32UnloadGameCode(&Game);
-~~~~~~~ C++ edit
-            Game = Win32LoadGameCode(SourceDLLName);
-~~~~~~~ C++
-            LoadCounter = 0;
-        }
-        // ... 
-    }
-    // ... 
-}
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+We're after this find data. Among other things, it contains `FILETIME` of `ftLastWriteTime` that we can store and use for comparison.
 
-..
-    
-[FindFirstFileA][].
+One thing to remember that, while we can work with the find data directly, we still get the handle to the file. We must remember to close the handle using [FindClose][] function. 
 
-[WIN32_FIND_DATAA][].
-
-[FindClose][].
-
-~~~~~~~ C++
-struct win32_game_code
-{
-    HMODULE GameCodeDLL;
-~~~~~~~ C++ add
-    FILETIME DLLLastWriteTime;
-~~~~~~~ C++
-    
-    game_update_and_render *UpdateAndRender;
-    game_get_sound_samples *GetSoundSamples;
-    
-    b32 IsValid;
-};
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.h]</file> .]
+Let's write a quick helper function so that we never forget what to do. This function will take a filename and return the `FILETIME`. You can find it below; hopefully it's everything that the function does is clear to you by now.
 
 ~~~~~~~ C++ add
 inline FILETIME
@@ -456,14 +395,48 @@ Win32GetLastWriteTime(char *Filename)
     return (LastWriteTime);
 }
 ~~~~~~~ C++
+
 internal win32_game_code
-Win32LoadGameCode(char *SourceDLLName)
+Win32LoadGameCode(char *SourceDLLName, char *TempDLLName)
+//...
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> Defining `Win32GetLastWriteTime`.]
+
+## Store the Last Write Time
+
+In order to compare the write times, we need to store the last write time first. We have our `win32_game_code` structure; we could expand it to do so. 
+
+~~~~~~~ C++
+struct win32_game_code
+{
+    HMODULE GameCodeDLL;
+~~~~~~~ C++ add
+    FILETIME DLLLastWriteTime;
+~~~~~~~ C++
+    
+    game_update_and_render *UpdateAndRender;
+    game_get_sound_samples *GetSoundSamples;
+    
+    b32 IsValid;
+};
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.h]</file> Expanding `win32_game_code` to include last write time.]
+
+Now we can simply save the write time of the source DLL whenever we load the game code. 
+
+~~~~~~~ C++ 
+inline FILETIME
+Win32GetLastWriteTime(char *Filename)
+{
+   //...
+}
+
+internal win32_game_code
+Win32LoadGameCode(char *SourceDLLName, char *TempDLLName)
 {
     win32_game_code Result = {};
     
-    char *TempDLLName = "handmade_temp.dll";
-    
-~~~~~~~ C++ edit
+~~~~~~~ C++ add
     Result.DLLLastWriteTime = Win32GetLastWriteTime(SourceDLLName);
 ~~~~~~~ C++
     
@@ -471,13 +444,15 @@ Win32LoadGameCode(char *SourceDLLName)
     Result.GameCodeDLL = LoadLibraryA(TempDLLName);  
 }
 ~~~~~~~ 
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Saving last write time. .]
 
-No changes yet, we're still latent; but now we're in position to fix that latency.
+## Remove Latency
+
+So far, we haven't done any changes to the core functionality. We're still latent. However, we're now in position to fix that. With one fel swoop we can get rid of the `LoadCounter` and look at the write time instead. If the current write time and the stored write times are not equal, we reload the code. 
 
 ~~~~~~~ C++
-char *SourceDLLName = "handmade.dll";
-win32_game_code Game = Win32LoadGameCode(SourceDLLName);
+win32_game_code Game = Win32LoadGameCode(SourceGameCodeDLLFullPath, 
+                                         TempGameCodeDLLFullPath);
 ~~~~~~~ C++ delete
 u32 LoadCounter = 0;
 ~~~~~~~ C++
@@ -495,7 +470,8 @@ while (GlobalRunning)
         Game.DLLLastWriteTime = NewDLLWriteTime;
 ~~~~~~~ C++
         Win32UnloadGameCode(&Game);
-        Game = Win32LoadGameCode(SourceDLLName);
+        Game = Win32LoadGameCode(SourceGameCodeDLLFullPath, 
+                                 TempGameCodeDLLFullPath);
 ~~~~~~~ C++ delete
         LoadCounter = 0;
 ~~~~~~~ C++
@@ -503,11 +479,11 @@ while (GlobalRunning)
     // ...
 }
 ~~~~~~~ 
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Using last write time to reload the code.]
 
-Unfortunately, this won't really compile. `FILETIME` is a compound structure, and C++ doesn't allow direct comparison of these. While we can certainly make a relevant comparison function ourselves, we can use one from the Windows API called [CompareFileTime][].
+Unfortunately, this won't really compile. `FILETIME` is a compound structure ("struct"), and C++ doesn't allow direct comparison of these. While we can certainly make a relevant comparison function ourselves, we can use one from the Windows API called [CompareFileTime][].
 
-`CompareFileTime` returns 0 if the two filetimes are equal.
+`CompareFileTime` returns 0 if the two file times are equal. This is perfect for us since we only want to reload the code if they're not. 
 
 ~~~~~~~ C++
 FILETIME NewDLLWriteTime = Win32GetLastWriteTime(SourceDLLName);
@@ -517,10 +493,13 @@ if (CompareFileTime(&NewDLLWriteTime, &Game.DLLLastWriteTime))
 {
     Game.DLLLastWriteTime = NewDLLWriteTime;
     Win32UnloadGameCode(&Game);
-    Game = Win32LoadGameCode(SourceDLLName);
+    Game = Win32LoadGameCode(SourceGameCodeDLLFullPath, 
+                             TempGameCodeDLLFullPath);
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Comparing file times.]
+
+And this is all there's to it. If you compile the platform code now, you will see that live reloading is instantaneous.
 
 # Recap 
 
@@ -529,8 +508,6 @@ All of what we've done today probably won't make it into the final game we ship.
 You might have noticed that we made all of this almost trivially, by just moving some things around. It comes as a result of architecturing our code well: separating platform and cross-platform code, memory handling, etc. This comes as a result of an approach known as _semantic compression_, and you can read more about it [here][semantic compression].
 
 You will see next time how a bunch of other decisions we made in the past will prove useful.
-
-# Exercises 
 
 # Programming Notions 
 
