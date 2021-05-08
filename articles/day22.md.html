@@ -6,31 +6,31 @@ _Video Length (including Q&A): [1h53](https://hero.handmade.network/episode/code
 
 (insert intro.md.html here) 
 
-We hope you've been enjoying the course so far; even if you mainly code in Python, JavaScript or C#, it's never a bad idea to learn low level programming to better understand what's going higher up.
+We hope you've been enjoying the course so far; even if you mainly code in Python, JavaScript, or C#, it's never a bad idea to learn low-level programming to better understand what's going higher up.
 
-Yesterday we laid down foundation for live code editing. However, there are many limitations to our current implementation: first, the code reloading isn't instantaneous; currently the game only tries to reload the code every 120 frames. Second, you can't debug and live code reload; the debugger won't let you recompile, plus it can have trouble finding `handmade.dll`.
+Yesterday we laid down the foundation for live code editing. However, there are many limitations to our current implementation: first, the code reloading isn't instantaneous; currently, the game only tries to reload the code every 120 frames. Second, you can't debug and use this feature; the debugger won't let you recompile, plus it can have trouble finding handmade.dll.
 
 # Variable PDB Name
 
 ## Add Ability to Edit DLL PDB Name
 
-When we left off, we couldn't debug our game properly. This was for a couple of reasons that really we should address first. Debugging is an extremely important part of programming, so restoring that functionality is paramount.
+When we left off, we couldn't debug our game correctly. This was for a couple of reasons that really we should address first. Debugging is an essential part of programming, so restoring that functionality is paramount.
 
 First of all, whenever you recompile a program (be it executable or a DLL), the compiler generates multiple files: 
 
 * `.exe` or `.dll`: of course, the final product of the compilation and linking.
-* `.map`: a text file containing all the _symbols_ of your program. This is optional, and we enabled these files by passing `-Fm` parameter in the build line.
-* `.obj` is the machine code of your program immediately after compilation. It's passed to the linker which then proceeds to link this code with other libraries and external symbols as necessary.
-* More relevant to us, `.pdb` (Program DataBase or symbol) files are generated to allow the debugger to properly interact with the program. It allows things like breakpoints in code, or visualizing on which line of your code you're currently paused. Otherwise, you'd need to read assembly code.
+* `.map`: a text file containing all the _symbols_ of your program. This is optional, and we enabled these files using the `-Fm` parameter in the build line.
+* `.obj` is the machine code of your program immediately after compilation. It's passed to the linker, which then proceeds to link this code with other libraries and external symbols as necessary.
+* More relevant to us, `.pdb` (Program DataBase or symbol) files are generated to allow the debugger to properly interact with the program. It will enable things like breakpoints in code or visualizing on which line of your code you're currently paused. Otherwise, you'd need to read the assembly code!
 
-When compiling, all of the potential files should be available for writing. We already tried to circumvent this issue by copying `handmade.dll` instead of loading it directly. However, the `.pdb` file remains open in the debugger, and in many debuggers (including Visual Studio) it remains loaded until the end of the debugging session.
+When compiling, all of the potential files should be available for writing. We already tried to circumvent this issue by copying handmade.dll instead of loading it directly. However, the .pdb file often remains locked by the debugger until the end of the debugging session.
 
-That said, we don't have to always name the `.pdb` file with the same name. What if, instead of `handmade.pdb`, it would had a completely random name? This way, the debugger can keep all the symbol files it wants open, and we can rewrite the `.pdb` as many times we like.
+That said, we don't have to always name the `.pdb` file with the same name. What if, instead of handmade.pdb, would it have a completely random name? This way, the debugger can keep all the symbol files it wants open, and we can rewrite the `.pdb` as many times as we like.
 
 As usual, there seem to be multiple solutions to this problem. First of all, a quick search on MSDN shows us that there're two flags related to the `.pdb` file names: 
 
-* [-FD][] is a compiler option allowing to set the name of the `.pdb`. Seems what we're looking for, yet on a closer inspection you realize that it's not renaming the correct `.pdb`. We don't even have that thanks to the `-Z7` option we pass!
-* [-PDB][] is a linker option is what we need. It allows to set the name name of the main program database.
+* [-FD][] is a compiler option allowing to set the name of the `.pdb`. Seems what we're looking for, yet on a closer inspection, you realize that it's not renaming the correct `.pdb`. We don't even have that, thanks to the `-Z7` option we pass!
+* [-PDB][] is a linker option that we need. It allows setting the name of the primary program database.
 
 This allows us to change our `cl` line for `handmade.cpp` (not to be confused with `win32_handmade.cpp`) in the following manner: 
 
@@ -60,7 +60,7 @@ cl -Od %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %co
 ~~~~~~~
 [Listing [x]: <file>[build.bat]</file> Random PDB naming.]
 
-If you now build your program several times, you'll notice that you get several `.pdb` files with the names like `handmade1297.pdb`. That's exactly what we want: a unique name for each pdb.
+If you now build your program several times, you'll notice that you get several `.pdb` files with the names like `handmade1297.pdb`. That's what we want: a unique name for each pdb.
 
 There's just one more issue. These files will keep piling up. You can delete them once in a while yourself, but why do something manually when you can automate it? Let's simply clean up all the `.pdb` files each time we're about to recompile: 
 
@@ -73,11 +73,11 @@ cl -Od %compiler% -DHANDMADE_WIN32=1 %defines% %debug% -Fmwin32_handmade.map %co
 ~~~~~~~
 [Listing [x]: <file>[build.bat]</file> Cleaning up before recompilation.]
 
-This solution comes with a new issue: open `.pdb` files won't be able to be deleted, so `del` function will complain about it clogging your console. It's not _that_ big of a deal, but we can remedy this as well! Simply pipe out the output of the `del` command. 
+This solution comes with a new issue: open `.pdb` files won't be deletable, so the `del` function will complain about it clogging your console. It's not _that_ big of a deal, but we can remedy this as well! Simply pipe out the output of the `del` command. 
 
 What does that "pipe" even mean? 
 
-Console commands can have multiple output streams: `standard output` and `standard error` are the most common, and they can be redirected (or "piped") separately. "Pipe" name literally comes from the symbol `|` (read as "pipe") which is used in format `commandA  |  commandB` meaning "Send the output from `commandA` as input to `commandB`". You can find more information in the [cmd redirection syntax][] article. 
+Console commands can have multiple output streams: `standard output` and `standard error` are the most common, and they can be redirected (or "piped") separately. "Pipe" name literally comes from the symbol `|` (read as "pipe"), which is used in format `commandA  |  commandB`, meaning "Send the output from `commandA` as input to `commandB`". You can find more information in the [cmd redirection syntax][] article. 
 
 In any case, we won't get too deep into all of this. Shell scripting is a completely separate topic in and of itself that you can study separately. Suffice to say that we want to suppress all the messages of `del` command, so we pipe them both to the magic `NUL` file. This looks like this:
 
@@ -98,11 +98,11 @@ And there you have it, you will hear no more from the `del` command.
 
 With the pdb issue out of the way, we still cannot use our debugger. Frustrating! Why is that? 
 
-Early in the course, [very early in the course][day 1], we asked the debugger to set the _working directory_ of our game to be `handmade\data`. What this means is that our game effectively starts in `handmade\data` instead of `handmade\build` where our dll and executable are.
+Early in the course, [very early][day 1], we asked the debugger to set the _working directory_ of our game to be `handmade\data`. This means that our game effectively starts in `handmade\data` instead of `handmade\build` where our dll and executable are.
 
-`LoadLibraryA` that we were using for loading files up until doesn't see it as an issue. This function has an implicit search path. Unfortunately, that's not the case for some other file I/O functions, such as `FindFirstFileA` and even `CopyFile`. This function will go and search from the _working directory_ instead.
+`LoadLibraryA` that we were using for loading files up until now doesn't see it as an issue. This function has an implicit search path. Unfortunately, that's not the case for some other file I/O functions, such as `FindFirstFileA` and even `CopyFile`. This function will go and search from the _working directory_ instead.
 
-We can remedy this by rebuilding the correct path from the executable path. For this there's a handy function [GetModuleFileNameA][] which does just that. 
+We can remedy this by rebuilding the correct path from the executable path. For this, there's a handy function [GetModuleFileNameA][] which does just that. 
 
 ~~~~~~~ C++
 DWORD GetModuleFileNameA(
@@ -112,14 +112,14 @@ DWORD GetModuleFileNameA(
 );
 ~~~~~~~
 
-* `hModule`: optional handle to the module. You might remember from the first days of this course that a module handle is non other than `HINSTANCE Instance` which is passed to us in `WinMain`. It is optional though so we simply pass 0. 
+* `hModule`: optional handle to the module. From the first days of this course, you might remember that a module handle is non-other than `HINSTANCE Instance`, passed to us in `WinMain`. It is optional, though, so we simply give 0.
 * `lpFilename`: text buffer to contain the path. 
-* `nSize`: size of the text buffer.
+* `nSize`: the size of the text buffer.
 
-We don't know where the executable might live in file system, so let's reserve a buffer with a magic `MAX_PATH` value. It's a Windows `#define` which specifies what's a maximum possible filename length can be.
+We don't know where the executable might the live in file system, so let's reserve a buffer with a magic `MAX_PATH` value. It's a Windows `#define` which specifies what's a maximum possible filename length can be.
 
 !!! Warning
-    Keep in mind that `MAX_PATH` is not the safest thing in the world and it could produce buffer overruns. Do not use it in production code! 
+    Keep in mind that `MAX_PATH` is not the safest thing in the world and could produce buffer overruns. Do not use it in production code! 
 
 Additionally, this function returns the size of the executable. Let's keep it as it might become useful as well. 
 
@@ -139,9 +139,9 @@ int WinMain(...)
 
 ## Determine Module Path Without Filename
 
-Now, what do want? You ask yourself this question often. The issue we're facing is that `GetModuleFileNameA` returns a complete path _including the filename_ itself. That's not what we want! If our module filename is `w:\handmade\build\win32_handmade.exe` we want to know only the `w:\handmade\build\ `part! And, to be even more precise, we want to know the _position_ of the last slash: this way we can add to the path `handmade.dll` to become `w:\handmade\build\handmade.dll`.
+Now, what do we want? Ask yourself this question often. The issue we're facing is that `GetModuleFileNameA` returns a complete path, _including the filename_ itself. That's not what we want! If our module filename is `w:\handmade\build\win32_handmade.exe`, we want to know only the `w:\handmade\build\ `part! And, to be even more precise, we want to get the _position_ of the last slash: this way, we can add to the path `handmade.dll` to become `w:\handmade\build\handmade.dll`.
 
-String manipulation is complex. In a higher level language it might see a simpler task, but many things happen under the hood. 
+String manipulation is complex. It might be a more straightforward task in a higher-level language, but many things happen under the hood.
 
 *****************************************************
 *                  OnePastLastSlash pointer         *
@@ -159,9 +159,9 @@ String manipulation is complex. In a higher level language it might see a simple
 *                         |                         *
 *              Desired "cursor" Position            *
 *****************************************************
-[Figure [x]: Retrieving desired position in a file string.]
+[Figure [x]: Retrieving the desired position in a file string.]
 
-So what we need to do is to scan the string that we get and see whether or not we find the last slash. Then we move one step further and say that this would be our "cursor" position: one past the last slash. We repeat this until we run until the end of the string (which is determined by `0`) and use the last value we found.
+So what we need to do is to scan the string that we get and see whether or not we find the last slash. Then we move one step further and say that this would be our "cursor" position: one past the last slash. We repeat this until we run until the end of the string (determined by the _null terminator_: `0`) and use the last value we found.
 
 ~~~~~~~ C++
 // NOTE(casey): Never use MAX_PATH in code that is user-facing, because it
@@ -187,7 +187,7 @@ for (char *Scan = EXEFilename;
 
 ## Get Desired Filenames
 
-Let's suppose that we have a magic function `CatStrings` which allows to conCATenate two strings together in a third string. This will look something like this: 
+Let's suppose that we have a magic function, `CatStrings`, which allows us to conCATenate two strings together in a third string.
 
 ***************************************************************
 *                                                             *
@@ -209,7 +209,7 @@ Let's suppose that we have a magic function `CatStrings` which allows to conCATe
 ***************************************************************
 [Figure [x]: Hypothetical CatStrings functionality.]
 
-We need to figure out how much text we want to copy from String A. `OnePastLastSlash` gives us a pointer, a numerical _address_. We know already that we can manipulate that to our advantage. `OnePastLastSlash` is exactly the _desired length_ amount of bytes longer than the pointer to `EXEFilename`. This allows us simply to subtract one from the other to get desired size. 
+We need to figure out how much text we want to copy from String A. `OnePastLastSlash` gives us a pointer, a numerical _address_. We know already that we can manipulate that to our advantage. `OnePastLastSlash` is precisely the _desired length_ amount of bytes longer than the pointer to `EXEFilename`. This allows us simply to subtract one from the other to get the desired size. 
 
 All this said, and assuming `CatStrings` will take the parameters in order (`StringA Character Count`, `StringA`, `StringB Character Count`, `StringB`, `Result Character Count`, `Result`), we can draft the following code:
 
@@ -267,11 +267,11 @@ CatStrings(OnePastLastSlash - EXEFilename, EXEFilename,
 ~~~~~~~ 
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Calculating full path of the game copy DLL.]
 
-Speaking of `CatStrings`, what we'll make is probably the worst possible implementation of string concatenation routine. However, it's fast to write and easy to wrap your head around so it'll do for our purposes. Besides, this is all developer-only code: if you needed to write a string processing routine for the game, we'd definitely spend more effort on this.
+Speaking of `CatStrings`, what we'll make is probably the worst possible implementation of a string concatenation routine. However, it's fast to write and easy to wrap your head around to do for our purposes. Besides, this is all developer-only code: if you needed to write a string processing routine for the game, we'd definitely spend more effort on this.
 
-As we said, we have Source A, Source B, Destination and the respective character counts. We'll simply iterate over source A until we reach its count copying its character over, then do the same thing with source B. Finally, we'll add the null terminator. 
+We have Source A, Source B, Destination, and the respective character counts. We'll simply iterate over source A until we reach its count copying its character over, then do the same thing with source B. Finally, we'll add the null terminator. 
 
-If you notice, we won't be doing anything with the character count of the destination buffer. Ideally we'd need to validate that we can fit both strings inside it, but for now we will just trust this thing works. Hey, we'll even drop a TODO for it!
+If you notice, we won't be doing anything with the character count of the destination buffer. Ideally, we'd need to validate that we can fit both strings inside it, but we will just trust this thing works for now. Hey, we'll even drop a TODO for it!
 
 ~~~~~~~ C++ add
 internal void
@@ -303,7 +303,7 @@ CatStrings(size_t SourceACount, char *SourceA,
 
 Hurray, we have the working strings containing the full path of our DLLs! Let's fix our code to make use of them.
 
-First of all, we need to pass both the `SourceDLLName` and `TempDLLName` to `Win32LoadGameCode` instead of defining them directly in the code:
+First, we need to pass both the `SourceDLLName` and the `TempDLLName` to `Win32LoadGameCode` instead of defining them directly in the code:
 
 ~~~~~~~ C++
 internal win32_game_code
@@ -350,13 +350,13 @@ while (GlobalRunning)
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Using full file paths.]
 
-If you followed along so far, you should be good and compilable. You can finally boot up your debugger, run the game and edit its various features in _almost_ real time. Try it now, by changing the value of `Pixel` inside `handmade.cpp > RenderWeirdGradient` and recompiling the game without exiting!
+If you followed along so far, you should be good and compilable. You can finally boot up your debugger, run the game and edit its various features _almost_ real-time. Try it now by changing the value of `Pixel` inside `handmade.cpp > RenderWeirdGradient` and recompiling the game without exiting!
 
 # Remove Delay between Reloads
 
-At this point we still flat-out reload the game every 4 seconds. We don't really want this. If we make the change, we want it to appear the moment we hit "compile" button. Instantaneously, immediately, right away.
+At this point, we still flat-out reload the game every 4 seconds. We don't really want this. If we make a change, we want it to appear whenever we hit the "compile" button. Instantaneously, immediately, right away.
 
-The way of achieving this that we will adopt is comparing the last write time of the source DLL. If the last write time changed, reload the DLL. This can be done easily using Windows API.
+The way of achieving this that we will adopt is comparing the last write time of the source DLL. If it changed, reload the DLL. This can be done easily, using Windows API.
 
 ### Get Last Write Time
 
@@ -374,9 +374,9 @@ HANDLE FindFirstFileA(
 
 We're after this find data. Among other things, it contains `FILETIME` of `ftLastWriteTime` that we can store and use for comparison.
 
-One thing to remember that, while we can work with the find data directly, we still get the handle to the file. We must remember to close the handle using [FindClose][] function. 
+One thing to remember that while we can work with the find data directly, we still get the handle to the file. We must not forget to close the handle using the [FindClose][] function. 
 
-Let's write a quick helper function so that we never forget what to do. This function will take a filename and return the `FILETIME`. You can find it below; hopefully it's everything that the function does is clear to you by now.
+Let's write a quick helper function so that we never forget what to do. This function will take a filename and return the `FILETIME`. You can find it below; hopefully everything that it does is clear to you by now.
 
 ~~~~~~~ C++ add
 inline FILETIME
@@ -404,7 +404,7 @@ Win32LoadGameCode(char *SourceDLLName, char *TempDLLName)
 
 ## Store the Last Write Time
 
-In order to compare the write times, we need to store the last write time first. We have our `win32_game_code` structure; we could expand it to do so. 
+To compare the write times, we need to store the last write time first. We have our `win32_game_code` structure; we could expand it to do so. 
 
 ~~~~~~~ C++
 struct win32_game_code
@@ -448,7 +448,7 @@ Win32LoadGameCode(char *SourceDLLName, char *TempDLLName)
 
 ## Remove Latency
 
-So far, we haven't done any changes to the core functionality. We're still latent. However, we're now in position to fix that. With one fel swoop we can get rid of the `LoadCounter` and look at the write time instead. If the current write time and the stored write times are not equal, we reload the code. 
+So far, we haven't made any changes to the core functionality. We're still latent. However, we're now in a position to fix that. With one fell swoop, we can get rid of the `LoadCounter` and look at the write time instead. If the current write time and the stored write times are not equal, we reload the code. 
 
 ~~~~~~~ C++
 win32_game_code Game = Win32LoadGameCode(SourceGameCodeDLLFullPath, 
@@ -503,11 +503,11 @@ And this is all there's to it. If you compile the platform code now, you will se
 
 # Recap 
 
-All of what we've done today probably won't make it into the final game we ship. However, it will help us the developer along the way to make it happen.
+All of what we've done today probably won't make it into the final game we ship. However, it will help us, the developer, along the way to make it happen.
 
-You might have noticed that we made all of this almost trivially, by just moving some things around. It comes as a result of architecturing our code well: separating platform and cross-platform code, memory handling, etc. This comes as a result of an approach known as _semantic compression_, and you can read more about it [here][semantic compression].
+You might have noticed that we made all of this almost trivially by just moving some things around. It comes from defining our code architecture well: separating platform and cross-platform code, memory handling, etc. This comes from an approach known as _semantic compression_, and you can read more about it [here][semantic compression].
 
-You will see next time how a bunch of other decisions we made in the past will prove useful.
+Next time, you will see how many other decisions we made in the past will prove helpful.
 
 # Programming Notions 
 
@@ -515,7 +515,7 @@ You will see next time how a bunch of other decisions we made in the past will p
 
 Metaprogramming is writing programs that write programs. In C specifically, it is a viable alternative for some missing features (like listing possible members of a struct).
 
-In its most basic form, a meta program looks something like this: 
+In its most basic form, a meta-program looks something like this: 
 
 ~~~~~~~ C++
 #include <stdio.h>
@@ -529,7 +529,7 @@ int main (int argc, char **argv)
 }
 ~~~~~~~
 
-That's it. First you compile this program, run it, it will write you the code of the `out.cpp` so you can compile that. Of course, in its current shape such a program wouldn't do anything special, but as you make it more and more complex things will start getting interesting.
+That's it. First, you compile this program, run it, it will write you `out.cpp` so you can compile that. Of course, such a program wouldn't do anything special in its current shape, but as you expand it more and more with complex functionality, things will start getting interesting.
 
 # Navigation 
 
