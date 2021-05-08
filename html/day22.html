@@ -46,7 +46,6 @@ Yesterday we laid down the foundation for live code editing. However, there are 
 <a href="#navigation" class="level1"><span class="tocNumber">6&nbsp; </span>Navigation</a><br/>
 </p></div><a class="target" name="variablepdbname">&nbsp;</a><a class="target" name="variablepdbname">&nbsp;</a><a class="target" name="toc1">&nbsp;</a><h1>Variable PDB Name</h1>
 
-<a class="target" name="addabilitytoeditdllpdbname">&nbsp;</a><a class="target" name="variablepdbname/addabilitytoeditdllpdbname">&nbsp;</a><a class="target" name="toc1.1">&nbsp;</a><h2>Add Ability to Edit DLL PDB Name</h2>
 <p>
 
 
@@ -69,13 +68,23 @@ First of all, whenever you recompile a program (be it executable or a DLL), the 
 
 </p><p>
 
-When compiling, all of the potential files should be available for writing. We already tried to circumvent this issue by copying handmade.dll instead of loading it directly. However, the .pdb file often remains locked by the debugger until the end of the debugging session.
+  When compiling, all of the potential files should be available for writing. We already tried to circumvent this issue by copying handmade.dll instead of loading it directly. However, the <code>.pdb</code> file often remains locked by the debugger until the end of the debugging session.
 
 </p><p>
 
-That said, we don't have to always name the <code>.pdb</code> file with the same name. What if, instead of handmade.pdb, would it have a completely random name? This way, the debugger can keep all the symbol files it wants open, and we can rewrite the <code>.pdb</code> as many times as we like.
+That said, we don't have to always name the <code>.pdb</code> file with the same name. What if, instead of <code>handmade.pdb</code>, would it have a completely random name? This way, the debugger can keep all the symbol files it wants open, and we can rewrite the <code>.pdb</code> as many times as we like.
 
 </p><p>
+
+<div class="admonition ">Note that the PDB is locked only in a some debuggers and not in the others. For instance, <a href="https://remedybg.itch.io/remedybg">RemedyBG</a> doesn't have this issue while <a href="https://visualstudio.microsoft.com/">Visual Studio</a> does. 
+
+</p><p>
+
+    If your debugger doesn't have this issue, feel free to skip this section entirely.</div>
+
+</p>
+<a class="target" name="addabilitytoeditdllpdbname">&nbsp;</a><a class="target" name="variablepdbname/addabilitytoeditdllpdbname">&nbsp;</a><a class="target" name="toc1.1">&nbsp;</a><h2>Add Ability to Edit DLL PDB Name</h2>
+<p>
 
 As usual, there seem to be multiple solutions to this problem. First of all, a quick search on MSDN shows us that there're two flags related to the <code>.pdb</code> file names: 
 

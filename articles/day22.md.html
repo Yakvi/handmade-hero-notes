@@ -12,8 +12,6 @@ Yesterday we laid down the foundation for live code editing. However, there are 
 
 # Variable PDB Name
 
-## Add Ability to Edit DLL PDB Name
-
 When we left off, we couldn't debug our game correctly. This was for a couple of reasons that really we should address first. Debugging is an essential part of programming, so restoring that functionality is paramount.
 
 First of all, whenever you recompile a program (be it executable or a DLL), the compiler generates multiple files: 
@@ -23,9 +21,16 @@ First of all, whenever you recompile a program (be it executable or a DLL), the 
 * `.obj` is the machine code of your program immediately after compilation. It's passed to the linker, which then proceeds to link this code with other libraries and external symbols as necessary.
 * More relevant to us, `.pdb` (Program DataBase or symbol) files are generated to allow the debugger to properly interact with the program. It will enable things like breakpoints in code or visualizing on which line of your code you're currently paused. Otherwise, you'd need to read the assembly code!
 
-When compiling, all of the potential files should be available for writing. We already tried to circumvent this issue by copying handmade.dll instead of loading it directly. However, the .pdb file often remains locked by the debugger until the end of the debugging session.
+When compiling, all of the potential files should be available for writing. We already tried to circumvent this issue by copying handmade.dll instead of loading it directly. However, the `.pdb` file often remains locked by the debugger until the end of the debugging session.
 
-That said, we don't have to always name the `.pdb` file with the same name. What if, instead of handmade.pdb, would it have a completely random name? This way, the debugger can keep all the symbol files it wants open, and we can rewrite the `.pdb` as many times as we like.
+That said, we don't have to always name the `.pdb` file with the same name. What if, instead of `handmade.pdb`, would it have a completely random name? This way, the debugger can keep all the symbol files it wants open, and we can rewrite the `.pdb` as many times as we like.
+
+!!!
+    Note that the PDB is locked only in a some debuggers and not in the others. For instance, [RemedyBG][] doesn't have this issue while [Visual Studio][msvc] does. 
+
+    If your debugger doesn't have this issue, feel free to skip this section entirely.
+
+## Add Ability to Edit DLL PDB Name
 
 As usual, there seem to be multiple solutions to this problem. First of all, a quick search on MSDN shows us that there're two flags related to the `.pdb` file names: 
 
