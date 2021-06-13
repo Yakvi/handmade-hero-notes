@@ -972,7 +972,7 @@ Now that we have a permanent place for our keyboard, let's think about its state
 In our gamepad code, we were swapping and <code>OldInput</code> and <code>NewInput</code>. We can use the same structures here, as well. Simply copying over the <code>EndedDown</code> value will suffice. While we're at it, we can also get rid of the <code>ZeroController</code> and reinitialize the controller directly. It's a newer C++ feature but it should be pretty simply and straightforward in usage to prevent us any issues.
 
 </p><pre class="listing tilde"><code><div class=" edit"><span class="line">game_controller_input *OldKeyboardController = &amp;OldInput-&gt;Controllers[<span class="hljs-number">0</span>];</span></div><div class=" add"><span class="line">game_controller_input *NewKeyboardController = &amp;NewInput-&gt;Controllers[<span class="hljs-number">0</span>];</span></div><div class=" delete"><span class="line">game_controller_input ZeroController = {};</span></div><div class=" edit"><span class="line">*NewKeyboardController = {};</span></div><div class=" add"><span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> ButtonIndex = <span class="hljs-number">0</span>;</span>
-<span class="line">        ButtonIndex &lt; ArrayCount(OldKeyboardController-&gt;Buttons);</span>
+<span class="line">        ButtonIndex &lt; ArrayCount(NewKeyboardController-&gt;Buttons);</span>
 <span class="line">        ++ButtonIndex)</span>
 <span class="line">{</span>
 <span class="line">    NewKeyboardController-&gt;Buttons[ButtonIndex].EndedDown =</span>
@@ -1028,7 +1028,7 @@ For now, our keyboard will be always connected:
 </p><pre class="listing tilde"><code><span class="line">game_controller_input *OldKeyboardController = &amp;OldInput-&gt;Controllers[<span class="hljs-number">0</span>];</span>
 <span class="line">game_controller_input *NewKeyboardController = &amp;NewInput-&gt;Controllers[<span class="hljs-number">0</span>];</span>
 <span class="line">*NewKeyboardController = {};</span><div class=" add"><span class="line">NewKeyboardController-&gt;IsConnected = <span class="hljs-literal">true</span>;</span></div><span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> ButtonIndex = <span class="hljs-number">0</span>;</span>
-<span class="line">        ButtonIndex &lt; ArrayCount(OldKeyboardController-&gt;Buttons);</span>
+<span class="line">        ButtonIndex &lt; ArrayCount(NewKeyboardController-&gt;Buttons);</span>
 <span class="line">        ++ButtonIndex)</span>
 <span class="line">{</span>
 <span class="line">    NewKeyboardController-&gt;Buttons[ButtonIndex].EndedDown =</span>

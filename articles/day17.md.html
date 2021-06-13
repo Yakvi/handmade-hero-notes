@@ -1115,7 +1115,7 @@ game_controller_input ZeroController = {};
 *NewKeyboardController = {};
 ~~~~~~~ C++ add
 for (int ButtonIndex = 0;
-        ButtonIndex < ArrayCount(OldKeyboardController->Buttons);
+        ButtonIndex < ArrayCount(NewKeyboardController->Buttons);
         ++ButtonIndex)
 {
     NewKeyboardController->Buttons[ButtonIndex].EndedDown =
@@ -1178,7 +1178,7 @@ game_controller_input *NewKeyboardController = &NewInput->Controllers[0];
 NewKeyboardController->IsConnected = true;
 ~~~~~~~ C++
 for (int ButtonIndex = 0;
-        ButtonIndex < ArrayCount(OldKeyboardController->Buttons);
+        ButtonIndex < ArrayCount(NewKeyboardController->Buttons);
         ++ButtonIndex)
 {
     NewKeyboardController->Buttons[ButtonIndex].EndedDown =
