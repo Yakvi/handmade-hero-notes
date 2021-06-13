@@ -917,7 +917,7 @@ GameUpdateAndRender(game_memory* Memory, game_input *Input, game_offscreen_buffe
 internal void
 GameGetSoundSamples(game_memory* Memory, game_sound_output_buffer *SoundBuffer)
 {
-    game_state *GameState = (game_state*)Memory;
+    game_state *GameState = (game_state*)Memory->PermanentStorage
     GameOutputSound(SoundBuffer, GameState->ToneHz);
 }
 ~~~~~~~

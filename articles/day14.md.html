@@ -153,7 +153,7 @@ Enough with the words, let's start coding!
 First thing first, let's imagine how the usage will change in `handmade.cpp`: 
 
 * We will receive memory from our platform in one big `void *` blob.
-* We will then _cast_ it to whatever our `game_state` will be.
+* We will then _cast_ its permanent part to whatever our `game_state` will be.
 * For now this game state only contains what were our `local_persist` variables.
 
 ~~~~~~~ C++
@@ -164,7 +164,7 @@ GameUpdateAndRender(game_memory* Memory, game_input *Input,
                     game_offscreen_buffer* Buffer, game_sound_output_buffer *SoundBuffer)
 {
 ~~~~~~~ C++ add
-    game_state *GameState = (game_state*)Memory;
+    game_state *GameState = (game_state*)Memory->PermanentStorage
 ~~~~~~~ C++
         
 ~~~~~~~ C++ edit
@@ -544,7 +544,7 @@ GameUpdateAndRender(...)
 ~~~~~~~ C++ add
     Assert(sizeof(game_state) <= Memory->PermanentStorageSize);
 ~~~~~~~ C++
-    game_state *GameState = (game_state*)Memory;
+    game_state *GameState = (game_state*)Memory->PermanentStorage
     // ...
 }
 ~~~~~~~

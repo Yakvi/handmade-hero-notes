@@ -257,7 +257,7 @@ First thing first, let's imagine how the usage will change in <code>handmade.cpp
 <li class="asterisk">For now this game state only contains what were our <code>local_persist</code> variables.</li></ul>
 
 </p><pre class="listing tilde"><code><span class="line">internal <span class="hljs-keyword">void</span></span><div class=" edit"><span class="line">GameUpdateAndRender(game_memory* Memory, game_input *Input,       </span></div><span class="line">                    game_offscreen_buffer* Buffer, game_sound_output_buffer *SoundBuffer)</span>
-<span class="line">{</span><div class=" add"><span class="line">    game_state *GameState = (game_state*)Memory;</span></div><span class="line">        </span><div class=" edit"><span class="line">    GameState-&gt;XOffset = <span class="hljs-number">0</span>;</span>
+<span class="line">{</span><div class=" add"><span class="line">    game_state *GameState = (game_state*)Memory-&gt;PermanentStorage;</span></div><span class="line">        </span><div class=" edit"><span class="line">    GameState-&gt;XOffset = <span class="hljs-number">0</span>;</span>
 <span class="line">    GameState-&gt;YOffset = <span class="hljs-number">0</span>;</span>
 <span class="line">    GameState-&gt;ToneHz = <span class="hljs-number">256</span>;</span></div><span class="line">    </span>
 <span class="line">    game_controller_input *Input0 = &amp;Input-&gt;Controllers[<span class="hljs-number">0</span>];</span>
@@ -623,7 +623,7 @@ In code, this looks as simple as this:
 
 </p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
 <span class="line"><span class="hljs-title">GameUpdateAndRender</span><span class="hljs-params">(...)</span></span>
-<span class="line"></span>{</span><div class=" add"><span class="line">    Assert(<span class="hljs-keyword">sizeof</span>(game_state) &lt;= Memory-&gt;PermanentStorageSize);</span></div><span class="line">    game_state *GameState = (game_state*)Memory;</span>
+<span class="line"></span>{</span><div class=" add"><span class="line">    Assert(<span class="hljs-keyword">sizeof</span>(game_state) &lt;= Memory-&gt;PermanentStorageSize);</span></div><span class="line">    game_state *GameState = (game_state*)Memory-&gt;PermanentStorage</span>
 <span class="line">    <span class="hljs-comment">// ...</span></span>
 <span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;12:</b> <file>[handmade.cpp]</file> Adding our first assertion.</div></center>
 <p>

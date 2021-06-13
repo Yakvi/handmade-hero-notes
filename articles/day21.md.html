@@ -1131,7 +1131,7 @@ GameOutputSound(game_state *GameState, game_sound_output_buffer *SoundBuffer, in
 
 GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
 {
-    game_state *GameState = (game_state*)Memory;
+    game_state *GameState = (game_state*)Memory->PermanentStorage
 ~~~~~~~ C++ edit
     GameOutputSound(GameState, SoundBuffer, GameState->ToneHz);
 ~~~~~~~ C++

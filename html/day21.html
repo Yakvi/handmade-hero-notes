@@ -1153,7 +1153,7 @@ Now we can change our <code>GameOutputSound</code> code to actually use the corr
 <span class="line"></span>
 <span class="line">GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)</span>
 <span class="line">{</span>
-<span class="line">    game_state *GameState = (game_state*)Memory;</span><div class=" edit"><span class="line">    GameOutputSound(GameState, SoundBuffer, GameState-&gt;ToneHz);</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;26:</b> <file>[handmade.cpp]</file> Using <code>tSine</code> stored in the game state.</div></center>
+<span class="line">    game_state *GameState = (game_state*)Memory-&gt;PermanentStorage</span><div class=" edit"><span class="line">    GameOutputSound(GameState, SoundBuffer, GameState-&gt;ToneHz);</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;26:</b> <file>[handmade.cpp]</file> Using <code>tSine</code> stored in the game state.</div></center>
 <p>
 
 

@@ -999,7 +999,7 @@ Now, we shall look at what is happening inside <code>handmade.cpp</code>. Lookin
 <span class="line"></span><div class=" add"><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
 <span class="line"><span class="hljs-title">GameGetSoundSamples</span><span class="hljs-params">(game_memory* Memory, game_sound_output_buffer *SoundBuffer)</span></span>
 <span class="line"></span>{</span>
-<span class="line">    game_state *GameState = (game_state*)Memory;</span>
+<span class="line">    game_state *GameState = (game_state*)Memory-&gt;PermanentStorage</span>
 <span class="line">    GameOutputSound(SoundBuffer, GameState-&gt;ToneHz);</span>
 <span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;23:</b> <file>[win32_handmade.cpp]</file> Defining <code>GameGetSoundSamples</code>.</div></center>
 <p>
