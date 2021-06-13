@@ -107,7 +107,7 @@ This was a forced solution for us to keep the feature parity with our initial im
 </p><pre class="listing tilde"><code><span class="line">internal <span class="hljs-keyword">void</span></span><div class=" edit"><span class="line">GameUpdateAndRender(game_offscreen_buffer* Buffer, game_sound_output_buffer* SoundBuffer)</span></div><span class="line">{</span><div class=" add"><span class="line">    local_persist <span class="hljs-keyword">int</span> XOffset = <span class="hljs-number">0</span>;</span>
 <span class="line">    local_persist <span class="hljs-keyword">int</span> YOffset = <span class="hljs-number">0</span>;</span>
 <span class="line">    local_persist <span class="hljs-keyword">int</span> ToneHz = <span class="hljs-number">256</span>;</span></div><span class="line"></span>
-<span class="line">    GameSoundOutput(SoundBuffer, ToneHz);</span>
+<span class="line">    GameOutputSound(SoundBuffer, ToneHz);</span>
 <span class="line">    RenderWeirdGradient(Buffer, XOffset, YOffset);</span>
 <span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;1:</b> <file>[handmade.cpp]</file> Storing input-related parameters locally.</div></center>
 <p>
@@ -271,7 +271,7 @@ At this point we simply have to remember that this implementation of the input i
 <span class="line">{</span>
 <span class="line">    <span class="hljs-comment">// NOTE(casey): Use digital movement tuning</span></span>
 <span class="line">}</span></div><span class="line"></span>
-<span class="line">GameSoundOutput(SoundBuffer, ToneHz);</span>
+<span class="line">GameOutputSound(SoundBuffer, ToneHz);</span>
 <span class="line">RenderWeirdGradient(Buffer, XOffset, YOffset);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;6:</b> <file>[handmade.cpp > GameUpdateAndRender]</file>. Writing Usage Code First.</div></center>
 <p>
 

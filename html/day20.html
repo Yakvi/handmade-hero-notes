@@ -994,13 +994,13 @@ Now, we shall look at what is happening inside <code>handmade.cpp</code>. Lookin
 
 </p><pre class="listing tilde"><code><span class="line">internal <span class="hljs-keyword">void</span></span><div class=" edit"><span class="line">GameUpdateAndRender(game_memory* Memory, game_input *Input, game_offscreen_buffer* Buffer)</span></div><span class="line">{</span>
 <span class="line">    <span class="hljs-comment">// ... </span></span>
-<span class="line">    </span><div class=" delete"><span class="line">    GameSoundOutput(SoundBuffer, GameState-&gt;ToneHz);</span></div><span class="line">    RenderWeirdGradient(Buffer, GameState-&gt;XOffset, GameState-&gt;YOffset);</span>
+<span class="line">    </span><div class=" delete"><span class="line">    GameOutputSound(SoundBuffer, GameState-&gt;ToneHz);</span></div><span class="line">    RenderWeirdGradient(Buffer, GameState-&gt;XOffset, GameState-&gt;YOffset);</span>
 <span class="line">}</span>
 <span class="line"></span><div class=" add"><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
 <span class="line"><span class="hljs-title">GameGetSoundSamples</span><span class="hljs-params">(game_memory* Memory, game_sound_output_buffer *SoundBuffer)</span></span>
 <span class="line"></span>{</span>
 <span class="line">    game_state *GameState = (game_state*)Memory;</span>
-<span class="line">    GameSoundOutput(SoundBuffer, GameState-&gt;ToneHz);</span>
+<span class="line">    GameOutputSound(SoundBuffer, GameState-&gt;ToneHz);</span>
 <span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;23:</b> <file>[win32_handmade.cpp]</file> Defining <code>GameGetSoundSamples</code>.</div></center>
 <p>
 
@@ -1494,7 +1494,7 @@ This is due to the loss of precision of the floating-point value. It turns out t
 <span class="line"></span><div class=" add"><span class="line"><span class="hljs-keyword">if</span> (tSine &gt; <span class="hljs-number">2.0f</span> * Pi32)</span>
 <span class="line">{</span>
 <span class="line">    tSine -= <span class="hljs-number">2.0f</span> * Pi32;</span>
-<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;42:</b> <file>[handmade.cpp > GameSoundOutput]</file> Normalizing <code>tSine</code>.</div></center>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;42:</b> <file>[handmade.cpp > GameOutputSound]</file> Normalizing <code>tSine</code>.</div></center>
 
 <a class="target" name="navigation">&nbsp;</a><a class="target" name="navigation">&nbsp;</a><a class="target" name="toc7">&nbsp;</a><h1>Navigation</h1>
 <p>

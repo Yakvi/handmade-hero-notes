@@ -272,7 +272,7 @@ First thing first, let's imagine how the usage will change in <code>handmade.cpp
 <span class="line">    </span>
 <span class="line">    <span class="hljs-keyword">if</span>(Input0-&gt;Down.EndedDown)</span>
 <span class="line">    {</span><div class=" edit"><span class="line">        GameState-&gt;XOffset += <span class="hljs-number">1</span>;</span></div><span class="line">    }</span>
-<span class="line">    </span><div class=" edit"><span class="line">    GameSoundOutput(SoundBuffer, GameState-&gt;ToneHz);</span>
+<span class="line">    </span><div class=" edit"><span class="line">    GameOutputSound(SoundBuffer, GameState-&gt;ToneHz);</span>
 <span class="line">    RenderWeirdGradient(Buffer, GameState-&gt;XOffset, GameState-&gt;YOffset);</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;1:</b> <file>[handmade.cpp]</file>. Writing usage code first.</div></center>
 <p>
 

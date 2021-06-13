@@ -908,7 +908,7 @@ GameUpdateAndRender(game_memory* Memory, game_input *Input, game_offscreen_buffe
     // ... 
     
 ~~~~~~~ C++ delete
-    GameSoundOutput(SoundBuffer, GameState->ToneHz);
+    GameOutputSound(SoundBuffer, GameState->ToneHz);
 ~~~~~~~ C++
     RenderWeirdGradient(Buffer, GameState->XOffset, GameState->YOffset);
 }
@@ -918,7 +918,7 @@ internal void
 GameGetSoundSamples(game_memory* Memory, game_sound_output_buffer *SoundBuffer)
 {
     game_state *GameState = (game_state*)Memory;
-    GameSoundOutput(SoundBuffer, GameState->ToneHz);
+    GameOutputSound(SoundBuffer, GameState->ToneHz);
 }
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Defining `GameGetSoundSamples`.]
@@ -1517,7 +1517,7 @@ if (tSine > 2.0f * Pi32)
     tSine -= 2.0f * Pi32;
 }
 ~~~~~~~
-[Listing [x]: <file>[handmade.cpp > GameSoundOutput]</file> Normalizing `tSine`.]
+[Listing [x]: <file>[handmade.cpp > GameOutputSound]</file> Normalizing `tSine`.]
 
 # Navigation 
 

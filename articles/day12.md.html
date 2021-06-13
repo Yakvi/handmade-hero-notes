@@ -46,7 +46,7 @@ GameUpdateAndRender(game_offscreen_buffer* Buffer, int XOffset, int YOffset)
 {
 ~~~~~~~ C++ add
     // TODO(casey): Allow sample offsets here for more robust platform options
-    GameSoundOutput(SoundBuffer, SampleCountToOutput);
+    GameOutputSound(SoundBuffer, SampleCountToOutput);
 ~~~~~~~ C++
     RenderWeirdGradient(Buffer, XOffset, YOffset);
 }
@@ -55,7 +55,7 @@ GameUpdateAndRender(game_offscreen_buffer* Buffer, int XOffset, int YOffset)
 
 ## Port Sine Wave Code
 
-Of course, we don't have a function called `GameSoundOutput` yet; Let's create one!
+Of course, we don't have a function called `GameOutputSound` yet; Let's create one!
 
 In `win32_handmade.cpp`, we only use the sound system to output the sine wave. The code responsible for sine wave sample generation is fairly straightforward: 
 
@@ -80,11 +80,11 @@ for (DWORD SampleIndex = 0;
 
 We can easily take this code and port it over to become cross-platform. Here's how we're going to approach it:
 
-1. We'll define function `GameSoundOutput` inside `handmade.cpp`. As we said, it will take a `SoundBuffer`, which for now we can define to be some `game_sound_output_buffer *` and an `int SampleCountToOutput`. Inside, we'll paste the code above. Don't eliminate the code from `win32_handmade.cpp`! We'll return to it in a minute.
+1. We'll define function `GameOutputSound` inside `handmade.cpp`. As we said, it will take a `SoundBuffer`, which for now we can define to be some `game_sound_output_buffer *` and an `int SampleCountToOutput`. Inside, we'll paste the code above. Don't eliminate the code from `win32_handmade.cpp`! We'll return to it in a minute.
 
 ~~~~~~~ C++ add
 internal void
-GameSoundOutput(game_sound_output_buffer *SoundBuffer, int SampleCountToOutput)
+GameOutputSound(game_sound_output_buffer *SoundBuffer, int SampleCountToOutput)
 {
     s16 *SampleOut = (s16 *)Region1;
     DWORD Region1SampleCount = Region1Size / SoundOutput->BytesPerSample;
@@ -107,11 +107,11 @@ GameSoundOutput(game_sound_output_buffer *SoundBuffer, int SampleCountToOutput)
 internal void
 GameUpdateAndRender(game_offscreen_buffer* Buffer, int XOffset, int YOffset)
 {
-    GameSoundOutput(SoundBuffer, SampleCountToOutput);
+    GameOutputSound(SoundBuffer, SampleCountToOutput);
     RenderWeirdGradient(Buffer, XOffset, YOffset);
 }
 ~~~~~~~
-[Listing [x]: <file>[handmade.cpp]</file> Introducing `GameSoundOutput` and populating it with the code from `Win32FillSoundBuffer`.]
+[Listing [x]: <file>[handmade.cpp]</file> Introducing `GameOutputSound` and populating it with the code from `Win32FillSoundBuffer`.]
 
 2. We need to make some changes to this code to make it cross-platform. 
     * `SampleOut` will be coming from `SoundBuffer`.
@@ -124,7 +124,7 @@ This will result in the following function:
 
 ~~~~~~~ C++
 internal void
-GameSoundOutput(game_sound_output_buffer *SoundBuffer, int SampleCountToOutput)
+GameOutputSound(game_sound_output_buffer *SoundBuffer, int SampleCountToOutput)
 {
 ~~~~~~~ C++ add
     local_persist f32 tSine;
@@ -157,7 +157,7 @@ GameSoundOutput(game_sound_output_buffer *SoundBuffer, int SampleCountToOutput)
     }
 }
 ~~~~~~~
-[Listing [x]: <file>[handmade.cpp]</file> Simplifying `GameSoundOutput`.]
+[Listing [x]: <file>[handmade.cpp]</file> Simplifying `GameOutputSound`.]
 
 We still have that `WavePeriod` that we were getting from the `SoundOutput` structure. Now, if you think about it, wave period is referring to our test code of the sine wave. We were calculating it in the following manner: 
 
@@ -195,7 +195,7 @@ for (DWORD SampleIndex = 0;
 ~~~~~~~ C++
 }
 ~~~~~~~
-[Listing [x]: <file>[handmade.cpp > GameSoundOutput]</file> Finalizing `GameSoundOutput`.]
+[Listing [x]: <file>[handmade.cpp > GameOutputSound]</file> Finalizing `GameOutputSound`.]
 
 !!! Tip
     This is a good example of why we said we want to write the usage code first. Simply by writing the usage code you can already tell what the API should provide, and in which manner. And you don't have to guess or presuppose, you just know because that's what you need.
@@ -241,7 +241,7 @@ struct game_sound_output_buffer
 ~~~~~~~ C++
 internal void
 ~~~~~~~ C++ edit
-GameSoundOutput(game_sound_output_buffer *SoundBuffer)
+GameOutputSound(game_sound_output_buffer *SoundBuffer)
 ~~~~~~~ C++
 {
     // ... 
@@ -259,7 +259,7 @@ internal void
 GameUpdateAndRender(game_offscreen_buffer* Buffer, int XOffset, int YOffset)
 {
 ~~~~~~~ C++ edit
-    GameSoundOutput(SoundBuffer);
+    GameOutputSound(SoundBuffer);
 ~~~~~~~ C++
     RenderWeirdGradient(Buffer, XOffset, YOffset);
 }
@@ -712,7 +712,7 @@ internal void GameUpdateAndRender(game_offscreen_buffer* Buffer, int XOffset, in
 ~~~~~~~
 [Listing [x]: <file>[handmade.h]</file> Updating `GameUpdateAndRender` signature.]
 
-Then, receive `ToneHz` inside the actual function definition and immediately send it to `GameSoundOutput`: 
+Then, receive `ToneHz` inside the actual function definition and immediately send it to `GameOutputSound`: 
 
 ~~~~~~~ C++
 internal void
@@ -722,19 +722,19 @@ GameUpdateAndRender(game_offscreen_buffer* Buffer, int XOffset, int YOffset,
 ~~~~~~~ C++
 {
 ~~~~~~~ C++ edit
-    GameSoundOutput(SoundBuffer, ToneHz);
+    GameOutputSound(SoundBuffer, ToneHz);
 ~~~~~~~ C++
     RenderWeirdGradient(Buffer, XOffset, YOffset);
 }
 ~~~~~~~
 [Listing [x]: <file>[handmade.cpp]</file> Sending `ToneHz` to the sound generating code.]
 
-Last but not least, update `GameSoundOutput` to actually use the tone!
+Last but not least, update `GameOutputSound` to actually use the tone!
 
 ~~~~~~~ C++
 internal void
 ~~~~~~~ C++ edit
-GameSoundOutput(game_sound_output_buffer *SoundBuffer, int ToneHz)
+GameOutputSound(game_sound_output_buffer *SoundBuffer, int ToneHz)
 ~~~~~~~ C++
 {
     local_persist f32 tSine;

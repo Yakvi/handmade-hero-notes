@@ -1046,7 +1046,7 @@ Let's inspect our sound code inside `handmade.cpp`:
 
 ~~~~~~~ C++
 internal void
-GameSoundOutput(game_sound_output_buffer *SoundBuffer, int ToneHz)
+GameOutputSound(game_sound_output_buffer *SoundBuffer, int ToneHz)
 {
     local_persist f32 tSine;
     s16 ToneVolume = 3000;
@@ -1090,12 +1090,12 @@ struct game_state
 ~~~~~~~
 [Listing [x]: <file>[handmade.h]</file> Updating `game_state` structure.]
 
-Now we can change our `GameSoundOutput` code to actually use the correct `tSine`. We also need to pass the pointer to the game state, which you'll grow to do by default as this course progresses.
+Now we can change our `GameOutputSound` code to actually use the correct `tSine`. We also need to pass the pointer to the game state, which you'll grow to do by default as this course progresses.
 
 ~~~~~~~ C++
 internal void
 ~~~~~~~ C++ edit
-GameSoundOutput(game_state *GameState, game_sound_output_buffer *SoundBuffer, int ToneHz)
+GameOutputSound(game_state *GameState, game_sound_output_buffer *SoundBuffer, int ToneHz)
 ~~~~~~~ C++
 {
 ~~~~~~~ C++ delete
@@ -1133,7 +1133,7 @@ GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
 {
     game_state *GameState = (game_state*)Memory;
 ~~~~~~~ C++ edit
-    GameSoundOutput(GameState, SoundBuffer, GameState->ToneHz);
+    GameOutputSound(GameState, SoundBuffer, GameState->ToneHz);
 ~~~~~~~ C++
 }
 ~~~~~~~

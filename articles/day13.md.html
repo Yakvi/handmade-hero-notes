@@ -54,7 +54,7 @@ GameUpdateAndRender(game_offscreen_buffer* Buffer, game_sound_output_buffer* Sou
     local_persist int ToneHz = 256;
 ~~~~~~~ C++
 
-    GameSoundOutput(SoundBuffer, ToneHz);
+    GameOutputSound(SoundBuffer, ToneHz);
     RenderWeirdGradient(Buffer, XOffset, YOffset);
 }
 ~~~~~~~
@@ -239,7 +239,7 @@ else
 }
 ~~~~~~~ C++
 
-GameSoundOutput(SoundBuffer, ToneHz);
+GameOutputSound(SoundBuffer, ToneHz);
 RenderWeirdGradient(Buffer, XOffset, YOffset);
 ~~~~~~~
 [Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file>. Writing Usage Code First.]
