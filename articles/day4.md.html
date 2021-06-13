@@ -94,7 +94,7 @@ In other words, we are calculating the area of the rectangle $A = x \cdot\ y$. T
 
 ~~~~~~~ C++ add
 int BytesPerPixel = 4;
-int BitmapMemorySize = BytesPerPixel * Width * Height;
+int BitmapMemorySize = BytesPerPixel * (Width * Height);
 ~~~~~~~ C++
 BitmapMemory = ; // TODO allocation
 ~~~~~~~
@@ -134,7 +134,7 @@ As you can see, it returns a simple `void *` (we've seen what void pointers are 
 
 ~~~~~~~ C++
 int BytesPerPixel = 4;
-int BitmapMemorySize = BytesPerPixel * Width * Height;
+int BitmapMemorySize = BytesPerPixel * (Width * Height);
 ~~~~~~~ C++ edit
 BitmapMemory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE); 
 ~~~~~~~
@@ -178,7 +178,7 @@ if (BitmapMemory) // Same as writing (BitmapMemory != 0) or (BitmapMemory != NUL
 }
 ~~~~~~~ C++
 int BytesPerPixel = 4;
-int BitmapMemorySize = BytesPerPixel * Width * Height;
+int BitmapMemorySize = BytesPerPixel * (Width * Height);
 BitmapMemory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE); 
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Allocating Bitmap Memory.]
@@ -354,7 +354,7 @@ BitmapHeight = Height;
 ~~~~~~~ C++
 int BytesPerPixel = 4;
 ~~~~~~~ C++ edit
-int BitmapMemorySize = BytesPerPixel * BitmapWidth * BitmapHeight;
+int BitmapMemorySize = BytesPerPixel * (BitmapWidth * BitmapHeight);
 ~~~~~~~ C++
 // ...
 ~~~~~~~
@@ -973,7 +973,7 @@ Win32ResizeDIBSection(...)
 {
     // ...
     int BytesPerPixel = 4;
-    int BitmapMemorySize = BytesPerPixel * BitmapWidth * BitmapHeight;
+    int BitmapMemorySize = BytesPerPixel * (BitmapWidth * BitmapHeight);
 
     BitmapMemory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 ~~~~~~~ C++ delete
@@ -1009,7 +1009,7 @@ Win32ResizeDIBSection(...)
 ~~~~~~~ C++ edit
     BytesPerPixel = 4;
 ~~~~~~~ C++
-    int BitmapMemorySize = BytesPerPixel * BitmapWidth * BitmapHeight;
+    int BitmapMemorySize = BytesPerPixel * (BitmapWidth * BitmapHeight);
 
     BitmapMemory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     RenderWeirdGradient(0, 0);

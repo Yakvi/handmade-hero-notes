@@ -186,7 +186,7 @@ We now have everything in place to determine the amount of the memory we will ne
 In other words, we are calculating the area of the rectangle \(A = x \cdot\ y\). This gives us the total amount of pixels, and by multiplying by 4 (which is our Bytes per Pixel), we get the final <em class="underscore">Bitmap Memory Size</em>, i.e. \(A = 4x \cdot\ y\). 
 
 </p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-keyword">int</span> BytesPerPixel = <span class="hljs-number">4</span>;</span>
-<span class="line"><span class="hljs-keyword">int</span> BitmapMemorySize = BytesPerPixel * Width * Height;</span></div><span class="line">BitmapMemory = ; <span class="hljs-comment">// TODO allocation</span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;2:</b> <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Calculating buffer size.</div></center>
+<span class="line"><span class="hljs-keyword">int</span> BitmapMemorySize = BytesPerPixel * (Width * Height);</span></div><span class="line">BitmapMemory = ; <span class="hljs-comment">// TODO allocation</span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;2:</b> <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Calculating buffer size.</div></center>
 <p>
 
 
@@ -246,7 +246,7 @@ As you can see, it returns a simple <code>void *</code> (we've seen what void po
 <li class="asterisk"><code>flProtect</code>: another bit field specifying the &ldquo;access priviliges&rdquo;. You can find them <a href="https://docs.microsoft.com/en-us/windows/win32/memory/memory-protection-constants">here</a>. We only want to use the memory as a data bank, so <code>PAGE_READWRITE</code> is sufficient for our purposes.</li></ul>
 
 </p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">int</span> BytesPerPixel = <span class="hljs-number">4</span>;</span>
-<span class="line"><span class="hljs-keyword">int</span> BitmapMemorySize = BytesPerPixel * Width * Height;</span><div class=" edit"><span class="line">BitmapMemory = VirtualAlloc(<span class="hljs-number">0</span>, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE); </span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;3:</b> <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Allocating Bitmap Memory.</div></center>
+<span class="line"><span class="hljs-keyword">int</span> BitmapMemorySize = BytesPerPixel * (Width * Height);</span><div class=" edit"><span class="line">BitmapMemory = VirtualAlloc(<span class="hljs-number">0</span>, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE); </span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;3:</b> <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Allocating Bitmap Memory.</div></center>
 <p>
 
 
@@ -298,7 +298,7 @@ We will call <code>VirtualFree</code> at the beginning of <code>Win32ResizeDIBSe
 <span class="line">    <span class="hljs-comment">// Optionally, you can check if the result of VirtualFree is not zero.</span></span>
 <span class="line">    <span class="hljs-comment">// Print out an error message if it is.</span></span>
 <span class="line">}</span></div><span class="line"><span class="hljs-keyword">int</span> BytesPerPixel = <span class="hljs-number">4</span>;</span>
-<span class="line"><span class="hljs-keyword">int</span> BitmapMemorySize = BytesPerPixel * Width * Height;</span>
+<span class="line"><span class="hljs-keyword">int</span> BitmapMemorySize = BytesPerPixel * (Width * Height);</span>
 <span class="line">BitmapMemory = VirtualAlloc(<span class="hljs-number">0</span>, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE); </span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;4:</b> <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Allocating Bitmap Memory.</div></center>
 
 <a class="target" name="forfuturereference:changememoryprotection">&nbsp;</a><a class="target" name="ourcustombitmapmemoryallocator/forfuturereference:changememoryprotection">&nbsp;</a><a class="target" name="toc2.3">&nbsp;</a><h2>For Future Reference: Change Memory Protection</h2>
@@ -492,7 +492,7 @@ We don't have any of these sizes for now. Let's focus on the bitmap width and he
 <code>BitmapWidth</code> and <code>BitmapHeight</code> will be initialized inside <code>Win32ResizeDIBSection</code>. We can also start using them right away:
 
 </p><pre class="listing tilde"><code><div class=" add"><span class="line">BitmapWidth = Width; </span>
-<span class="line">BitmapHeight = Height; </span></div><span class="line"><span class="hljs-keyword">int</span> BytesPerPixel = <span class="hljs-number">4</span>;</span><div class=" edit"><span class="line"><span class="hljs-keyword">int</span> BitmapMemorySize = BytesPerPixel * BitmapWidth * BitmapHeight;</span></div><span class="line"><span class="hljs-comment">// ...</span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;11:</b> <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Initializing new globals.</div></center>
+<span class="line">BitmapHeight = Height; </span></div><span class="line"><span class="hljs-keyword">int</span> BytesPerPixel = <span class="hljs-number">4</span>;</span><div class=" edit"><span class="line"><span class="hljs-keyword">int</span> BitmapMemorySize = BytesPerPixel * (BitmapWidth * BitmapHeight);</span></div><span class="line"><span class="hljs-comment">// ...</span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;11:</b> <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Initializing new globals.</div></center>
 
 <a class="target" name="windowwidthandheight">&nbsp;</a><a class="target" name="revisitwin32updatewindow/propagatethechangesoutside/windowwidthandheight">&nbsp;</a><a class="target" name="toc3.2.2">&nbsp;</a><h3>Window Width and Height</h3>
 <p>
@@ -1403,7 +1403,7 @@ What can possibly go wrong?
 <span class="line"></span>{</span>
 <span class="line">    <span class="hljs-comment">// ...</span></span>
 <span class="line">    <span class="hljs-keyword">int</span> BytesPerPixel = <span class="hljs-number">4</span>;</span>
-<span class="line">    <span class="hljs-keyword">int</span> BitmapMemorySize = BytesPerPixel * BitmapWidth * BitmapHeight;</span>
+<span class="line">    <span class="hljs-keyword">int</span> BitmapMemorySize = BytesPerPixel * (BitmapWidth * BitmapHeight);</span>
 <span class="line"></span>
 <span class="line">    BitmapMemory = VirtualAlloc(<span class="hljs-number">0</span>, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);</span><div class=" delete"><span class="line">    <span class="hljs-keyword">int</span> Pitch = Width * BytesPerPixel;</span>
 <span class="line">    <span class="hljs-comment">//... </span></span>
@@ -1426,7 +1426,7 @@ Right, we need to pull out <code>BytesPerPixel</code> as well, that's a constant
 <span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
 <span class="line"><span class="hljs-title">Win32ResizeDIBSection</span><span class="hljs-params">(...)</span></span>
 <span class="line"></span>{</span>
-<span class="line">    <span class="hljs-comment">// ...</span></span><div class=" edit"><span class="line">    BytesPerPixel = <span class="hljs-number">4</span>;</span></div><span class="line">    <span class="hljs-keyword">int</span> BitmapMemorySize = BytesPerPixel * BitmapWidth * BitmapHeight;</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span><div class=" edit"><span class="line">    BytesPerPixel = <span class="hljs-number">4</span>;</span></div><span class="line">    <span class="hljs-keyword">int</span> BitmapMemorySize = BytesPerPixel * (BitmapWidth * BitmapHeight);</span>
 <span class="line"></span>
 <span class="line">    BitmapMemory = VirtualAlloc(<span class="hljs-number">0</span>, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);</span>
 <span class="line">    RenderWeirdGradient(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>);</span>

@@ -317,7 +317,7 @@ With this chage, we're levelling up our capabilities, as well! Before we could o
 <span class="line">    Buffer-&gt;Info.bmiHeader.biBitCount = <span class="hljs-number">32</span>;</span>
 <span class="line">    Buffer-&gt;Info.bmiHeader.biCompression = BI_RGB;</span>
 <span class="line">    </span>
-<span class="line">    <span class="hljs-keyword">int</span> BitmapMemorySize = Buffer-&gt;BytesPerPixel * Buffer-&gt;Width * Buffer-&gt;Height;</span>
+<span class="line">    <span class="hljs-keyword">int</span> BitmapMemorySize = Buffer-&gt;BytesPerPixel * (Buffer-&gt;Width * Buffer-&gt;Height);</span>
 <span class="line">    </span>
 <span class="line">    Buffer-&gt;Memory = VirtualAlloc(<span class="hljs-number">0</span>, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);</span></div><span class="line">}</span>
 <span class="line"></span>
