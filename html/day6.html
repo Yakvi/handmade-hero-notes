@@ -699,6 +699,19 @@ Now, someone's machine might not have one <code>Xinput</code> version but have a
 <span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;18:</b> <file>[win32_handmade.cpp]</file> Checking for multiple versions</div></center>
 <p>
 
+Finally, we need to secure the situations where we don't find XInput libraries or where something goes wrong. This is where the stub functions come into play: our game will not simply crash, it will gracefully do nothing. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span>(XInputLibrary)</span>
+<span class="line">{</span>
+<span class="line">    XInputGetState = (x_input_get_state *)GetProcAddress(XInputLibrary, <span class="hljs-string">"XInputGetState"</span>);</span><div class=" add"><span class="line"><span class="hljs-keyword">if</span>(!XInputGetState) { XInputGetState = XInputGetStateStub; }</span></div><span class="line"></span>
+<span class="line">XInputSetState = (x_input_set_state *)GetProcAddress(XInputLibrary, <span class="hljs-string">"XInputSetState"</span>);</span><div class=" add"><span class="line"><span class="hljs-keyword">if</span>(!XInputSetState) { XInputSetState = XInputSetStateStub; }</span></div><span class="line">}</span><div class=" add"><span class="line"><span class="hljs-keyword">else</span></span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// We still don't have any XInputLibrary</span></span>
+<span class="line">    XInputGetState = XInputGetStateStub;</span>
+<span class="line">    XInputSetState = XInputSetStateStub;</span>
+<span class="line">    <span class="hljs-comment">// TODO(casey): Diagnostic</span></span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;19:</b> <file>[win32_handmade.cpp > Win32LoadXInput]</file> Reverting to stubs in case of no result found.</div></center>
+<p>
 
 We are now compiling, but we won't even attempt to load the file unless you ask it to! Simply add the call to <code>Win32LoadXInput</code> somewhere on top of your <code>WinMain</code>: 
 

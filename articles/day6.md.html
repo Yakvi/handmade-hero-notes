@@ -576,6 +576,32 @@ Win32LoadXInput()
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Checking for multiple versions]
 
+Finally, we need to secure the situations where we don't find XInput libraries or where something goes wrong. This is where the stub functions come into play: our game will not simply crash, it will gracefully do nothing. 
+
+~~~~~~~ C++
+if(XInputLibrary)
+{
+    XInputGetState = (x_input_get_state *)GetProcAddress(XInputLibrary, "XInputGetState");
+~~~~~~~ C++ add
+if(!XInputGetState) { XInputGetState = XInputGetStateStub; }
+~~~~~~~ C++
+
+XInputSetState = (x_input_set_state *)GetProcAddress(XInputLibrary, "XInputSetState");
+~~~~~~~ C++ add
+if(!XInputSetState) { XInputSetState = XInputSetStateStub; }
+~~~~~~~ C++
+}
+~~~~~~~ C++ add
+else
+{
+    // We still don't have any XInputLibrary
+    XInputGetState = XInputGetStateStub;
+    XInputSetState = XInputSetStateStub;
+    // TODO(casey): Diagnostic
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32LoadXInput]</file> Reverting to stubs in case of no result found.]
+
 We are now compiling, but we won't even attempt to load the file unless you ask it to! Simply add the call to `Win32LoadXInput` somewhere on top of your `WinMain`: 
 
 ~~~~~~~ C++ 
