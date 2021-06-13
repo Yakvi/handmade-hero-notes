@@ -575,7 +575,7 @@ We hope that you can see what we did there. For each of our two calls:
 
 To make things a bit clearer, let's group the two calls together to map exactly to these steps: 
 
-</p><pre class="listing tilde"><code><div class=" edit"><span class="line"><span class="hljs-comment">// NOTE(casey): XInputGetInputState</span></span>
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line"><span class="hljs-comment">// NOTE(casey): XInputGetState</span></span>
 <span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> X_INPUT_GET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_STATE *pState)</span></span>
 <span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">X_INPUT_GET_STATE</span><span class="hljs-params">(x_input_get_state)</span></span>;</span>
 <span class="line">X_INPUT_GET_STATE(XInputGetStateStub) </span>
@@ -585,7 +585,7 @@ To make things a bit clearer, let's group the two calls together to map exactly 
 <span class="line">global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub;</span>
 <span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> XInputGetState XInputGetState_</span></span>
 <span class="line"></span>
-<span class="line"><span class="hljs-comment">// NOTE(casey): XInputSetInputState</span></span>
+<span class="line"><span class="hljs-comment">// NOTE(casey): XInputSetState</span></span>
 <span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> X_INPUT_SET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_VIBRATION *pVibration)</span></span>
 <span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">X_INPUT_SET_STATE</span><span class="hljs-params">(x_input_set_state)</span></span>;</span>
 <span class="line">X_INPUT_SET_STATE(XInputSetStateStub) </span>

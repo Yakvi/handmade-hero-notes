@@ -437,7 +437,7 @@ We hope that you can see what we did there. For each of our two calls:
 To make things a bit clearer, let's group the two calls together to map exactly to these steps: 
 
 ~~~~~~~ C++ edit
-// NOTE(casey): XInputGetInputState
+// NOTE(casey): XInputGetState
 #define X_INPUT_GET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_STATE *pState)
 typedef X_INPUT_GET_STATE(x_input_get_state);
 X_INPUT_GET_STATE(XInputGetStateStub) 
@@ -447,7 +447,7 @@ X_INPUT_GET_STATE(XInputGetStateStub)
 global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub;
 #define XInputGetState XInputGetState_
 
-// NOTE(casey): XInputSetInputState
+// NOTE(casey): XInputSetState
 #define X_INPUT_SET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_VIBRATION *pVibration)
 typedef X_INPUT_SET_STATE(x_input_set_state);
 X_INPUT_SET_STATE(XInputSetStateStub) 

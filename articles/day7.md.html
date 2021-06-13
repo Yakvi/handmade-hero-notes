@@ -202,7 +202,7 @@ HRESULT WINAPI DirectSoundCreate(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUN
 Let's go ahead and implement the plan above. Immediately after the analagous blocks we made for XInput, we can lay down the following: 
 
 ~~~~~~~ C++
-// NOTE(yakvi): XInputSetInputState
+// NOTE(yakvi): XInputSetState
 #define X_INPUT_SET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_VIBRATION *pVibration)
 typedef X_INPUT_SET_STATE(x_input_set_state);
 X_INPUT_SET_STATE(XInputSetStateStub) { return (ERROR_DEVICE_NOT_CONNECTED); }

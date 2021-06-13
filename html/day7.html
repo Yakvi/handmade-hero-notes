@@ -311,7 +311,7 @@ Let's look at the <a href="https://docs.microsoft.com/en-us/previous-versions/wi
 
 Let's go ahead and implement the plan above. Immediately after the analagous blocks we made for XInput, we can lay down the following: 
 
-</p><pre class="listing tilde"><code><span class="line"><span class="hljs-comment">// NOTE(yakvi): XInputSetInputState</span></span>
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-comment">// NOTE(yakvi): XInputSetState</span></span>
 <span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> X_INPUT_SET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_VIBRATION *pVibration)</span></span>
 <span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">X_INPUT_SET_STATE</span><span class="hljs-params">(x_input_set_state)</span></span>;</span>
 <span class="line">X_INPUT_SET_STATE(XInputSetStateStub) { <span class="hljs-keyword">return</span> (ERROR_DEVICE_NOT_CONNECTED); }</span>
