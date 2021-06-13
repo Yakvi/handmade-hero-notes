@@ -390,11 +390,11 @@ Win32GetLastWriteTime(char *Filename)
     FILETIME LastWriteTime = {};
     
     WIN32_FIND_DATA FindData;
-    HANDLE FileHandle = FindFirstFileA(Filename, &FindData);
-    if (FileHandle != INVALID_HANDLE_VALUE)
+    HANDLE FindHandle = FindFirstFileA(Filename, &FindData);
+    if (FindHandle != INVALID_HANDLE_VALUE)
     {
         LastWriteTime = FindData.ftLastWriteTime;
-        FindClose(FileHandle);
+        FindClose(FindHandle);
     }
     
     return (LastWriteTime);

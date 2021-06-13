@@ -459,11 +459,11 @@ Let's write a quick helper function so that we never forget what to do. This fun
 <span class="line">    FILETIME LastWriteTime = {};</span>
 <span class="line">    </span>
 <span class="line">    WIN32_FIND_DATA FindData;</span>
-<span class="line">    HANDLE FileHandle = FindFirstFileA(Filename, &amp;FindData);</span>
-<span class="line">    <span class="hljs-keyword">if</span> (FileHandle != INVALID_HANDLE_VALUE)</span>
+<span class="line">    HANDLE FindHandle = FindFirstFileA(Filename, &amp;FindData);</span>
+<span class="line">    <span class="hljs-keyword">if</span> (FindHandle != INVALID_HANDLE_VALUE)</span>
 <span class="line">    {</span>
 <span class="line">        LastWriteTime = FindData.ftLastWriteTime;</span>
-<span class="line">        FindClose(FileHandle);</span>
+<span class="line">        FindClose(FindHandle);</span>
 <span class="line">    }</span>
 <span class="line">    </span>
 <span class="line">    <span class="hljs-keyword">return</span> (LastWriteTime);</span>
