@@ -263,7 +263,7 @@ We're still compilable, and we still have effectively the same functionality as 
 
 ## Keyboard Input Storage: First Pass
 
-To get things going, let's assign some function to the buttons. Let's say `Escape` kills our game, while for the other buttons we'll mimic our gamepad handling. `Win32ProcessPendingMessages` would receive a controller structure, not dissimilar from what we used for the gamepad. For this purpose we will use another function which we'll call `Win32ProcessKeyboardMessages`. This would do the work of storing the input. 
+To get things going, let's assign some function to the buttons. Let's say `Escape` kills our game, while for the other buttons we'll mimic our gamepad handling. `Win32ProcessPendingMessages` would receive a controller structure, not dissimilar from what we used for the gamepad. For this purpose we will use another function which we'll call `Win32ProcessKeyboardMessage`. This would do the work of storing the input. 
 
 ~~~~~~~ C++
 if (VKCode == 'W')
@@ -281,37 +281,37 @@ else if (VKCode == 'D')
 else if (VKCode == 'Q')
 {
 ~~~~~~~ C++ add
-    Win32ProcessKeyboardMessages(&KeyboardController->LeftShoulder, IsDown);
+    Win32ProcessKeyboardMessage(&KeyboardController->LeftShoulder, IsDown);
 ~~~~~~~ C++
 }
 else if (VKCode == 'E')
 {
 ~~~~~~~ C++ add
-    Win32ProcessKeyboardMessages(&KeyboardController->RightShoulder, IsDown);
+    Win32ProcessKeyboardMessage(&KeyboardController->RightShoulder, IsDown);
 ~~~~~~~ C++
 }
 else if (VKCode == VK_UP)
 {
 ~~~~~~~ C++ add
-    Win32ProcessKeyboardMessages(&KeyboardController->Up, IsDown);
+    Win32ProcessKeyboardMessage(&KeyboardController->Up, IsDown);
 ~~~~~~~ C++
 }
 else if (VKCode == VK_DOWN)
 {
 ~~~~~~~ C++ add
-    Win32ProcessKeyboardMessages(&KeyboardController->Down, IsDown);
+    Win32ProcessKeyboardMessage(&KeyboardController->Down, IsDown);
 ~~~~~~~ C++
 }
 else if (VKCode == VK_LEFT)
 {
 ~~~~~~~ C++ add
-    Win32ProcessKeyboardMessages(&KeyboardController->Left, IsDown);
+    Win32ProcessKeyboardMessage(&KeyboardController->Left, IsDown);
 ~~~~~~~ C++
 }
 else if (VKCode == VK_RIGHT)
 {
 ~~~~~~~ C++ add
-    Win32ProcessKeyboardMessages(&KeyboardController->Right, IsDown);
+    Win32ProcessKeyboardMessage(&KeyboardController->Right, IsDown);
 ~~~~~~~ C++
 }
 else if (VKCode == VK_ESCAPE)
@@ -365,7 +365,7 @@ while (GlobalRunning)
 
 This is a bit wanky, so we'll need to revisit it pretty soon. 
 
-One last thing that's missing is the `Win32ProcessKeyboardMessages` we assumed above. Let's create one based on `Win32ProcessXInputDigitalButton`, except it will be largely simplified: we need to do but a fraction of the work that the latter function does.
+One last thing that's missing is the `Win32ProcessKeyboardMessage` we assumed above. Let's create one based on `Win32ProcessXInputDigitalButton`, except it will be largely simplified: we need to do but a fraction of the work that the latter function does.
 
 ~~~~~~~ C++
 internal void
@@ -379,13 +379,13 @@ Win32ProcessXInputDigitalButton(DWORD XInputButtonState,
 
 ~~~~~~~ C++ add
 internal void
-Win32ProcessKeyboardMessages(game_button_state *NewState, b32 IsDown)
+Win32ProcessKeyboardMessage(game_button_state *NewState, b32 IsDown)
 {
     NewState->EndedDown = IsDown;
     ++NewState->HalfTransitionCount;
 }
 ~~~~~~~ 
-[Listing [x]: <file>[win32_handmade.cpp]</file> Defining `Win32ProcessKeyboardMessages`.]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Defining `Win32ProcessKeyboardMessage`.]
 
 Finally we can compile and run. It... somewhat works. If you repeatedly press the down arrow you will notice offset changing. However, this is less than ideal: we can't zero out everything because the up/down state will be wrong. You need to repeatedly hit the button if you want the game to react to it. That's not how the games work, and we want to be able to hold down a key. This might need requiring more changes. Additionally, right now we're hacking into the existing controller system, and we want a more complete solution.
 
@@ -501,7 +501,7 @@ NewController->MinY = NewController->MaxY = NewController->EndY = Y;
 
 ~~~~~~~ C++
 internal void
-Win32ProcessKeyboardMessages(game_button_state *NewState, b32 IsDown)
+Win32ProcessKeyboardMessage(game_button_state *NewState, b32 IsDown)
 {
     NewState->EndedDown = IsDown;
     ++NewState->HalfTransitionCount;
@@ -875,57 +875,57 @@ Behind all these changes we come out with a free benefit! We can immediately han
 if (VKCode == 'W')
 {
 ~~~~~~~ C++ add
-    Win32ProcessKeyboardMessages(&KeyboardController->MoveUp, IsDown);
+    Win32ProcessKeyboardMessage(&KeyboardController->MoveUp, IsDown);
 ~~~~~~~ C++
 }
 else if (VKCode == 'A')
 {
 ~~~~~~~ C++ add
-    Win32ProcessKeyboardMessages(&KeyboardController->MoveLeft, IsDown);
+    Win32ProcessKeyboardMessage(&KeyboardController->MoveLeft, IsDown);
 ~~~~~~~ C++
 }
 else if (VKCode == 'S')
 {
 ~~~~~~~ C++ add
-    Win32ProcessKeyboardMessages(&KeyboardController->MoveDown, IsDown);
+    Win32ProcessKeyboardMessage(&KeyboardController->MoveDown, IsDown);
 ~~~~~~~ C++
 }
 else if (VKCode == 'D')
 {
 ~~~~~~~ C++ add
-    Win32ProcessKeyboardMessages(&KeyboardController->MoveRight, IsDown);
+    Win32ProcessKeyboardMessage(&KeyboardController->MoveRight, IsDown);
 ~~~~~~~ C++
 }
 else if (VKCode == 'Q')
 {
-    Win32ProcessKeyboardMessages(&KeyboardController->LeftShoulder, IsDown);
+    Win32ProcessKeyboardMessage(&KeyboardController->LeftShoulder, IsDown);
 }
 else if (VKCode == 'E')
 {
-    Win32ProcessKeyboardMessages(&KeyboardController->RightShoulder, IsDown);
+    Win32ProcessKeyboardMessage(&KeyboardController->RightShoulder, IsDown);
 }
 else if (VKCode == VK_UP)
 {
 ~~~~~~~ C++ edit
-    Win32ProcessKeyboardMessages(&KeyboardController->ActionUp, IsDown);
+    Win32ProcessKeyboardMessage(&KeyboardController->ActionUp, IsDown);
 ~~~~~~~ C++
 }
 else if (VKCode == VK_DOWN)
 {
 ~~~~~~~ C++ edit
-    Win32ProcessKeyboardMessages(&KeyboardController->ActionDown, IsDown);
+    Win32ProcessKeyboardMessage(&KeyboardController->ActionDown, IsDown);
 ~~~~~~~ C++
 }
 else if (VKCode == VK_LEFT)
 {
 ~~~~~~~ C++ edit
-    Win32ProcessKeyboardMessages(&KeyboardController->ActionLeft, IsDown);
+    Win32ProcessKeyboardMessage(&KeyboardController->ActionLeft, IsDown);
 ~~~~~~~ C++
 }
 else if (VKCode == VK_RIGHT)
 {
 ~~~~~~~ C++ edit
-    Win32ProcessKeyboardMessages(&KeyboardController->Action, IsDown);
+    Win32ProcessKeyboardMessage(&KeyboardController->Action, IsDown);
 ~~~~~~~ C++
 }
 else if (VKCode == VK_ESCAPE)
@@ -935,13 +935,13 @@ else if (VKCode == VK_ESCAPE)
 else if (VKCode == VK_SPACE)
 {
 ~~~~~~~ C++ edit
-    Win32ProcessKeyboardMessages(&KeyboardController->Start, IsDown);
+    Win32ProcessKeyboardMessage(&KeyboardController->Start, IsDown);
 ~~~~~~~ C++
 }
 ~~~~~~~ C++ add
 else if (VKCode == VK_BACK)
 {
-    Win32ProcessKeyboardMessages(&KeyboardController->Back, IsDown);
+    Win32ProcessKeyboardMessage(&KeyboardController->Back, IsDown);
 }
 ~~~~~~~ 
 [Listing [x]: <file>[win32_handmade.cpp > Win32ProcessPendingMessages]</file> Adding more keyboard buttons.]
@@ -1130,11 +1130,11 @@ Win32ProcessPendingMessages(NewKeyboardController);
 
 Hopefully you can see what's going on here. We still do the full clear of the new state but also preserve the pointer to the previous state and then copy the pieces we're interested in.
 
-Now, when we come in to `Win32ProcessPendingMessages`, we will already have a structure with the previous state preserved. We also want to add an assertion to `Win32ProcessKeyboardMessages` to make sure that the two states are different.
+Now, when we come in to `Win32ProcessPendingMessages`, we will already have a structure with the previous state preserved. We also want to add an assertion to `Win32ProcessKeyboardMessage` to make sure that the two states are different.
 
 ~~~~~~~ C++
 internal void
-Win32ProcessKeyboardMessages(game_button_state *NewState, b32 IsDown)
+Win32ProcessKeyboardMessage(game_button_state *NewState, b32 IsDown)
 {
 ~~~~~~~ C++ add
     Assert(NewState->EndedDown != IsDown);
@@ -1148,7 +1148,7 @@ Win32ProcessKeyboardMessages(game_button_state *NewState, b32 IsDown)
 You can now compile and see that you can keep holding the arrow down key while your gradient will keep scrolling!
 
 !!! Note Why the assertion?
-    You might ask: Why do we even need to do this assertion? Isn't it double work? We already check in `Win32ProcessPendingMessages` that `IsDown != WasDown` before we even call `Win32ProcessKeyboardMessages`. 
+    You might ask: Why do we even need to do this assertion? Isn't it double work? We already check in `Win32ProcessPendingMessages` that `IsDown != WasDown` before we even call `Win32ProcessKeyboardMessage`. 
     
     First, it doesn't cost us anything to add this assertion. During the final build of the game (when we remove `HANDMADE_SLOW` flag from the compiler) the assertions will disappear anyway. But during the development we're future-proofing our code, so that if it does change, we can catch unintended functionality right away. In this case, we want to make sure that our half-transition counts aren't messed up since recording a same event twice might lead to dire consequences in the game. 
 

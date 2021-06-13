@@ -953,7 +953,7 @@ Now we can toggle this paused state on and off by pressing a key, say 'P'. If th
 ~~~~~~~ C++
 else if (VKCode == VK_BACK)
 {
-    Win32ProcessKeyboardMessages(&KeyboardController->Back, IsDown);
+    Win32ProcessKeyboardMessage(&KeyboardController->Back, IsDown);
 }
 ~~~~~~~ C++ add
 #if HANDMADE_INTERNAL

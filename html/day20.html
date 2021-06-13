@@ -1039,7 +1039,7 @@ Now we can toggle this paused state on and off by pressing a key, say 'P'. If th
 
 </p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (VKCode == VK_BACK)</span>
 <span class="line">{</span>
-<span class="line">    Win32ProcessKeyboardMessages(&amp;KeyboardController-&gt;Back, IsDown);</span>
+<span class="line">    Win32ProcessKeyboardMessage(&amp;KeyboardController-&gt;Back, IsDown);</span>
 <span class="line">}</span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> HANDMADE_INTERNAL</span></span>
 <span class="line"><span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (VKCode == <span class="hljs-string">'P'</span>)</span>
 <span class="line">{</span>
