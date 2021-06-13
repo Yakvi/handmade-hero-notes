@@ -6,6 +6,268 @@ _Video Length (including Q&A): [1h46](https://hero.handmade.network/episode/code
 
 (insert intro.md.html here) 
 
+Last time, we achieved instantaneous live code editing, allowing us to edit C code live, and recompile it without having to exit the program. 
+
+Today we'll do something even cooler and more unique. 
+
+~~~~~~~ C++
+struct game_state
+{
+    int ToneHz;
+    int XOffset;
+    int YOffset;
+    
+    f32 tSine;
+    
+~~~~~~~ C++ add
+    int PlayerX;
+    int PlayerY;
+~~~~~~~ C++
+};
+~~~~~~~ 
+[Listing [x]: <file>[handmade.h]</file> .]
+
+
+~~~~~~~ C++
+if(!Memory->IsInitialized)
+{
+    // ...
+    GameState->ToneHz = 256;
+    
+~~~~~~~ C++ add
+    GameState->PlayerX = 100;
+    GameState->PlayerY = 100;
+~~~~~~~ C++
+    
+    Memory->IsInitialized = true;
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Setting up "player" starting location to a random point on screen.]
+
+
+~~~~~~~ C++
+for (int ControllerIndex = 0;
+     ControllerIndex < ArrayCount(Input->Controllers);
+     ++ControllerIndex)
+{
+    // ...
+    
+    if(Controller->ActionDown.EndedDown)
+    {
+        GameState->YOffset += 1;
+    }
+    
+~~~~~~~ C++ add
+    GameState->PlayerX += (int)(4.0f * Controller->StickAverageX);
+    GameState->PlayerY -= (int)(4.0f * Controller->StickAverageY);
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Controlling player movement.]
+
+
+~~~~~~~ C++
+internal void
+RenderWeirdGradient(game_offscreen_buffer *Buffer, int XOffset, int YOffset)
+{
+    // ...
+}
+
+~~~~~~~ C++ add
+internal void
+RenderPlayer(game_offscreen_buffer *Buffer, int PlayerX, int PlayerY)
+{
+    u32 Color = 0xFFFFFFFF;
+    int Top = PlayerY;
+    int Bottom = PlayerY + 10;
+    for (int X = PlayerX;
+         X < PlayerX + 10;
+         ++X)
+    {
+        u8 *Pixel = ((u8 *)Buffer->Memory + 
+                     X * Buffer->BytesPerPixel +
+                     Top * Buffer->Pitch);
+        for (int Y = Top;
+             Y < Bottom;
+             ++Y)
+        {
+            *(u32 *)Pixel = Color;
+            Pixel += Buffer->Pitch;
+        }
+    }
+}
+
+GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
+{
+    // ...     
+    ~~~~~~~ C++
+    RenderWeirdGradient(Buffer, GameState->XOffset, GameState->YOffset);
+    ~~~~~~~ C++ add
+    RenderPlayer(Buffer, GameState->PlayerX, GameState->PlayerY);
+    ~~~~~~~
+}
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> .]
+
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> .]
+
+This will not compile just yet. We don't have `BytesPerPixel` as a part of `game_offscreen_buffer` structure, so we'll need to add it in: 
+
+~~~~~~~ C++
+struct game_offscreen_buffer
+{
+    void *Memory;
+    int Width;
+    int Height;
+    int Pitch;
+~~~~~~~ C++ add
+    int BytesPerPixel;
+~~~~~~~ C++
+};
+~~~~~~~ 
+[Listing [x]: <file>[handmade.h]</file> .]
+
+And fill inside the platform layer: 
+
+~~~~~~~ C++
+game_offscreen_buffer Buffer = {};
+Buffer.Memory = GlobalBackbuffer.Memory;
+Buffer.Width = GlobalBackbuffer.Width;
+Buffer.Height = GlobalBackbuffer.Height;
+Buffer.Pitch = GlobalBackbuffer.Pitch;
+~~~~~~~ C++ add
+Buffer.BytesPerPixel = GlobalBackbuffer.BytesPerPixel;
+~~~~~~~ C++
+Game.UpdateAndRender(&GameMemory, NewInput, &Buffer);
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+![Figure [x]: Our first player.](../media/day23/first_player.jpg) 
+
+!!!
+    If you don't have a controller, you can control your character with your keyboard by adding something like the following: 
+
+    ~~~~~~~ C++
+    Win32ProcessPendingMessages(NewKeyboardController);
+                    
+    if (!GlobalPause)
+    {
+    ~~~~~~~ C++ add
+        if (NewKeyboardController->MoveUp.EndedDown)
+        {
+            NewKeyboardController->StickAverageY = 1.0f;
+        }
+        if (NewKeyboardController->MoveDown.EndedDown)
+        {
+            NewKeyboardController->StickAverageY = -1.0f;
+        }
+        if (NewKeyboardController->MoveLeft.EndedDown)
+        {
+            NewKeyboardController->StickAverageX = -1.0f;
+        }
+        if (NewKeyboardController->MoveRight.EndedDown)
+        {
+            NewKeyboardController->StickAverageX = 1.0f;
+        }
+    ~~~~~~~ C++
+        
+        DWORD MaxControllerCount = XUSER_MAX_COUNT;
+        if(MaxControllerCount > (ArrayCount(NewInput->Controllers) - 1))
+        {
+            MaxControllerCount = (ArrayCount(NewInput->Controllers) - 1);
+        }
+        
+        // ...
+    }
+    ~~~~~~~
+    [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Capturing keyboard input for movement.]
+
+One last thing, we'll crash any time we hit the top or bottom of the screen. Let's throw another hack to prevent it from happening. 
+
+~~~~~~~ C++ add
+u8 *EndOfBuffer = (u8 *)Buffer->Memory + 
+                        Buffer->BytesPerPixel * Buffer->Width +
+                        Buffer->Pitch * Buffer->Height;
+~~~~~~~ C++
+u32 Color = 0xFFFFFFFF;
+int Top = PlayerY;
+int Bottom = PlayerY + 10;
+for (int X = PlayerX;
+        X < PlayerX + 10;
+        ++X)
+{
+    u8 *Pixel = ((u8 *)Buffer->Memory + 
+                    X * Buffer->BytesPerPixel +
+                    Top * Buffer->Pitch);
+    for (int Y = Top;
+            Y < Bottom;
+            ++Y)
+    {
+~~~~~~~ C++ add
+        if ((Pixel >= Buffer->Memory) &&
+            (Pixel < EndOfBuffer))
+        {
+~~~~~~~ C++ 
+            *(u32 *)Pixel = Color;
+            Pixel += Buffer->Pitch;
+~~~~~~~ C++ add
+        }
+~~~~~~~ C++
+    }
+}
+~~~~~~~ 
+[Listing [x]: <file>[handmade.cpp > RenderPlayer]</file> .]
+
+// FIXME: Why does it still crash???
+
+!!! Warning
+    All of this is temporary code for the purposes of finalizing our platform layer. Do not use any of it in your user-facing applications!
+
+As an aside, let's disable the sound. We don't need it for now.
+
+~~~~~~~ C++ add
+#if 0
+~~~~~~~ C++
+        f32 SineValue = sinf(GameState->tSine);
+        s16 SampleValue = (s16)(SineValue * ToneVolume);
+~~~~~~~ C++ add
+#else
+        s16 SampleValue = 0;
+#endif
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameSoundOutput]</file> .]
+
+Let's assume that our "character" jumps whenever we hit action down button. We currently use this button to control the `YOffset` so let's repurpose it.
+
+// FIXME: 13:45
+    
+~~~~~~~ C++ delete
+if(Controller->ActionDown.EndedDown)
+{
+    GameState->YOffset += 1;
+}
+~~~~~~~ C++
+GameState->PlayerX += (int)(4.0f * Controller->StickAverageX);
+GameState->PlayerY -= (int)(4.0f * Controller->StickAverageY);
+~~~~~~~ C++ add
+if(Controller->ActionDown.EndedDown)
+{
+    GameState->PlayerY -= 10;
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> .]
+
+This is all terrible code, by the way. Our character won't even fall down! We can very quickly hack in simple jumping code based on a sine wave. 
+
+
+If we assume however, that we want to go in and fine-tune our jumping algorithm, say, but adding falling down of our character, our workflow would be the following: 
+
+1. Go into the game, find out what you need to tune. 
+2. Implement the change in your code, recompile.
+3. Go back to the game, repeat the action to see whether it was fixed.
+
+That is fine for simple actions like jumping but if you need to do some complex movement it might be quite tedious to remake the action. It would be so great if the game replayed it for us!
+
 ------------------------
 <!-- 
 [Listing [x]: <file>[]</file> .]
@@ -13,26 +275,6 @@ _Video Length (including Q&A): [1h46](https://hero.handmade.network/episode/code
 [Figure [x]: .]
 -->
 ------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # Recap 
