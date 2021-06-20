@@ -4,8 +4,1239 @@
 <link rel="stylesheet" href="../css/html-style.css">
 <link rel="stylesheet" href="../css/style.css">
 
+<span class="md"><p><title>Day 23. Looped Live Code Editing</title><div class="title"> Day 23. Looped Live Code Editing </div>
+
+<div class="afterTitles"></div>
+<em class="underscore">Video Length (including Q&A): <a href="https://hero.handmade.network/episode/code/day023/">1h46</a></em> 
+
+</p><p>
+
+Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with no external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
+
+</p><p>
+
+Last time, we achieved instantaneous live code editing, allowing us to edit C code live, and recompile it without having to exit the program. That's already a great tool to help us on our journey. 
+
+</p><p>
+
+Today we'll do something even cooler and more unique. At the very least, the technique you are about to learn is something that you don't often hear about; it has no big drawbacks and, as you will see, only great benefits. 
+
+</p><p>
+
+Today we'll achieve looped live code editing.
+
+</p>
 <div class="longTOC"><p align="center">
     <span align="right"><a href="day22.html">Day 22</a></span>
     <a href="../index.html"><img src = "../media/logo.png"></a>
     <span align="left"><a href="day24.html">Day 24</a></span>
 </p><p><a href="#" class="tocTop">(Top)</a><br/>
+<a href="#introducethe&ldquo;player&rdquo;" class="level1"><span class="tocNumber">1&nbsp; </span>Introduce the &ldquo;Player&rdquo;</a><br/>
+&nbsp;&nbsp;<a href="#introducethe&ldquo;player&rdquo;/addingjumping" class="level2"><span class="tocNumber">1.1&nbsp; </span>Adding Jumping</a><br/>
+<a href="#definetheobjective" class="level1"><span class="tocNumber">2&nbsp; </span>Define the Objective</a><br/>
+&nbsp;&nbsp;<a href="#definetheobjective/theproblem" class="level2"><span class="tocNumber">2.1&nbsp; </span>The Problem</a><br/>
+&nbsp;&nbsp;<a href="#definetheobjective/doitlikethemusiciansdo" class="level2"><span class="tocNumber">2.2&nbsp; </span>Do It Like the Musicians Do</a><br/>
+<a href="#implementliveloop" class="level1"><span class="tocNumber">3&nbsp; </span>Implement Live Loop</a><br/>
+&nbsp;&nbsp;<a href="#implementliveloop/introducetheplatformstate" class="level2"><span class="tocNumber">3.1&nbsp; </span>Introduce the Platform State</a><br/>
+&nbsp;&nbsp;<a href="#implementliveloop/outlineusage" class="level2"><span class="tocNumber">3.2&nbsp; </span>Outline Usage</a><br/>
+&nbsp;&nbsp;<a href="#implementliveloop/inputrecording" class="level2"><span class="tocNumber">3.3&nbsp; </span>Input Recording</a><br/>
+&nbsp;&nbsp;<a href="#implementliveloop/inputplayback" class="level2"><span class="tocNumber">3.4&nbsp; </span>Input Playback</a><br/>
+<a href="#loopthegamestate" class="level1"><span class="tocNumber">4&nbsp; </span>Loop the Game State</a><br/>
+<a href="#fixthe&ldquo;jump&rdquo;code" class="level1"><span class="tocNumber">5&nbsp; </span>Fix the &ldquo;Jump&rdquo; Code</a><br/>
+<a href="#furthertweaks" class="level1"><span class="tocNumber">6&nbsp; </span>Further Tweaks</a><br/>
+&nbsp;&nbsp;<a href="#furthertweaks/makegamewindowtopmost" class="level2"><span class="tocNumber">6.1&nbsp; </span>Make Game Window Topmost</a><br/>
+&nbsp;&nbsp;<a href="#furthertweaks/makegamewindowsemitransparent" class="level2"><span class="tocNumber">6.2&nbsp; </span>Make Game Window Semitransparent</a><br/>
+<a href="#recap" class="level1"><span class="tocNumber">7&nbsp; </span>Recap</a><br/>
+<a href="#sideconsiderations" class="level1"><span class="tocNumber">8&nbsp; </span>Side Considerations</a><br/>
+&nbsp;&nbsp;<a href="#sideconsiderations/disablesound" class="level2"><span class="tocNumber">8.1&nbsp; </span>Disable Sound</a><br/>
+<a href="#navigation" class="level1"><span class="tocNumber">9&nbsp; </span>Navigation</a><br/>
+</p></div><a class="target" name="introducethe%22player%22">&nbsp;</a><a class="target" name="introducethe&ldquo;player&rdquo;">&nbsp;</a><a class="target" name="toc1">&nbsp;</a><h1>Introduce the &ldquo;Player&rdquo;</h1>
+<p>
+
+
+To better illustrate our objectives, let's add more complexity to our &ldquo;gameplay&rdquo; code. To be fair, we didn't start working on the game proper just yet, we want to finish cleaning up the platform layer first so that not to return to it for a great while. What we have in our platform-independent layer right now&mdash;a simple gradient and a sine wave sound&mdash;only serve to flesh out our platform layer. 
+
+</p><p>
+
+Today's addition will be of no exception. We'll try a simulate the most simple &ldquo;player&rdquo; you can imagine: a small white square which can move based on the user's input. This will be completely throwaway code, something that you can write fast without thinking twice about!
+
+</p><p>
+
+<div class="admonition warning">All of the player code is temporary code for the purposes of finalizing our platform layer. Do not use any of it in your user-facing applications!</div>
+
+</p><p>
+
+In order to draw such a player, we really only need two values: its X and Y coordinates every frame. These can be stored in our <code>game_state</code> so that the player's state is preserved. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_state</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">int</span> ToneHz;</span>
+<span class="line">    <span class="hljs-keyword">int</span> XOffset;</span>
+<span class="line">    <span class="hljs-keyword">int</span> YOffset;</span>
+<span class="line">    </span>
+<span class="line">    f32 tSine;</span>
+<span class="line">    </span><div class=" add"><span class="line">    <span class="hljs-keyword">int</span> PlayerX;</span>
+<span class="line">    <span class="hljs-keyword">int</span> PlayerY;</span></div><span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;1:</b> <file>[handmade.h]</file> Introducing player by saving its position.</div></center>
+<p>
+
+
+Our player should start at some point. It will be a completely arbitrary point, let's say (100,100). We'll throw it in together with the rest of the <code>game_state</code> initialization code.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span>(!Memory-&gt;IsInitialized)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">    GameState-&gt;ToneHz = <span class="hljs-number">256</span>;</span>
+<span class="line">    </span><div class=" add"><span class="line">    GameState-&gt;PlayerX = <span class="hljs-number">100</span>;</span>
+<span class="line">    GameState-&gt;PlayerY = <span class="hljs-number">100</span>;</span></div><span class="line">    </span>
+<span class="line">    Memory-&gt;IsInitialized = <span class="hljs-literal">true</span>;</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;2:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Setting up &ldquo;player&rdquo; starting location.</div></center>
+<p>
+
+
+To control the player, we'll use the values of our Controllers. Input from the X axis of the stick will translate directly into the player's X coordinate, while the Y axis should be inverted first (because otherwise player would go in the opposite sense). We'll also multiply both values by 4 so that the movement is a bit faster.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> ControllerIndex = <span class="hljs-number">0</span>;</span>
+<span class="line">     ControllerIndex &lt; ArrayCount(Input-&gt;Controllers);</span>
+<span class="line">     ++ControllerIndex)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">if</span>(Controller-&gt;ActionDown.EndedDown)</span>
+<span class="line">    {</span>
+<span class="line">        GameState-&gt;YOffset += <span class="hljs-number">1</span>;</span>
+<span class="line">    }</span>
+<span class="line">    </span><div class=" add"><span class="line">    GameState-&gt;PlayerX += (<span class="hljs-keyword">int</span>)(<span class="hljs-number">4.0f</span> * Controller-&gt;StickAverageX);</span>
+<span class="line">    GameState-&gt;PlayerY -= (<span class="hljs-keyword">int</span>)(<span class="hljs-number">4.0f</span> * Controller-&gt;StickAverageY);</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;3:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Controlling player movement.</div></center>
+<p>
+
+
+As of right now, player is just that: two numbers inside the game's data. We don't have anything to visualize it with just yet, no red hat or green shield, so let's just make it happen! We'll add a simple rendering code. 
+
+</p><p>
+
+We can imagine that, in order to render our player, we'll need to loop over several pixels vertically and several pixels horizontally and paint each pixel of a different color. 
+
+</p><p>
+
+We'll call this code immediately after drawing our gradient (not before because otherwise it will be overwritten!).
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">RenderWeirdGradient</span><span class="hljs-params">(game_offscreen_buffer *Buffer, <span class="hljs-keyword">int</span> XOffset, <span class="hljs-keyword">int</span> YOffset)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">RenderPlayer</span><span class="hljs-params">(game_offscreen_buffer *Buffer, <span class="hljs-keyword">int</span> PlayerX, <span class="hljs-keyword">int</span> PlayerY)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> X = Left;</span>
+<span class="line">         X &lt; Right;</span>
+<span class="line">         ++X)</span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> Y = Top;</span>
+<span class="line">             Y &lt; Bottom;</span>
+<span class="line">             ++Y)</span>
+<span class="line">        {</span>
+<span class="line">           <span class="hljs-comment">// Paint the pixel at the X, Y coordinates</span></span>
+<span class="line">        }</span>
+<span class="line">    }</span>
+<span class="line">}</span></div><span class="line"></span>
+<span class="line">GAME_UPDATE_AND_RENDER(GameUpdateAndRender)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ...     </span></span><span class="line">    RenderWeirdGradient(Buffer, GameState-&gt;XOffset, GameState-&gt;YOffset);</span><div class=" add"><span class="line">    RenderPlayer(Buffer, GameState-&gt;PlayerX, GameState-&gt;PlayerY);</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;4:</b> <file>[handmade.cpp]</file> Adding player rendering code.</div></center>
+<p>
+
+
+So, what do we need to render our player? We're essentially drawing a single-tinted square, soo...
+
+</p><p>
+
+<ul>
+<li class="asterisk">We need a color, let's say white. White has RGBA value of 255, 255, 255, 255, i.e. <code>0xFFFFFFFF</code> in hexadecimal. 
+</li>
+<li class="asterisk">We need to calculate the top, bottom, left, and right margins of our square. 
+<ul>
+    <li class="asterisk">Left is, very simply, whatever our <code>PlayerX</code> position is. 
+</li>
+    <li class="asterisk">Top is, accordingly, <code>PlayerY</code>.
+</li>
+    <li class="asterisk">Right is calculated from <code>PlayerX</code>. Let's say we have a square with 10 pixel side, so right will be <code>PlayerX + 10</code>. 
+</li>
+    <li class="asterisk">Bottom is calculated by taking <code>PlayerY</code> and adding 10 to it.</li></ul></li></ul>
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="304" width="448" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 152,64 L 152,240 " style="fill:none;"/>
+<path d="M 320,64 L 320,240 " style="fill:none;"/>
+<path d="M 104,64 L 136,64 " style="fill:none;"/>
+<path d="M 152,64 L 320,64 " style="fill:none;"/>
+<path d="M 112,240 L 136,240 " style="fill:none;"/>
+<path d="M 152,240 L 320,240 " style="fill:none;"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="136" y="4">L</text><text text-anchor="middle" x="144" y="4">e</text><text text-anchor="middle" x="152" y="4">f</text><text text-anchor="middle" x="160" y="4">t</text><text text-anchor="middle" x="304" y="4">R</text><text text-anchor="middle" x="312" y="4">i</text><text text-anchor="middle" x="320" y="4">g</text><text text-anchor="middle" x="328" y="4">h</text><text text-anchor="middle" x="336" y="4">t</text><text text-anchor="middle" x="128" y="20">P</text><text text-anchor="middle" x="136" y="20">l</text><text text-anchor="middle" x="144" y="20">a</text><text text-anchor="middle" x="152" y="20">y</text><text text-anchor="middle" x="160" y="20">e</text><text text-anchor="middle" x="168" y="20">r</text><text text-anchor="middle" x="176" y="20">X</text><text text-anchor="middle" x="288" y="20">P</text><text text-anchor="middle" x="296" y="20">l</text><text text-anchor="middle" x="304" y="20">a</text><text text-anchor="middle" x="312" y="20">y</text><text text-anchor="middle" x="320" y="20">e</text><text text-anchor="middle" x="328" y="20">r</text><text text-anchor="middle" x="336" y="20">X</text><text text-anchor="middle" x="352" y="20">+</text><text text-anchor="middle" x="368" y="20">1</text><text text-anchor="middle" x="376" y="20">0</text><text text-anchor="middle" x="152" y="36">|</text><text text-anchor="middle" x="320" y="36">|</text><text text-anchor="middle" x="56" y="52">T</text><text text-anchor="middle" x="64" y="52">o</text><text text-anchor="middle" x="72" y="52">p</text><text text-anchor="middle" x="40" y="68">P</text><text text-anchor="middle" x="48" y="68">l</text><text text-anchor="middle" x="56" y="68">a</text><text text-anchor="middle" x="64" y="68">y</text><text text-anchor="middle" x="72" y="68">e</text><text text-anchor="middle" x="80" y="68">r</text><text text-anchor="middle" x="88" y="68">Y</text><text text-anchor="middle" x="160" y="84">▉</text><text text-anchor="middle" x="168" y="84">▉</text><text text-anchor="middle" x="176" y="84">▉</text><text text-anchor="middle" x="184" y="84">▉</text><text text-anchor="middle" x="192" y="84">▉</text><text text-anchor="middle" x="200" y="84">▉</text><text text-anchor="middle" x="208" y="84">▉</text><text text-anchor="middle" x="216" y="84">▉</text><text text-anchor="middle" x="224" y="84">▉</text><text text-anchor="middle" x="232" y="84">▉</text><text text-anchor="middle" x="240" y="84">▉</text><text text-anchor="middle" x="248" y="84">▉</text><text text-anchor="middle" x="256" y="84">▉</text><text text-anchor="middle" x="264" y="84">▉</text><text text-anchor="middle" x="272" y="84">▉</text><text text-anchor="middle" x="280" y="84">▉</text><text text-anchor="middle" x="288" y="84">▉</text><text text-anchor="middle" x="296" y="84">▉</text><text text-anchor="middle" x="304" y="84">▉</text><text text-anchor="middle" x="312" y="84">▉</text><text text-anchor="middle" x="160" y="100">▉</text><text text-anchor="middle" x="168" y="100">▉</text><text text-anchor="middle" x="176" y="100">▉</text><text text-anchor="middle" x="184" y="100">▉</text><text text-anchor="middle" x="192" y="100">▉</text><text text-anchor="middle" x="200" y="100">▉</text><text text-anchor="middle" x="208" y="100">▉</text><text text-anchor="middle" x="216" y="100">▉</text><text text-anchor="middle" x="224" y="100">▉</text><text text-anchor="middle" x="232" y="100">▉</text><text text-anchor="middle" x="240" y="100">▉</text><text text-anchor="middle" x="248" y="100">▉</text><text text-anchor="middle" x="256" y="100">▉</text><text text-anchor="middle" x="264" y="100">▉</text><text text-anchor="middle" x="272" y="100">▉</text><text text-anchor="middle" x="280" y="100">▉</text><text text-anchor="middle" x="288" y="100">▉</text><text text-anchor="middle" x="296" y="100">▉</text><text text-anchor="middle" x="304" y="100">▉</text><text text-anchor="middle" x="312" y="100">▉</text><text text-anchor="middle" x="160" y="116">▉</text><text text-anchor="middle" x="168" y="116">▉</text><text text-anchor="middle" x="176" y="116">▉</text><text text-anchor="middle" x="184" y="116">▉</text><text text-anchor="middle" x="192" y="116">▉</text><text text-anchor="middle" x="200" y="116">▉</text><text text-anchor="middle" x="208" y="116">▉</text><text text-anchor="middle" x="216" y="116">▉</text><text text-anchor="middle" x="224" y="116">▉</text><text text-anchor="middle" x="232" y="116">▉</text><text text-anchor="middle" x="240" y="116">▉</text><text text-anchor="middle" x="248" y="116">▉</text><text text-anchor="middle" x="256" y="116">▉</text><text text-anchor="middle" x="264" y="116">▉</text><text text-anchor="middle" x="272" y="116">▉</text><text text-anchor="middle" x="280" y="116">▉</text><text text-anchor="middle" x="288" y="116">▉</text><text text-anchor="middle" x="296" y="116">▉</text><text text-anchor="middle" x="304" y="116">▉</text><text text-anchor="middle" x="312" y="116">▉</text><text text-anchor="middle" x="160" y="132">▉</text><text text-anchor="middle" x="168" y="132">▉</text><text text-anchor="middle" x="176" y="132">▉</text><text text-anchor="middle" x="184" y="132">▉</text><text text-anchor="middle" x="192" y="132">▉</text><text text-anchor="middle" x="200" y="132">▉</text><text text-anchor="middle" x="208" y="132">▉</text><text text-anchor="middle" x="216" y="132">▉</text><text text-anchor="middle" x="224" y="132">▉</text><text text-anchor="middle" x="232" y="132">▉</text><text text-anchor="middle" x="240" y="132">▉</text><text text-anchor="middle" x="248" y="132">▉</text><text text-anchor="middle" x="256" y="132">▉</text><text text-anchor="middle" x="264" y="132">▉</text><text text-anchor="middle" x="272" y="132">▉</text><text text-anchor="middle" x="280" y="132">▉</text><text text-anchor="middle" x="288" y="132">▉</text><text text-anchor="middle" x="296" y="132">▉</text><text text-anchor="middle" x="304" y="132">▉</text><text text-anchor="middle" x="312" y="132">▉</text><text text-anchor="middle" x="160" y="148">▉</text><text text-anchor="middle" x="168" y="148">▉</text><text text-anchor="middle" x="176" y="148">▉</text><text text-anchor="middle" x="184" y="148">▉</text><text text-anchor="middle" x="192" y="148">▉</text><text text-anchor="middle" x="200" y="148">▉</text><text text-anchor="middle" x="208" y="148">▉</text><text text-anchor="middle" x="216" y="148">▉</text><text text-anchor="middle" x="224" y="148">▉</text><text text-anchor="middle" x="232" y="148">▉</text><text text-anchor="middle" x="240" y="148">▉</text><text text-anchor="middle" x="248" y="148">▉</text><text text-anchor="middle" x="256" y="148">▉</text><text text-anchor="middle" x="264" y="148">▉</text><text text-anchor="middle" x="272" y="148">▉</text><text text-anchor="middle" x="280" y="148">▉</text><text text-anchor="middle" x="288" y="148">▉</text><text text-anchor="middle" x="296" y="148">▉</text><text text-anchor="middle" x="304" y="148">▉</text><text text-anchor="middle" x="312" y="148">▉</text><text text-anchor="middle" x="160" y="164">▉</text><text text-anchor="middle" x="168" y="164">▉</text><text text-anchor="middle" x="176" y="164">▉</text><text text-anchor="middle" x="184" y="164">▉</text><text text-anchor="middle" x="192" y="164">▉</text><text text-anchor="middle" x="200" y="164">▉</text><text text-anchor="middle" x="208" y="164">▉</text><text text-anchor="middle" x="216" y="164">▉</text><text text-anchor="middle" x="224" y="164">▉</text><text text-anchor="middle" x="232" y="164">▉</text><text text-anchor="middle" x="240" y="164">▉</text><text text-anchor="middle" x="248" y="164">▉</text><text text-anchor="middle" x="256" y="164">▉</text><text text-anchor="middle" x="264" y="164">▉</text><text text-anchor="middle" x="272" y="164">▉</text><text text-anchor="middle" x="280" y="164">▉</text><text text-anchor="middle" x="288" y="164">▉</text><text text-anchor="middle" x="296" y="164">▉</text><text text-anchor="middle" x="304" y="164">▉</text><text text-anchor="middle" x="312" y="164">▉</text><text text-anchor="middle" x="160" y="180">▉</text><text text-anchor="middle" x="168" y="180">▉</text><text text-anchor="middle" x="176" y="180">▉</text><text text-anchor="middle" x="184" y="180">▉</text><text text-anchor="middle" x="192" y="180">▉</text><text text-anchor="middle" x="200" y="180">▉</text><text text-anchor="middle" x="208" y="180">▉</text><text text-anchor="middle" x="216" y="180">▉</text><text text-anchor="middle" x="224" y="180">▉</text><text text-anchor="middle" x="232" y="180">▉</text><text text-anchor="middle" x="240" y="180">▉</text><text text-anchor="middle" x="248" y="180">▉</text><text text-anchor="middle" x="256" y="180">▉</text><text text-anchor="middle" x="264" y="180">▉</text><text text-anchor="middle" x="272" y="180">▉</text><text text-anchor="middle" x="280" y="180">▉</text><text text-anchor="middle" x="288" y="180">▉</text><text text-anchor="middle" x="296" y="180">▉</text><text text-anchor="middle" x="304" y="180">▉</text><text text-anchor="middle" x="312" y="180">▉</text><text text-anchor="middle" x="160" y="196">▉</text><text text-anchor="middle" x="168" y="196">▉</text><text text-anchor="middle" x="176" y="196">▉</text><text text-anchor="middle" x="184" y="196">▉</text><text text-anchor="middle" x="192" y="196">▉</text><text text-anchor="middle" x="200" y="196">▉</text><text text-anchor="middle" x="208" y="196">▉</text><text text-anchor="middle" x="216" y="196">▉</text><text text-anchor="middle" x="224" y="196">▉</text><text text-anchor="middle" x="232" y="196">▉</text><text text-anchor="middle" x="240" y="196">▉</text><text text-anchor="middle" x="248" y="196">▉</text><text text-anchor="middle" x="256" y="196">▉</text><text text-anchor="middle" x="264" y="196">▉</text><text text-anchor="middle" x="272" y="196">▉</text><text text-anchor="middle" x="280" y="196">▉</text><text text-anchor="middle" x="288" y="196">▉</text><text text-anchor="middle" x="296" y="196">▉</text><text text-anchor="middle" x="304" y="196">▉</text><text text-anchor="middle" x="312" y="196">▉</text><text text-anchor="middle" x="160" y="212">▉</text><text text-anchor="middle" x="168" y="212">▉</text><text text-anchor="middle" x="176" y="212">▉</text><text text-anchor="middle" x="184" y="212">▉</text><text text-anchor="middle" x="192" y="212">▉</text><text text-anchor="middle" x="200" y="212">▉</text><text text-anchor="middle" x="208" y="212">▉</text><text text-anchor="middle" x="216" y="212">▉</text><text text-anchor="middle" x="224" y="212">▉</text><text text-anchor="middle" x="232" y="212">▉</text><text text-anchor="middle" x="240" y="212">▉</text><text text-anchor="middle" x="248" y="212">▉</text><text text-anchor="middle" x="256" y="212">▉</text><text text-anchor="middle" x="264" y="212">▉</text><text text-anchor="middle" x="272" y="212">▉</text><text text-anchor="middle" x="280" y="212">▉</text><text text-anchor="middle" x="288" y="212">▉</text><text text-anchor="middle" x="296" y="212">▉</text><text text-anchor="middle" x="304" y="212">▉</text><text text-anchor="middle" x="312" y="212">▉</text><text text-anchor="middle" x="40" y="228">B</text><text text-anchor="middle" x="48" y="228">o</text><text text-anchor="middle" x="56" y="228">t</text><text text-anchor="middle" x="64" y="228">t</text><text text-anchor="middle" x="72" y="228">o</text><text text-anchor="middle" x="80" y="228">m</text><text text-anchor="middle" x="160" y="228">▉</text><text text-anchor="middle" x="168" y="228">▉</text><text text-anchor="middle" x="176" y="228">▉</text><text text-anchor="middle" x="184" y="228">▉</text><text text-anchor="middle" x="192" y="228">▉</text><text text-anchor="middle" x="200" y="228">▉</text><text text-anchor="middle" x="208" y="228">▉</text><text text-anchor="middle" x="216" y="228">▉</text><text text-anchor="middle" x="224" y="228">▉</text><text text-anchor="middle" x="232" y="228">▉</text><text text-anchor="middle" x="240" y="228">▉</text><text text-anchor="middle" x="248" y="228">▉</text><text text-anchor="middle" x="256" y="228">▉</text><text text-anchor="middle" x="264" y="228">▉</text><text text-anchor="middle" x="272" y="228">▉</text><text text-anchor="middle" x="280" y="228">▉</text><text text-anchor="middle" x="288" y="228">▉</text><text text-anchor="middle" x="296" y="228">▉</text><text text-anchor="middle" x="304" y="228">▉</text><text text-anchor="middle" x="312" y="228">▉</text><text text-anchor="middle" x="16" y="244">P</text><text text-anchor="middle" x="24" y="244">l</text><text text-anchor="middle" x="32" y="244">a</text><text text-anchor="middle" x="40" y="244">y</text><text text-anchor="middle" x="48" y="244">e</text><text text-anchor="middle" x="56" y="244">r</text><text text-anchor="middle" x="64" y="244">Y</text><text text-anchor="middle" x="80" y="244">+</text><text text-anchor="middle" x="96" y="244">1</text><text text-anchor="middle" x="104" y="244">0</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;1:</b> In order to draw the player we need to iterate on each pixel inside this square.</div></center>
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">u32 Color = <span class="hljs-number">0xFFFFFFFF</span>;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">int</span> Left = PlayerX;</span>
+<span class="line"><span class="hljs-keyword">int</span> Right = PlayerX + <span class="hljs-number">10</span>;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">int</span> Top = PlayerY;</span>
+<span class="line"><span class="hljs-keyword">int</span> Bottom = PlayerY + <span class="hljs-number">10</span>;</span>
+<span class="line"></span></div><span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> X = Left;</span>
+<span class="line">        X &lt; Right;</span>
+<span class="line">        ++X)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> Y = Top;</span>
+<span class="line">            Y &lt; Bottom;</span>
+<span class="line">            ++Y)</span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-comment">// Paint the pixel at the X, Y coordinates</span></span>
+<span class="line">    }</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;5:</b> <file>[handmade.cpp > RenderPlayer]</file> Calculating the color and the player margins.</div></center>
+<p>
+
+
+Now comes the tricky part: Finding these pixels inside our buffer memory. Unlike in <code>RenderWeirdGradient</code>, we don't want to repaint the whole buffer, we only want to edit memory in that specific 10&times;10 area. That means that, each time we go on a new iteration of the <code>X</code> loop, we recalculate our Pixel position from scratch as follows: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">We take the pointer to buffer memory as the base (pixel (0, 0)). We'll take the memory on a byte-by-byte basis (counting 1-byte long <code>u8</code>s) to simplify the math.
+</li>
+<li class="asterisk">We add to it our X position. We'll need to multiply it by bytes per pixel to get the correct offset. 
+</li>
+<li class="asterisk">Finally, we move down to the top which is calculated by multiplying our <code>Top</code> value by buffer's <code>Pitch</code>. As a reminder, pitch contains all the bytes of a single row.</li></ul>
+
+</p><p>
+
+When we are iterating on Y values, we'll simply paint the pixel and then move down by <code>Pitch</code> until we reach <code>Bottom</code>.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> X = Left;</span>
+<span class="line">        X &lt; Right;</span>
+<span class="line">        ++X)</span>
+<span class="line">{</span><div class=" add"><span class="line">    u8 *Pixel = ((u8 *)Buffer-&gt;Memory + </span>
+<span class="line">                 X * Buffer-&gt;BytesPerPixel +</span>
+<span class="line">                 Top * Buffer-&gt;Pitch);</span></div><span class="line">    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> Y = Top;</span>
+<span class="line">            Y &lt; Bottom;</span>
+<span class="line">            ++Y)</span>
+<span class="line">    {</span><div class=" add"><span class="line">        *(u32 *)Pixel = Color;</span>
+<span class="line">        Pixel += Buffer-&gt;Pitch;</span></div><span class="line">    }</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;6:</b> <file>[handmade.cpp > RenderPlayer]</file> Accessing and painting the pixels.</div></center>
+<p>
+
+
+There's just one small problem with this. Currently, we don't store <code>BytesPerPixel</code> as a part of <code>game_offscreen_buffer</code> structure. But it's a very quick fix that we can add in right away: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_offscreen_buffer</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">void</span> *Memory;</span>
+<span class="line">    <span class="hljs-keyword">int</span> Width;</span>
+<span class="line">    <span class="hljs-keyword">int</span> Height;</span>
+<span class="line">    <span class="hljs-keyword">int</span> Pitch;</span><div class=" add"><span class="line">    <span class="hljs-keyword">int</span> BytesPerPixel;</span></div><span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;7:</b> <file>[handmade.h]</file> Expanding game render buffer structure.</div></center>
+<p>
+
+
+We can simply initialize <code>BytesPerPixel</code> from the platform backbuffer's <code>BytesPerPixel</code> (because we already store it there): 
+
+</p><pre class="listing tilde"><code><span class="line">game_offscreen_buffer Buffer = {};</span>
+<span class="line">Buffer.Memory = GlobalBackbuffer.Memory;</span>
+<span class="line">Buffer.Width = GlobalBackbuffer.Width;</span>
+<span class="line">Buffer.Height = GlobalBackbuffer.Height;</span>
+<span class="line">Buffer.Pitch = GlobalBackbuffer.Pitch;</span><div class=" add"><span class="line">Buffer.BytesPerPixel = GlobalBackbuffer.BytesPerPixel;</span></div><span class="line">Game.UpdateAndRender(&amp;GameMemory, NewInput, &amp;Buffer);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;8:</b> <file>[win32_handmade.cpp > WinMain]</file> Initializing <code>BytesPerPixel</code> value.</div></center>
+<p>
+
+
+Great! Now we can compile and have a player to control.
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day23/first_player.jpg" target="_blank"><img class="markdeep" src="../media/day23/first_player.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;2:</b> Our first player.</span></center></div></center> 
+
+</p><p>
+
+<div class="admonition ">If you don't have a controller, you can setup keyboard controls in the following manner: 
+
+</p><pre class="listing tilde"><code><span class="line">Win32ProcessPendingMessages(NewKeyboardController);</span>
+<span class="line">                </span>
+<span class="line"><span class="hljs-keyword">if</span> (!GlobalPause)</span>
+<span class="line">{</span><div class=" add"><span class="line">    <span class="hljs-keyword">if</span> (NewKeyboardController-&gt;MoveUp.EndedDown)</span>
+<span class="line">    {</span>
+<span class="line">        NewKeyboardController-&gt;StickAverageY = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">    }</span>
+<span class="line">    <span class="hljs-keyword">if</span> (NewKeyboardController-&gt;MoveDown.EndedDown)</span>
+<span class="line">    {</span>
+<span class="line">        NewKeyboardController-&gt;StickAverageY = <span class="hljs-number">-1.0f</span>;</span>
+<span class="line">    }</span>
+<span class="line">    <span class="hljs-keyword">if</span> (NewKeyboardController-&gt;MoveLeft.EndedDown)</span>
+<span class="line">    {</span>
+<span class="line">        NewKeyboardController-&gt;StickAverageX = <span class="hljs-number">-1.0f</span>;</span>
+<span class="line">    }</span>
+<span class="line">    <span class="hljs-keyword">if</span> (NewKeyboardController-&gt;MoveRight.EndedDown)</span>
+<span class="line">    {</span>
+<span class="line">        NewKeyboardController-&gt;StickAverageX = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">    }</span></div><span class="line">    </span>
+<span class="line">    DWORD MaxControllerCount = XUSER_MAX_COUNT;</span>
+<span class="line">    <span class="hljs-keyword">if</span>(MaxControllerCount &gt; (ArrayCount(NewInput-&gt;Controllers) - <span class="hljs-number">1</span>))</span>
+<span class="line">    {</span>
+<span class="line">        MaxControllerCount = (ArrayCount(NewInput-&gt;Controllers) - <span class="hljs-number">1</span>);</span>
+<span class="line">    }</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;9:</b> <file>[win32_handmade.cpp > WinMain]</file> Capturing keyboard input for movement.</div></center></div>
+
+</p><p>
+
+<p>
+
+
+One last thing, we'll crash any time we hit the top or the bottom of the screen: these pixels are simply out of reach. Let's quickly prevent it from happening. We'll need to calculate the end of buffer value and make sure that the pixel we're accessing is never at the end of buffer or before the beginning of the memory.
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">u8 *EndOfBuffer = (u8 *)Buffer-&gt;Memory + </span>
+<span class="line">                        Buffer-&gt;Pitch * Buffer-&gt;Height;</span></div><span class="line">u32 Color = <span class="hljs-number">0xFFFFFFFF</span>;</span>
+<span class="line"><span class="hljs-keyword">int</span> Top = PlayerY;</span>
+<span class="line"><span class="hljs-keyword">int</span> Bottom = PlayerY + <span class="hljs-number">10</span>;</span>
+<span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> X = PlayerX;</span>
+<span class="line">        X &lt; PlayerX + <span class="hljs-number">10</span>;</span>
+<span class="line">        ++X)</span>
+<span class="line">{</span>
+<span class="line">    u8 *Pixel = ((u8 *)Buffer-&gt;Memory + </span>
+<span class="line">                    X * Buffer-&gt;BytesPerPixel +</span>
+<span class="line">                    Top * Buffer-&gt;Pitch);</span>
+<span class="line">    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> Y = Top;</span>
+<span class="line">            Y &lt; Bottom;</span>
+<span class="line">            ++Y)</span>
+<span class="line">    {</span><div class=" add"><span class="line">        <span class="hljs-keyword">if</span> ((Pixel &gt;= Buffer-&gt;Memory) &amp;&amp;</span>
+<span class="line">            (Pixel &lt; EndOfBuffer))</span>
+<span class="line">        {</span></div><div class=" C++ "><span class="line">            *(u32 *)Pixel = Color;</span>
+<span class="line">            Pixel += Buffer-&gt;Pitch;</span></div><div class=" add"><span class="line">        }</span></div><span class="line">    }</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;10:</b> <file>[handmade.cpp > RenderPlayer]</file> We simply skip the pixels out of bounds.</div></center>
+
+<a class="target" name="addingjumping">&nbsp;</a><a class="target" name="introducethe&ldquo;player&rdquo;/addingjumping">&nbsp;</a><a class="target" name="toc1.1">&nbsp;</a><h2>Adding Jumping</h2>
+<p>
+
+
+One last thing before we arrive to the topic of the day. 
+
+</p><p>
+
+Let's assume that our &ldquo;character&rdquo; jumps whenever we hit <code>ActionDown</code> button (arrow down on keyboard). We currently use this button to control the <code>YOffset</code>, so let's repurpose it.
+
+</p><pre class="listing tilde"><code><div class=" delete"><span class="line"><span class="hljs-keyword">if</span>(Controller-&gt;ActionDown.EndedDown)</span>
+<span class="line">{</span>
+<span class="line">    GameState-&gt;YOffset += <span class="hljs-number">1</span>;</span>
+<span class="line">}</span></div><span class="line">GameState-&gt;PlayerX += (<span class="hljs-keyword">int</span>)(<span class="hljs-number">4.0f</span> * Controller-&gt;StickAverageX);</span>
+<span class="line">GameState-&gt;PlayerY -= (<span class="hljs-keyword">int</span>)(<span class="hljs-number">4.0f</span> * Controller-&gt;StickAverageY);</span><div class=" add"><span class="line"><span class="hljs-keyword">if</span>(Controller-&gt;ActionDown.EndedDown)</span>
+<span class="line">{</span>
+<span class="line">    GameState-&gt;PlayerY -= <span class="hljs-number">10</span>;</span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;11:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Adding our first jump!</div></center>
+<p>
+
+
+<center><div class="image" style=""><a href="../media/day23/jump01.gif" target="_blank"><img class="markdeep" src="../media/day23/jump01.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;3:</b> Our first jump?</span></center></div></center> 
+
+</p><p>
+
+Ok, this isn't good, like it's not even &ldquo;terrible&rdquo;, it's completely unusable. Our character won't even fall down! Maybe that's too much. We can very quickly hack in a simple jumping code based on a sine wave. We'll need to add another persistent element to our <code>GameState</code>. This element will track the current state of the jump: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_state</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">int</span> ToneHz;</span>
+<span class="line">    <span class="hljs-keyword">int</span> XOffset;</span>
+<span class="line">    <span class="hljs-keyword">int</span> YOffset;</span>
+<span class="line">    </span>
+<span class="line">    f32 tSine;</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">int</span> PlayerX;</span>
+<span class="line">    <span class="hljs-keyword">int</span> PlayerY;</span><div class=" add"><span class="line">    f32 tJump;</span></div><span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;12:</b> <file>[handmade.h]</file> <code>tJump</code> is a magic value. Don't use magic values for physics.</div></center>
+<p>
+
+
+Now we can implement the jumping logic. After the initial impulse, <code>tJump</code>'s value will gradually decrease every frame. We'll then pass this value through the sine function which will determine the desired offset. 
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">GameState-&gt;PlayerY -= (<span class="hljs-keyword">int</span>)(<span class="hljs-number">4.0f</span> * Controller-&gt;StickAverageY + <span class="hljs-number">10.0f</span> * sinf(GameState-&gt;tJump));</span></div><span class="line"><span class="hljs-keyword">if</span>(Controller-&gt;ActionDown.EndedDown)</span>
+<span class="line">{</span><div class=" edit"><span class="line">    GameState-&gt;tJump = <span class="hljs-number">1.0</span>;</span></div><span class="line">}</span><div class=" add"><span class="line">GameState-&gt;tJump -= <span class="hljs-number">0.033f</span>;</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;13:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Our character's jump is now governed by a sine wave.</div></center>
+
+<a class="target" name="definetheobjective">&nbsp;</a><a class="target" name="definetheobjective">&nbsp;</a><a class="target" name="toc2">&nbsp;</a><h1>Define the Objective</h1>
+
+<a class="target" name="theproblem">&nbsp;</a><a class="target" name="definetheobjective/theproblem">&nbsp;</a><a class="target" name="toc2.1">&nbsp;</a><h2>The Problem</h2>
+<p>
+
+
+Now this player code still has flaws. There's nothing stopping us from having a new jump while we're &ldquo;in the air&rdquo;; besides, our character still doesn't fall down. (And you never, ever, should base your character movement on sine waves). 
+
+</p><p>
+
+So let's say we want to go in and fine-tune our jumping algorithm. We already have tools which allow us to leave the game running, we can go back to the code saying &ldquo;we will only modify <code>tJump</code> if it's above 0": 
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">GameState-&gt;PlayerY -= (<span class="hljs-keyword">int</span>)(<span class="hljs-number">4.0f</span> * Controller-&gt;StickAverageY);</span></div><div class=" add"><span class="line"><span class="hljs-keyword">if</span> (GameState-&gt;tJump &gt; <span class="hljs-number">0</span>)</span>
+<span class="line">{</span>
+<span class="line">    GameState-&gt;PlayerY += (<span class="hljs-keyword">int</span>)(<span class="hljs-number">10.0f</span> * sinf(GameState-&gt;tJump));</span>
+<span class="line">}</span></div><span class="line"><span class="hljs-keyword">if</span>(Controller-&gt;ActionDown.EndedDown)</span>
+<span class="line">{</span>
+<span class="line">    GameState-&gt;tJump = <span class="hljs-number">1.0</span>;</span>
+<span class="line">}</span>
+<span class="line">GameState-&gt;tJump -= <span class="hljs-number">0.033f</span>;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;14:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Making sure there're no double-jumps.</div></center>
+<p>
+
+
+For instance, after the previous edit we can see that now the &ldquo;jump&rdquo; happens downwards instead of upwards (because of the phase of the sine wave). So we flip back to the editor, flip the sign, recompile, go back to the game and retest: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span> (GameState-&gt;tJump &gt; <span class="hljs-number">0</span>)</span>
+<span class="line">{</span><div class=" edit"><span class="line">    GameState-&gt;PlayerY -= (<span class="hljs-keyword">int</span>)(<span class="hljs-number">10.0f</span> * sinf(GameState-&gt;tJump));</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;15:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Tweak, recompile, and retest.</div></center>
+<p>
+
+
+Hopefully you can see where we're getting at: there's a whole <em class="underscore">process</em> that we need to keep repeating for testing our changes: and it's just a simple jump tuning! Yet we still need to think about falling down, the amplitude, etc. 
+
+</p><p>
+
+Fine-tuning is a potentially a complex and lengthy process, and we want to make it as smooth as possible. In our case, we already can leave the game running, recompile on the fly and continue editing, yet we still need to pick up our controller again and do the jump to test. This is how it looks now:
+
+</p><p>
+
+<ol start=1>
+<li class="number">Go into the game, find out what you need to tune. 
+</li>
+<li class="number">Implement the change in your code
+</li>
+<li class="number">Recompile.
+</li>
+<li class="number">Switch back to the game.
+</li>
+<li class="number">Repeat the action to see whether it was fixed.</li></ol>
+
+</p><p>
+
+Picking up the controller and pressing a couple buttons may be tedious enough, but in a grand scheme of things it's a trivial situation. Imagine that you have to fine-tune something you can't easily replicate in one go, say, death animation of an enemy. You kill the enemy, and now he's gone, so you need to wait for him to respawn, or spawn a new one, or go find a new enemy... These are all the annoyances that you need to think about... 
+
+</p>
+<a class="target" name="doitlikethemusiciansdo">&nbsp;</a><a class="target" name="definetheobjective/doitlikethemusiciansdo">&nbsp;</a><a class="target" name="toc2.2">&nbsp;</a><h2>Do It Like the Musicians Do</h2>
+<p>
+
+
+Why not do it the way the musicians edit their music? Any serious music writing software allows you to write the notes, which will then be automatically reproduced for you, potentially on a loop. You can then go in, implement a quick fix, and go out.
+
+</p><p>
+
+What we're thinking about is a sort of a looped editor, where one can go and record a specific situation: input, world state, everything. After that, the game would be repeating the same action again and again, allowing us to work on it in the meantime.
+
+</p><p>
+
+This might be a daunting idea to face but it turns out it's not that bad! The way we set up our game, implementing such a feature would be quite easy. Setting sound aside for a moment, we only have one function to call: <code>GameUpdateAndRender</code>. This function takes whatever the state of the game memory is, it takes the input from the user, and a buffer to draw its result in. That's it!
+
+</p><p>
+
+So what if we remember whatever our input was? We could then pass it back to the game, the way we did it. By walking down this road, you can imagine setting up a structure to store the input for us. Since we'd be recording input for potentially more than one frame, we'd have an &ldquo;input stream&rdquo; containing input events for each frame and an &ldquo;input count&rdquo; saying how many of those events did we record. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_recorded_input</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">int</span> InputCount;</span>
+<span class="line">    game_input *InputStream;</span>
+<span class="line">};</span></code></pre><center><div class="listingcaption tilde">Hypothetical recorded input structure.</div></center>
+<p>
+
+
+Further still, we know how to read or write files, so we can even potentially preserve these states between sessions! In such case we won't even need any structures to hold additional information for us, we can access such a stream on the fly. 
+
+</p><p>
+
+That is what we're going to do. We'll have all the input data stored in a separate file that, once requested, will be fed back to the game as if it were actual user input. 
+
+</p>
+<a class="target" name="implementliveloop">&nbsp;</a><a class="target" name="implementliveloop">&nbsp;</a><a class="target" name="toc3">&nbsp;</a><h1>Implement Live Loop</h1>
+
+<a class="target" name="introducetheplatformstate">&nbsp;</a><a class="target" name="implementliveloop/introducetheplatformstate">&nbsp;</a><a class="target" name="toc3.1">&nbsp;</a><h2>Introduce the Platform State</h2>
+<p>
+
+
+To get ourselves started, let's define two simple numbers: a recording index and a playing index. These (for now) will serve as the triggers: if the recording index is not zero, we'll do the recording, if the playing index is not zero, we'll start the playback. 
+
+</p><p>
+
+We can define these inside our WinMain as follows: 
+
+</p><pre class="listing tilde"><code><span class="line">HDC DeviceContext = GetDC(Window);</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-keyword">int</span> InputRecordingIndex = <span class="hljs-number">0</span>;</span>
+<span class="line"><span class="hljs-keyword">int</span> InputPlayingIndex = <span class="hljs-number">0</span>;</span></div><span class="line"></span>
+<span class="line"><span class="hljs-comment">// NOTE(casey): Sound test</span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;16:</b> <file>[win32_handmade.cpp > WinMain]</file> Introducing recording and playing indexes.</div></center>
+<p>
+
+
+Even further still, we could package these inside a structure. At this point, we can introduce a structure similar to <code>game_state</code>, a platform-specific struct where we can store all sorts of useful data. It will contain things that wouldn't make sense agglomerating elsewhere, and we can pass it around wherever we want. For Windows platform layer, we'll call this structure <code>win32_state</code>, but you can imagine us eventually having eventually <code>linux_state</code>, <code>macos_state</code>, etc.
+
+</p><p>
+
+Let's define this structure inside <code>win32_handmade.h</code>:
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_recorded_input</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">int</span> InputCount;</span>
+<span class="line">    game_input *InputStream;</span>
+<span class="line">};</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_state</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">int</span> InputRecordingIndex;</span>
+<span class="line">    <span class="hljs-keyword">int</span> InputPlayingIndex;</span>
+<span class="line">};</span></div><span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> WIN32_HANDMADE_H</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;17:</b> <file>[win32_handmade.h]</file> Introducing <code>win32_state</code>.</div></center>
+<p>
+
+
+This structure can then be initialized inside our <code>WinMain</code> on startup. 
+
+</p><pre class="listing tilde"><code><span class="line">HDC DeviceContext = GetDC(Window);</span>
+<span class="line"></span><div class=" add"><span class="line">win32_state Win32State = {};</span></div><div class=" edit"><span class="line">Win32State.InputRecordingIndex = <span class="hljs-number">0</span>;</span>
+<span class="line">Win32State.InputPlayingIndex = <span class="hljs-number">0</span>;</span></div><span class="line"></span>
+<span class="line"><span class="hljs-comment">// NOTE(casey): Sound test</span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;18:</b> <file>[win32_handmade.cpp > WinMain]</file> Initializing <code>win32_state</code>.</div></center>
+<p>
+
+
+Having a single state struct allows us to pass its arguments with ease. In our case, we can send the indexes to the keyboard processing function. If the user presses a key, let's say <code>L</code> for &ldquo;loop&rdquo;, we can toggle the states as necessary. If we don't do anything, we start recording, if we're already recording, we will stop recording and start playback. 
+
+</p><pre class="listing tilde"><code><span class="line">internal <span class="hljs-keyword">void</span></span><div class=" edit"><span class="line">Win32ProcessPendingMessages(win32_state *Win32State, game_controller_input *KeyboardController)</span></div><span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> HANDMADE_INTERNAL</span></span>
+<span class="line">    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (VKCode == <span class="hljs-string">&#x27;P&#x27;</span>)</span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-keyword">if</span> (IsDown)</span>
+<span class="line">        {</span>
+<span class="line">            GlobalPause = !GlobalPause;</span>
+<span class="line">        }</span>
+<span class="line">    }</span><div class=" add"><span class="line">    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (VKCode == <span class="hljs-string">&#x27;L&#x27;</span>)</span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-keyword">if</span> (IsDown)</span>
+<span class="line">        {</span>
+<span class="line">            <span class="hljs-keyword">if</span> (Win32State-&gt;InputRecordingIndex == <span class="hljs-number">0</span>)</span>
+<span class="line">            {</span>
+<span class="line">                Win32State-&gt;InputRecordingIndex = <span class="hljs-number">1</span>;</span>
+<span class="line">            }</span>
+<span class="line">            <span class="hljs-keyword">else</span></span>
+<span class="line">            {</span>
+<span class="line">                Win32State-&gt;InputRecordingIndex = <span class="hljs-number">0</span>;</span>
+<span class="line">                Win32State-&gt;InputPlayingIndex = <span class="hljs-number">1</span>;</span>
+<span class="line">            }</span>
+<span class="line">        }</span>
+<span class="line">    }</span></div><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">int</span> CALLBACK </span>
+<span class="line"><span class="hljs-title">WinMain</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">    *NewKeyboardController = {};</span>
+<span class="line">    NewKeyboardController-&gt;IsConnected = <span class="hljs-literal">true</span>;</span>
+<span class="line">    NewKeyboardController-&gt;IsAnalog = <span class="hljs-literal">false</span>;</span>
+<span class="line">    <span class="hljs-keyword">for</span> (...)</span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-comment">// ... </span></span>
+<span class="line">    }</span>
+<span class="line">    </span><div class=" edit"><span class="line">    Win32ProcessPendingMessages(&amp;Win32State, NewKeyboardController);</span></div><span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;19:</b> <file>[win32_handmade.cpp]</file> Using <code>win32_state</code> to toggle recording and playback indexes.</div></center>
+
+<a class="target" name="outlineusage">&nbsp;</a><a class="target" name="implementliveloop/outlineusage">&nbsp;</a><a class="target" name="toc3.2">&nbsp;</a><h2>Outline Usage</h2>
+<p>
+
+
+Now that we can get from the user the commands to start looped recording or playback, let's think about how we can actually make it happen. 
+
+</p><p>
+
+Supposedly, just before the <code>Game.UpdateAndRender()</code> call we introduce a couple functions that operate on the following logic:  
+
+</p><p>
+
+<ul>
+<li class="asterisk">If the recording index has any value but 0, we start recording. 
+</li>
+<li class="asterisk">If the playing index has any value but 0, we do the playback.</li></ul>
+
+</p><p>
+
+These functions would get the platform state and the user's input. For recording, the input would be stored on an external file. For the playback, whatever user's input was will be flat-out replaced by the saved version.
+
+</p><p>
+
+In code, this will look roughly this way:
+
+</p><pre class="listing tilde"><code><span class="line">game_offscreen_buffer Buffer = {};</span>
+<span class="line">Buffer.Memory = GlobalBackbuffer.Memory;</span>
+<span class="line">Buffer.Width = GlobalBackbuffer.Width;</span>
+<span class="line">Buffer.Height = GlobalBackbuffer.Height;</span>
+<span class="line">Buffer.Pitch = GlobalBackbuffer.Pitch;</span>
+<span class="line">Buffer.BytesPerPixel = GlobalBackbuffer.BytesPerPixel;</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-keyword">if</span> (Win32State.InputRecordingIndex)</span>
+<span class="line">{</span>
+<span class="line">    Win32RecordInput(&amp;Win32State, NewInput);</span>
+<span class="line">}</span>
+<span class="line"><span class="hljs-keyword">if</span> (Win32State.InputPlayingIndex)</span>
+<span class="line">{</span>
+<span class="line">    Win32PlaybackInput(&amp;Win32State, NewInput);</span>
+<span class="line">}</span></div><span class="line">Game.UpdateAndRender(&amp;GameMemory, NewInput, &amp;Buffer);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;20:</b> <file>[win32_handmade.cpp > WinMain]</file> Sketching out usage.</div></center>
+<p>
+
+
+Well, the only thing remaining now is dive in and actually make it happen. 
+
+</p>
+<a class="target" name="inputrecording">&nbsp;</a><a class="target" name="implementliveloop/inputrecording">&nbsp;</a><a class="target" name="toc3.3">&nbsp;</a><h2>Input Recording</h2>
+<p>
+
+
+As we said, we want to save user input on disk. If we look at the <code>DEBUGPlatformWriteEntireFile</code> function, you'll notice that, roughly said, a write process happens in three steps: 
+
+</p><p>
+
+<ol start=1>
+<li class="number">File handle is opened for given filename.
+</li>
+<li class="number">Data is written. 
+</li>
+<li class="number">File handle is closed.</li></ol>
+
+</p><p>
+
+That said, we don't <em class="underscore">have to</em> open and close the file right ahead. Furthermore, every subsequent write will add data <em class="underscore">after</em> whatever we've written before while the handle is open. All of this is awfully convenient for our purposes, so what we really need is to split input recording into three functions: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">Opening file for writing, which is called at the beginning of the recording (when the user presses <code>L</code> for the first time). 
+</li>
+<li class="asterisk">Writing input, which is happening every frame. 
+</li>
+<li class="asterisk">Closing the file (when the user presses <code>L</code> for the second time).</li></ul>
+
+</p><p>
+
+Let's start from the simplest one: Writing input. Provided a file handle, we simply write our input to it and call it a day. We won't even check if the file handle is valid, since it's all debug code. 
+
+</p><p>
+
+This is how the output function looks like:
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">Win32RecordInput</span><span class="hljs-params">(win32_state *Win32State, game_input *Input)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    DWORD BytesWritten;</span>
+<span class="line">    WriteFile(Win32State-&gt;RecordingHandle, Input, <span class="hljs-keyword">sizeof</span>(*Input), &amp;BytesWritten, <span class="hljs-number">0</span>);</span>
+<span class="line">}</span></div><span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32ProcessPendingMessages</span><span class="hljs-params">(...)</span></span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;21:</b> <file>[win32_handmade.cpp]</file> Implementing <code>Win32RecordInput</code>.</div></center>
+<p>
+
+
+And that's all there's to the actual recording. <a href="https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-writefile">WriteFile</a> takes five parameters: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">Handle to the file. We don't have <code>RecordingHandle</code> just yet, we'll get there in a second.
+</li>
+<li class="asterisk">Pointer to the data to write. It's our whole <code>Input</code> struct.
+</li>
+<li class="asterisk">How much data to write. It's simple in our case, we want to copy the whole struct so we use <code>sizeof</code> operator.
+</li>
+<li class="asterisk">Pointer to <code>BytesWritten</code> variable. <code>WriteFile</code> will output <code>TRUE</code> or <code>FALSE</code> depending on whether the operation succeeded at all. It's the programmer's responsibility then to check if the <code>BytesWritten</code> corresponds to the size since writing less than requested is not considered a fail case. Not in our case, we don't care, it's all internal debug code. 
+</li>
+<li class="asterisk">Final value only comes into play in case of asynchronous writing. It's not our case so we simply pass <code>NULL</code> or <code>0</code>.</li></ul>
+
+</p><p>
+
+So from all of this we are only missing our file handle. Let's first add it to <code>win32_state</code>. While we're at it, let's also add the <code>PlaybackHandle</code> which will become handy for playback.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_state</span></span>
+<span class="line">{</span></span>
+<span class="line">    HANDLE RecordingHandle;</span>
+<span class="line">    <span class="hljs-keyword">int</span> InputRecordingIndex;</span>
+<span class="line"></span>
+<span class="line">    HANDLE PlaybackHandle;</span>
+<span class="line">    <span class="hljs-keyword">int</span> InputPlayingIndex;</span>
+<span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;22:</b> <file>[win32_handmade.h]</file> Adding <code>Recording</code> and <code>Playback</code> file handles.</div></center>
+<p>
+
+
+To open and close the recording file handle, we can simply reuse the code we have already. We don't care about the file name for now, let's have it as <code>foo.hmi</code>, <code>.hmi</code> standing for &ldquo;Handmade Input`.
+
+</p><p>
+
+Another thing that we'll do is to delegate setting of the recording index to these functions. This is less error-prone, and will come in handy when we will use these functions.
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32BeginRecordingInput</span><span class="hljs-params">(win32_state *Win32State, <span class="hljs-keyword">int</span> InputRecordingIndex)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    Win32State-&gt;InputRecordingIndex = InputRecordingIndex;</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">char</span> *Filename = <span class="hljs-string">&quot;foo.hmi&quot;</span>;</span>
+<span class="line">    Win32State-&gt;RecordingHandle = </span>
+<span class="line">                CreateFileA(Filename, GENERIC_WRITE, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, CREATE_ALWAYS, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>);</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32EndRecordingInput</span><span class="hljs-params">(win32_state *Win32State)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    CloseHandle(Win32State-&gt;RecordingHandle);</span>
+<span class="line">    Win32State-&gt;InputRecordingIndex = <span class="hljs-number">0</span>;</span>
+<span class="line">}</span>
+<span class="line"></span></div><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">Win32RecordInput</span><span class="hljs-params">(...)</span></span>
+<span class="line"><span class="hljs-comment">// ... </span></span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;23:</b> <file>[win32_handmade.cpp]</file> Defining <code>Win32BeginRecordingInput</code> and <code>Win32EndRecordingInput</code>.</div></center>
+<p>
+
+
+At this point, we can replace the code we've written before inside <code>Win32ProcessPendingMessages</code> and, instead of defining indexes ourselves, call the newly defined functions.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (VKCode == <span class="hljs-string">&#x27;L&#x27;</span>)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">if</span> (IsDown)</span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-keyword">if</span> (Win32State-&gt;InputRecordingIndex == <span class="hljs-number">0</span>)</span>
+<span class="line">        {</span><div class=" edit"><span class="line">            Win32BeginRecordingInput(Win32State, <span class="hljs-number">1</span>);</span></div><span class="line">        }</span>
+<span class="line">        <span class="hljs-keyword">else</span></span>
+<span class="line">        {</span><div class=" edit"><span class="line">            Win32EndRecordingInput(Win32State);</span>
+<span class="line">            Win32BeginInputPlayback(Win32State, <span class="hljs-number">1</span>);</span></div><div class=" C++ "><span class="line">        }</span>
+<span class="line">    }</span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;24:</b> <file>[win32_handmade.cpp > Win32ProcessPendingMessages]</file> Using begin and end recording functions.</div></center>
+<p>
+
+
+We don't have <code>Win32BeginInputPlayback</code> just yet, so let's make it happen right away!
+
+</p>
+<a class="target" name="inputplayback">&nbsp;</a><a class="target" name="implementliveloop/inputplayback">&nbsp;</a><a class="target" name="toc3.4">&nbsp;</a><h2>Input Playback</h2>
+<p>
+
+
+For what it might concern the playback (or PlayBack if you prefer it), we will mostly mirror the same setup:
+
+</p><p>
+
+<ul>
+<li class="asterisk">A function will open a playback handle for reading. 
+</li>
+<li class="asterisk">Another function will do the read on each frame. 
+</li>
+<li class="asterisk">Yet another function will close the handle once we're done.</li></ul>
+
+</p><p>
+
+We have already added <code>PlaybackHandle</code> to <code>win32_state</code> anticipating this movement, let's go ahead and write the rest of code. 
+
+</p><p>
+
+Functions for begin and end playback should be fairly straightforward. We will set the <code>InputPlaybackIndex</code>, open or close the file handle as necessary. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">Win32RecordInput</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">}</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32BeginInputPlayback</span><span class="hljs-params">(win32_state *Win32State, <span class="hljs-keyword">int</span> InputPlaybackIndex)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    Win32State-&gt;InputPlaybackIndex = InputPlaybackIndex;</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">char</span> *Filename = <span class="hljs-string">&quot;foo.hmi&quot;</span>;</span>
+<span class="line">    Win32State-&gt;PlaybackHandle = CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, <span class="hljs-number">0</span>, OPEN_EXISTING, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>);</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32EndInputPlayback</span><span class="hljs-params">(win32_state *Win32State)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    CloseHandle(Win32State-&gt;PlaybackHandle);</span>
+<span class="line">    Win32State-&gt;InputPlayingIndex = <span class="hljs-number">0</span>;</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">Win32PlaybackInput</span><span class="hljs-params">(win32_state *Win32State, game_input *Input)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    </span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;25:</b> <file>[win32_handmade.cpp]</file> Writing playback functions.</div></center>
+<p>
+
+
+As for <code>Win32PlaybackInput</code>, there's more complexity involved. The simplest solution is: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">Try to read the first input. 
+</li>
+<li class="asterisk">If it succeeds (we do need to make sure that the read was successful), stop and restart right away.</li></ul>
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">Win32PlaybackInput</span><span class="hljs-params">(win32_state *Win32State, game_input *Input)</span></span>
+<span class="line"></span>{</span><div class=" add"><span class="line">    DWORD BytesRead;</span>
+<span class="line">    <span class="hljs-keyword">if</span> (ReadFile(Win32State-&gt;PlaybackHandle, Input, <span class="hljs-keyword">sizeof</span> (*Input), &amp;BytesRead, <span class="hljs-number">0</span>))</span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-keyword">int</span> PlayingIndex = Win32State-&gt;InputPlayingIndex;</span>
+<span class="line">        Win32EndInputPlayback(Win32State);</span>
+<span class="line">        Win32BeginInputPlayback(Win32State, PlayingIndex);</span>
+<span class="line">    }</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;26:</b> <file>[win32_handmade.cpp]</file> Defining <code>Win32PlaybackInput</code>.</div></center>
+<p>
+
+
+This is a valid solution if we only need to register a single frame's <code>Input</code> event. However this is not the case; we want to read the whole recorded sequence. What we really need is this logic:
+
+</p><p>
+
+<ul>
+<li class="asterisk">If the read succeeded, all good, there will be still input on the next iteration. 
+</li>
+<li class="asterisk">If the read failed, we reached the end of file stream, need to restart.</li></ul>
+
+</p><pre class="listing tilde"><code><span class="line">DWORD BytesRead;</span>
+<span class="line"><span class="hljs-keyword">if</span> (ReadFile(Win32State-&gt;PlaybackHandle, Input, <span class="hljs-keyword">sizeof</span> (*Input), &amp;BytesRead, <span class="hljs-number">0</span>))</span>
+<span class="line">{</span><div class=" add"><span class="line">    <span class="hljs-comment">// NOTE(casey): There&#x27;s still input</span></span>
+<span class="line">}</span>
+<span class="line"><span class="hljs-keyword">else</span></span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// NOTE(casey): We&#x27;ve hit the end of the stream, go back to the beginning</span></span></div><span class="line">    <span class="hljs-keyword">int</span> PlayingIndex = Win32State-&gt;InputPlayingIndex;</span>
+<span class="line">    Win32EndInputPlayback(Win32State);</span>
+<span class="line">    Win32BeginInputPlayback(Win32State, PlayingIndex);</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;27:</b> <file>[win32_handmade.cpp > Win32PlaybackInput]</file> Making sure that all the recorded input is played before restarting.</div></center>
+<p>
+
+
+Let's compile, run, and see in the debugger what's going on. 
+
+</p><p>
+
+<ol start=1>
+<li class="number">At the beginning of <code>WinMain</code>, <code>Win32State</code> is reset successfully. 
+</li>
+<li class="number">When we press <code>L</code>, and the recording starts: <code>InputRecordingIndex</code> is changed to <code>1</code>, and the <code>RecordingHandle</code> is not <code>0</code>. 
+</li>
+<li class="number">You can run around with your player, do a couple jumps. 
+</li>
+<li class="number">Once you press <code>L</code> again, you'll see that the player repeats the whole sequence.</li></ol>
+
+</p><p>
+
+There's still one last bug lurking around. You'll notice that we don't loop properly. After the first playback loop is completed, it should return to the beginning and restart playback from scratch.
+
+</p><p>
+
+What's going on? Let's re-examine <code>Win32PlaybackInput</code>: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">Win32PlaybackInput</span><span class="hljs-params">(win32_state *Win32State, game_input *Input)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    DWORD BytesRead;</span>
+<span class="line">    <span class="hljs-keyword">if</span> (ReadFile(Win32State-&gt;PlaybackHandle, Input, <span class="hljs-keyword">sizeof</span> (*Input), &amp;BytesRead, <span class="hljs-number">0</span>))</span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-comment">// NOTE(casey): There&#x27;s still input</span></span>
+<span class="line">    }</span>
+<span class="line">    <span class="hljs-keyword">else</span></span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-comment">// NOTE(casey): We&#x27;ve hit the end of the stream, go back to the beginning</span></span>
+<span class="line">        <span class="hljs-keyword">int</span> PlayingIndex = Win32State-&gt;InputPlayingIndex;</span>
+<span class="line">        Win32EndInputPlayback(Win32State);</span>
+<span class="line">        Win32BeginInputPlayback(Win32State, PlayingIndex);</span>
+<span class="line">    }</span>
+<span class="line">}</span></code></pre><p>
+
+Ok, seems like we didn't check the <a href="https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-readfile">documentation</a> here. We are checking whether or not <code>ReadFile</code> returns <code>0</code>. Our expectation was that <code>0</code> (or <code>FALSE</code>) would be returned if <code>ReadFile</code> read less <code>0</code> bytes. However, the documentation claims that the function only returns <code>0</code> if the read failed completely (for instance, if the file handle wasn't open) so it's not not our case. 
+
+</p><p>
+
+We need to refactor this code to look at the bytes read instead. If we our <code>BytesRead</code> is <code>0</code>, we'll restart from the beginning. We still want to see whether <code>ReadFile</code> succeeded, just to be sure.
+
+</p><p>
+
+While we're at it, we might also fix another inaccuracy: when we restart our read, we still want to read the first input in the sequence. Otherwise one frame would be skipped entirely, something that might cause unexpected troubles. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">Win32PlaybackInput</span><span class="hljs-params">(win32_state *Win32State, game_input *Input)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    DWORD BytesRead = <span class="hljs-number">0</span>;</span>
+<span class="line">    <span class="hljs-keyword">if</span>(ReadFile(Win32State-&gt;PlaybackHandle, Input, <span class="hljs-keyword">sizeof</span>(*Input), &amp;BytesRead, <span class="hljs-number">0</span>))</span>
+<span class="line">    {</span><div class=" delete"><span class="line">        <span class="hljs-comment">// NOTE(casey): There&#x27;s still input</span></span>
+<span class="line">    }</span>
+<span class="line">    <span class="hljs-keyword">else</span></span>
+<span class="line">    {</span></div><div class=" add"><span class="line">        <span class="hljs-keyword">if</span>(BytesRead == <span class="hljs-number">0</span>)</span>
+<span class="line">        {</span></div><span class="line">            <span class="hljs-comment">// NOTE(casey): We&#x27;ve hit the end of the stream, go back to the beginning</span></span>
+<span class="line">            <span class="hljs-keyword">int</span> PlayingIndex = Win32State-&gt;InputPlayingIndex;</span>
+<span class="line">            Win32EndInputPlayback(Win32State);</span>
+<span class="line">            Win32BeginInputPlayback(Win32State, PlayingIndex);</span><div class=" add"><span class="line">            ReadFile(Win32State-&gt;PlaybackHandle, Input, <span class="hljs-keyword">sizeof</span>(*Input), &amp;BytesRead, <span class="hljs-number">0</span>);</span>
+<span class="line">        }</span></div><span class="line">    }</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;28:</b> <file>[win32_handmade.cpp]</file> Fixing looping issue.</div></center>
+
+<a class="target" name="loopthegamestate">&nbsp;</a><a class="target" name="loopthegamestate">&nbsp;</a><a class="target" name="toc4">&nbsp;</a><h1>Loop the Game State</h1>
+<p>
+
+
+There's one last piece of the puzzle missing. If we wanted to save the whole state of the game... guess what? We've architectured our code in the specific manner allowing this with ease. It's going to take a huge amount of space on your disk drive but it's doable! 
+
+</p><p>
+
+As you remember, we <code>VirtualAlloc</code>'ed the entire memory block used by the game to the known <em class="underscore">base address</em> (address to which the memory pointer is pointing to &mdash; the result of <code>VirtualAlloc</code>). So if we want to restore the state of the game at that time, we simply need to save and load that block. That's it. Just a couple lines of code, without the need of a full-blown serialization layer, big walking changes of things (to check what changed or not). Even further than that, having a known base address means that all the pointers within that memory block will remain valid! 
+
+</p><p>
+
+So how exactly do we make it happen? You will be shocked how little of a change to our code is required. 
+
+</p><p>
+
+First of all, let's move the references to our game memory to <code>win32_state</code>. It's only a single pointer and the size.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_state</span></span>
+<span class="line">{</span></span><div class=" add"><span class="line">    u64 TotalSize;</span>
+<span class="line">    <span class="hljs-keyword">void</span> *GameMemoryBlock;</span></div><span class="line"></span>
+<span class="line">    HANDLE RecordingHandle;</span>
+<span class="line">    <span class="hljs-keyword">int</span> InputRecordingIndex;</span>
+<span class="line">    </span>
+<span class="line">    HANDLE PlaybackHandle;</span>
+<span class="line">    <span class="hljs-keyword">int</span> InputPlayingIndex;</span>
+<span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;29:</b> <file>[win32_handmade.h]</file> Expanding <code>win32_state</code>.</div></center>
+<p>
+
+
+To use it, we simply move <code>TotalStorageSize</code> and <code>GameMemoryBlock</code> to <code>Win32State</code>. Make sure that the <code>Win32State</code> initialization is above <code>GameMemory</code> initialization inside your <code>WinMain</code>!
+
+</p><pre class="listing tilde"><code><span class="line">win32_state Win32State = {};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// ... </span></span>
+<span class="line"></span>
+<span class="line">game_memory GameMemory = {};</span>
+<span class="line">GameMemory.PermanentStorageSize = Megabytes(<span class="hljs-number">64</span>);</span>
+<span class="line">GameMemory.TransientStorageSize = Gigabytes(<span class="hljs-number">1</span>);</span>
+<span class="line">GameMemory.DEBUGPlatformFreeFileMemory = DEBUGPlatformFreeFileMemory;</span>
+<span class="line">GameMemory.DEBUGPlatformReadEntireFile = DEBUGPlatformReadEntireFile;</span>
+<span class="line">GameMemory.DEBUGPlatformWriteEntireFile = DEBUGPlatformWriteEntireFile;</span>
+<span class="line"></span><div class=" edit"><span class="line">Win32State.TotalSize = (GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize);</span>
+<span class="line">Win32State.GameMemoryBlock = VirtualAlloc(BaseAddress, (<span class="hljs-keyword">size_t</span>)Win32State.TotalSize,</span></div><span class="line">                                            MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);</span>
+<span class="line"></span><div class=" add"><span class="line">GameMemory.PermanentStorage = Win32State.GameMemoryBlock;</span></div><span class="line">GameMemory.TransientStorage = ((u8 *)GameMemory.PermanentStorage +</span>
+<span class="line">                                GameMemory.PermanentStorageSize);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;30:</b> <file>[win32_handmade.cpp > WinMain]</file> Storing the pointer to the game memory inside <code>Win32State</code>.</div></center>
+<p>
+
+
+So far, there's no change to the output of our program. We simply moved the location of our game memory block to access it easier. Now let's actually make the change.
+
+</p><p>
+
+Inside <code>Win32BeginRecordingIndex</code> (which already has access to <code>Win32State</code>) we will attempt to write the <em class="underscore">whole</em> <code>GameMemoryBlock</code> (i.e. whatever its <code>TotalSize</code> is). 
+
+</p><p>
+
+We need to be careful about that because our <code>GameMemoryBlock</code> can eventually exceed 4GB of data (since we already request a bit more than 1GB), and <code>WriteFile</code> cannot write more than 4GB at a time. We can go around this issue for now by casting our <code>TotalSize</code> to a 32-bit <code>DWORD</code> and immediately assert that the resulting value is the same as <code>TotalSize</code>. 
+
+</p><pre class="listing tilde"><code><span class="line">Win32State-&gt;InputRecordingIndex = InputRecordingIndex;</span>
+<span class="line">    </span>
+<span class="line"><span class="hljs-keyword">char</span> *Filename = <span class="hljs-string">&quot;foo.hmi&quot;</span>;</span>
+<span class="line">Win32State-&gt;RecordingHandle = CreateFileA(Filename, GENERIC_WRITE, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, CREATE_ALWAYS, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>);</span>
+<span class="line"></span><div class=" add"><span class="line">DWORD BytesToWrite = (DWORD)Win32State-&gt;TotalSize;</span>
+<span class="line">Assert(Win32State-&gt;TotalSize == BytesToWrite);</span>
+<span class="line">DWORD BytesWritten;</span>
+<span class="line">WriteFile(Win32State-&gt;RecordingHandle, Win32State-&gt;GameMemoryBlock, BytesToWrite,</span>
+<span class="line">            &amp;BytesWritten, <span class="hljs-number">0</span>); </span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;31:</b> <file>[win32_handmade.cpp > Win32BeginRecordingInput]</file> Recording the whole of game memory.</div></center>
+<p>
+
+
+Conversely, whenever we want to start our playback, we want to load whatever the game's state was. It looks exactly the same way as the recording, except we use <code>ReadFile</code> instead of <code>WriteFile</code>: 
+
+</p><pre class="listing tilde"><code><span class="line">Win32State-&gt;InputPlayingIndex = InputPlayingIndex;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">char</span> *Filename = <span class="hljs-string">&quot;foo.hmi&quot;</span>;</span>
+<span class="line">Win32State-&gt;PlaybackHandle = CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, <span class="hljs-number">0</span>, OPEN_EXISTING, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>);</span>
+<span class="line"></span><div class=" add"><span class="line">DWORD BytesToRead = (DWORD)Win32State-&gt;TotalSize;</span>
+<span class="line">Assert(Win32State-&gt;TotalSize == BytesToRead);</span>
+<span class="line">DWORD BytesRead;</span>
+<span class="line">ReadFile(Win32State-&gt;PlaybackHandle, Win32State-&gt;GameMemoryBlock, BytesToRead, &amp;BytesRead, <span class="hljs-number">0</span>);    </span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;32:</b> <file>[win32_handmade.cpp > Win32BeginInputPlayback]</file> Restoring the saved game memory.</div></center>
+<p>
+
+
+That's it. That's really all there's to it. This is absolutely amazing. Isn't programming great?
+
+</p>
+<a class="target" name="fixthe%22jump%22code">&nbsp;</a><a class="target" name="fixthe&ldquo;jump&rdquo;code">&nbsp;</a><a class="target" name="toc5">&nbsp;</a><h1>Fix the &ldquo;Jump&rdquo; Code</h1>
+<p>
+
+
+Now you'll see how simple it is to edit code on the fly. To test our newfound ability, let's go back to our &ldquo;totally accurate&rdquo; jump code and try to fix it just a little bit. This is the state of it right now. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span> (GameState-&gt;tJump &gt; <span class="hljs-number">0</span>)</span>
+<span class="line">{</span>
+<span class="line">    GameState-&gt;PlayerY -= (<span class="hljs-keyword">int</span>)(<span class="hljs-number">10.0f</span> * sinf(GameState-&gt;tJump));</span>
+<span class="line">}</span>
+<span class="line"><span class="hljs-keyword">if</span>(Controller-&gt;ActionDown.EndedDown)</span>
+<span class="line">{</span>
+<span class="line">    GameState-&gt;tJump = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">}</span>
+<span class="line">GameState-&gt;tJump -= <span class="hljs-number">0.033f</span>;</span></code></pre><p>
+
+The way we approach this will be the following: 
+
+</p><p>
+
+<ol start=1>
+<li class="number">Run the game.
+</li>
+<li class="number">Start recording (press <code>L</code>)
+</li>
+<li class="number">Make the player run and do a single jump
+</li>
+<li class="number">Stop recording (press <code>L</code> again). The player should repeat the little run and jump ad infinitum, allowing you to: 
+<ul>
+    <li class="asterisk">Make the tweak
+</li>
+    <li class="asterisk">Recompile the code (hopefully you have setup a keyboard shortcut to compile by now?)
+</li>
+    <li class="asterisk">See the change
+</li>
+    <li class="asterisk">Make the tweak....</li></ul></li></ol>
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day23/looped_editing.gif" target="_blank"><img class="markdeep" src="../media/day23/looped_editing.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;4:</b> Looped Live Code Editing.</span></center></div></center> 
+
+</p><p>
+
+Well, first of all, we'd like for the player to return down. If we continue by our current logic and use the sine function, we'd say that there should be Pi period involved. 
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">GameState-&gt;PlayerY -= (<span class="hljs-keyword">int</span>)(<span class="hljs-number">10.0f</span> * sinf(Pi32 * GameState-&gt;tJump));</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;33:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> And recompile.</div></center>
+<p>
+
+
+Ok, that did nothing. Maybe we should do the full period, 2Pi? 
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">GameState-&gt;PlayerY -= (<span class="hljs-keyword">int</span>)(<span class="hljs-number">10.0f</span> * sinf(<span class="hljs-number">2.0f</span> * Pi32 * GameState-&gt;tJump));</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;34:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> And recompile.</div></center>
+<p>
+
+
+Now the &ldquo;jump&rdquo; works but in the opposite sense, because we're subtracting from player's position. Let's increase instead:
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">GameState-&gt;PlayerY += (<span class="hljs-keyword">int</span>)(<span class="hljs-number">10.0f</span> * sinf(<span class="hljs-number">2.0f</span> * Pi32 * GameState-&gt;tJump));</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;35:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> And recompile.</div></center>
+<p>
+
+
+Ok, this seems to work, let's increase the jump by <code>2.0f</code> instead of <code>1.0f</code> when we hit jump: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span> (GameState-&gt;tJump &gt; <span class="hljs-number">0</span>)</span>
+<span class="line">{</span><div class=" edit"><span class="line">    GameState-&gt;PlayerY += (<span class="hljs-keyword">int</span>)(<span class="hljs-number">10.0f</span> * sinf(Pi32 * GameState-&gt;tJump));</span></div><span class="line">}</span>
+<span class="line"><span class="hljs-keyword">if</span>(Controller-&gt;ActionDown.EndedDown)</span>
+<span class="line">{</span><div class=" edit"><span class="line">    GameState-&gt;tJump = <span class="hljs-number">2.0f</span>;</span></div><span class="line">}</span>
+<span class="line">GameState-&gt;tJump -= <span class="hljs-number">0.033f</span>;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;36:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> And recompile.</div></center>
+<p>
+
+
+Maybe we want this jump to take a little bit longer.. then we'd increase <code>tJump</code> while lowering sine angle.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span> (GameState-&gt;tJump &gt; <span class="hljs-number">0</span>)</span>
+<span class="line">{</span><div class=" edit"><span class="line">    GameState-&gt;PlayerY += (<span class="hljs-keyword">int</span>)(<span class="hljs-number">10.0f</span> * sinf(<span class="hljs-number">0.5f</span> * Pi32 * GameState-&gt;tJump));</span></div><span class="line">}</span>
+<span class="line"><span class="hljs-keyword">if</span>(Controller-&gt;ActionDown.EndedDown)</span>
+<span class="line">{</span><div class=" edit"><span class="line">    GameState-&gt;tJump = <span class="hljs-number">4.0f</span>;</span></div><span class="line">}</span>
+<span class="line">GameState-&gt;tJump -= <span class="hljs-number">0.033f</span>;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;37:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> And recompile.</div></center>
+<p>
+
+
+Yeah, this seems reasonable. Please don't use this jump implementation, that's not how you should do jumps.
+
+</p>
+<a class="target" name="furthertweaks">&nbsp;</a><a class="target" name="furthertweaks">&nbsp;</a><a class="target" name="toc6">&nbsp;</a><h1>Further Tweaks</h1>
+<p>
+
+
+As usual, you can make it so that the game helps you develop it even more. 
+
+</p>
+<a class="target" name="makegamewindowtopmost">&nbsp;</a><a class="target" name="furthertweaks/makegamewindowtopmost">&nbsp;</a><a class="target" name="toc6.1">&nbsp;</a><h2>Make Game Window Topmost</h2>
+<p>
+
+
+One of the tweaks is the possibility of setting up your window to be always on top by passing the flag <code>WS_EX_TOPMOST</code> when the window is created. 
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">HWND Window = CreateWindowEx(WS_EX_TOPMOST, </span></div><span class="line">                            WindowClass.lpszClassName, <span class="hljs-string">&quot;Handmade Hero&quot;</span>,</span>
+<span class="line">                            WS_OVERLAPPEDWINDOW | WS_VISIBLE,</span>
+<span class="line">                            CW_USEDEFAULT, CW_USEDEFAULT,</span>
+<span class="line">                            CW_USEDEFAULT, CW_USEDEFAULT,</span>
+<span class="line">                            <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, Instance, <span class="hljs-number">0</span>);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;38:</b> <file>[win32_handmade.cpp > WinMain]</file> As easy as changing one flag.</div></center>
+
+<a class="target" name="makegamewindowsemitransparent">&nbsp;</a><a class="target" name="furthertweaks/makegamewindowsemitransparent">&nbsp;</a><a class="target" name="toc6.2">&nbsp;</a><h2>Make Game Window Semitransparent</h2>
+<p>
+
+
+Another cool trick is that you can even make the window semitransparent, so you can continue editing the code below.
+
+</p><p>
+
+One limitation of these so-called &ldquo;layered&rdquo; windows is that they cannot have an own or class device context. We do have Own DC but luckily we don't use it that much. We can easily get rid of it. 
+
+</p><pre class="listing tilde"><code><span class="line">WNDCLASS WindowClass = {<span class="hljs-number">0</span>};</span>
+<span class="line"></span><div class=" edit"><span class="line">WindowClass.style = CS_HREDRAW | CS_VREDRAW;</span></div><span class="line">WindowClass.lpfnWndProc = Win32MainWindowCallback;</span>
+<span class="line">WindowClass.hInstance = Instance;</span>
+<span class="line"><span class="hljs-comment">// WindowClass.hIcon;</span></span>
+<span class="line">WindowClass.lpszClassName = <span class="hljs-string">&quot;HandmadeHeroWindowClass&quot;</span>;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;39:</b> <file>[win32_handmade.cpp > WinMain]</file> Removing <code>CS_OWNDC</code>.</div></center>
+<p>
+
+
+There's only one place we use a DC: when we're rendering our buffer. We can request one and release it then. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span> (Window)</span>
+<span class="line">{</span><div class=" delete"><span class="line">    <span class="hljs-comment">// NOTE(casey): Since we specified CS_OWNDC, we can just</span></span>
+<span class="line">    <span class="hljs-comment">// get one device context and use it forever because we</span></span>
+<span class="line">    <span class="hljs-comment">// are not sharing it with anyone.</span></span>
+<span class="line">    HDC DeviceContext = GetDC(Window);</span></div><span class="line">    </span>
+<span class="line">    win32_state Win32State = {};</span>
+<span class="line">    Win32State.InputRecordingIndex = <span class="hljs-number">0</span>;</span>
+<span class="line">    Win32State.InputPlayingIndex = <span class="hljs-number">0</span>;</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line"></span><div class=" add"><span class="line">    HDC DeviceContext = GetDC(Window);</span></div><span class="line">    Win32DisplayBufferInWindow(&amp;GlobalBackbuffer, DeviceContext, Dimension.Width, Dimension.Height);</span><div class=" add"><span class="line">    ReleaseDC(Window, DeviceContext);</span></div><span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;40:</b> <file>[win32_handmade.cpp > WinMain]</file> Requesting a device context every time we render the window.</div></center>
+<p>
+
+
+So far, we see no changes to the output of our program. But now we can actually implement a layered window. This is achieved in two steps. First, we need to declare that our window will be layered, we can do it when we create it:
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">HWND Window = CreateWindowEx(WS_EX_TOPMOST | WS_EX_LAYERED, </span></div><span class="line">                             WindowClass.lpszClassName, <span class="hljs-string">&quot;Handmade Hero&quot;</span>,</span>
+<span class="line">                             WS_OVERLAPPEDWINDOW | WS_VISIBLE,</span>
+<span class="line">                             CW_USEDEFAULT, CW_USEDEFAULT,</span>
+<span class="line">                             CW_USEDEFAULT, CW_USEDEFAULT,</span>
+<span class="line">                             <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, Instance, <span class="hljs-number">0</span>);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;41:</b> <file>[win32_handmade.cpp > WinMain]</file> .</div></center>
+<p>
+
+
+Next, we need to configure how this layered-ness will be. This is achieved by calling the   <a href="https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setlayeredwindowattributes">SetLayeredWindowAttributes</a> function. We want our Window to be exactly semi-transparent. 
+
+</p><p>
+
+<code>SetLayeredWindowAttributes</code> requires us to pass the following parameters: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">A handle to the window.
+</li>
+<li class="asterisk">Color key. This way you could make transparent, for example, only green or blue parts of the screen. We don't need this, so we'll specify black.
+</li>
+<li class="asterisk">Transparency level. This goes from 0&mdash;completely transparent to 255&mdash;completely opaque. Let's settle somewhere in between for now.</li></ul>
+
+</p><p>
+
+This function is better called by Windows directly. Whenever we receive <code>WM_ACTIVATEAPP</code> message, our <code>MainWindowCallback</code> will set the layered attributes. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">case</span> WM_ACTIVATEAPP:</span>
+<span class="line">{</span><div class=" edit"><span class="line">    SetLayeredWindowAttributes(Window, RGB(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>), <span class="hljs-number">128</span>, LWA_ALPHA);</span></div><span class="line">} <span class="hljs-keyword">break</span>;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;42:</b> <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> .</div></center>
+<p>
+
+
+Here, if we want to be extra fancy, we can check if the window is active or not. <code>WParam</code> is set to <code>TRUE</code> if the window is currently focused, and to <code>FALSE</code> if it's not. Let's leverage this knowledge to make our window completely opaque when we're focused on it: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">case</span> WM_ACTIVATEAPP:</span>
+<span class="line">{</span><div class=" add"><span class="line">    <span class="hljs-keyword">if</span> (WParam == TRUE)</span>
+<span class="line">    {</span>
+<span class="line">        SetLayeredWindowAttributes(Window, RGB(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>), <span class="hljs-number">255</span>, LWA_ALPHA);</span>
+<span class="line">    }</span>
+<span class="line">    <span class="hljs-keyword">else</span></span>
+<span class="line">    {</span></div><div class=" edit"><span class="line">        SetLayeredWindowAttributes(Window, RGB(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>), <span class="hljs-number">64</span>, LWA_ALPHA);</span></div><span class="line">    }</span>
+<span class="line">} <span class="hljs-keyword">break</span>;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;43:</b> <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> .</div></center>
+<p>
+
+
+
+If you'd like to read more about layered windows, head over to this <a href="https://docs.microsoft.com/en-us/windows/win32/winmsg/window-features#layered-windows">quick guide</a> or <a href="https://docs.microsoft.com/en-us/previous-versions/ms997507(v=msdn.10)?redirectedfrom=MSDN">this</a>, more extensive, article. 
+
+</p><p>
+
+There's more to it, like allowing mouse click-through, but we'll get to it next time (or you can try and implement it yourself!). 
+
+</p>
+<a class="target" name="recap">&nbsp;</a><a class="target" name="recap">&nbsp;</a><a class="target" name="toc7">&nbsp;</a><h1>Recap</h1>
+<p>
+
+
+What we did today cannot be praised enough. We've done input recording in no time and even have more time for extra fanciness. Yet there was an entire company dedicated to input recording once, and it's not something you see used a lot because it's deemed &ldquo;too complex to implement&rdquo;. 
+
+</p><p>
+
+There's so much more to do to make our platform layer a better development environment. We could make an middle platform layer to make our tools cross-platform, we could continue adding special functionality... and one day we might. But so far, in the past 23 days, we focused only on the platform layer, and not at all on the game. So the next two days we'll dedicate to the final cleanups: fixing hidden bugs, moving things around, final testing. 
+
+</p>
+<a class="target" name="sideconsiderations">&nbsp;</a><a class="target" name="sideconsiderations">&nbsp;</a><a class="target" name="toc8">&nbsp;</a><h1>Side Considerations</h1>
+
+<a class="target" name="disablesound">&nbsp;</a><a class="target" name="sideconsiderations/disablesound">&nbsp;</a><a class="target" name="toc8.1">&nbsp;</a><h2>Disable Sound</h2>
+<p>
+
+
+If you want to disable sound, you can do it by simply setting the sample value to 0. You can hard-code it or, since we'd like to return to our sound code one last time in the future, we will <code>#if 0</code> the exiting part out.
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> 0</span></span></div><span class="line">        f32 SineValue = sinf(GameState-&gt;tSine);</span>
+<span class="line">        s16 SampleValue = (s16)(SineValue * ToneVolume);</span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span></span>
+<span class="line">        s16 SampleValue = <span class="hljs-number">0</span>;</span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;44:</b> <file>[handmade.cpp > GameOutputSound]</file> Disabling sound.</div></center>
+
+<a class="target" name="navigation">&nbsp;</a><a class="target" name="navigation">&nbsp;</a><a class="target" name="toc9">&nbsp;</a><h1>Navigation</h1>
+<p>
+
+
+Previous: <a href="../html/day22.html">Day 22. Instantaneous Live Code Editing</a>
+
+</p><p>
+
+Up Next: <a href="../html/day24.html">Day 24. Win32 Platform Layer Cleanup</a>
+
+</p><p>
+
+<a href="../index.md.html">Back to Index</a>
+
+</p>
+<div class="nonumberh1">Glossary </div>
+<p>
+
+
+<ul>
+<li class="asterisk">Base address
+</li>
+<li class="asterisk">Layered windows</li></ul>
+
+</p>
+<div class="nonumberh1">Win32 API</div>
+<p>
+
+
+<a href="https://docs.microsoft.com/en-us/cpp/cpp/sizeof-operator?view=msvc-160">sizeof</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-readfile">ReadFile</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-writefile">WriteFile</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setlayeredwindowattributes">SetLayeredWindowAttributes</a>
+
+</p>
+<div class="nonumberh1">MSDN Articles</div>
+<p>
+
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/winmsg/window-features#layered-windows">Layered Windows</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/previous-versions/ms997507(v=msdn.10)?redirectedfrom=MSDN">Layered Windows Extended</a>
+
+</p><p>
+
+<style class="fallback">
+  body {
+    visibility: hidden;
+    font-family: sans-serif;
+  }
+</style>
+
+</p><p>
+
+<script>
+  markdeepOptions = { tocStyle: 'long' };
+  window.alreadyProcessedMarkdeep ||
+    (document.body.style.visibility = 'visible');
+</script>
+
+</p><p>
+
+</p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.13&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div>
