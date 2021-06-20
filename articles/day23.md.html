@@ -6,9 +6,22 @@ _Video Length (including Q&A): [1h46](https://hero.handmade.network/episode/code
 
 (insert intro.md.html here) 
 
-Last time, we achieved instantaneous live code editing, allowing us to edit C code live, and recompile it without having to exit the program. 
+Last time, we achieved instantaneous live code editing, allowing us to edit C code live, and recompile it without having to exit the program. That's already a great tool to help us on our journey. 
 
-Today we'll do something even cooler and more unique. 
+Today we'll do something even cooler and more unique. At the very least, the technique you are about to learn is something that you don't often hear about; it has no big drawbacks and, as you will see, only great benefits. 
+
+Today we'll achieve looped live code editing.
+
+# Introduce the "Player"
+
+To better illustrate our objectives, let's add more complexity to our "gameplay" code. To be fair, we didn't start working on the game proper just yet, we want to finish cleaning up the platform layer first so that not to return to it for a great while. What we have in our platform-independent layer right now---a simple gradient and a sine wave sound---only serve to flesh out our platform layer. 
+
+Today's addition will be of no exception. We'll try a simulate the most simple "player" you can imagine: a small white square which can move based on the user's input. This will be completely throwaway code, something that you can write fast without thinking twice about!
+
+!!! Warning
+    All of the player code is temporary code for the purposes of finalizing our platform layer. Do not use any of it in your user-facing applications!
+
+In order to draw such a player, we really only need two values: its X and Y coordinates every frame. These can be stored in our `game_state` so that the player's state is preserved. 
 
 ~~~~~~~ C++
 struct game_state
@@ -25,8 +38,9 @@ struct game_state
 ~~~~~~~ C++
 };
 ~~~~~~~ 
-[Listing [x]: <file>[handmade.h]</file> .]
+[Listing [x]: <file>[handmade.h]</file> Introducing player by saving its position.]
 
+Our player should start at some point. It will be a completely arbitrary point, let's say (100,100). We'll throw it in together with the rest of the `game_state` initialization code.
 
 ~~~~~~~ C++
 if(!Memory->IsInitialized)
@@ -42,8 +56,9 @@ if(!Memory->IsInitialized)
     Memory->IsInitialized = true;
 }
 ~~~~~~~
-[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Setting up "player" starting location to a random point on screen.]
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Setting up "player" starting location.]
 
+To control the player, we'll use the values of our Controllers. Input from the X axis of the stick will translate directly into the player's X coordinate, while the Y axis should be inverted first (because otherwise player would go in the opposite sense). We'll also multiply both values by 4 so that the movement is a bit faster.
 
 ~~~~~~~ C++
 for (int ControllerIndex = 0;
@@ -65,6 +80,11 @@ for (int ControllerIndex = 0;
 ~~~~~~~
 [Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Controlling player movement.]
 
+As of right now, player is just that: two numbers inside the game's data. We don't have anything to visualize it with just yet, no red hat or green shield, so let's just make it happen! We'll add a simple rendering code. 
+
+We can imagine that, in order to render our player, we'll need to loop over several pixels vertically and several pixels horizontally and paint each pixel of a different color. 
+
+We'll call this code immediately after drawing our gradient (not before because otherwise it will be overwritten!).
 
 ~~~~~~~ C++
 internal void
@@ -77,41 +97,120 @@ RenderWeirdGradient(game_offscreen_buffer *Buffer, int XOffset, int YOffset)
 internal void
 RenderPlayer(game_offscreen_buffer *Buffer, int PlayerX, int PlayerY)
 {
-    u32 Color = 0xFFFFFFFF;
-    int Top = PlayerY;
-    int Bottom = PlayerY + 10;
-    for (int X = PlayerX;
-         X < PlayerX + 10;
+    for (int X = Left;
+         X < Right;
          ++X)
     {
-        u8 *Pixel = ((u8 *)Buffer->Memory + 
-                     X * Buffer->BytesPerPixel +
-                     Top * Buffer->Pitch);
         for (int Y = Top;
              Y < Bottom;
              ++Y)
         {
-            *(u32 *)Pixel = Color;
-            Pixel += Buffer->Pitch;
+           // Paint the pixel at the X, Y coordinates
         }
     }
 }
+~~~~~~~ C++
 
 GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
     // ...     
-    ~~~~~~~ C++
+~~~~~~~ C++
     RenderWeirdGradient(Buffer, GameState->XOffset, GameState->YOffset);
-    ~~~~~~~ C++ add
+~~~~~~~ C++ add
     RenderPlayer(Buffer, GameState->PlayerX, GameState->PlayerY);
-    ~~~~~~~
+~~~~~~~ C++
 }
-[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> .]
-
 ~~~~~~~
-[Listing [x]: <file>[handmade.cpp]</file> .]
+[Listing [x]: <file>[handmade.cpp]</file> Adding player rendering code.]
 
-This will not compile just yet. We don't have `BytesPerPixel` as a part of `game_offscreen_buffer` structure, so we'll need to add it in: 
+So, what do we need to render our player? We're essentially drawing a single-tinted square, soo...
+
+* We need a color, let's say white. White has RGBA value of 255, 255, 255, 255, i.e. `0xFFFFFFFF` in hexadecimal. 
+* We need to calculate the top, bottom, left, and right margins of our square. 
+    * Left is, very simply, whatever our `PlayerX` position is. 
+    * Top is, accordingly, `PlayerY`.
+    * Right is calculated from `PlayerX`. Let's say we have a square with 10 pixel side, so right will be `PlayerX + 10`. 
+    * Bottom is calculated by taking `PlayerY` and adding 10 to it. 
+
+*********************************************************
+*                 Left                 Right            *
+*                PlayerX             PlayerX + 10       *
+*                   |                    |              *
+*       Top                                             *
+*     PlayerY ----- .--------------------.              *
+*                   |▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉|              *
+*                   |▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉|              *
+*                   |▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉|              *
+*                   |▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉|              *
+*                   |▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉|              *
+*                   |▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉|              *
+*                   |▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉|              *
+*                   |▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉|              *
+*                   |▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉|              *
+*     Bottom        |▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉▉|              *
+*  PlayerY + 10---- '--------------------'              *
+*                                                       *
+*                                                       *
+*********************************************************
+[Figure [x]: In order to draw the player we need to iterate on each pixel inside this square.]
+
+
+~~~~~~~ C++ add
+u32 Color = 0xFFFFFFFF;
+
+int Left = PlayerX;
+int Right = PlayerX + 10;
+
+int Top = PlayerY;
+int Bottom = PlayerY + 10;
+
+~~~~~~~ C++
+for (int X = Left;
+        X < Right;
+        ++X)
+{
+    for (int Y = Top;
+            Y < Bottom;
+            ++Y)
+    {
+        // Paint the pixel at the X, Y coordinates
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > RenderPlayer]</file> Calculating the color and the player margins.]
+
+Now comes the tricky part: Finding these pixels inside our buffer memory. Unlike in `RenderWeirdGradient`, we don't want to repaint the whole buffer, we only want to edit memory in that specific 10x10 area. That means that, each time we go on a new iteration of the `X` loop, we recalculate our Pixel position from scratch as follows: 
+
+* We take the pointer to buffer memory as the base (pixel (0, 0)). We'll take the memory on a byte-by-byte basis (counting 1-byte long `u8`s) to simplify the math.
+* We add to it our X position. We'll need to multiply it by bytes per pixel to get the correct offset. 
+* Finally, we move down to the top which is calculated by multiplying our `Top` value by buffer's `Pitch`. As a reminder, pitch contains all the bytes of a single row. 
+
+When we are iterating on Y values, we'll simply paint the pixel and then move down by `Pitch` until we reach `Bottom`.
+
+~~~~~~~ C++
+for (int X = Left;
+        X < Right;
+        ++X)
+{
+~~~~~~~ C++ add
+    u8 *Pixel = ((u8 *)Buffer->Memory + 
+                 X * Buffer->BytesPerPixel +
+                 Top * Buffer->Pitch);
+~~~~~~~ C++
+    for (int Y = Top;
+            Y < Bottom;
+            ++Y)
+    {
+~~~~~~~ C++ add
+        *(u32 *)Pixel = Color;
+        Pixel += Buffer->Pitch;
+~~~~~~~ C++
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > RenderPlayer]</file> Accessing and painting the pixels.]
+
+There's just one small problem with this. Currently, we don't store `BytesPerPixel` as a part of `game_offscreen_buffer` structure. But it's a very quick fix that we can add in right away: 
 
 ~~~~~~~ C++
 struct game_offscreen_buffer
@@ -125,9 +224,9 @@ struct game_offscreen_buffer
 ~~~~~~~ C++
 };
 ~~~~~~~ 
-[Listing [x]: <file>[handmade.h]</file> .]
+[Listing [x]: <file>[handmade.h]</file> Expanding game render buffer structure.]
 
-And fill inside the platform layer: 
+We can simply initialize `BytesPerPixel` from the platform backbuffer's `BytesPerPixel` (because we already store it there): 
 
 ~~~~~~~ C++
 game_offscreen_buffer Buffer = {};
@@ -140,12 +239,14 @@ Buffer.BytesPerPixel = GlobalBackbuffer.BytesPerPixel;
 ~~~~~~~ C++
 Game.UpdateAndRender(&GameMemory, NewInput, &Buffer);
 ~~~~~~~ 
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Initializing `BytesPerPixel` value.]
+
+Great! Now we can compile and have a player to control.
 
 ![Figure [x]: Our first player.](../media/day23/first_player.jpg) 
 
 !!!
-    If you don't have a controller, you can control your character with your keyboard by adding something like the following: 
+    If you don't have a controller, you can setup keyboard controls in the following manner: 
 
     ~~~~~~~ C++
     Win32ProcessPendingMessages(NewKeyboardController);
@@ -182,7 +283,7 @@ Game.UpdateAndRender(&GameMemory, NewInput, &Buffer);
     ~~~~~~~
     [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Capturing keyboard input for movement.]
 
-One last thing, we'll crash any time we hit the top or bottom of the screen. Let's throw another hack to prevent it from happening. 
+One last thing, we'll crash any time we hit the top or the bottom of the screen: these pixels are simply out of reach. Let's quickly prevent it from happening. We'll need to calculate the end of buffer value and make sure that the pixel we're accessing is never at the end of buffer or before the beginning of the memory.
 
 ~~~~~~~ C++ add
 u8 *EndOfBuffer = (u8 *)Buffer->Memory + 
@@ -215,26 +316,13 @@ for (int X = PlayerX;
     }
 }
 ~~~~~~~ 
-[Listing [x]: <file>[handmade.cpp > RenderPlayer]</file> .]
+[Listing [x]: <file>[handmade.cpp > RenderPlayer]</file> We simply skip the pixels out of bounds.]
 
-!!! Warning
-    All of this is temporary code for the purposes of finalizing our platform layer. Do not use any of it in your user-facing applications!
+## Adding Jumping
 
-As an aside, let's disable the sound. We don't need it for now.
+One last thing before we arrive to the topic of the day. 
 
-~~~~~~~ C++ add
-#if 0
-~~~~~~~ C++
-        f32 SineValue = sinf(GameState->tSine);
-        s16 SampleValue = (s16)(SineValue * ToneVolume);
-~~~~~~~ C++ add
-#else
-        s16 SampleValue = 0;
-#endif
-~~~~~~~
-[Listing [x]: <file>[handmade.cpp > GameOutputSound]</file> .]
-
-Let's assume that our "character" jumps whenever we hit Action Down button. We currently use this button to control the `YOffset` so let's repurpose it.
+Let's assume that our "character" jumps whenever we hit `ActionDown` button (arrow down on keyboard). We currently use this button to control the `YOffset`, so let's repurpose it.
 
 ~~~~~~~ C++ delete
 if(Controller->ActionDown.EndedDown)
@@ -250,9 +338,11 @@ if(Controller->ActionDown.EndedDown)
     GameState->PlayerY -= 10;
 }
 ~~~~~~~
-[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> .]
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Adding our first jump!]
 
-Ok, this isn't good. Our character won't even fall down! We can very quickly hack in simple jumping code based on a sine wave. We'll need to add another persistent element to our GameState tracking the force of jump: 
+![Figure [x]: Our first jump?](../media/day23/jump01.gif) 
+
+Ok, this isn't good, like it's not even "terrible", it's completely unusable. Our character won't even fall down! Maybe that's too much. We can very quickly hack in a simple jumping code based on a sine wave. We'll need to add another persistent element to our `GameState`. This element will track the current state of the jump: 
 
 ~~~~~~~ C++
 struct game_state
@@ -270,9 +360,9 @@ struct game_state
 ~~~~~~~ C++
 };
 ~~~~~~~
-[Listing [x]: <file>[handmade.h]</file> .]
+[Listing [x]: <file>[handmade.h]</file> `tJump` is a magic value. Don't use magic values for physics.]
 
-And now we can implement the jumping logic. It will be a sine wave based on `tJump` value. If we press Action Down, `tJump` will jump up, and then will constantly be dropping each frame.
+Now we can implement the jumping logic. After the initial impulse, `tJump`'s value will gradually decrease every frame. We'll then pass this value through the sine function which will determine the desired offset. 
 
 ~~~~~~~ C++ edit
 GameState->PlayerY -= (int)(4.0f * Controller->StickAverageY + 10.0f * sinf(GameState->tJump));
@@ -286,12 +376,18 @@ if(Controller->ActionDown.EndedDown)
 ~~~~~~~ C++ add
 GameState->tJump -= 0.033f;
 ~~~~~~~
-[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> .]
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Our character's jump is now governed by a sine wave.]
 
-It's still terrible, but we can work with for our purposes right now. Let's say we want to go in and fine-tune our jumping algorithm. We already have tools which allow us to leave the game running, go back to the code and say "we will only modify `tJump` if it's above 0": 
+# Define the Objective
+
+## The Problem
+
+Now this player code still has flaws. There's nothing stopping us from having a new jump while we're "in the air"; besides, our character still doesn't fall down. (And you never, ever, should base your character movement on sine waves). 
+
+So let's say we want to go in and fine-tune our jumping algorithm. We already have tools which allow us to leave the game running, we can go back to the code saying "we will only modify `tJump` if it's above 0": 
 
 ~~~~~~~ C++ edit
-GameState->PlayerY -= (int)(4.0f * Controller->StickAverageY + 10.0f * sinf(GameState->tJump));
+GameState->PlayerY -= (int)(4.0f * Controller->StickAverageY);
 ~~~~~~~ C++ add
 if (GameState->tJump > 0)
 {
@@ -304,9 +400,9 @@ if(Controller->ActionDown.EndedDown)
 }
 GameState->tJump -= 0.033f;
 ~~~~~~~
-[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> .]
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Making sure there're no double-jumps.]
 
-So yeah, our game is running, we recompile in a fraction of a second... But then we need to pick up our controller again, and do the jump. We can see that now there's no swinging but the "jump" happens down instead of up. So we flip back to the editor, edit the direction, recompile, go back to the game and retest: 
+For instance, after the previous edit we can see that now the "jump" happens downwards instead of upwards (because of the phase of the sine wave). So we flip back to the editor, flip the sign, recompile, go back to the game and retest: 
 
 ~~~~~~~ C++
 if (GameState->tJump > 0)
@@ -316,23 +412,29 @@ if (GameState->tJump > 0)
 ~~~~~~~ C++
 }
 ~~~~~~~
-[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> .]
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Tweak, recompile, and retest.]
 
-Hopefully you can see where we're getting at: there's a whole _process_ that we need to keep repeating for testing our changes: and it's just a simple jump tuning! 
+Hopefully you can see where we're getting at: there's a whole _process_ that we need to keep repeating for testing our changes: and it's just a simple jump tuning! Yet we still need to think about falling down, the amplitude, etc. 
+
+Fine-tuning is a potentially a complex and lengthy process, and we want to make it as smooth as possible. In our case, we already can leave the game running, recompile on the fly and continue editing, yet we still need to pick up our controller again and do the jump to test. This is how it looks now:
 
 1. Go into the game, find out what you need to tune. 
 2. Implement the change in your code
-3. Recompile. (no more need to restart!)
+3. Recompile.
 4. Switch back to the game.
 5. Repeat the action to see whether it was fixed.
 
-Picking up the controller and pressing a couple buttons may be tedious enough, but even further still, imagine that you have to fine-tune something you can't easily replicate in one go. Say, death animation of an enemy. You kill the enemy, now he's gone, you need to wait for him to respawn, or spawn a new one, or go find a new enemy... There're all these annoyances that you need to think about... So why not do it the way the musicians edit their music? 
+Picking up the controller and pressing a couple buttons may be tedious enough, but in a grand scheme of things it's a trivial situation. Imagine that you have to fine-tune something you can't easily replicate in one go, say, death animation of an enemy. You kill the enemy, and now he's gone, so you need to wait for him to respawn, or spawn a new one, or go find a new enemy... These are all the annoyances that you need to think about... 
 
-What we're thinking about is a sort of a looped editor, where one can go and record a specific action. Then the game would be repeating that action again and again the way we did it as we clean the code for it.
+## Do It Like the Musicians Do
 
-It turns out that, the way we set up our game, implementing such a feature would be quite easy. If we don't care about the sound, we only have one function to call: `UpdateAndRender`. This function takes whatever the state of the game memory is, it takes the input from the user, and whenever we want it to draw. That's it!
+Why not do it the way the musicians edit their music? Any serious music writing software allows you to write the notes, which will then be automatically reproduced for you, potentially on a loop. You can then go in, implement a quick fix, and go out.
 
-So what if we remember whatever our input was? We would then pass it back to the game, the way we did it. If we walk this road, you can imagine setting up a structure to store the input for us. Since we'd be recording input for potentially more than one frame, we'd have an "input stream" containing input events for each frame and an "input count" saying how many of those events did we record. 
+What we're thinking about is a sort of a looped editor, where one can go and record a specific situation: input, world state, everything. After that, the game would be repeating the same action again and again, allowing us to work on it in the meantime.
+
+This might be a daunting idea to face but it turns out it's not that bad! The way we set up our game, implementing such a feature would be quite easy. Setting sound aside for a moment, we only have one function to call: `GameUpdateAndRender`. This function takes whatever the state of the game memory is, it takes the input from the user, and a buffer to draw its result in. That's it!
+
+So what if we remember whatever our input was? We could then pass it back to the game, the way we did it. By walking down this road, you can imagine setting up a structure to store the input for us. Since we'd be recording input for potentially more than one frame, we'd have an "input stream" containing input events for each frame and an "input count" saying how many of those events did we record. 
 
 ~~~~~~~ C++
 struct win32_recorded_input
@@ -343,7 +445,17 @@ struct win32_recorded_input
 ~~~~~~~
 [Hypothetical recorded input structure.]
 
-Further still, we know how to read or write files, so we can even potentially preserve these states between sessions! In such case we won't even need any structures to hold additional information for us, we can access this stream on the fly. One can imagine that we have a recording index and a playing index available inside the game loop at any given moment: 
+Further still, we know how to read or write files, so we can even potentially preserve these states between sessions! In such case we won't even need any structures to hold additional information for us, we can access such a stream on the fly. 
+
+That is what we're going to do. We'll have all the input data stored in a separate file that, once requested, will be fed back to the game as if it were actual user input. 
+
+# Implement Live Loop
+
+## Introduce the Platform State
+
+To get ourselves started, let's define two simple numbers: a recording index and a playing index. These (for now) will serve as the triggers: if the recording index is not zero, we'll do the recording, if the playing index is not zero, we'll start the playback. 
+
+We can define these inside our WinMain as follows: 
 
 ~~~~~~~ C++
 HDC DeviceContext = GetDC(Window);
@@ -355,9 +467,11 @@ int InputPlayingIndex = 0;
 
 // NOTE(casey): Sound test
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Introducing recording and playing indexes.]
 
-Even better still, we can add these into a new structure that we'll call `win32_state` so that we can pass these around:
+Even further still, we could package these inside a structure. At this point, we can introduce a structure similar to `game_state`, a platform-specific struct where we can store all sorts of useful data. It will contain things that wouldn't make sense agglomerating elsewhere, and we can pass it around wherever we want. For Windows platform layer, we'll call this structure `win32_state`, but you can imagine us eventually having eventually `linux_state`, `macos_state`, etc.
+
+Let's define this structure inside `win32_handmade.h`:
 
 ~~~~~~~ C++
 struct win32_recorded_input
@@ -377,9 +491,9 @@ struct win32_state
 #define WIN32_HANDMADE_H
 #endif
 ~~~~~~~ 
-[Listing [x]: <file>[win32_handmade.h]</file> .]
+[Listing [x]: <file>[win32_handmade.h]</file> Introducing `win32_state`.]
 
-Then we can initialize this structure in our WinMain as we did with other structures before. 
+This structure can then be initialized inside our `WinMain` on startup. 
 
 ~~~~~~~ C++
 HDC DeviceContext = GetDC(Window);
@@ -393,11 +507,9 @@ Win32State.InputPlayingIndex = 0;
 
 // NOTE(casey): Sound test
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Initializing `win32_state`.]
 
-Why would we even need a `win32_state`? Well, similar to `game_state`, we can store there all sorts of useful data, things that wouldn't make sense agglomerating elsewhere, and we can pass it around wherever we want.
-
-Now we can actually toggle the index by pressing a key on our keyboard, let's say `L`. If we don't do anything, we start recording, if we're already recording, we will stop recording and start playback. 
+Having a single state struct allows us to pass its arguments with ease. In our case, we can send the indexes to the keyboard processing function. If the user presses a key, let's say `L` for "loop", we can toggle the states as necessary. If we don't do anything, we start recording, if we're already recording, we will stop recording and start playback. 
 
 ~~~~~~~ C++
 internal void
@@ -442,12 +554,9 @@ WinMain(...)
     *NewKeyboardController = {};
     NewKeyboardController->IsConnected = true;
     NewKeyboardController->IsAnalog = false;
-    for (int ButtonIndex = 0;
-            ButtonIndex < ArrayCount(NewKeyboardController->Buttons);
-            ++ButtonIndex)
+    for (...)
     {
-        NewKeyboardController->Buttons[ButtonIndex].EndedDown =
-                        OldKeyboardController->Buttons[ButtonIndex].EndedDown;
+        // ... 
     }
     
 ~~~~~~~ C++ edit
@@ -456,12 +565,20 @@ WinMain(...)
     // ... 
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Using `win32_state` to toggle recording and playback indexes.]
 
-Ok, so now we collect and advance this index, now what? Well, now we should use it! Supposedly, just before the `Game.UpdateAndRender()` call we introduce a couple magic (for now) functions like this: 
+## Outline Usage
 
-* If recording index is anything but 0, we start recording. 
-* If playing index is anything but 0, we do the playback: 
+Now that we can get from the user the commands to start looped recording or playback, let's think about how we can actually make it happen. 
+
+Supposedly, just before the `Game.UpdateAndRender()` call we introduce a couple functions that operate on the following logic:  
+
+* If the recording index has any value but 0, we start recording. 
+* If the playing index has any value but 0, we do the playback.
+
+These functions would get the platform state and the user's input. For recording, the input would be stored on an external file. For the playback, whatever user's input was will be flat-out replaced by the saved version.
+
+In code, this will look roughly this way:
 
 ~~~~~~~ C++
 game_offscreen_buffer Buffer = {};
@@ -478,28 +595,36 @@ if (Win32State.InputRecordingIndex)
 }
 if (Win32State.InputPlayingIndex)
 {
-    Win32PlaybackInput(&Win32State, &NewInput);
+    Win32PlaybackInput(&Win32State, NewInput);
 }
 ~~~~~~~ C++
 Game.UpdateAndRender(&GameMemory, NewInput, &Buffer);
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Sketching out usage.]
 
-Let's see what's so magic about these functions and implement them.
+Well, the only thing remaining now is dive in and actually make it happen. 
 
 ## Input Recording
 
-Recording is easy: We need to open the file, write to it the last user input, and close it. We've seen the Windows API for that in `DEBUGPlatformWriteEntireFile`: 
+As we said, we want to save user input on disk. If we look at the `DEBUGPlatformWriteEntireFile` function, you'll notice that, roughly said, a write process happens in three steps: 
 
-~~~~~~~ C++
-WriteFile(FileHandle, Memory, MemorySize, &BytesWritten, 0)
-~~~~~~~
+1. File handle is opened for given filename.
+2. Data is written. 
+3. File handle is closed.
 
-We can use pretty much the same here: 
+That said, we don't _have to_ open and close the file right ahead. Furthermore, every subsequent write will add data _after_ whatever we've written before while the handle is open. All of this is awfully convenient for our purposes, so what we really need is to split input recording into three functions: 
+
+* Opening file for writing, which is called at the beginning of the recording (when the user presses `L` for the first time). 
+* Writing input, which is happening every frame. 
+* Closing the file (when the user presses `L` for the second time).
+
+Let's start from the simplest one: Writing input. Provided a file handle, we simply write our input to it and call it a day. We won't even check if the file handle is valid, since it's all debug code. 
+
+This is how the output function looks like:
 
 ~~~~~~~ C++ add
 internal void 
-Win32RecordInput(win32_state *Win32State, game_input Input)
+Win32RecordInput(win32_state *Win32State, game_input *Input)
 {
     DWORD BytesWritten;
     WriteFile(Win32State->RecordingHandle, Input, sizeof(*Input), &BytesWritten, 0);
@@ -509,9 +634,16 @@ Win32RecordInput(win32_state *Win32State, game_input Input)
 internal void
 Win32ProcessPendingMessages(...)
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Implementing `Win32RecordInput`.]
 
-And that's all there's to the actual recording. You'll notice however that we don't have a handle, nor do we open or close the file we're writing to. Let's fix all this: 
+And that's all there's to the actual recording. [WriteFile][] takes five parameters: 
+* Handle to the file. We don't have `RecordingHandle` just yet, we'll get there in a second.
+* Pointer to the data to write. It's our whole `Input` struct.
+* How much data to write. It's simple in our case, we want to copy the whole struct so we use `sizeof` operator.
+* Pointer to `BytesWritten` variable. `WriteFile` will output `TRUE` or `FALSE` depending on whether the operation succeeded at all. It's the programmer's responsibility then to check if the `BytesWritten` corresponds to the size since writing less than requested is not considered a fail case. Not in our case, we don't care, it's all internal debug code. 
+* Final value only comes into play in case of asynchronous writing. It's not our case so we simply pass `NULL` or `0`. 
+
+So from all of this we are only missing our file handle. Let's first add it to `win32_state`. While we're at it, let's also add the `PlaybackHandle` which will become handy for playback.
 
 ~~~~~~~ C++
 struct win32_state
@@ -523,9 +655,11 @@ struct win32_state
     int InputPlayingIndex;
 };
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.h]</file> .]
+[Listing [x]: <file>[win32_handmade.h]</file> Adding `Recording` and `Playback` file handles.]
 
-As for opening and closing handles, we can simply reuse the code we have already. We don't care about the file name for now, let's have it as `foo.hmi`, `.hmi` standing for "Handmade Input`.
+To open and close the recording file handle, we can simply reuse the code we have already. We don't care about the file name for now, let's have it as `foo.hmi`, `.hmi` standing for "Handmade Input`.
+
+Another thing that we'll do is to delegate setting of the recording index to these functions. This is less error-prone, and will come in handy when we will use these functions.
 
 ~~~~~~~ C++ add
 internal void
@@ -550,11 +684,46 @@ internal void
 Win32RecordInput(...)
 // ... 
 ~~~~~~~ 
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Defining `Win32BeginRecordingInput` and `Win32EndRecordingInput`.]
+
+At this point, we can replace the code we've written before inside `Win32ProcessPendingMessages` and, instead of defining indexes ourselves, call the newly defined functions.
+
+~~~~~~~ C++
+else if (VKCode == 'L')
+{
+    if (IsDown)
+    {
+        if (Win32State->InputRecordingIndex == 0)
+        {
+~~~~~~~ C++ edit
+            Win32BeginRecordingInput(Win32State, 1);
+~~~~~~~ C++
+        }
+        else
+        {
+~~~~~~~ C++ edit
+            Win32EndRecordingInput(Win32State);
+            Win32BeginInputPlayback(Win32State, 1);
+~~~~~~~ C++ 
+        }
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32ProcessPendingMessages]</file> Using begin and end recording functions.]
+
+We don't have `Win32BeginInputPlayback` just yet, so let's make it happen right away!
 
 ## Input Playback
 
-As for the playback (or PlayBack if you prefer it), we pretty much mirror the same setup (except this time we're reading instead of writing). We have already added `PlaybackHandle` to `win32_state` anticipating this movement, let's go ahead and write the rest of code:
+For what it might concern the playback (or PlayBack if you prefer it), we will mostly mirror the same setup:
+
+* A function will open a playback handle for reading. 
+* Another function will do the read on each frame. 
+* Yet another function will close the handle once we're done. 
+
+We have already added `PlaybackHandle` to `win32_state` anticipating this movement, let's go ahead and write the rest of code. 
+
+Functions for begin and end playback should be fairly straightforward. We will set the `InputPlaybackIndex`, open or close the file handle as necessary. 
 
 ~~~~~~~ C++
 internal void 
@@ -586,9 +755,12 @@ Win32PlaybackInput(win32_state *Win32State, game_input *Input)
     
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Writing playback functions.]
 
-For `Win32PlaybackInput`:
+As for `Win32PlaybackInput`, there's more complexity involved. The simplest solution is: 
+
+* Try to read the first input. 
+* If it succeeds (we do need to make sure that the read was successful), stop and restart right away. 
 
 ~~~~~~~ C++
 internal void 
@@ -605,13 +777,12 @@ Win32PlaybackInput(win32_state *Win32State, game_input *Input)
 ~~~~~~~ C++
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Defining `Win32PlaybackInput`.]
 
-This however will only read one input (from the first frame when we started recording). We want to read the full thing, so really we need to structure this code differently.
+This is a valid solution if we only need to register a single frame's `Input` event. However this is not the case; we want to read the whole recorded sequence. What we really need is this logic:
 
-// TODO: this relies on `ReadFile` advancing "read cursor" each time a read succeeds.
-
-For now, let's use these functions and verify that we're compiling fine. 
+* If the read succeeded, all good, there will be still input on the next iteration. 
+* If the read failed, we reached the end of file stream, need to restart. 
 
 ~~~~~~~ C++
 DWORD BytesRead;
@@ -629,117 +800,18 @@ else
     Win32BeginInputPlayback(Win32State, PlayingIndex);
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > Win32PlaybackInput]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp > Win32PlaybackInput]</file> Making sure that all the recorded input is played before restarting.]
 
-~~~~~~~ C++
-else if (VKCode == 'L')
-{
-    if (IsDown)
-    {
-        if (Win32State->InputRecordingIndex == 0)
-        {
-~~~~~~~ C++ edit
-            Win32BeginRecordingInput(Win32State, 1);
-~~~~~~~ C++
-        }
-        else
-        {
-~~~~~~~ C++ edit
-            Win32EndRecordingInput(Win32State);
-            Win32BeginInputPlayback(Win32State, 1);
-~~~~~~~ C++ 
-        }
-    }
-}
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > Win32ProcessPendingMessages]</file> .]
+Let's compile, run, and see in the debugger what's going on. 
 
-// TODO: walk through the debugger
+1. At the beginning of `WinMain`, `Win32State` is reset successfully. 
+2. When we press `L`, and the recording starts: `InputRecordingIndex` is changed to `1`, and the `RecordingHandle` is not `0`. 
+3. You can run around with your player, do a couple jumps. 
+4. Once you press `L` again, you'll see that the player repeats the whole sequence. 
 
-Hey look, we've got input recording in 10 minutes, isn't that beautiful. There was an entire company dedicated to input recording once... 
+There's still one last bug lurking around. You'll notice that we don't loop properly. After the first playback loop is completed, it should return to the beginning and restart playback from scratch.
 
-# Loop the State of the Game
-
-If we wanted to save the whole state of the game... guess what? We've architectured our code in the specific manner allowing this with ease. It's going to take a huge amount of space on your disk drive but it's doable! 
-
-We `VirtualAlloc`'ed the entire memory block used by the game to the known base address. So if we want to restore the state of the game at that time, we simply need to save and load that block. That's it. Just a couple lines of code, without the need of a full-blown serialization layer, big walking changes of things (to check what changed or not). Even further than that, having a known base address means that all the pointers within that memory block will remain valid! 
-
-So how exactly do we make it happen? First of all, let's need move our the references to our game memory to `win32_state`. It's only a single pointer and the size.
-
-~~~~~~~ C++
-struct win32_state
-{
-~~~~~~~ C++ add
-    u64 TotalSize;
-    void *GameMemoryBlock;
-~~~~~~~ C++
-    HANDLE RecordingHandle;
-    int InputRecordingIndex;
-    
-    HANDLE PlaybackHandle;
-    int InputPlayingIndex;
-};
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.h]</file> .]
-
-To use it, we simply move `TotalStorageSize` and `GameMemoryBlock` to `Win32State`.
-
-~~~~~~~ C++
-game_memory GameMemory = {};
-GameMemory.PermanentStorageSize = Megabytes(64);
-GameMemory.TransientStorageSize = Gigabytes(1);
-GameMemory.DEBUGPlatformFreeFileMemory = DEBUGPlatformFreeFileMemory;
-GameMemory.DEBUGPlatformReadEntireFile = DEBUGPlatformReadEntireFile;
-GameMemory.DEBUGPlatformWriteEntireFile = DEBUGPlatformWriteEntireFile;
-
-~~~~~~~ C++ edit
-Win32State.TotalSize = (GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize);
-~~~~~~~ C++ add
-Win32State.GameMemoryBlock = VirtualAlloc(BaseAddress, (size_t)Win32State.TotalSize,
-                                            MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-
-~~~~~~~ C++ edit
-GameMemory.PermanentStorage = Win32State.GameMemoryBlock;
-~~~~~~~ C++
-GameMemory.TransientStorage = ((u8 *)GameMemory.PermanentStorage +
-                                GameMemory.PermanentStorageSize);
-~~~~~~~ 
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
-
-So far, there's no change to the output of our program. We simply moved the location of our game memory block to access it easier. Now let's actually use this.
-
-~~~~~~~ C++
-Win32State->InputRecordingIndex = InputRecordingIndex;
-    
-char *Filename = "foo.hmi";
-Win32State->RecordingHandle = CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
-
-~~~~~~~ C++ add
-DWORD BytesToWrite = (DWORD)Win32State->TotalSize;
-Assert(Win32State->TotalSize == BytesToWrite);
-DWORD BytesWritten;
-WriteFile(Win32State->RecordingHandle, Win32State->GameMemoryBlock, BytesToWrite,
-            &BytesWritten, 0); 
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > Win32BeginRecordingInput]</file> .]
-
-~~~~~~~ C++
-Win32State->InputPlayingIndex = InputPlayingIndex;
-
-char *Filename = "foo.hmi";
-Win32State->PlaybackHandle = CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
-
-~~~~~~~ C++ add
-DWORD BytesToRead = (DWORD)Win32State->TotalSize;
-Assert(Win32State->TotalSize == BytesToRead);
-DWORD BytesRead;
-ReadFile(Win32State->PlaybackHandle, Win32State->GameMemoryBlock, BytesToRead, &BytesRead, 0);    
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > Win32BeginInputPlayback]</file> .]
-
-There's still one last bug lurking around. You'll notice that we don't loop properly. After a loop is completed, it should return to the beginning and continue playback.
-
-Let's look at our `Win32PlaybackInput`: 
+What's going on? Let's re-examine `Win32PlaybackInput`: 
 
 ~~~~~~~ C++
 internal void 
@@ -760,9 +832,11 @@ Win32PlaybackInput(win32_state *Win32State, game_input *Input)
 }
 ~~~~~~~
 
-In here, we are checking whether or not ReadFile returns `0`. The expectation being that `0` is returned if `ReadFile` read 0 bytes. But, if we look at the documentation, it only returns `0` if the read failed completely (for instance, if the file handle wasn't open) which anyway is not the case. We need to refactor this code to look at the bytes read instead. If we read 0 bytes, we'll restart from the beginning. We still want to see whether `ReadFile` succeeded, just to be sure.
+Ok, seems like we didn't check the [documentation][ReadFile] here. We are checking whether or not `ReadFile` returns `0`. Our expectation was that `0` (or `FALSE`) would be returned if `ReadFile` read less `0` bytes. However, the documentation claims that the function only returns `0` if the read failed completely (for instance, if the file handle wasn't open) so it's not not our case. 
 
-While we're at it, we might also fix another inaccuracy: when we restart our read, we still want to read the first input in the sequence.
+We need to refactor this code to look at the bytes read instead. If we our `BytesRead` is `0`, we'll restart from the beginning. We still want to see whether `ReadFile` succeeded, just to be sure.
+
+While we're at it, we might also fix another inaccuracy: when we restart our read, we still want to read the first input in the sequence. Otherwise one frame would be skipped entirely, something that might cause unexpected troubles. 
 
 ~~~~~~~ C++
 internal void 
@@ -791,13 +865,105 @@ Win32PlaybackInput(win32_state *Win32State, game_input *Input)
     }
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Fixing looping issue.]
 
-That's it. 
+# Loop the Game State
 
-# "Fix" the "Jump" Code
+There's one last piece of the puzzle missing. If we wanted to save the whole state of the game... guess what? We've architectured our code in the specific manner allowing this with ease. It's going to take a huge amount of space on your disk drive but it's doable! 
 
-Now you'll see how simple it is to edit code on the fly. Let's go back to our totally accurate jump code and try to fix it just a little bit. This is the state of it right now. 
+As you remember, we `VirtualAlloc`'ed the entire memory block used by the game to the known _base address_ (address to which the memory pointer is pointing to -- the result of `VirtualAlloc`). So if we want to restore the state of the game at that time, we simply need to save and load that block. That's it. Just a couple lines of code, without the need of a full-blown serialization layer, big walking changes of things (to check what changed or not). Even further than that, having a known base address means that all the pointers within that memory block will remain valid! 
+
+So how exactly do we make it happen? You will be shocked how little of a change to our code is required. 
+
+First of all, let's move the references to our game memory to `win32_state`. It's only a single pointer and the size.
+
+~~~~~~~ C++
+struct win32_state
+{
+~~~~~~~ C++ add
+    u64 TotalSize;
+    void *GameMemoryBlock;
+~~~~~~~ C++
+
+    HANDLE RecordingHandle;
+    int InputRecordingIndex;
+    
+    HANDLE PlaybackHandle;
+    int InputPlayingIndex;
+};
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.h]</file> Expanding `win32_state`.]
+
+To use it, we simply move `TotalStorageSize` and `GameMemoryBlock` to `Win32State`. Make sure that the `Win32State` initialization is above `GameMemory` initialization inside your `WinMain`!
+
+~~~~~~~ C++
+win32_state Win32State = {};
+
+// ... 
+
+game_memory GameMemory = {};
+GameMemory.PermanentStorageSize = Megabytes(64);
+GameMemory.TransientStorageSize = Gigabytes(1);
+GameMemory.DEBUGPlatformFreeFileMemory = DEBUGPlatformFreeFileMemory;
+GameMemory.DEBUGPlatformReadEntireFile = DEBUGPlatformReadEntireFile;
+GameMemory.DEBUGPlatformWriteEntireFile = DEBUGPlatformWriteEntireFile;
+
+~~~~~~~ C++ edit
+Win32State.TotalSize = (GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize);
+Win32State.GameMemoryBlock = VirtualAlloc(BaseAddress, (size_t)Win32State.TotalSize,
+~~~~~~~ C++
+                                            MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+
+~~~~~~~ C++ add
+GameMemory.PermanentStorage = Win32State.GameMemoryBlock;
+~~~~~~~ C++
+GameMemory.TransientStorage = ((u8 *)GameMemory.PermanentStorage +
+                                GameMemory.PermanentStorageSize);
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Storing the pointer to the game memory inside `Win32State`.]
+
+So far, there's no change to the output of our program. We simply moved the location of our game memory block to access it easier. Now let's actually make the change.
+
+Inside `Win32BeginRecordingIndex` (which already has access to `Win32State`) we will attempt to write the _whole_ `GameMemoryBlock` (i.e. whatever its `TotalSize` is). 
+
+We need to be careful about that because our `GameMemoryBlock` can eventually exceed 4GB of data (since we already request a bit more than 1GB), and `WriteFile` cannot write more than 4GB at a time. We can go around this issue for now by casting our `TotalSize` to a 32-bit `DWORD` and immediately assert that the resulting value is the same as `TotalSize`. 
+
+~~~~~~~ C++
+Win32State->InputRecordingIndex = InputRecordingIndex;
+    
+char *Filename = "foo.hmi";
+Win32State->RecordingHandle = CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+
+~~~~~~~ C++ add
+DWORD BytesToWrite = (DWORD)Win32State->TotalSize;
+Assert(Win32State->TotalSize == BytesToWrite);
+DWORD BytesWritten;
+WriteFile(Win32State->RecordingHandle, Win32State->GameMemoryBlock, BytesToWrite,
+            &BytesWritten, 0); 
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32BeginRecordingInput]</file> Recording the whole of game memory.]
+
+Conversely, whenever we want to start our playback, we want to load whatever the game's state was. It looks exactly the same way as the recording, except we use `ReadFile` instead of `WriteFile`: 
+
+~~~~~~~ C++
+Win32State->InputPlayingIndex = InputPlayingIndex;
+
+char *Filename = "foo.hmi";
+Win32State->PlaybackHandle = CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+
+~~~~~~~ C++ add
+DWORD BytesToRead = (DWORD)Win32State->TotalSize;
+Assert(Win32State->TotalSize == BytesToRead);
+DWORD BytesRead;
+ReadFile(Win32State->PlaybackHandle, Win32State->GameMemoryBlock, BytesToRead, &BytesRead, 0);    
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32BeginInputPlayback]</file> Restoring the saved game memory.]
+
+That's it. That's really all there's to it. This is absolutely amazing. Isn't programming great?
+
+# Fix the "Jump" Code
+
+Now you'll see how simple it is to edit code on the fly. To test our newfound ability, let's go back to our "totally accurate" jump code and try to fix it just a little bit. This is the state of it right now. 
 
 ~~~~~~~ C++
 if (GameState->tJump > 0)
@@ -811,14 +977,27 @@ if(Controller->ActionDown.EndedDown)
 GameState->tJump -= 0.033f;
 ~~~~~~~
 
-Well, first of all, we'd like for the player to return down. If we continue by our current logic, we'd say that there should be Pi period involved. 
+The way we approach this will be the following: 
+
+1. Run the game.
+2. Start recording (press `L`)
+3. Make the player run and do a single jump
+4. Stop recording (press `L` again). The player should repeat the little run and jump ad infinitum, allowing you to: 
+    * Make the tweak
+    * Recompile the code (hopefully you have setup a keyboard shortcut to compile by now?)
+    * See the change
+    * Make the tweak....
+
+![Figure [x]: Looped Live Code Editing.](../media/day23/looped_editing.gif) 
+
+Well, first of all, we'd like for the player to return down. If we continue by our current logic and use the sine function, we'd say that there should be Pi period involved. 
 
 ~~~~~~~ C++ edit
 GameState->PlayerY -= (int)(10.0f * sinf(Pi32 * GameState->tJump));
 ~~~~~~~
 [Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> And recompile.]
 
-Maybe we should do the full period, 2Pi? 
+Ok, that did nothing. Maybe we should do the full period, 2Pi? 
 
 ~~~~~~~ C++ edit
 GameState->PlayerY -= (int)(10.0f * sinf(2.0f * Pi32 * GameState->tJump));
@@ -870,24 +1049,32 @@ GameState->tJump -= 0.033f;
 ~~~~~~~
 [Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> And recompile.]
 
-Yeah, this seems reasonable.
+Yeah, this seems reasonable. Please don't use this jump implementation, that's not how you should do jumps.
 
 # Further Tweaks
 
-There's more to it. For instance, if you want to go completely crazy, you can setup your window to be always on top by passing the flag `WS_EX_TOPMOST` when the window is created. 
+As usual, you can make it so that the game helps you develop it even more. 
+
+## Make Game Window Topmost
+
+One of the tweaks is the possibility of setting up your window to be always on top by passing the flag `WS_EX_TOPMOST` when the window is created. 
 
 ~~~~~~~ C++ edit
 HWND Window = CreateWindowEx(WS_EX_TOPMOST, 
 ~~~~~~~ C++
-                             WindowClass.lpszClassName, "Handmade Hero",
-                             WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-                             CW_USEDEFAULT, CW_USEDEFAULT,
-                             CW_USEDEFAULT, CW_USEDEFAULT,
-                             0, 0, Instance, 0);
+                            WindowClass.lpszClassName, "Handmade Hero",
+                            WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                            CW_USEDEFAULT, CW_USEDEFAULT,
+                            CW_USEDEFAULT, CW_USEDEFAULT,
+                            0, 0, Instance, 0);
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> As easy as changing one flag.]
 
-Furthermore, you can even make the window semitransparent so you can continue editing the code below, however this requires a bit more work. Thing is, semitransparent (or "layered" as it's called by Windows) windows cannot have an own or class device context. We do have own DC so we'll need to get rid of it first. 
+## Make Game Window Semitransparent
+
+Another cool trick is that you can even make the window semitransparent, so you can continue editing the code below.
+
+One limitation of these so-called "layered" windows is that they cannot have an own or class device context. We do have Own DC but luckily we don't use it that much. We can easily get rid of it. 
 
 ~~~~~~~ C++
 WNDCLASS WindowClass = {0};
@@ -900,9 +1087,9 @@ WindowClass.hInstance = Instance;
 // WindowClass.hIcon;
 WindowClass.lpszClassName = "HandmadeHeroWindowClass";
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> `Removing CS_OWNDC`. ]
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Removing `CS_OWNDC`.]
 
-It's not like we even need our own device context; we use it only in one place: when we're rendering our buffer. We can get it and release then. 
+There's only one place we use a DC: when we're rendering our buffer. We can request one and release it then. 
 
 ~~~~~~~ C++
 if (Window)
@@ -930,9 +1117,9 @@ if (Window)
     // ... 
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> ]
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Requesting a device context every time we render the window.]
 
-So far, no changes. But now we can actually implement a layered window. This is achieved in two steps. First, we need to declare that our window will be layered: 
+So far, we see no changes to the output of our program. But now we can actually implement a layered window. This is achieved in two steps. First, we need to declare that our window will be layered, we can do it when we create it:
 
 ~~~~~~~ C++ edit
 HWND Window = CreateWindowEx(WS_EX_TOPMOST | WS_EX_LAYERED, 
@@ -948,10 +1135,11 @@ HWND Window = CreateWindowEx(WS_EX_TOPMOST | WS_EX_LAYERED,
 Next, we need to configure how this layered-ness will be. This is achieved by calling the   [SetLayeredWindowAttributes][] function. We want our Window to be exactly semi-transparent. 
 
 `SetLayeredWindowAttributes` requires us to pass the following parameters: 
-* A handle to our window. Once we have it, we'll need to call the function.
-* TODO the rest
+* A handle to the window.
+* Color key. This way you could make transparent, for example, only green or blue parts of the screen. We don't need this, so we'll specify black.
+* Transparency level. This goes from 0---completely transparent to 255---completely opaque. Let's settle somewhere in between for now.
 
-This function is better called by Windows directly. Whenever we receive `WM_ACTIVATEAPP` message, our `MainWindowCallback` should set the layered attributes. 
+This function is better called by Windows directly. Whenever we receive `WM_ACTIVATEAPP` message, our `MainWindowCallback` will set the layered attributes. 
 
 ~~~~~~~ C++
 case WM_ACTIVATEAPP:
@@ -963,7 +1151,7 @@ case WM_ACTIVATEAPP:
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> .]
 
-Now here, if we want to be extra fancy, we can check if the window is active or not. `WParam` is set to `TRUE` if the window is currently focused, and to `FALSE` if it's not. Let's leverage this knowledge to manipulate the alpha: 
+Here, if we want to be extra fancy, we can check if the window is active or not. `WParam` is set to `TRUE` if the window is currently focused, and to `FALSE` if it's not. Let's leverage this knowledge to make our window completely opaque when we're focused on it: 
 
 ~~~~~~~ C++
 case WM_ACTIVATEAPP:
@@ -988,15 +1176,29 @@ If you'd like to read more about layered windows, head over to this [quick guide
 
 There's more to it, like allowing mouse click-through, but we'll get to it next time (or you can try and implement it yourself!). 
 
-
-
 # Recap 
 
-# Exercises 
+What we did today cannot be praised enough. We've done input recording in no time and even have more time for extra fanciness. Yet there was an entire company dedicated to input recording once, and it's not something you see used a lot because it's deemed "too complex to implement". 
 
-# Programming Notions 
+There's so much more to do to make our platform layer a better development environment. We could make an middle platform layer to make our tools cross-platform, we could continue adding special functionality... and one day we might. But so far, in the past 23 days, we focused only on the platform layer, and not at all on the game. So the next two days we'll dedicate to the final cleanups: fixing hidden bugs, moving things around, final testing. 
 
 # Side Considerations 
+
+## Disable Sound
+
+If you want to disable sound, you can do it by simply setting the sample value to 0. You can hard-code it or, since we'd like to return to our sound code one last time in the future, we will `#if 0` the exiting part out.
+
+~~~~~~~ C++ add
+#if 0
+~~~~~~~ C++
+        f32 SineValue = sinf(GameState->tSine);
+        s16 SampleValue = (s16)(SineValue * ToneVolume);
+~~~~~~~ C++ add
+#else
+        s16 SampleValue = 0;
+#endif
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameOutputSound]</file> Disabling sound.]
 
 # Navigation 
 
