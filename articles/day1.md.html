@@ -4,38 +4,42 @@
 **Day 1. Setting Up the Windows Build**
 _Video Length: [1h13](https://hero.handmade.network/episode/code/day001/)_
 
-Welcome to Handmade Hero! This is a series where we program an entire game, from scratch, with detailed explanations of each step. 
+Welcome to Handmade Hero! This is a series where we program an entire game, from scratch, explaining each and every little piece that goes into creating games along the way.
 
 !!! Tip
-    Over the years, a whole community has spawned around the project. Head over to [Handmade Network][hmn] if you have any question, comment or feedback!
+    Over the years, a whole community has spawned around the project. Head over to [Handmade Network][hmn] if you have any question or comment!
 
     Additionally, if you preorder [Handmade Hero][], you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as community ports to other platforms. If you get stuck somewhere during this course, be sure to check it out! 
 
-Keep in mind that everything we're going to show you in this course is only _one way_ of coding a game from scratch. It is not the only way, and you don't have to follow each step the same manner it is presented here. In this course, we will present you how [Casey][] makes games, so that you can see one __complete way__ of doing it, where nothing is left out. You are encouraged however to develop your own techniques and experiment with your own styles, try different things and see what works best for you. 
+Keep in mind that everything we're going to show you in this course is only _one way_ of programming a game. In this course, we will present you how [Casey][] makes games, so that you can see one __complete__ way of doing it. You are encouraged however to develop your own styles and techniques, and experiment with trying different things and see what works the best for you.
 
-No prior knowledge of programming is required to start following along. The only thing that will help you along the way is the basic knowledge of Windows, the insides of a computer (what's a CPU, graphics card, Memory (RAM), etc. at a very general notion). Knowledge about that binary exists, that a byte is 8 bits and a Kibibyte (KiB) is 1024 bytes, and other basic computer theory, as well as the basics of color theory would definitely help as well.
+No prior knowledge of programming is required to start following along. The only thing that will help you along the way is the basic knowledge of Windows, the insides of a computer on a basic level (what's a CPU, Graphics card, Memory, Motherboard). Knowledge about that binary number system, that a byte is 8 bits and that a kilobyte is 1024 bytes, as well as the basics of color theory (RGB) would definitely help as well.
 
 # Start the Project
 
-The first thing we're going to do is to actually get the project started. We do it by setting up all our tools and by building _anything_ to ensure that the tools are working properly. While it may be a bit of _drudgework_, it's a vital step to ensure that, moving forward, the project can be continued successfully without any interruptions. 
+The first thing we're going to do is to get a simple project started. We do it by setting up all our tools and by building _something_ to ensure that our tools are working properly. While it may be a bit of _drudgework_, it's a vital step to ensure that, when moving forward, the project can be continued successfully without any interruptions.
 
-At its very core, the following things must be created: 
+To program our game, for the starters we will only need the following tools:
 
-*   Something that allows you to build the actual text files that you type into the source ("a text editor")
-*   Something that allows you to build the text files into the executables ("compiler", "linker", etc).
+*   A tool that allows us to edit our code.
+*   Another tool that allows us to compile our code and produce executable (.exe) files.
 
-You will also need a variety of additional tools that would render your life much simpler. All of these will be the focus of this Day.
+These tools, as well as few more advanced tools will be the focus of this Day.
 
 ## Set Up the Compiler
 
-A compiler is something that takes the source code that you type, and it translates it _partially_ into executable code. The role of the linker then is to gather all that executable code and put it into an executable, which is something that we can run on our computer.
+A **compiler** is something that takes the source code that you type, and it translates it into what's called "an object file".
 
-Nowadays, these are usually bundled together under the name of <b>I</b>ntegrated <b>D</b>evelopment <b>E</b>nvironment, or IDE for short. A shorthand term "compiler" is also used.
+The role of the **linker** then is then to gather all of the (usually) independently compiled object files and compose (link) them together it into an executable file.
+
+Compiling and linking are two different stages of producing executable file from the source code. We will learn about compilers and linkers in the following sections and chapters.
 
 !!! Tip
     For a more in-depth overview of how compiler and linker work, you can watch the short series [Intro to C][introtoc] where these topics are covered in detail.
 
-This course assumes you follow along on a machine running Windows 10, and will use the <b>M</b>icro<b>s</b>oft <b>V</b>isual <b>C</b>++ development tools, or MSVC. These are available bundled with Visual Studio. You can download a free Community edition at [visualstudio.microsoft.com][msvc] and follow the installation instructions: 
+This course assumes you follow along on a machine with x86 (preferably one with 64-bit support) processor running Windows 7, 8 or Windows 10.
+
+We will use the <b>M</b>icro<b>s</b>oft <b>V</b>isual <b>C</b>++ compiler, or MSVC. MSVC is part of Visual Studio IDE (Integrated Developmen Environment). You can download the free Community Edition at [visualstudio.microsoft.com][msvc] and follow the installation instructions: 
 
 1. Run `vs_community.exe` file that will be downloaded after the prompt.
 2. Accept the terms and conditions.
@@ -49,33 +53,36 @@ This course assumes you follow along on a machine running Windows 10, and will u
 6. After that, the development tools will be installed
 
 !!!
-    If you don't intend to use Visual Studio debugger at all, you can save yourself some bandwidth and disk space by only downloading and installing [Build Tools for Visual Studio](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2019). 
+    If you don't intend to use Visual Studio debugger (in case you're able to use other debugger, like GDB, WinDBG or Remedy), you can save yourself some bandwidth and disk space by only downloading and installing [Build Tools for Visual Studio](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2019). Note that some of the paths will be different in such case.
+
+    Although in practice this does not reduce space by too much. In total that  still weighs a few gigabytes.
 
 Once you are done, you can quickly test if everything was installed correctly by searching for "Visual Studio 2019" in your Start menu. You will be greeted with the Visual Studio IDE:
 
 ![Figure [X]: Visual Studio Development Environment](../media/day1/1.1-vs_ide.png)
 
-This tool may be used to write, compile and debug all code. While some developers use this interface to make their projects, in this course we will use other means. Feel free to try to use Visual Studio editor tools to develop your code though!
+This tool may be used to write, compile and debug the code. Feel free to use Visual Studio editor tools to develop your code, though this course will use a different route and show how to use the compiler, text editor and debugger separately.
 
-Other than that, depending on your choice of debugger (see Subsection [Debugging in RemedyBG or Visual Studio]), you might only access this IDE for debugging purposes. As for compilation, we will do it through the <b>C</b>ommand <b>L</b>ine <b>I</b>nterface (CLI).
+Other than that, depending on your choice of debugger (see Subsection [Debugging in RemedyBG or Visual Studio]), you might only access this IDE for debugging purposes. 
+
+We will compile our code using <b>C</b>ommand <b>L</b>ine <b>I</b>nterface (CLI) for MSVC.
 
 ## Command Line in Windows
 
 In 2020 world, the command line is getting somewhat of a comeback on Windows. Still, while on Linux the command line is omnipresent, it's still possible that you have used Windows without ever accessing it. 
 
-To open a command line, simply search in your Windows `Start` Menu for `Command Prompt`. If you open it, you will be presented with a simple text window:
+To open a command line, simply search in your Windows `Start` Menu for `Command Prompt`. Alternatively you can hit `Win+R` and type `cmd`, or hit `Win+X` and then type `C` key.
+
+When you open it, you will be presented with a simple text window:
 
 ![Figure [X]: Default Command Prompt Window](../media/day1/1.2-cmd.png)
 
-This text window allows you to have dialogue with your computer the old-fashioned way: with the text commands. For instance, `dir` lists the contents of the current directory, `del [filename]` deletes the specified file, `cd [directory]` changes the current directory, etc. 
+This text window allows you to have dialogue with your computer the old-fashioned way: with the text commands. For instance, typing `dir` command lists the contents of the current directory (shown as the path in the prompt), `del [filename]` deletes the specified file (be careful, it won't be put into the trash bin!), `cd [path]` changes the current directory to the one specified by `path`.
 
 !!! Tip
     If you're completely unfamiliar with the command lines, check out a handy command list [on Wikipedia](https://en.wikipedia.org/wiki/Cmd.exe#Windows_NT_family).
 
-!!!
-    In this book, we will be using the terms "Command Line", "Command Prompt", "CLI" and "Terminal" interchangeably.
-
-The default way the Command Prompt window looks is pretty basic, and you might want to customize its font, colors, layout, etc. To do that, close the Command Prompt and copy the shortcut to the Command Prompt on your desktop.
+You might want to customize your Command Prompt font, colors, layout, etc. To do that, you would need to have Command Prompt shortcut saved somewhere, preferably on desktop. Close your Console window and create a shortcut to the Command Prompt. Open the Console through that shortcut.
 
 !!! Note Copying shortcuts from Windows 10 Start Menu
     Please note that, if you are using your default Windows 10 theme, you cannot `Click and Drag` the shortcut to copy it. Instead:
@@ -108,9 +115,11 @@ For your convenience, these are the preferences we're using:
 
 As the first action in your new terminal, let's create a directory for our project! 
 
-As a refresher, Command Prompt works... by processing commands. Anything you type into it is considered a command, a name of a program or a _script_. Each command is executed from a _directory_ which is represented before the `>` symbol. The first word is the command, and then usually follow _parameters_ that this command may or may not recognize. 
+As a refresher, Command Prompt works by processing commands. Any line you type into it is considered either a command, or a name of a file (either a program or a script). Each command is executed from a _directory_ which is represented before the `>` symbol. The first word is the command, and then usually follow _parameters_ that this command may or may not recognize. 
 
-For instance, if we type `cd ..` we send a command "Change Directory" with parameter `..` ("Previous folder in the structure"). If we type `dir`, we send the command "Show contents of the directory" with no parameter (meaning "of the current directory"). 
+For instance, if we type `cd ..` we send a command "Change Directory" with parameter `..` (Two dots mean "Parent directory").
+
+If we type `dir`, we send the command "Show contents of the directory" with no parameters, the command will print the contents of a directory. The first parameter is the path of the directory to view contents of.
 
 !!! Tip
     Again, if you're completely unfamiliar with the command lines, check out a handy command list [on Wikipedia](https://en.wikipedia.org/wiki/Cmd.exe#Windows_NT_family).
@@ -122,7 +131,7 @@ C:\Users\Yakvi> D:
 D:> cd d:\documents\codebase
 D:\Documents\Codebase> mkdir handmade
 D:\Documents\Codebase\> cd handmade
-D:\Documents\Codebase\handmade> _
+D:\Documents\Codebase\> _
 ~~~~~~~
 [<file>[Command Prompt]</file> Creating your work folder]
 
@@ -218,7 +227,7 @@ Once we have our compiler and text editor at the ready, we can launch the latter
 ~~~~~~~ batch input
 W:\handmade> mkdir code
 W:\handmade> cd code
-W:\handmade\code> _
+D:\Documents\Codebase\> _
 ~~~~~~~
 [<file>[Command Prompt]</file> Creating `code` folder]
 3. Create a new text file and save it as `win32_handmade.cpp` inside your `code` folder.
@@ -293,14 +302,11 @@ We'll leave our source file as a stub, because we need to get this building and 
 To compile, we're going to call Visual Studio, that we installed earlier (see Set Up the Compiler subsection), or rather its command `cl`. Unfortunately, even after you've installed Visual Studio you will get an error:
 
 ~~~~~~~ batch input
-W:\handmade>cl
+W:\handmade> cl
 ~~~~~~~ batch
 'cl' is not recognized as an internal or external command,
 operable program or batch file.
 
-
-~~~~~~~ batch input
-W:\handmade> _
 ~~~~~~~ 
 [<file>[Command Prompt]</file> Trying to call cl]
 
@@ -782,11 +788,11 @@ In this section, we will be detailing some of important programming concepts tha
 
 ## Entry Point on Windows
 
-`WinMain` is an _entry point_ for Windows. An entry point is a function that gets called, executes the code inside it, and returns to whoever called it. But who called us in the first place? In this particular way of compiling which we are doing right now, it's not actually Windows that called us, it's the so-called "<b>C</b> <b>R</b>untime <b>L</b>ibrary", or CRT for short. CRT is something that ships with all the C compilers, as mandated by the C specification (for Windows, you can find documentation on [MSDN][crt]). In turn, the CRT was called by Windows. 
+`WinMain` is an _entry point_ for windows applications. An entry point is a function that gets called, executes the code inside it, and returns to whoever called it.
 
-However, CRT is not part of Windows, it's inside our executable. And even if we aren't going to use any of its functions (since this course is about making things from scratch yourself), we can't just remove it like this. The compiler counts on CRT for a number of things. These things are actually hard-coded into the compiler to call into the CRT, and if it's not there, you'll need to implement that code yourself. 
+But who called us in the first place? It's not actually the operating system that called us. "<b>C</b> <b>R</b>untime <b>L</b>ibrary" (CRT) was the one who's responsible for calling us. CRT is something that ships with all the C compilers, as mandated by the C specification (for Windows, you can find documentation on [MSDN][crt]). In turn, the CRT was called by Windows. 
 
-We aren't going to address this here but, if you are interested to learn more, check out [this discussion](https://hero.handmade.network/forums/code-discussion/t/94-guide_-_how_to_avoid_c_c++_runtime_on_windows) on Handmade Network.
+It is possible to disable the CRT library to get called by the operating system directly. This can have positive effect on the size of your binary and the number of dependencies. However removing CRT is not simple, because compiler accounts on CRT for many things in our code. If you are interested to learn more, check out [this discussion](https://hero.handmade.network/forums/code-discussion/t/94-guide_-_how_to_avoid_c_c++_runtime_on_windows) on Handmade Network.
 
 ## Bitwise Operators
 
@@ -810,7 +816,7 @@ In this section, we will be showcasing additional things you might want to do to
 
 ## Create a Virtual Drive
 
-One command to note is `subst`. On Windows, there're _drives_ (C, D, etc.) that, in the command line, you can quickly refer to by specifying their letter (e.g. `C:`). What `subst` does is taking an (available) drive letter and assigning it a path on your hard drive. This can come handy to point your codebase root folder, especially if you move the codebase to another machine or location. 
+One command to note is `subst`. This command can be used to assign a drive letter (like `Z:`) to a path on a hard drive. This can come handy to point your codebase root folder, especially if you move the codebase to another machine or location. 
 
 For more details, simply type `subst /?` in the command line.
 
@@ -823,12 +829,11 @@ Let's assign `w` drive to our codebase, create a `handmade` directory in it, and
 D:\Documents\Codebase> subst w: d:\documents\codebase
 D:\Documents\Codebase> w:
 W:\> cd handmade
-W:\handmade> _
 ~~~~~~~
 [<file>[Command Prompt]</file> Setting up your work folder]
 
 !!! Note
-    This command must be run each time you restart your PC. If you'd like subst to happen automatically, create a `startup.bat` file with the following commands: 
+    This command must be run again after you restart your PC. If you'd like subst to happen automatically when you boot your PC, create a `startup.bat` file with the following commands: 
 
     `@echo off`
 
