@@ -4,6 +4,7 @@
     * change previous and next
     * modify refs and glossary links
 2. Create new .html
+    * modify navigation links
 3. Update links
 4. Update appendix
     * modify refs section
