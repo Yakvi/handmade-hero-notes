@@ -11,11 +11,11 @@
 
 </p><p>
 
-Welcome to Handmade Hero! This is a series where we program an entire game, from scratch, with detailed explanations of each step. 
+Welcome to Handmade Hero! This is a series where we program an entire game, from scratch, explaining each and every little piece that goes into creating games along the way.
 
 </p><p>
 
-<div class="admonition tip">Over the years, a whole community has spawned around the project. Head over to <a href="https://handmade.network/">Handmade Network</a> if you have any question, comment or feedback!
+<div class="admonition tip">Over the years, a whole community has spawned around the project. Head over to <a href="https://handmade.network/">Handmade Network</a> if you have any question or comment!
 
 </p><p>
 
@@ -23,11 +23,11 @@ Welcome to Handmade Hero! This is a series where we program an entire game, from
 
 </p><p>
 
-Keep in mind that everything we're going to show you in this course is only <em class="underscore">one way</em> of coding a game from scratch. It is not the only way, and you don't have to follow each step the same manner it is presented here. In this course, we will present you how <a href="https://caseymuratori.com/">Casey</a> makes games, so that you can see one <strong class="underscore">complete way</strong> of doing it, where nothing is left out. You are encouraged however to develop your own techniques and experiment with your own styles, try different things and see what works best for you. 
+Keep in mind that everything we're going to show you in this course is only <em class="underscore">one way</em> of programming a game. In this course, we will present you how <a href="https://caseymuratori.com/">Casey</a> makes games, so that you can see one <strong class="underscore">complete</strong> way of doing it. You are encouraged however to develop your own styles and techniques, and experiment with trying different things and see what works the best for you.
 
 </p><p>
 
-No prior knowledge of programming is required to start following along. The only thing that will help you along the way is the basic knowledge of Windows, the insides of a computer (what's a CPU, graphics card, Memory (RAM), etc. at a very general notion). Knowledge about that binary exists, that a byte is 8 bits and a Kibibyte (KiB) is 1024 bytes, and other basic computer theory, as well as the basics of color theory would definitely help as well.
+No prior knowledge of programming is required to start following along. The only thing that will help you along the way is the basic knowledge of Windows, the insides of a computer on a basic level (what's a CPU, Graphics card, Memory, Motherboard). Knowledge about that binary number system, that a byte is 8 bits and that a kilobyte is 1024 bytes, as well as the basics of color theory (RGB) would definitely help as well.
 
 </p>
 <div class="longTOC">
@@ -68,33 +68,37 @@ No prior knowledge of programming is required to start following along. The only
 <p>
 
 
-The first thing we're going to do is to actually get the project started. We do it by setting up all our tools and by building <em class="underscore">anything</em> to ensure that the tools are working properly. While it may be a bit of <em class="underscore">drudgework</em>, it's a vital step to ensure that, moving forward, the project can be continued successfully without any interruptions. 
+The first thing we're going to do is to get a simple project started. We do it by setting up all our tools and by building <em class="underscore">something</em> to ensure that our tools are working properly. While it may be a bit of <em class="underscore">drudgework</em>, it's a vital step to ensure that, when moving forward, the project can be continued successfully without any interruptions.
 
 </p><p>
 
-At its very core, the following things must be created: 
+To program our game, for the starters we will only need the following tools:
 
 </p><p>
 
 <ul>
-<li class="asterisk">  Something that allows you to build the actual text files that you type into the source (&ldquo;a text editor&rdquo;)
+<li class="asterisk">  A tool allowing to edit our code.
 </li>
-<li class="asterisk">  Something that allows you to build the text files into the executables (&ldquo;compiler&rdquo;, &ldquo;linker&rdquo;, etc).</li></ul>
+<li class="asterisk">  Another tool that allows us to compile our code and produce executable (.exe) files.</li></ul>
 
 </p><p>
 
-You will also need a variety of additional tools that would render your life much simpler. All of these will be the focus of this Day.
+These tools, as well as few more advanced tools will be the focus of this Day.
 
 </p>
 <a class="target" name="setupthecompiler">&nbsp;</a><a class="target" name="starttheproject/setupthecompiler">&nbsp;</a><a class="target" name="toc1.1">&nbsp;</a><h2>Set Up the Compiler</h2>
 <p>
 
 
-A compiler is something that takes the source code that you type, and it translates it <em class="underscore">partially</em> into executable code. The role of the linker then is to gather all that executable code and put it into an executable, which is something that we can run on our computer.
+A <strong class="asterisk">compiler</strong> is something that takes the source code that you type, and it translates it into what's called &ldquo;an object file&rdquo;.
 
 </p><p>
 
-Nowadays, these are usually bundled together under the name of <b>I</b>ntegrated <b>D</b>evelopment <b>E</b>nvironment, or IDE for short. A shorthand term &ldquo;compiler&rdquo; is also used.
+The role of the <strong class="asterisk">linker</strong> then is then to gather all of the (usually) independently compiled object files and compose (link) them together it into an executable file.
+
+</p><p>
+
+Compiling and linking are two different stages of producing executable file from the source code. We will learn about compilers and linkers in the following sections and chapters.
 
 </p><p>
 
@@ -102,7 +106,11 @@ Nowadays, these are usually bundled together under the name of <b>I</b>ntegrated
 
 </p><p>
 
-This course assumes you follow along on a machine running Windows 10, and will use the <b>M</b>icro<b>s</b>oft <b>V</b>isual <b>C</b>++ development tools, or MSVC. These are available bundled with Visual Studio. You can download a free Community edition at <a href="https://visualstudio.microsoft.com/">visualstudio.microsoft.com</a> and follow the installation instructions: 
+This course assumes you follow along on a machine with x86 (preferably one with 64-bit support) processor running Windows 7, 8 or Windows 10.
+
+</p><p>
+
+We will use the <b>M</b>icro<b>s</b>oft <b>V</b>isual <b>C</b>++ compiler, or MSVC. MSVC is part of Visual Studio IDE (Integrated Developmen Environment). You can download the free Community Edition at <a href="https://visualstudio.microsoft.com/">visualstudio.microsoft.com</a> and follow the installation instructions: 
 
 </p><p>
 
@@ -129,7 +137,11 @@ This course assumes you follow along on a machine running Windows 10, and will u
 
 </p><p>
 
-<div class="admonition ">If you don't intend to use Visual Studio debugger at all, you can save yourself some bandwidth and disk space by only downloading and installing <a href="https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2019">Build Tools for Visual Studio</a>.</div>
+<div class="admonition ">If you don't intend to use Visual Studio debugger (in case you're able to use other debugger, like GDB, WinDBG or Remedy), you can save yourself some bandwidth and disk space by only downloading and installing <a href="https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2019">Build Tools for Visual Studio</a>. Note that some of the paths will be different in such case.
+
+</p><p>
+
+    Although in practice this does not reduce space by too much. In total that  still weighs a few gigabytes.</div>
 
 </p><p>
 
@@ -141,11 +153,15 @@ Once you are done, you can quickly test if everything was installed correctly by
 
 </p><p>
 
-This tool may be used to write, compile and debug all code. While some developers use this interface to make their projects, in this course we will use other means. Feel free to try to use Visual Studio editor tools to develop your code though!
+This tool may be used to write, compile and debug the code. Feel free to use Visual Studio editor tools to develop your code, though this course will use a different route and show how to use the compiler, text editor and debugger separately.
 
 </p><p>
 
-Other than that, depending on your choice of debugger (see Subsection  <a href="#toc4">4</a>), you might only access this IDE for debugging purposes. As for compilation, we will do it through the <b>C</b>ommand <b>L</b>ine <b>I</b>nterface (CLI).
+Other than that, depending on your choice of debugger (see Subsection  <a href="#toc4">4</a>), you might only access this IDE for debugging purposes. 
+
+</p><p>
+
+We will compile our code using <b>C</b>ommand <b>L</b>ine <b>I</b>nterface (CLI) for MSVC.
 
 </p>
 <a class="target" name="commandlineinwindows">&nbsp;</a><a class="target" name="starttheproject/commandlineinwindows">&nbsp;</a><a class="target" name="toc1.2">&nbsp;</a><h2>Command Line in Windows</h2>
@@ -156,7 +172,11 @@ In 2020 world, the command line is getting somewhat of a comeback on Windows. St
 
 </p><p>
 
-To open a command line, simply search in your Windows <code>Start</code> Menu for <code>Command Prompt</code>. If you open it, you will be presented with a simple text window:
+To open a command line, simply search in your Windows <code>Start</code> Menu for <code>Command Prompt</code>. Alternatively you can hit <code>Win+R</code> and type <code>cmd</code>, or hit <code>Win+X</code> and then type <code>C</code> key.
+
+</p><p>
+
+When you open it, you will be presented with a simple text window:
 
 </p><p>
 
@@ -164,7 +184,7 @@ To open a command line, simply search in your Windows <code>Start</code> Menu fo
 
 </p><p>
 
-This text window allows you to have dialogue with your computer the old-fashioned way: with the text commands. For instance, <code>dir</code> lists the contents of the current directory, <code>del [filename]</code> deletes the specified file, <code>cd [directory]</code> changes the current directory, etc. 
+This text window allows you to have dialogue with your computer the old-fashioned way: with the text commands. For instance, typing <code>dir</code> command lists the contents of the current directory (shown as the path in the prompt), <code>del [filename]</code> deletes the specified file (be careful, it won't be put into the trash bin!), <code>cd [path]</code> changes the current directory to the one specified by <code>path</code>.
 
 </p><p>
 
@@ -172,11 +192,7 @@ This text window allows you to have dialogue with your computer the old-fashione
 
 </p><p>
 
-<div class="admonition ">In this book, we will be using the terms &ldquo;Command Line&rdquo;, &ldquo;Command Prompt&rdquo;, &ldquo;CLI&rdquo; and &ldquo;Terminal&rdquo; interchangeably.</div>
-
-</p><p>
-
-The default way the Command Prompt window looks is pretty basic, and you might want to customize its font, colors, layout, etc. To do that, close the Command Prompt and copy the shortcut to the Command Prompt on your desktop.
+You might want to customize your Command Prompt font, colors, layout, etc. To do that, you would need to have Command Prompt shortcut saved somewhere, preferably on desktop. Close your Console window and create a shortcut to the Command Prompt. Open the Console through that shortcut.
 
 </p><p>
 
@@ -247,11 +263,15 @@ As the first action in your new terminal, let's create a directory for our proje
 
 </p><p>
 
-As a refresher, Command Prompt works... by processing commands. Anything you type into it is considered a command, a name of a program or a <em class="underscore">script</em>. Each command is executed from a <em class="underscore">directory</em> which is represented before the <code>&gt;</code> symbol. The first word is the command, and then usually follow <em class="underscore">parameters</em> that this command may or may not recognize. 
+As a refresher, Command Prompt works by processing commands. Any line you type into it is considered either a command, or a name of a file (either a program or a script). Each command is executed from a <em class="underscore">directory</em> which is represented before the <code>&gt;</code> symbol. The first word is the command, and then usually follow <em class="underscore">parameters</em> that this command may or may not recognize. 
 
 </p><p>
 
-For instance, if we type <code>cd ..</code> we send a command &ldquo;Change Directory&rdquo; with parameter <code>..</code> (&ldquo;Previous folder in the structure&rdquo;). If we type <code>dir</code>, we send the command &ldquo;Show contents of the directory&rdquo; with no parameter (meaning &ldquo;of the current directory&rdquo;). 
+For instance, if we type <code>cd ..</code> we send a command &ldquo;Change Directory&rdquo; with parameter <code>..</code> (Two dots mean &ldquo;Parent directory&rdquo;).
+
+</p><p>
+
+If we type <code>dir</code>, we send the command &ldquo;Show contents of the directory&rdquo; with no parameters, the command will print the contents of a directory. The first parameter is the path of the directory to view contents of.
 
 </p><p>
 
@@ -265,7 +285,7 @@ If your codebase is located on a different drive than the one you start in, you'
 <span class="line">D:&gt; cd d:\documents\codebase</span>
 <span class="line">D:\Documents\Codebase&gt; mkdir handmade</span>
 <span class="line">D:\Documents\Codebase\&gt; cd handmade</span>
-<span class="line">D:\Documents\Codebase\handmade&gt; _</span></div></code></pre><center><div class="listingcaption tilde"><file>[Command Prompt]</file> Creating your work folder</div></center>
+<span class="line">D:\Documents\Codebase\&gt; _</span></div></code></pre><center><div class="listingcaption tilde"><file>[Command Prompt]</file> Creating your work folder</div></center>
 <p>
 
 
@@ -438,7 +458,7 @@ Once we have our compiler and text editor at the ready, we can launch the latter
 
 </p><pre class="listing tilde"><code><div class=" input"><span class="line">W:\handmade&gt; mkdir code</span>
 <span class="line">W:\handmade&gt; cd code</span>
-<span class="line">W:\handmade\code&gt; _</span></div></code></pre><center><div class="listingcaption tilde"><file>[Command Prompt]</file> Creating <code>code</code> folder</div></center>
+<span class="line">D:\Documents\Codebase\&gt; _</span></div></code></pre><center><div class="listingcaption tilde"><file>[Command Prompt]</file> Creating <code>code</code> folder</div></center>
 <p>
 
 
@@ -532,10 +552,9 @@ We'll leave our source file as a stub, because we need to get this building and 
 
 To compile, we're going to call Visual Studio, that we installed earlier (see <a href="#setupthecompiler">Set Up the Compiler</a> subsection), or rather its command <code>cl</code>. Unfortunately, even after you've installed Visual Studio you will get an error:
 
-</p><pre class="listing tilde"><code><div class=" input"><span class="line">W:\handmade&gt;cl</span></div><span class="line">'cl' is not recognized as an internal or external command,</span>
+</p><pre class="listing tilde"><code><div class=" input"><span class="line">W:\handmade&gt; cl</span></div><span class="line">&#x27;cl&#x27; is not recognized as an internal or external command,</span>
 <span class="line">operable program or batch file.</span>
-<span class="line"></span>
-<span class="line"></span><div class=" input"><span class="line">W:\handmade&gt; _</span></div></code></pre><center><div class="listingcaption tilde"><file>[Command Prompt]</file> Trying to call cl</div></center>
+<span class="line"></span></code></pre><center><div class="listingcaption tilde"><file>[Command Prompt]</file> Trying to call cl</div></center>
 <p>
 
 
@@ -585,11 +604,11 @@ For Visual Studio 2019 Community edition, this path would therefore be <code>C:\
 
 So now, if you run the <code>vcvars64.bat</code> in your Command Prompt you will see the following message:
 
-</p><pre class="listing tilde"><code><div class=" input"><span class="line">W:\handmade&gt;"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"</span></div><span class="line">**********************************************************************</span>
+</p><pre class="listing tilde"><code><div class=" input"><span class="line">W:\handmade&gt;&quot;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat&quot;</span></div><span class="line">**********************************************************************</span>
 <span class="line">** Visual Studio 2019 Developer Command Prompt v##.#.##</span>
 <span class="line">** Copyright (c) 2019 Microsoft Corporation</span>
 <span class="line">**********************************************************************</span>
-<span class="line">[vcvarsall.bat] Environment initialized for: 'x64'</span>
+<span class="line">[vcvarsall.bat] Environment initialized for: &#x27;x64&#x27;</span>
 <span class="line"></span>
 <span class="line"></span><div class=" input"><span class="line">W:\handmade&gt; _</span></div></code></pre><center><div class="listingcaption tilde"><file>[Command Prompt]</file> Initializing Developer Environment for 64-bit version of Windows</div></center>
 <p>
@@ -636,7 +655,7 @@ Be mindful that this command must be run each time you restart your <em class="u
 
 </p><pre class="listing tilde"><code><span class="line">@echo off</span>
 <span class="line"></span>
-<span class="line">call "PATH_TO_VISUAL_STUDIO\vcvarsall.bat" x64</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;3:</b> <file>[shell.bat]</file> Setting up automated environment initialization.</div></center>
+<span class="line">call &quot;PATH_TO_VISUAL_STUDIO\vcvarsall.bat&quot; x64</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;3:</b> <file>[shell.bat]</file> Setting up automated environment initialization.</div></center>
 <p>
 
 
@@ -665,7 +684,7 @@ You can go even one step further and expand your Path to include the <code>misc<
 
 </p><pre class="listing tilde"><code><span class="line">@echo off</span>
 <span class="line"></span>
-<span class="line">call "PATH_TO_VISUAL_STUDIO\vcvarsall.bat" x64</span><div class=" add"><span class="line">set path=w:\handmade\misc;%path%</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;4:</b> <file>[shell.bat]</file> Expanding your Path.</div></center>
+<span class="line">call &quot;PATH_TO_VISUAL_STUDIO\vcvarsall.bat&quot; x64</span><div class=" add"><span class="line">set path=w:\handmade\misc;%path%</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;4:</b> <file>[shell.bat]</file> Expanding your Path.</div></center>
 <p>
 
 
@@ -697,7 +716,7 @@ Last, you can add a command <code>cls</code> so that the screen is cleared after
 
 </p><pre class="listing tilde"><code><span class="line">@echo off</span>
 <span class="line"></span>
-<span class="line">call "PATH_TO_VISUAL_STUDIO/vcvarsall.bat" x64</span>
+<span class="line">call &quot;PATH_TO_VISUAL_STUDIO/vcvarsall.bat&quot; x64</span>
 <span class="line">set path=w:/handmade/misc;%path%</span><div class=" add"><span class="line">cls</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;6:</b> <file>[shell.bat]</file> Your final shell setup.</div></center>
 <p>
 
@@ -1032,8 +1051,8 @@ Then, this function takes the following <em class="underscore">parameters</em>:
 Combining all these things together and putting them on one line, we get our Message Box call:
 
 </p><pre class="listing tilde"><code><div class=" edit"><span class="line">    MessageBox(<span class="hljs-number">0</span>, </span>
-<span class="line">               <span class="hljs-string">"This is Handmade Hero."</span>, </span>
-<span class="line">               <span class="hljs-string">"Handmade Hero"</span>, </span>
+<span class="line">               <span class="hljs-string">&quot;This is Handmade Hero.&quot;</span>, </span>
+<span class="line">               <span class="hljs-string">&quot;Handmade Hero&quot;</span>, </span>
 <span class="line">               MB_ICONINFORMATION | MB_OK</span>
 <span class="line">               );</span></div><span class="line">    <span class="hljs-keyword">return</span> (<span class="hljs-number">0</span>);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;15:</b> <file>[win32_handmade.cpp]</file> Adding a Message Box to our program.</div></center>
 <p>
@@ -1041,7 +1060,7 @@ Combining all these things together and putting them on one line, we get our Mes
 
 We can even go further and compress it on one line: 
 
-</p><pre class="listing tilde"><code><div class=" edit"><span class="line">    MessageBox(<span class="hljs-number">0</span>, <span class="hljs-string">"This is Handmade Hero."</span>, <span class="hljs-string">"Handmade Hero"</span>, MB_ICONINFORMATION | MB_OK);</span></div><span class="line">    <span class="hljs-keyword">return</span> (<span class="hljs-number">0</span>);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;16:</b> <file>[win32_handmade.cpp]</file> Adding a Message Box to our program.</div></center>
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">    MessageBox(<span class="hljs-number">0</span>, <span class="hljs-string">&quot;This is Handmade Hero.&quot;</span>, <span class="hljs-string">&quot;Handmade Hero&quot;</span>, MB_ICONINFORMATION | MB_OK);</span></div><span class="line">    <span class="hljs-keyword">return</span> (<span class="hljs-number">0</span>);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;16:</b> <file>[win32_handmade.cpp]</file> Adding a Message Box to our program.</div></center>
 
 <a class="target" name="importalibrary">&nbsp;</a><a class="target" name="addsomethingtodofortheprogram/importalibrary">&nbsp;</a><a class="target" name="toc5.1">&nbsp;</a><h2>Import a Library</h2>
 <p>
@@ -1110,7 +1129,7 @@ To recap, when the linker combines all the <code>.obj</code> files and makes an 
 
     Note that the function linker was looking for is <code>MessageBoxA</code>, while we called for <code>MessageBox</code>. This is because in Windows, any function that takes a string as input has an <b>A</b>NSI and a <b>W</b>ide (Unicode) version, and a macro decides which function to call. By default, the ANSI mode is enabled, but you can short-circuit this and call the version you prefer directly: 
 
-</p><pre class="listing tilde"><code><div class=" edit"><span class="line">    MessageBoxA(<span class="hljs-number">0</span>, <span class="hljs-string">"This is Handmade Hero."</span>, <span class="hljs-string">"Handmade Hero"</span>, MB_ICONINFORMATION | MB_OK);</span></div></code></pre><center><div class="listingcaption tilde"><file>[win32_handmade.cpp]</file></div></center></div>
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">    MessageBoxA(<span class="hljs-number">0</span>, <span class="hljs-string">&quot;This is Handmade Hero.&quot;</span>, <span class="hljs-string">&quot;Handmade Hero&quot;</span>, MB_ICONINFORMATION | MB_OK);</span></div></code></pre><center><div class="listingcaption tilde"><file>[win32_handmade.cpp]</file></div></center></div>
 
 </p><p>
 
@@ -1186,15 +1205,15 @@ In this section, we will be detailing some of important programming concepts tha
 <p>
 
 
-<code>WinMain</code> is an <em class="underscore">entry point</em> for Windows. An entry point is a function that gets called, executes the code inside it, and returns to whoever called it. But who called us in the first place? In this particular way of compiling which we are doing right now, it's not actually Windows that called us, it's the so-called "<b>C</b> <b>R</b>untime <b>L</b>ibrary&rdquo;, or CRT for short. CRT is something that ships with all the C compilers, as mandated by the C specification (for Windows, you can find documentation on <a href="https://docs.microsoft.com/en-us/cpp/c-runtime-library/c-run-time-library-reference">MSDN</a>). In turn, the CRT was called by Windows. 
+<code>WinMain</code> is an <em class="underscore">entry point</em> for windows applications. An entry point is a function that gets called, executes the code inside it, and returns to whoever called it.
 
 </p><p>
 
-However, CRT is not part of Windows, it's inside our executable. And even if we aren't going to use any of its functions (since this course is about making things from scratch yourself), we can't just remove it like this. The compiler counts on CRT for a number of things. These things are actually hard-coded into the compiler to call into the CRT, and if it's not there, you'll need to implement that code yourself. 
+But who called us in the first place? It's not actually the operating system that called us. "<b>C</b> <b>R</b>untime <b>L</b>ibrary&rdquo; (CRT) was the one who's responsible for calling us. CRT is something that ships with all the C compilers, as mandated by the C specification (for Windows, you can find documentation on <a href="https://docs.microsoft.com/en-us/cpp/c-runtime-library/c-run-time-library-reference">MSDN</a>). In turn, the CRT was called by Windows. 
 
 </p><p>
 
-We aren't going to address this here but, if you are interested to learn more, check out <a href="https://hero.handmade.network/forums/code-discussion/t/94-guide_-_how_to_avoid_c_c++_runtime_on_windows">this discussion</a> on Handmade Network.
+It is possible to disable the CRT library to get called by the operating system directly. This can have positive effect on the size of your binary and the number of dependencies. However removing CRT is not simple, because compiler accounts on CRT for many things in our code. If you are interested to learn more, check out <a href="https://hero.handmade.network/forums/code-discussion/t/94-guide_-_how_to_avoid_c_c++_runtime_on_windows">this discussion</a> on Handmade Network.
 
 </p>
 <a class="target" name="bitwiseoperators">&nbsp;</a><a class="target" name="basicsofprogramming/bitwiseoperators">&nbsp;</a><a class="target" name="toc8.2">&nbsp;</a><h2>Bitwise Operators</h2>
@@ -1242,7 +1261,7 @@ In this section, we will be showcasing additional things you might want to do to
 <p>
 
 
-One command to note is <code>subst</code>. On Windows, there're <em class="underscore">drives</em> (C, D, etc.) that, in the command line, you can quickly refer to by specifying their letter (e.g. <code>C:</code>). What <code>subst</code> does is taking an (available) drive letter and assigning it a path on your hard drive. This can come handy to point your codebase root folder, especially if you move the codebase to another machine or location. 
+One command to note is <code>subst</code>. This command can be used to assign a drive letter (like <code>Z:</code>) to a path on a hard drive. This can come handy to point your codebase root folder, especially if you move the codebase to another machine or location. 
 
 </p><p>
 
@@ -1262,14 +1281,13 @@ Let's assign <code>w</code> drive to our codebase, create a <code>handmade</code
 
 </p><pre class="listing tilde"><code><div class=" input"><span class="line">D:\Documents\Codebase&gt; subst w: d:\documents\codebase</span>
 <span class="line">D:\Documents\Codebase&gt; w:</span>
-<span class="line">W:\&gt; cd handmade</span>
-<span class="line">W:\handmade&gt; _</span></div></code></pre><center><div class="listingcaption tilde"><file>[Command Prompt]</file> Setting up your work folder</div></center>
+<span class="line">W:\&gt; cd handmade</span></div></code></pre><center><div class="listingcaption tilde"><file>[Command Prompt]</file> Setting up your work folder</div></center>
 <p>
 
 
 
 
-<div class="admonition note">This command must be run each time you restart your PC. If you'd like subst to happen automatically, create a <code>startup.bat</code> file with the following commands: 
+<div class="admonition note">This command must be run again after you restart your PC. If you'd like subst to happen automatically when you boot your PC, create a <code>startup.bat</code> file with the following commands: 
 
 </p><p>
 
@@ -1300,7 +1318,7 @@ If you're coming from Subsection  <a href="#toc1.2">1.2</a>, you can continue by
 <p>
 
 
-Up Next: <a href="day2.html">Day 2. Opening a Win32 Window</a>
+Up Next: <a href="../html/day2.html">Day 2. Opening a Win32 Window</a>
 
 </p><p>
 
@@ -1378,4 +1396,4 @@ Up Next: <a href="day2.html">Day 2. Opening a Win32 Window</a>
 </p><p>
 
 <script>markdeepOptions = { tocStyle: 'long' }; window.alreadyProcessedMarkdeep || (document.body.style.visibility = 'visible');</script>
-</dir></dir></windows.h></p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.10&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div>
+</dir></dir></windows.h></p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.13&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div>
