@@ -514,7 +514,7 @@ Having a single state struct allows us to pass its arguments with ease. In our c
 ~~~~~~~ C++
 internal void
 ~~~~~~~ C++ edit
-Win32ProcessPendingMessages(win32_state *Win32State, game_controller_input *KeyboardController)
+Win32ProcessPendingMessages(win32_state *State, game_controller_input *KeyboardController)
 ~~~~~~~ C++
 {
     // ... 
@@ -531,14 +531,14 @@ Win32ProcessPendingMessages(win32_state *Win32State, game_controller_input *Keyb
     {
         if (IsDown)
         {
-            if (Win32State->InputRecordingIndex == 0)
+            if (State->InputRecordingIndex == 0)
             {
-                Win32State->InputRecordingIndex = 1;
+                State->InputRecordingIndex = 1;
             }
             else
             {
-                Win32State->InputRecordingIndex = 0;
-                Win32State->InputPlayingIndex = 1;
+                State->InputRecordingIndex = 0;
+                State->InputPlayingIndex = 1;
             }
         }
     }
@@ -624,10 +624,10 @@ This is how the output function looks like:
 
 ~~~~~~~ C++ add
 internal void 
-Win32RecordInput(win32_state *Win32State, game_input *Input)
+Win32RecordInput(win32_state *State, game_input *Input)
 {
     DWORD BytesWritten;
-    WriteFile(Win32State->RecordingHandle, Input, sizeof(*Input), &BytesWritten, 0);
+    WriteFile(State->RecordingHandle, Input, sizeof(*Input), &BytesWritten, 0);
 }
 ~~~~~~~ C++
 
@@ -663,20 +663,20 @@ Another thing that we'll do is to delegate setting of the recording index to the
 
 ~~~~~~~ C++ add
 internal void
-Win32BeginRecordingInput(win32_state *Win32State, int InputRecordingIndex)
+Win32BeginRecordingInput(win32_state *State, int InputRecordingIndex)
 {
-    Win32State->InputRecordingIndex = InputRecordingIndex;
+    State->InputRecordingIndex = InputRecordingIndex;
     
     char *Filename = "foo.hmi";
-    Win32State->RecordingHandle = 
+    State->RecordingHandle = 
                 CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
 }
 
 internal void
-Win32EndRecordingInput(win32_state *Win32State)
+Win32EndRecordingInput(win32_state *State)
 {
-    CloseHandle(Win32State->RecordingHandle);
-    Win32State->InputRecordingIndex = 0;
+    CloseHandle(State->RecordingHandle);
+    State->InputRecordingIndex = 0;
 }
 
 ~~~~~~~ C++
@@ -693,17 +693,17 @@ else if (VKCode == 'L')
 {
     if (IsDown)
     {
-        if (Win32State->InputRecordingIndex == 0)
+        if (State->InputRecordingIndex == 0)
         {
 ~~~~~~~ C++ edit
-            Win32BeginRecordingInput(Win32State, 1);
+            Win32BeginRecordingInput(State, 1);
 ~~~~~~~ C++
         }
         else
         {
 ~~~~~~~ C++ edit
-            Win32EndRecordingInput(Win32State);
-            Win32BeginInputPlayback(Win32State, 1);
+            Win32EndRecordingInput(State);
+            Win32BeginInputPlayback(State, 1);
 ~~~~~~~ C++ 
         }
     }
@@ -734,23 +734,23 @@ Win32RecordInput(...)
 
 ~~~~~~~ C++ add
 internal void
-Win32BeginInputPlayback(win32_state *Win32State, int InputPlaybackIndex)
+Win32BeginInputPlayback(win32_state *State, int InputPlaybackIndex)
 {
-    Win32State->InputPlaybackIndex = InputPlaybackIndex;
+    State->InputPlaybackIndex = InputPlaybackIndex;
     
     char *Filename = "foo.hmi";
-    Win32State->PlaybackHandle = CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+    State->PlaybackHandle = CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
 }
 
 internal void
-Win32EndInputPlayback(win32_state *Win32State)
+Win32EndInputPlayback(win32_state *State)
 {
-    CloseHandle(Win32State->PlaybackHandle);
-    Win32State->InputPlayingIndex = 0;
+    CloseHandle(State->PlaybackHandle);
+    State->InputPlayingIndex = 0;
 }
 
 internal void 
-Win32PlaybackInput(win32_state *Win32State, game_input *Input)
+Win32PlaybackInput(win32_state *State, game_input *Input)
 {
     
 }
@@ -764,15 +764,15 @@ As for `Win32PlaybackInput`, there's more complexity involved. The simplest solu
 
 ~~~~~~~ C++
 internal void 
-Win32PlaybackInput(win32_state *Win32State, game_input *Input)
+Win32PlaybackInput(win32_state *State, game_input *Input)
 {
 ~~~~~~~ C++ add
     DWORD BytesRead;
-    if (ReadFile(Win32State->PlaybackHandle, Input, sizeof (*Input), &BytesRead, 0))
+    if (ReadFile(State->PlaybackHandle, Input, sizeof (*Input), &BytesRead, 0))
     {
-        int PlayingIndex = Win32State->InputPlayingIndex;
-        Win32EndInputPlayback(Win32State);
-        Win32BeginInputPlayback(Win32State, PlayingIndex);
+        int PlayingIndex = State->InputPlayingIndex;
+        Win32EndInputPlayback(State);
+        Win32BeginInputPlayback(State, PlayingIndex);
     }
 ~~~~~~~ C++
 }
@@ -786,7 +786,7 @@ This is a valid solution if we only need to register a single frame's `Input` ev
 
 ~~~~~~~ C++
 DWORD BytesRead;
-if (ReadFile(Win32State->PlaybackHandle, Input, sizeof (*Input), &BytesRead, 0))
+if (ReadFile(State->PlaybackHandle, Input, sizeof (*Input), &BytesRead, 0))
 {
 ~~~~~~~ C++ add
     // NOTE(casey): There's still input
@@ -795,9 +795,9 @@ else
 {
     // NOTE(casey): We've hit the end of the stream, go back to the beginning
 ~~~~~~~ C++
-    int PlayingIndex = Win32State->InputPlayingIndex;
-    Win32EndInputPlayback(Win32State);
-    Win32BeginInputPlayback(Win32State, PlayingIndex);
+    int PlayingIndex = State->InputPlayingIndex;
+    Win32EndInputPlayback(State);
+    Win32BeginInputPlayback(State, PlayingIndex);
 }
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > Win32PlaybackInput]</file> Making sure that all the recorded input is played before restarting.]
@@ -815,19 +815,19 @@ What's going on? Let's re-examine `Win32PlaybackInput`:
 
 ~~~~~~~ C++
 internal void 
-Win32PlaybackInput(win32_state *Win32State, game_input *Input)
+Win32PlaybackInput(win32_state *State, game_input *Input)
 {
     DWORD BytesRead;
-    if (ReadFile(Win32State->PlaybackHandle, Input, sizeof (*Input), &BytesRead, 0))
+    if (ReadFile(State->PlaybackHandle, Input, sizeof (*Input), &BytesRead, 0))
     {
         // NOTE(casey): There's still input
     }
     else
     {
         // NOTE(casey): We've hit the end of the stream, go back to the beginning
-        int PlayingIndex = Win32State->InputPlayingIndex;
-        Win32EndInputPlayback(Win32State);
-        Win32BeginInputPlayback(Win32State, PlayingIndex);
+        int PlayingIndex = State->InputPlayingIndex;
+        Win32EndInputPlayback(State);
+        Win32BeginInputPlayback(State, PlayingIndex);
     }
 }
 ~~~~~~~
@@ -840,10 +840,10 @@ While we're at it, we might also fix another inaccuracy: when we restart our rea
 
 ~~~~~~~ C++
 internal void 
-Win32PlaybackInput(win32_state *Win32State, game_input *Input)
+Win32PlaybackInput(win32_state *State, game_input *Input)
 {
     DWORD BytesRead = 0;
-    if(ReadFile(Win32State->PlaybackHandle, Input, sizeof(*Input), &BytesRead, 0))
+    if(ReadFile(State->PlaybackHandle, Input, sizeof(*Input), &BytesRead, 0))
     {
 ~~~~~~~ C++ delete
         // NOTE(casey): There's still input
@@ -855,11 +855,11 @@ Win32PlaybackInput(win32_state *Win32State, game_input *Input)
         {
 ~~~~~~~ C++
             // NOTE(casey): We've hit the end of the stream, go back to the beginning
-            int PlayingIndex = Win32State->InputPlayingIndex;
-            Win32EndInputPlayback(Win32State);
-            Win32BeginInputPlayback(Win32State, PlayingIndex);
+            int PlayingIndex = State->InputPlayingIndex;
+            Win32EndInputPlayback(State);
+            Win32BeginInputPlayback(State, PlayingIndex);
 ~~~~~~~ C++ add
-            ReadFile(Win32State->PlaybackHandle, Input, sizeof(*Input), &BytesRead, 0);
+            ReadFile(State->PlaybackHandle, Input, sizeof(*Input), &BytesRead, 0);
         }
 ~~~~~~~ C++
     }
@@ -929,16 +929,16 @@ Inside `Win32BeginRecordingIndex` (which already has access to `Win32State`) we 
 We need to be careful about that because our `GameMemoryBlock` can eventually exceed 4GB of data (since we already request a bit more than 1GB), and `WriteFile` cannot write more than 4GB at a time. We can go around this issue for now by casting our `TotalSize` to a 32-bit `DWORD` and immediately assert that the resulting value is the same as `TotalSize`. 
 
 ~~~~~~~ C++
-Win32State->InputRecordingIndex = InputRecordingIndex;
+State->InputRecordingIndex = InputRecordingIndex;
     
 char *Filename = "foo.hmi";
-Win32State->RecordingHandle = CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+State->RecordingHandle = CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
 
 ~~~~~~~ C++ add
-DWORD BytesToWrite = (DWORD)Win32State->TotalSize;
-Assert(Win32State->TotalSize == BytesToWrite);
+DWORD BytesToWrite = (DWORD)State->TotalSize;
+Assert(State->TotalSize == BytesToWrite);
 DWORD BytesWritten;
-WriteFile(Win32State->RecordingHandle, Win32State->GameMemoryBlock, BytesToWrite,
+WriteFile(State->RecordingHandle, State->GameMemoryBlock, BytesToWrite,
             &BytesWritten, 0); 
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > Win32BeginRecordingInput]</file> Recording the whole of game memory.]
@@ -946,16 +946,16 @@ WriteFile(Win32State->RecordingHandle, Win32State->GameMemoryBlock, BytesToWrite
 Conversely, whenever we want to start our playback, we want to load whatever the game's state was. It looks exactly the same way as the recording, except we use `ReadFile` instead of `WriteFile`: 
 
 ~~~~~~~ C++
-Win32State->InputPlayingIndex = InputPlayingIndex;
+State->InputPlayingIndex = InputPlayingIndex;
 
 char *Filename = "foo.hmi";
-Win32State->PlaybackHandle = CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+State->PlaybackHandle = CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
 
 ~~~~~~~ C++ add
-DWORD BytesToRead = (DWORD)Win32State->TotalSize;
-Assert(Win32State->TotalSize == BytesToRead);
+DWORD BytesToRead = (DWORD)State->TotalSize;
+Assert(State->TotalSize == BytesToRead);
 DWORD BytesRead;
-ReadFile(Win32State->PlaybackHandle, Win32State->GameMemoryBlock, BytesToRead, &BytesRead, 0);    
+ReadFile(State->PlaybackHandle, State->GameMemoryBlock, BytesToRead, &BytesRead, 0);    
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > Win32BeginInputPlayback]</file> Restoring the saved game memory.]
 
