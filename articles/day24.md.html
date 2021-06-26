@@ -6,6 +6,473 @@ _Video Length (including Q&A): [1h39](https://hero.handmade.network/episode/code
 
 (insert intro.md.html here) 
 
+# Set Controller Type
+
+~~~~~~~ C++
+DWORD OurControllerIndex = ControllerIndex + 1;
+game_controller_input *OldController = GetController(OldInput, OurControllerIndex);
+game_controller_input *NewController = GetController(NewInput, OurControllerIndex);
+
+XINPUT_STATE ControllerState;
+if (XInputGetState(ControllerIndex, &ControllerState) == ERROR_SUCCESS)
+{
+    NewController->IsConnected = true;
+~~~~~~~ C++ add
+    NewController->IsAnalog = OldController->IsAnalog;
+~~~~~~~ C++
+    
+    // NOTE(casey): This controller is plugged in
+    // TODO(casey): See if ControllerState.dwPacketNumber increments too rapidly
+    XINPUT_GAMEPAD *Pad = &ControllerState.Gamepad;
+
+    NewController->StickAverageX = Win32ProcessXInputStickValue
+        (Pad->sThumbLX,XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+    NewController->StickAverageY = Win32ProcessXInputStickValue
+        (Pad->sThumbLY,XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+    
+    if ((NewController->StickAverageX != 0.0f) ||
+        (NewController->StickAverageY != 0.0f))
+    {
+        NewController->IsAnalog = true;
+    }
+    
+    if (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP)
+    {
+        NewController->StickAverageY = 1.0f;
+        NewController->IsAnalog = false;
+    }
+    
+    if (Pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN)
+    {
+        NewController->StickAverageY = -1.0f;
+        NewController->IsAnalog = false;
+    }
+    
+    if (Pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT)
+    {
+        NewController->StickAverageX = -1.0f;
+        NewController->IsAnalog = false;
+    }
+    
+    if (Pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT)
+    {
+        NewController->StickAverageX = 1.0f;
+        NewController->IsAnalog = false;
+    }
+    // ...
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+Would not setting `IsAnalog` create issues in the future? We don't know. But it is cleaner to do so, and it's cleanup day. 
+
+# Set Fixed Output Size
+
+~~~~~~~ C++
+internal void
+Win32DisplayBufferInWindow(...)
+{
+~~~~~~~ C++ edit
+    // NOTE(casey): For prototyping purposes, we're going to always blit
+    // 1-to-1 pixels to make sure we don't introduce artifacts with
+    // stretching while we are learning to code the renderer!
+~~~~~~~ C++
+    StretchDIBits(DeviceContext,
+~~~~~~~ C++ edit
+                  0, 0, Buffer->Width, Buffer->Height,
+~~~~~~~ C++
+                  0, 0, Buffer->Width, Buffer->Height,
+                  Buffer->Memory,
+                  &Buffer->Info,
+                  DIB_RGB_COLORS, SRCCOPY);
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+
+# Improve `build.bat`
+
+~~~~~~~ batch
+set compiler=%compiler%     -Oi                    &:: Use assembly intrinsics where possible
+~~~~~~~ batch edit
+set compiler=%compiler%     -MTd                   &:: Include CRT library in the executable (static link)
+~~~~~~~ batch
+set compiler=%compiler%     -Gm-                   &:: Disable minimal rebuild
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> .]
+
+
+~~~~~~~ C++
+char SourceGameCodeDLLFilename[] = "handmade.dll";
+char SourceGameCodeDLLFullPath[MAX_PATH];
+
+CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, 
+            sizeof(SourceGameCodeDLLFilename) - 1, SourceGameCodeDLLFilename, 
+            sizeof(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);
+
+char TempGameCodeDLLFilename[] = "handmade_temp.dll";
+char TempGameCodeDLLFullPath[MAX_PATH];
+
+CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, 
+            sizeof(TempGameCodeDLLFilename) - 1, TempGameCodeDLLFilename, 
+            sizeof(TempGameCodeDLLFullPath), TempGameCodeDLLFullPath);
+~~~~~~~
+
+We want to pull this out in a separate function that we can recycle. But first, we want to expand our `win32_state` to keep track of things like the EXE path and `OnePastLastSlash` pointer.
+
+~~~~~~~ C++
+struct win32_state
+{
+    u64 TotalSize;
+    void *GameMemoryBlock;
+    
+    HANDLE RecordingHandle;
+    int InputRecordingIndex;
+    
+    HANDLE PlaybackHandle;
+    int InputPlayingIndex;
+    
+~~~~~~~ C++ add
+    char EXEFilename[MAX_PATH];
+    char *OnePastLastEXEFilenameSlash;
+~~~~~~~ C++
+};
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.h]</file> .]
+
+We aren't 100% comfortable with using `MAX_PATH`. This is an obsolete structure which is sometimes ignored by modern API, so let's use an intermediary `define` so that we can eventually revisit it. 
+
+~~~~~~~ C++ add
+#define WIN32_STATE_FILENAME_COUNT MAX_PATH
+~~~~~~~ C++
+struct win32_state
+{
+    u64 TotalSize;
+    void *GameMemoryBlock;
+    
+    HANDLE RecordingHandle;
+    int InputRecordingIndex;
+    
+    HANDLE PlaybackHandle;
+    int InputPlayingIndex;
+    
+~~~~~~~ C++ add
+    char EXEFilename[WIN32_STATE_FILENAME_COUNT];
+    char *OnePastLastEXEFilenameSlash;
+~~~~~~~ C++
+};
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.h]</file> .]
+
+
+
+~~~~~~~ C++
+// NOTE(casey): Never use MAX_PATH in code that is user-facing, because it
+// can be dangerous and lead to bad results.
+char EXEFilename[MAX_PATH];
+DWORD SizeOfFilename = GetModuleFileNameA(0, EXEFilename, sizeof(EXEFilename));
+char *OnePastLastSlash = EXEFilename;
+for (char *Scan = EXEFilename;
+        *Scan;
+        ++Scan)
+{
+    if (*Scan == '\\')
+    {
+        OnePastLastSlash = Scan + 1;
+    }
+}
+
+char SourceGameCodeDLLFilename[] = "handmade.dll";
+~~~~~~~ C++ edit
+char SourceGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];
+~~~~~~~ C++
+
+CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, 
+            sizeof(SourceGameCodeDLLFilename) - 1, SourceGameCodeDLLFilename, 
+            sizeof(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);
+
+char TempGameCodeDLLFilename[] = "handmade_temp.dll";
+~~~~~~~ C++ edit
+char TempGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];
+~~~~~~~ C++
+CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, 
+            sizeof(TempGameCodeDLLFilename) - 1, TempGameCodeDLLFilename, 
+            sizeof(TempGameCodeDLLFullPath), TempGameCodeDLLFullPath);
+   
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+
+
+~~~~~~~ C++ add
+internal void
+Win32GetEXEFilename(win32_state *State)
+{
+    // NOTE(casey): Never use MAX_PATH in code that is user-facing, because it
+    // can be dangerous and lead to bad results.
+    char EXEFilename[MAX_PATH];
+    DWORD SizeOfFilename = GetModuleFileNameA(0, EXEFilename, sizeof(EXEFilename));
+    char *OnePastLastSlash = EXEFilename;
+    for (char *Scan = EXEFilename;
+         *Scan;
+         ++Scan)
+    {
+        if (*Scan == '\\')
+        {
+            OnePastLastSlash = Scan + 1;
+        }
+    }
+}
+~~~~~~~ C++
+
+int CALLBACK
+WinMain(...)
+{
+~~~~~~~ C++ add
+    win32_state Win32State = {};
+
+    Win32GetEXEFilename(Win32State);
+
+
+~~~~~~~ C++ delete
+    // NOTE(casey): Never use MAX_PATH in code that is user-facing, because it
+    // can be dangerous and lead to bad results.
+    char EXEFilename[MAX_PATH];
+    DWORD SizeOfFilename = GetModuleFileNameA(0, EXEFilename, sizeof(EXEFilename));
+    char *OnePastLastSlash = EXEFilename;
+    for (char *Scan = EXEFilename;
+         *Scan;
+         ++Scan)
+    {
+        if (*Scan == '\\')
+        {
+            OnePastLastSlash = Scan + 1;
+        }
+    }
+~~~~~~~ C++
+    
+    char SourceGameCodeDLLFilename[] = "handmade.dll";
+    char SourceGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];
+    
+    CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, 
+               sizeof(SourceGameCodeDLLFilename) - 1, SourceGameCodeDLLFilename, 
+               sizeof(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);
+    
+    char TempGameCodeDLLFilename[] = "handmade_temp.dll";
+    char TempGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];
+    
+    CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, 
+               sizeof(TempGameCodeDLLFilename) - 1, TempGameCodeDLLFilename, 
+               sizeof(TempGameCodeDLLFullPath), TempGameCodeDLLFullPath);
+    
+    LARGE_INTEGER PerfCountFrequencyResult;
+
+    // ...    
+    if (Window)
+    {
+~~~~~~~ C++ delete
+        win32_state Win32State = {};
+        Win32State.InputRecordingIndex = 0;
+        Win32State.InputPlayingIndex = 0;
+~~~~~~~ C++
+        // ...
+    }
+    // ...
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+
+
+~~~~~~~ C++ delete
+// NOTE(casey): Never use MAX_PATH in code that is user-facing, because it
+// can be dangerous and lead to bad results.
+char EXEFilename[MAX_PATH];
+~~~~~~~ C++ edit
+DWORD SizeOfFilename = GetModuleFileNameA(0, State->EXEFilename, sizeof(State->EXEFilename));
+State->OnePastLastEXEFilenameSlash = State->EXEFilename;
+for (char *Scan = State->EXEFilename;
+~~~~~~~ C++
+        *Scan;
+        ++Scan)
+{
+    if (*Scan == '\\')
+    {
+~~~~~~~ C++ edit
+        State->OnePastLastEXEFilenameSlash = Scan + 1;
+~~~~~~~ C++
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32GetEXEFilename]</file> .]
+
+
+
+~~~~~~~ C++ add
+internal void 
+Win32BuildEXEPathFilename(win32_state *State, char *Filename,
+                                        int DestCount, char *Dest)
+{
+    char SourceGameCodeDLLFilename[] = "handmade.dll";
+    char SourceGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];
+    
+    CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, 
+               sizeof(SourceGameCodeDLLFilename) - 1, SourceGameCodeDLLFilename, 
+               sizeof(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);
+}
+~~~~~~~ C++
+
+int CALLBACK
+WinMain(...)
+{
+    win32_state Win32State = {};
+
+    Win32GetEXEFilename(Win32State);
+
+~~~~~~~ C++ add
+    char SourceGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];
+    Win32BuildEXEPathFilename(&Win32State, "handmade.dll", 
+                              sizeof(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);
+    char TempGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];
+    Win32BuildEXEPathFilename(&Win32State, "handmade_temp.dll", 
+                              sizeof(TempGameCodeDLLFullPath), TempGameCodeDLLFullPath);
+    
+~~~~~~~ C++ delete
+    char SourceGameCodeDLLFilename[] = "handmade.dll";
+    char SourceGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];
+    
+    CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, 
+               sizeof(SourceGameCodeDLLFilename) - 1, SourceGameCodeDLLFilename, 
+               sizeof(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);
+    
+    char TempGameCodeDLLFilename[] = "handmade_temp.dll";
+    char TempGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];
+    
+    CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, 
+               sizeof(TempGameCodeDLLFilename) - 1, TempGameCodeDLLFilename, 
+               sizeof(TempGameCodeDLLFullPath), TempGameCodeDLLFullPath);
+~~~~~~~ C++
+    
+    LARGE_INTEGER PerfCountFrequencyResult;
+    // ... 
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+
+We don't need that `- 1` since we expect to get exactly the length we need.
+
+~~~~~~~ C++ delete
+char SourceGameCodeDLLFilename[] = "handmade.dll";
+char SourceGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];
+~~~~~~~ C++ edit
+    
+CatStrings(State->OnePastLastEXEFilenameSlash - State->EXEFilename, State->EXEFilename, 
+           StringLength(Filename), Filename, 
+           DestCount, Dest);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32BuildEXEPathFilename]</file> .]
+
+The way the C strings are stored, they are just bytes of data with the last byte being 0. So we'll count all the bytes until we reach 0 (at least for the ASCII strings, Unicode is a little bit more involved but we won't mess around that for now). 
+
+~~~~~~~ C++ add
+internal int
+StringLength(char *String)
+{
+    int Count = 0;
+    while (*String++)
+    {
+        ++Count;
+    }
+    return (Count);
+}
+~~~~~~~ C++
+
+internal void 
+Win32BuildEXEPathFilename(...)
+{
+    //...
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+
+Now we have a convenient function that we can use whenever we want to.
+
+Before we move on, let's do some reorganization. We'll move the functions `CatStrings`, `StringLength`, `Win32GetEXEFilename` and `Win32BuildEXEPathFilename` to the top of `win32_handmade.cpp`, just before our utility functions: 
+
+~~~~~~~ C++ 
+typedef DIRECT_SOUND_CREATE(direct_sound_create);
+
+~~~~~~~ C++ add
+internal void
+CatStrings(size_t SourceACount, char *SourceA, 
+           size_t SourceBCount, char *SourceB,
+           size_t DestCount, char *Dest)
+{
+    // ... 
+}
+
+internal int
+StringLength(char *String)
+{
+    // ... 
+}
+
+internal void
+Win32GetEXEFilename(win32_state *State)
+{
+    // ...
+}
+
+internal void 
+Win32BuildEXEPathFilename(win32_state *State, char *Filename,
+                          int DestCount, char *Dest)
+{
+    // ... 
+}
+
+~~~~~~~ C++
+DEBUG_PLATFORM_FREE_FILE_MEMORY(DEBUGPlatformFreeFileMemory)
+{
+    // ... 
+}
+
+// ... 
+~~~~~~~ C++ delete
+internal void
+CatStrings(size_t SourceACount, char *SourceA, 
+           size_t SourceBCount, char *SourceB,
+           size_t DestCount, char *Dest)
+{
+    // ... 
+}
+
+internal int
+StringLength(char *String)
+{
+    // ... 
+}
+
+internal void
+Win32GetEXEFilename(win32_state *State)
+{
+    // ...
+}
+
+internal void 
+Win32BuildEXEPathFilename(win32_state *State, char *Filename,
+                          int DestCount, char *Dest)
+{
+    // ... 
+}
+~~~~~~~ C++
+int CALLBACK
+WinMain(...)
+{
+    // ... 
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Remember to actually copy-paste the contents of these functions!!]
+
+
+
 ------------------------
 <!-- 
 [Listing [x]: <file>[]</file> .]
