@@ -47,7 +47,7 @@ Now, we shall finish the back buffer setup and do a simple animation to it.
 &nbsp;&nbsp;<a href="#drawpixelstothebitmap/setupbasictypes" class="level2"><span class="tocNumber">4.3&nbsp; </span>Set Up Basic Types</a><br/>
 &nbsp;&nbsp;<a href="#drawpixelstothebitmap/calculaterowandpixelpositions" class="level2"><span class="tocNumber">4.4&nbsp; </span>Calculate Row and Pixel positions</a><br/>
 &nbsp;&nbsp;<a href="#drawpixelstothebitmap/pixelcomponentlayoutinmemory" class="level2"><span class="tocNumber">4.5&nbsp; </span>Pixel Component Layout in Memory</a><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#drawpixelstothebitmap/pixelcomponentlayoutinmemory/possiblearrangmentsinmemory" class="level3"><span class="tocNumber">4.5.1&nbsp; </span>Possible Arrangments in Memory</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#drawpixelstothebitmap/pixelcomponentlayoutinmemory/possiblearrangementsinmemory" class="level3"><span class="tocNumber">4.5.1&nbsp; </span>Possible Arrangements in Memory</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#drawpixelstothebitmap/pixelcomponentlayoutinmemory/trytosetredchannel" class="level3"><span class="tocNumber">4.5.2&nbsp; </span>Try to Set Red Channel</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#drawpixelstothebitmap/pixelcomponentlayoutinmemory/correctthestructuredart" class="level3"><span class="tocNumber">4.5.3&nbsp; </span>Correct the Structured Art</a><br/>
 &nbsp;&nbsp;<a href="#drawpixelstothebitmap/drawcolorsbasedonpixelposition" class="level2"><span class="tocNumber">4.6&nbsp; </span>Draw Colors Based on Pixel Position</a><br/>
@@ -792,7 +792,7 @@ Inside the <code>Win32ResizeDIBSection</code>, at the very end, let's create our
 
 This will give us the <code>X</code> and <code>Y</code> coordinates for each pixel. 
 
-</p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-keyword">BitmapMemory </span>= VirtualAlloc(<span class="hljs-number">0</span>, <span class="hljs-keyword">BitmapMemorySize, </span>MEM_RESERVE <span class="hljs-title">| MEM_COMMIT, PAGE_READWRITE);</span></span></div><div class=" add"><span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> Y = <span class="hljs-number">0</span>;</span>
+</p><pre class="listing tilde"><code><div class=" C++ "><span class="line">BitmapMemory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);</span></div><div class=" add"><span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> Y = <span class="hljs-number">0</span>;</span>
 <span class="line">         Y &lt; BitmapHeight;</span>
 <span class="line">         ++Y)</span>
 <span class="line">{</span>
@@ -812,7 +812,7 @@ We have our <code>BitmapMemory</code>. It's a huge block of memory that Windows 
 
 We want to set up control over the pointer and how it's going to move, so we can <em class="underscore">cast</em> our <code>void *</code> to <code>unsigned char *</code> to have control over every single byte in our memory (On x86 processors, <code>char</code> is long exactly 1 byte, or 8 bits). For more about type casting, check out subsection  <a href="#toc8.2">8.2</a>.
 
-</p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-keyword">BitmapMemory </span>= VirtualAlloc(<span class="hljs-number">0</span>, <span class="hljs-keyword">BitmapMemorySize, </span>MEM_RESERVE <span class="hljs-title">| MEM_COMMIT, PAGE_READWRITE);</span></span></div><div class=" add"><span class="line"><span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> *Row = (<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> *)BitmapMemory;</span></div><div class=" C++ "><span class="line">for (int Y = 0;</span>
+</p><pre class="listing tilde"><code><div class=" C++ "><span class="line">BitmapMemory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);</span></div><div class=" add"><span class="line"><span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> *Row = (<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> *)BitmapMemory;</span></div><div class=" C++ "><span class="line">for (int Y = 0;</span>
 <span class="line">         Y &lt; BitmapHeight;</span>
 <span class="line">         ++Y)</span>
 <span class="line">{</span>
@@ -846,7 +846,7 @@ So we want to have something that a) is easier to type and b) means what we want
 
 We can now set our <code>Row</code> type appropriately:
 
-</p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-keyword">BitmapMemory </span>= VirtualAlloc(<span class="hljs-number">0</span>, <span class="hljs-keyword">BitmapMemorySize, </span>MEM_RESERVE <span class="hljs-title">| MEM_COMMIT, PAGE_READWRITE);</span></span></div><div class=" edit"><span class="line">u8 *Row = (u8 *)BitmapMemory;</span></div><div class=" C++ "><span class="line">for (int Y...)</span>
+</p><pre class="listing tilde"><code><div class=" C++ "><span class="line">BitmapMemory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);</span></div><div class=" edit"><span class="line">u8 *Row = (u8 *)BitmapMemory;</span></div><div class=" C++ "><span class="line">for (int Y...)</span>
 <span class="line">{</span>
 <span class="line">    // ...</span>
 <span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;20:</b> <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> Changing type of <code>Row</code> and relevant cast.</div></center>
@@ -1114,9 +1114,9 @@ The key to the outer loop is defining <code>Row</code> outside of the loop, and 
 
 As of <code>Pixel</code> pointer, we can make it 32-bit, so that by increasing it by one we can go pixel by pixel. Similar to <code>Row</code>, we initially define it outside of the inner loop and then increase inside.
 
-</p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-keyword">int</span> Pitch = Width * BytesPerPixel;</span>
+</p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-built_in">int</span> Pitch = Width * BytesPerPixel;</span>
 <span class="line">u8 *Row = (u8 *)BitmapMemory;</span>
-<span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> Y...)</span>
+<span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-built_in">int</span> Y...)</span>
 <span class="line">{</span></div><div class=" add"><span class="line">    u32 *Pixel = (u32 *)Row;</span></div><div class=" C++ "><span class="line">    for (int X...)</span>
 <span class="line">         {</span>
 <span class="line">             // Write color to pixel</span></div><div class=" add"><span class="line">            ++Pixel; <span class="hljs-comment">// advance to the next pixel (by 4 bytes)</span></span></div><div class=" C++ "><span class="line">         }</span>
@@ -1136,10 +1136,10 @@ While this might be inefficient, there's a couple of reasons of doing it this wa
 <p>
 
 
-We now can write to each pixel (by <em class="underscore">deferencing</em> our pointer with the <code>*</code> operator). But what are we going to right to it? 
+We now can write to each pixel (by <em class="underscore">dereferencing</em> our pointer with the <code>*</code> operator). But what are we going to right to it? 
 
 </p>
-<a class="target" name="possiblearrangmentsinmemory">&nbsp;</a><a class="target" name="drawpixelstothebitmap/pixelcomponentlayoutinmemory/possiblearrangmentsinmemory">&nbsp;</a><a class="target" name="toc4.5.1">&nbsp;</a><h3>Possible Arrangments in Memory</h3>
+<a class="target" name="possiblearrangementsinmemory">&nbsp;</a><a class="target" name="drawpixelstothebitmap/pixelcomponentlayoutinmemory/possiblearrangementsinmemory">&nbsp;</a><a class="target" name="toc4.5.1">&nbsp;</a><h3>Possible Arrangements in Memory</h3>
 <p>
 
 
@@ -1226,7 +1226,7 @@ To better illustrate this, let's actually change our pixel to an 8-bit pointer (
 
 Right now we're tentively testing arrangement <code>RR GG BB XX</code>. To test which value is which we need something called <em class="underscore">Structured Art</em> which is always a good thing to do when debugging/experimenting. We want to see if we're writing to this thing properly. So we're just going to write to (what we believe to be) the red channel, leave the green and blue channels black for now, and see if it produces the results we expected. This translates in writing the maximum value you can give an <code>unsigned char</code> to red (<code>255</code>), and <code>0</code> to the rest.
 
-</p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> X...)</span>
+</p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-built_in">int</span> X...)</span>
 <span class="line">{</span></div><div class=" edit"><span class="line">    <span class="hljs-comment">//</span></span>
 <span class="line">    <span class="hljs-comment">//Pixel in memory: RR GG BB XX</span></span>
 <span class="line">    <span class="hljs-comment">//</span></span>
@@ -1304,7 +1304,7 @@ In our case, this means that, when we load <code>RR GG BB XX</code> into memory,
 
 So this is the correct arrangement of the colors, and if we want to have our screen to be red, we should refactor our program as follows: 
 
-</p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> X...)</span>
+</p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-built_in">int</span> X...)</span>
 <span class="line">{</span></div><div class=" edit"><span class="line">    <span class="hljs-comment">//</span></span>
 <span class="line">    <span class="hljs-comment">//Pixel in memory: BB GG RR XX</span></span>
 <span class="line">    <span class="hljs-comment">//</span></span>
@@ -1353,7 +1353,7 @@ What happens here is a simple color combination. As the rows grow, the green cha
 <p>
 
 
-This is a great achievement right there. You have now enough knowledge to return yourself to 1980! We have just turned this modern and beastly computer running a hugely complicated, difficult to wield operating system into something where we just have a bitmap, that we can draw to, and get back to the Joy of Coding. There is no stopping us now, we can draw any world of our imagination into that. 
+This is a great achievement right there. You have now enough knowledge to return yourself to 1980! We have just turned this modern and beastly computer running a hugely complicated, difficult to wield operating system into something where we just have a bitmap, that we can draw to, and get back to the Joy of Coding. There is no stopping us now, we can draw any world of our immagination into that. 
 
 </p>
 <a class="target" name="introducerenderweirdgradient">&nbsp;</a><a class="target" name="renderingapattern/introducerenderweirdgradient">&nbsp;</a><a class="target" name="toc5.1">&nbsp;</a><h2>Introduce <code>RenderWeirdGradient</code></h2>
@@ -1559,7 +1559,7 @@ Oh, right. We forgot to blit it to the screen. Sure we render our weird gradient
 
 </p><p>
 
-So. We call <code>Win32UpdateWindow</code> which takes a Device Context and a client rect. Now, right now we're too busy making our animation happen so we will simply copy and paste the necessary code as we did it before, but we did cut and paste of the same code enough times to realize that we can optimize getting <code>ClientRect</code> out into a separate function. We'll tackle it some other time, just a mental note for the future us.
+So. We call <code>Win32UpdateWindow</code> which takes a Device Context and a client rect. Now, right now we're too busy making our animation happen so we will simply copy and paste the necessary code as we did id before, but we did cut and paste of the same code enough times to realize that we can optimize getting <code>ClientRect</code> out into a separate function. We'll tackle it some other time, just a mental note for the future us.
 
 </p><p>
 
@@ -1596,7 +1596,7 @@ Last quick refactoring for today. If you remember, in Subsection  <a href="#toc4
 
 </p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-built_in">u8</span>* Row = (<span class="hljs-built_in">u8</span>*)BitmapMemory;</span>
 <span class="line"><span class="hljs-keyword">for</span> (int Y...)</span>
-<span class="line">{</span></div><div class=" edit"><span class="line">    u32* Pixel = (u32*)Row;</span></div><div class=" C++ "><span class="line">~~~~~~~ C++ </span></div><div class=" C++ "><span class="line">    for (int X...)</span>
+<span class="line">{</span></div><div class=" edit"><span class="line">    u32* Pixel = (u32*)Row;</span></div><div class=" C++ "><span class="line">    for (int X...)</span>
 <span class="line">    {</span>
 <span class="line">        // </span>
 <span class="line">        // Pixel in memory: BB GG RR XX</span>
@@ -1659,10 +1659,8 @@ If you look at the memory layout in the figure above, we will know exactly by ho
 </p><pre class="listing tilde"><code><span class="line">u8 Red = <span class="hljs-number">0</span>;</span>
 <span class="line">u8 Green = (u8)(Y + YOffset);</span>
 <span class="line">u8 Blue = (u8)(X + XOffset);</span>
-<span class="line"></span><div class=" edit"><span class="line">~~~~~~~ C++ edit</span></div></code></pre><p>
-~~~~~~~
+<span class="line"></span><div class=" edit"><span class="line">*Pixel++ = Red &lt;&lt; <span class="hljs-number">16</span> | Green &lt;&lt; <span class="hljs-number">8</span> | Blue; <span class="hljs-comment">// &lt;&lt; 0</span></span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;36:</b> <file>[win32_handmade.cpp > RenderWeirdGradient]</file> Combining pixel output</div></center>
 
-</p>
 <a class="target" name="recap">&nbsp;</a><a class="target" name="recap">&nbsp;</a><a class="target" name="toc6">&nbsp;</a><h1>Recap</h1>
 <p>
 
@@ -1769,7 +1767,7 @@ You can quickly distinguish the &ldquo;Hex code&rdquo; of a color by a <code>#</
 
 </p><p>
 
-<em class="underscore">(Back to Subsection  <a href="#toc4.5.1">4.5.1</a>)</em>
+<em class="underscore">(Back to Subsection ?)</em>
 
 </p>
 <a class="target" name="pre-incrementandpost-incrementoperator">&nbsp;</a><a class="target" name="programmingbasics/pre-incrementandpost-incrementoperator">&nbsp;</a><a class="target" name="toc8.4">&nbsp;</a><h2>Pre-increment and Post-increment operator</h2>
@@ -1820,7 +1818,7 @@ Now, if you use <a href="https://4coder.itch.io/4coder">4coder</a>, you have an 
 <span class="line">mkdir build</span>
 <span class="line">pushd build</span>
 <span class="line"></span><div class=" edit"><span class="line">cl -FC -Zi ..\code\win32_handmade.cpp user32.lib gdi32.lib</span></div><span class="line"></span>
-<span class="line">popd</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;36:</b> <file>[build.bat]</file> Adding -FC compiler option.</div></center>
+<span class="line">popd</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;37:</b> <file>[build.bat]</file> Adding -FC compiler option.</div></center>
 <p>
 
 
@@ -1840,7 +1838,7 @@ Let's review our Bitmap Info Header:
 <span class="line">BitmapInfo.bmiHeader.biHeight = Height;</span>
 <span class="line">BitmapInfo.bmiHeader.biPlanes = <span class="hljs-number">1</span>;</span>
 <span class="line">BitmapInfo.bmiHeader.biBitCount = <span class="hljs-number">32</span>;</span>
-<span class="line">BitmapInfo.bmiHeader.biCompression = BI_RGB;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;37:</b> <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> BitmapInfo header structure.</div></center>
+<span class="line">BitmapInfo.bmiHeader.biCompression = BI_RGB;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;38:</b> <file>[win32_handmade.cpp > Win32ResizeDIBSection]</file> BitmapInfo header structure.</div></center>
 <p>
 
 
@@ -1960,11 +1958,11 @@ This is how a potential refactoring would look like:
 <p>
 
 
-Previous: <a href="day3.html">Day 3. Allocating a Back Buffer</a>
+Previous: <a href="../html/day3.html">Day 3. Allocating a Back Buffer</a>
 
 </p><p>
 
-Up Next: <a href="day5.html">Day 5. Windows Graphics Review</a>
+Up Next: <a href="../html/day5.html">Day 5. Windows Graphics Review</a>
 
 </p><p>
 
@@ -2087,4 +2085,4 @@ Up Next: <a href="day5.html">Day 5. Windows Graphics Review</a>
 </p><p>
 
 <script>markdeepOptions = { tocStyle: 'long' }; window.alreadyProcessedMarkdeep || (document.body.style.visibility = 'visible');</script>
-</stdint.h></windows.h></p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.10&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.6/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+</stdint.h></windows.h></p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.13&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.6/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>

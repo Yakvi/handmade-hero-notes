@@ -1193,17 +1193,15 @@ Last quick refactoring for today. If you remember, in Subsection [calculate row 
 u8* Row = (u8*)BitmapMemory;
 for (int Y...)
 {
-    ~~~~~~~ C++ edit
+~~~~~~~ C++ edit
     u32* Pixel = (u32*)Row;
-    ~~~~~~~ C++ 
 ~~~~~~~ C++ 
-    ~~~~~~~ C++ 
     for (int X...)
     {
         // 
         // Pixel in memory: BB GG RR XX
         // 
-    ~~~~~~~ C++ delete
+~~~~~~~ C++ delete
         // Byte 0, blue
         *Pixel = (u8)(X + XOffset);
         ++Pixel;  
@@ -1227,7 +1225,7 @@ for (int Y...)
         ++Pixel;  
     ++Pixel;  
         ++Pixel;  
-    ~~~~~~~ C++ add
+~~~~~~~ C++ add
         u8 Red = 0;
         u8 Green = (u8)(Y + YOffset);
         u8 Blue = (u8)(X + XOffset);
@@ -1261,9 +1259,9 @@ u8 Green = (u8)(Y + YOffset);
 u8 Blue = (u8)(X + XOffset);
 
 ~~~~~~~ C++ edit
-~~~~~~~ C++ edit
+*Pixel++ = Red << 16 | Green << 8 | Blue; // << 0
 ~~~~~~~
-~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > RenderWeirdGradient]</file> Combining pixel output]
 
 # Recap
 
