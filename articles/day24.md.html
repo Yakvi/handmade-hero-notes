@@ -6,6 +6,8 @@ _Video Length (including Q&A): [1h39](https://hero.handmade.network/episode/code
 
 (insert intro.md.html here) 
 
+Today is the cleanup day. 
+
 # Set Controller Type
 
 ~~~~~~~ C++
@@ -406,26 +408,26 @@ CatStrings(size_t SourceACount, char *SourceA,
            size_t SourceBCount, char *SourceB,
            size_t DestCount, char *Dest)
 {
-    // ... 
+    // + contents 
 }
 
 internal int
 StringLength(char *String)
 {
-    // ... 
+    // + contents
 }
 
 internal void
 Win32GetEXEFilename(win32_state *State)
 {
-    // ...
+    // + contents
 }
 
 internal void 
 Win32BuildEXEPathFilename(win32_state *State, char *Filename,
                           int DestCount, char *Dest)
 {
-    // ... 
+    // + contents
 }
 
 ~~~~~~~ C++
@@ -471,7 +473,252 @@ WinMain(...)
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Remember to actually copy-paste the contents of these functions!!]
 
+This allows us to use these path-assembling functions on our Input Recording/Playback functions! We don't want them to live inside our `data` folder, this is the folder for _good_ data.
 
+~~~~~~~ C++ add
+internal void
+Win32GetInputFileLocation(win32_state *State, int SlotIndex, int DestCount, char *Dest)
+{
+    Assert(SlotIndex == 1);
+    Win32BuildEXEPathFilename(State, "loop_edit.hmi", DestCount, Dest);
+}
+~~~~~~~ C++
+
+internal void
+Win32BeginRecordingInput(win32_state *State, int InputRecordingIndex)
+{
+    State->InputRecordingIndex = InputRecordingIndex;
+    
+~~~~~~~ C++ add
+    char Filename[WIN32_STATE_FILENAME_COUNT];
+    Win32GetInputFileLocation(State, InputRecordingIndex, WIN32_STATE_FILENAME_COUNT, Filename);
+~~~~~~~ C++ delete
+    char *Filename = "foo.hmi";
+~~~~~~~ C++
+    State->RecordingHandle = CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+    
+    // ...
+}
+
+// ...
+
+internal void
+Win32BeginInputPlayback(win32_state *State, int InputPlayingIndex)
+{
+    State->InputPlayingIndex = InputPlayingIndex;
+    
+~~~~~~~ C++ add
+    char Filename[WIN32_STATE_FILENAME_COUNT];
+    Win32GetInputFileLocation(State, InputPlayingIndex, WIN32_STATE_FILENAME_COUNT, Filename);
+~~~~~~~ C++ delete
+    char *Filename = "foo.hmi";
+~~~~~~~ C++
+    
+    State->PlaybackHandle = CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+    
+    // ...
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> ]
+
+# Get rid of topmost layered window for now
+
+~~~~~~~ C++ edit
+HWND Window = CreateWindowEx(0, // WS_EX_TOPMOST | WS_EX_LAYERED, 
+                             WindowClass.lpszClassName, "Handmade Hero",
+                             WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                             CW_USEDEFAULT, CW_USEDEFAULT,
+                             CW_USEDEFAULT, CW_USEDEFAULT,
+                             0, 0, Instance, 0);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> ]
+
+~~~~~~~ C++
+case WM_CLOSE:
+{
+    GlobalRunning = false;
+} break;
+
+case WM_ACTIVATEAPP:
+{
+~~~~~~~ C++ add
+#if 0
+~~~~~~~ C++
+    if (WParam == TRUE)
+    {
+        SetLayeredWindowAttributes(Window, RGB(0, 0, 0), 255, LWA_ALPHA);
+    }
+    else
+    {
+        SetLayeredWindowAttributes(Window, RGB(0, 0, 0), 64, LWA_ALPHA);
+    }
+~~~~~~~ C++ add
+#endif
+~~~~~~~ C++
+} break;
+
+case WM_DESTROY:
+{
+    GlobalRunning = false;
+} break;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> ]
+
+# Get the date without opening files
+
+Let's review our `Win32GetLastWriteTime` function: 
+
+~~~~~~~ C++
+inline FILETIME
+Win32GetLastWriteTime(char *Filename)
+{
+    FILETIME LastWriteTime = {};
+    
+    WIN32_FIND_DATA FindData;
+    HANDLE FindHandle = FindFirstFileA(Filename, &FindData);
+    if (FindHandle != INVALID_HANDLE_VALUE)
+    {
+        LastWriteTime = FindData.ftLastWriteTime;
+        FindClose(FindHandle);
+    }
+    
+    return (LastWriteTime);
+}
+~~~~~~~
+
+We can optimize this function by preventing us from opening the file, by using the [GetFileAttributesEx][] function.
+
+~~~~~~~ C++ delete
+WIN32_FIND_DATA FindData;
+HANDLE FindHandle = FindFirstFileA(Filename, &FindData);
+if (FindHandle != INVALID_HANDLE_VALUE)
+{
+    LastWriteTime = FindData.ftLastWriteTime;
+    FindClose(FindHandle);
+}
+~~~~~~~ C++ add
+WIN32_FILE_ATTRIBUTE_DATA Data;
+if(GetFileAttributesExA(Filename, GetFileExInfoStandard, &Data))
+{
+    LastWriteTime = Data.ftLastWriteTime;
+}
+~~~~~~~ C++
+return (LastWriteTime);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32GetLastWriteTime]</file> ]
+
+# Remove Stub Functions for Platform Calls
+
+~~~~~~~ C++
+#define GAME_UPDATE_AND_RENDER(name) void name(game_memory *Memory, game_input *Input, game_offscreen_buffer* Buffer)
+typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
+~~~~~~~ C++ delete
+GAME_UPDATE_AND_RENDER(GameUpdateAndRenderStub) { }
+~~~~~~~ C++
+
+// ...
+
+#define GAME_GET_SOUND_SAMPLES(name) void name(game_memory *Memory, game_sound_output_buffer *SoundBuffer)
+typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
+~~~~~~~ C++ delete
+GAME_GET_SOUND_SAMPLES(GameGetSoundSamplesStub) { }
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> ]
+
+~~~~~~~ C++
+internal win32_game_code
+Win32LoadGameCode(char *SourceDLLName, char *TempDLLName)
+{
+    win32_game_code Result = {};
+    
+    // ...       
+    if (!Result.IsValid)
+    {
+~~~~~~~ C++ edit
+        Result.UpdateAndRender = 0;
+        Result.GetSoundSamples = 0;
+~~~~~~~ C++
+    }
+    
+    return(Result);
+}
+
+internal void
+Win32UnloadGameCode(win32_game_code *GameCode)
+{
+    if (GameCode->GameCodeDLL)
+    {
+        FreeLibrary(GameCode->GameCodeDLL);
+        GameCode->GameCodeDLL = 0;
+    }
+    
+    GameCode->IsValid = false;
+~~~~~~~ C++ edit
+    GameCode->UpdateAndRender = 0;
+    GameCode->GetSoundSamples = 0;
+~~~~~~~ C++
+}
+
+// ...
+
+int CALLBACK
+WinMain(...)
+{
+~~~~~~~ C++ add
+    if (Game.UpdateAndRender)
+    {
+~~~~~~~ C++
+        Game.UpdateAndRender(&GameMemory, NewInput, &Buffer);
+~~~~~~~ C++ add
+    }
+~~~~~~~ C++
+    
+    // ...
+
+~~~~~~~ C++ add
+    if (Game.GetSoundSamples)
+    {
+    ~~~~~~~ C++
+        Game.GetSoundSamples(&GameMemory, &SoundBuffer);
+    ~~~~~~~ C++ add
+    }
+~~~~~~~ C++
+// ... 
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> ]
+
+~~~~~~~ C++
+struct win32_game_code
+{
+    HMODULE GameCodeDLL;
+    FILETIME DLLLastWriteTime;
+    
+~~~~~~~ C++ add
+    // IMPORTANT(casey): Either of the callbacks can be 0!
+    // You must check before calling.
+~~~~~~~ C++
+    game_update_and_render *UpdateAndRender;
+    game_get_sound_samples *GetSoundSamples;
+    
+    b32 IsValid;
+};
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.h]</file> ]
+
+# Enable Large-Page Support
+
+[Large-Page Support][]
+
+~~~~~~~ C++
+Win32State.TotalSize = (GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize);
+Win32State.GameMemoryBlock = VirtualAlloc(BaseAddress, (size_t)Win32State.TotalSize,
+~~~~~~~ C++ edit
+                                          MEM_RESERVE | MEM_COMMIT | MEM_LARGE_PAGES, 
+~~~~~~~ C++
+                                          PAGE_READWRITE);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Enabling Large-page support for the game memory block.]
 
 ------------------------
 <!-- 
