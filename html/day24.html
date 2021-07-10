@@ -3,9 +3,786 @@
 <meta name="viewport" content="width=600, initial-scale=1">
 <link rel="stylesheet" href="../css/html-style.css">
 <link rel="stylesheet" href="../css/style.css">
+<span class="md"><p><title>Day 24. Win32 Platform Layer Cleanup</title><div class="title"> Day 24. Win32 Platform Layer Cleanup </div>
 
+<div class="afterTitles"></div>
+<em class="underscore">Video Length (including Q&A): <a href="https://hero.handmade.network/episode/code/day024/">1h39</a></em> 
+
+</p><p>
+
+Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with no external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
+
+</p><p>
+
+Today is the cleanup day. We went in fast and furious, typing our way through the code, and we have left behind some bugs and inconsistencies. We'll dedicate the next two days revisiting and, hopefully, optimizing them out.
+
+</p>
 <div class="longTOC"><p align="center">
     <span align="right"><a href="day23.html">Day 23</a></span>
     <a href="../index.html"><img src = "../media/logo.png"></a>
-    <span align="left"><a href="day25.html">Day 24</a></span>
+    <span align="left"><a href="day25.html">Day 25</a></span>
 </p><p><a href="#" class="tocTop">(Top)</a><br/>
+<a href="#smallfixes" class="level1"><span class="tocNumber">1&nbsp; </span>Small Fixes</a><br/>
+&nbsp;&nbsp;<a href="#smallfixes/setcontrollertype" class="level2"><span class="tocNumber">1.1&nbsp; </span>Set Controller Type</a><br/>
+&nbsp;&nbsp;<a href="#smallfixes/setfixedwindowoutputsize" class="level2"><span class="tocNumber">1.2&nbsp; </span>Set Fixed Window Output Size</a><br/>
+&nbsp;&nbsp;<a href="#smallfixes/improvebuild.bat" class="level2"><span class="tocNumber">1.3&nbsp; </span>Improve <code>build.bat</code></a><br/>
+&nbsp;&nbsp;<a href="#smallfixes/getridofthetopmostlayeredwindow" class="level2"><span class="tocNumber">1.4&nbsp; </span>Get rid of the Topmost Layered Window</a><br/>
+&nbsp;&nbsp;<a href="#smallfixes/getthefileeditdatewithoutopeningit" class="level2"><span class="tocNumber">1.5&nbsp; </span>Get the File Edit Date Without Opening It</a><br/>
+&nbsp;&nbsp;<a href="#smallfixes/removestubfunctionsforplatformcalls" class="level2"><span class="tocNumber">1.6&nbsp; </span>Remove Stub Functions for Platform Calls</a><br/>
+<a href="#improverecordingcode" class="level1"><span class="tocNumber">2&nbsp; </span>Improve Recording Code</a><br/>
+&nbsp;&nbsp;<a href="#improverecordingcode/removereferencestomax_path" class="level2"><span class="tocNumber">2.1&nbsp; </span>Remove References to <code>MAX_PATH</code></a><br/>
+&nbsp;&nbsp;<a href="#improverecordingcode/storeexecutablefilename" class="level2"><span class="tocNumber">2.2&nbsp; </span>Store Executable Filename</a><br/>
+&nbsp;&nbsp;<a href="#improverecordingcode/buildacustomexepathfilename" class="level2"><span class="tocNumber">2.3&nbsp; </span>Build a Custom EXE Path Filename</a><br/>
+&nbsp;&nbsp;<a href="#improverecordingcode/reorganizewin32_handmade.cpp" class="level2"><span class="tocNumber">2.4&nbsp; </span>Reorganize <code>win32_handmade.cpp</code></a><br/>
+&nbsp;&nbsp;<a href="#improverecordingcode/updaterecordingandplaybackfunctions" class="level2"><span class="tocNumber">2.5&nbsp; </span>Update Recording and Playback Functions</a><br/>
+<a href="#recap" class="level1"><span class="tocNumber">3&nbsp; </span>Recap</a><br/>
+<a href="#navigation" class="level1"><span class="tocNumber">4&nbsp; </span>Navigation</a><br/>
+</p></div><a class="target" name="smallfixes">&nbsp;</a><a class="target" name="smallfixes">&nbsp;</a><a class="target" name="toc1">&nbsp;</a><h1>Small Fixes</h1>
+
+<a class="target" name="setcontrollertype">&nbsp;</a><a class="target" name="smallfixes/setcontrollertype">&nbsp;</a><a class="target" name="toc1.1">&nbsp;</a><h2>Set Controller Type</h2>
+<p>
+
+
+The first thing on our list is to clean up the state of the controller. Currently, the controller is set to <code>IsAnalog</code> only if it received input from D-Pad or the stick: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span> ((NewController-&gt;StickAverageX != <span class="hljs-number">0.0f</span>) ||</span>
+<span class="line">    (NewController-&gt;StickAverageY != <span class="hljs-number">0.0f</span>))</span>
+<span class="line">{</span>
+<span class="line">    NewController-&gt;IsAnalog = <span class="hljs-literal">true</span>;</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">if</span> (Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_DPAD_UP)</span>
+<span class="line">{</span>
+<span class="line">    NewController-&gt;StickAverageY = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">    NewController-&gt;IsAnalog = <span class="hljs-literal">false</span>;</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">if</span> (Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_DPAD_DOWN)</span>
+<span class="line">{</span>
+<span class="line">    NewController-&gt;StickAverageY = <span class="hljs-number">-1.0f</span>;</span>
+<span class="line">    NewController-&gt;IsAnalog = <span class="hljs-literal">false</span>;</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">if</span> (Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_DPAD_LEFT)</span>
+<span class="line">{</span>
+<span class="line">    NewController-&gt;StickAverageX = <span class="hljs-number">-1.0f</span>;</span>
+<span class="line">    NewController-&gt;IsAnalog = <span class="hljs-literal">false</span>;</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">if</span> (Pad-&gt;wButtons &amp; XINPUT_GAMEPAD_DPAD_RIGHT)</span>
+<span class="line">{</span>
+<span class="line">    NewController-&gt;StickAverageX = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">    NewController-&gt;IsAnalog = <span class="hljs-literal">false</span>;</span>
+<span class="line">}</span></code></pre><p>
+
+At least, that's the assumption we make. However, this assumption is incorrect. See, we swap controllers back and forth at each frame:
+
+</p><pre class="listing tilde"><code><span class="line">game_input *Temp = NewInput;</span>
+<span class="line">NewInput = OldInput;</span>
+<span class="line">OldInput = Temp;</span></code></pre><p>
+
+So if we set IsAnalog on the previous frame and then don't get any input on the next one, this information will not be carried on.
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day24/IsAnalog.gif" target="_blank"><img class="markdeep" src="../media/day24/IsAnalog.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;1:</b> Controller Rotation.</span></center></div></center> 
+
+</p><p>
+
+This is not a serious issue just yet, but you never know in the future. So let's simply pass over this information from the <code>OldController</code>:
+
+</p><pre class="listing tilde"><code><span class="line">XINPUT_STATE ControllerState;</span>
+<span class="line"><span class="hljs-keyword">if</span> (XInputGetState(ControllerIndex, &amp;ControllerState) == ERROR_SUCCESS)</span>
+<span class="line">{</span>
+<span class="line">    NewController-&gt;IsConnected = <span class="hljs-literal">true</span>;</span><div class=" add"><span class="line">    NewController-&gt;IsAnalog = OldController-&gt;IsAnalog;</span></div><span class="line">    </span>
+<span class="line">    <span class="hljs-comment">// NOTE(casey): This controller is plugged in</span></span>
+<span class="line">    <span class="hljs-comment">// TODO(casey): See if ControllerState.dwPacketNumber increments too rapidly</span></span>
+<span class="line">    XINPUT_GAMEPAD *Pad = &amp;ControllerState.Gamepad;</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;1:</b> <file>[win32_handmade.cpp > WinMain]</file> Preserving <code>IsAnalog</code> state.</div></center>
+<p>
+
+
+Compile and make sure there're no errors. You can even step through the code and verify that the <code>IsAnalog</code> state is preserved.
+
+</p>
+<a class="target" name="setfixedwindowoutputsize">&nbsp;</a><a class="target" name="smallfixes/setfixedwindowoutputsize">&nbsp;</a><a class="target" name="toc1.2">&nbsp;</a><h2>Set Fixed Window Output Size</h2>
+<p>
+
+
+The next thing we want to tackle is graphics output to the window. You might have noticed that some lines that we draw are thicker than the other: 
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day24/BufferStretch.jpg" target="_blank"><img class="markdeep" src="../media/day24/BufferStretch.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;2:</b> You can see from our debug lines that some are thicker.</span></center></div></center> 
+
+</p><p>
+
+Image stretching is a more complex topic than it might seem. Pixel blending comes into play, calculations must be done on the sub-pixel level, and so on. We aren't ready to tackle all this just yet, so let's simply make the following hack: We will render pixels exactly how they appear in our buffer, without any stretching. 
+
+</p><p>
+
+In practice, this means that, instead of passing <code>WindowWidth</code> and <code>WindowHeight</code> to the <code>StretchDIBits</code> function, we will provide the buffer's width and height. This will result in the output not matching our window size, but that's fine for our purposes for now. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32DisplayBufferInWindow</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span><div class=" edit"><span class="line">    <span class="hljs-comment">// NOTE(casey): For prototyping purposes, we&#x27;re going to always blit</span></span>
+<span class="line">    <span class="hljs-comment">// 1-to-1 pixels to make sure we don&#x27;t introduce artifacts with</span></span>
+<span class="line">    <span class="hljs-comment">// stretching while we are learning to code the renderer!</span></span></div><span class="line">    StretchDIBits(DeviceContext,</span><div class=" edit"><span class="line">                  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, Buffer-&gt;Width, Buffer-&gt;Height,</span></div><span class="line">                  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, Buffer-&gt;Width, Buffer-&gt;Height,</span>
+<span class="line">                  Buffer-&gt;Memory,</span>
+<span class="line">                  &amp;Buffer-&gt;Info,</span>
+<span class="line">                  DIB_RGB_COLORS, SRCCOPY);</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;2:</b> <file>[win32_handmade.cpp]</file> Setting Fixed Output Size.</div></center>
+<p>
+
+
+<center><div class="image" style=""><a href="../media/day24/NoStretchBlit.jpg" target="_blank"><img class="markdeep" src="../media/day24/NoStretchBlit.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;3:</b> If you <code>P</code>ause the game, you can see that all the lines are now of equal width.</span></center></div></center> 
+
+</p>
+<a class="target" name="improvebuild.bat">&nbsp;</a><a class="target" name="smallfixes/improvebuild.bat">&nbsp;</a><a class="target" name="toc1.3">&nbsp;</a><h2>Improve <code>build.bat</code></h2>
+<p>
+
+
+We have one little thing to fix in <code>build.bat</code>. Right now, we're <em class="underscore">statically</em> linking with the <em class="underscore">optimized version</em> of the C Runtime Library. We're still not ready to ship our code to the final users, and we can definitely benefit from a slower, debug version of the library. This can be achieved by simply swapping the <code>-MT</code> flag with <code>-MTd</code> flag:
+
+</p><pre class="listing tilde"><code><span class="line">set compiler=%compiler%     -Oi                    &amp;:: Use assembly intrinsics where possible</span><div class=" edit"><span class="line">set compiler=%compiler%     -MTd                   &amp;:: Include CRT library in the executable (static linking of the debug version)</span></div><span class="line">set compiler=%compiler%     -Gm-                   &amp;:: Disable minimal rebuild</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;3:</b> <file>[build.bat]</file> Importing debug version of the CRT library.</div></center>
+<p>
+
+
+
+
+<div class="admonition ">If you recall, <em class="underscore">static linking</em> simply means that we copy the library inside our code (at the cost of a bigger executable). This is opposed to <em class="underscore">dynamic linking</em>, where we try to find and link with it at runtime. Dynamic linking results in smaller executables but carries an inherent risk that the user might not have the necessary libraries installed on their machine.</div>
+
+</p><p>
+
+If you compile and run, you'll notice that not much has changed. However, this change might be handy in the future as we dive deeper into the code.
+
+</p>
+<a class="target" name="getridofthetopmostlayeredwindow">&nbsp;</a><a class="target" name="smallfixes/getridofthetopmostlayeredwindow">&nbsp;</a><a class="target" name="toc1.4">&nbsp;</a><h2>Get rid of the Topmost Layered Window</h2>
+<p>
+
+
+Last time, we played around with the idea of having our window always on top and becoming semi-transparent when bringing it out off-focus. Unfortunately, this results in the window being continually in the way, as mouse clicks still end up inside the game.
+
+</p><p>
+
+Let's get rid of this implementation for now. We can re-enable it when we want.
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">HWND Window = CreateWindowEx(<span class="hljs-number">0</span>, <span class="hljs-comment">// WS_EX_TOPMOST | WS_EX_LAYERED, </span></span></div><span class="line">                             WindowClass.lpszClassName, <span class="hljs-string">&quot;Handmade Hero&quot;</span>,</span>
+<span class="line">                             WS_OVERLAPPEDWINDOW | WS_VISIBLE,</span>
+<span class="line">                             CW_USEDEFAULT, CW_USEDEFAULT,</span>
+<span class="line">                             CW_USEDEFAULT, CW_USEDEFAULT,</span>
+<span class="line">                             <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, Instance, <span class="hljs-number">0</span>);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;4:</b> <file>[win32_handmade.cpp > WinMain]</file> Commenting out flags enabling layering.</div></center>
+<pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">case</span> WM_CLOSE:</span>
+<span class="line">{</span>
+<span class="line">    GlobalRunning = <span class="hljs-literal">false</span>;</span>
+<span class="line">} <span class="hljs-keyword">break</span>;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">case</span> WM_ACTIVATEAPP:</span>
+<span class="line">{</span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> 0</span></span></div><span class="line">    <span class="hljs-keyword">if</span> (WParam == TRUE)</span>
+<span class="line">    {</span>
+<span class="line">        SetLayeredWindowAttributes(Window, RGB(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>), <span class="hljs-number">255</span>, LWA_ALPHA);</span>
+<span class="line">    }</span>
+<span class="line">    <span class="hljs-keyword">else</span></span>
+<span class="line">    {</span>
+<span class="line">        SetLayeredWindowAttributes(Window, RGB(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>), <span class="hljs-number">64</span>, LWA_ALPHA);</span>
+<span class="line">    }</span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div><span class="line">} <span class="hljs-keyword">break</span>;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">case</span> WM_DESTROY:</span>
+<span class="line">{</span>
+<span class="line">    GlobalRunning = <span class="hljs-literal">false</span>;</span>
+<span class="line">} <span class="hljs-keyword">break</span>;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;5:</b> <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> Disabling Layering functionality.</div></center>
+<p>
+
+
+If you compile and run now, you'll notice that the layering functionality is gone. 
+
+</p>
+<a class="target" name="getthefileeditdatewithoutopeningit">&nbsp;</a><a class="target" name="smallfixes/getthefileeditdatewithoutopeningit">&nbsp;</a><a class="target" name="toc1.5">&nbsp;</a><h2>Get the File Edit Date Without Opening It</h2>
+<p>
+
+
+Another thing that's a concern is how we get the last write time of our <code>handmade.dll</code> file. This is how we implemented <code>Win32GetLastWriteTime</code> function: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function"><span class="hljs-keyword">inline</span> FILETIME</span>
+<span class="line"><span class="hljs-title">Win32GetLastWriteTime</span><span class="hljs-params">(<span class="hljs-keyword">char</span> *Filename)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    FILETIME LastWriteTime = {};</span>
+<span class="line">    </span>
+<span class="line">    WIN32_FIND_DATA FindData;</span>
+<span class="line">    HANDLE FindHandle = FindFirstFileA(Filename, &amp;FindData);</span>
+<span class="line">    <span class="hljs-keyword">if</span> (FindHandle != INVALID_HANDLE_VALUE)</span>
+<span class="line">    {</span>
+<span class="line">        LastWriteTime = FindData.ftLastWriteTime;</span>
+<span class="line">        FindClose(FindHandle);</span>
+<span class="line">    }</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">return</span> (LastWriteTime);</span>
+<span class="line">}</span></code></pre><p>
+
+We currently have to open the file (get the FindHandle) to check its last write time. That's not the safest thing to do, as it potentially creates conflicts with whoever tries to access the file at the same time. Additionally, we must never forget to close the handle, potentially another point of failure.
+
+</p><p>
+
+The best thing to do here is to check the last write time without opening the file handle. Luckily, such a solution exists in Windows; it can be achieved by calling the <a href="https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfileattributesexa">GetFileAttributesEx</a> function.
+
+</p><p>
+
+<code>GetFileAttributesEx</code> takes the following parameters: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">The filename, absolute or relative. We already have it. 
+</li>
+<li class="asterisk">A very specific flag, <code>GetFileExInfoStandard</code>. You shouldn't pass anything else here.
+</li>
+<li class="asterisk">A pointer to the <code>WIN32_FILE_ATTRIBUTE_DATA</code> structure that, if the function succeeds, will contain the information we're after.</li></ul>
+
+</p><p>
+
+In practice this results in the following rewriting of <code>Win32GetLastWriteTime</code>.
+
+</p><pre class="listing tilde"><code><span class="line">FILETIME LastWriteTime = {};</span><div class=" delete"><span class="line">WIN32_FIND_DATA FindData;</span>
+<span class="line">HANDLE FindHandle = FindFirstFileA(Filename, &amp;FindData);</span>
+<span class="line"><span class="hljs-keyword">if</span> (FindHandle != INVALID_HANDLE_VALUE)</span>
+<span class="line">{</span>
+<span class="line">    LastWriteTime = FindData.ftLastWriteTime;</span>
+<span class="line">    FindClose(FindHandle);</span>
+<span class="line">}</span></div><div class=" add"><span class="line">WIN32_FILE_ATTRIBUTE_DATA Data;</span>
+<span class="line"><span class="hljs-keyword">if</span>(GetFileAttributesExA(Filename, GetFileExInfoStandard, &amp;Data))</span>
+<span class="line">{</span>
+<span class="line">    LastWriteTime = Data.ftLastWriteTime;</span>
+<span class="line">}</span></div><span class="line"><span class="hljs-keyword">return</span> (LastWriteTime);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;6:</b> <file>[win32_handmade.cpp > Win32GetLastWriteTime]</file> Getting rid of unnecessary find handle.</div></center>
+
+<a class="target" name="removestubfunctionsforplatformcalls">&nbsp;</a><a class="target" name="smallfixes/removestubfunctionsforplatformcalls">&nbsp;</a><a class="target" name="toc1.6">&nbsp;</a><h2>Remove Stub Functions for Platform Calls</h2>
+<p>
+
+
+A small thing that we can also do to prevent compilation conflicts is to remove the stub functions in <code>handmade.h</code>. We currently have only two, so getting rid of those will be simple: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> GAME_UPDATE_AND_RENDER(name) void name(game_memory *Memory, game_input *Input, game_offscreen_buffer* Buffer)</span></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">GAME_UPDATE_AND_RENDER</span><span class="hljs-params">(game_update_and_render)</span></span>;</span><div class=" delete"><span class="line">GAME_UPDATE_AND_RENDER(GameUpdateAndRenderStub) { }</span></div><span class="line"></span>
+<span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> GAME_GET_SOUND_SAMPLES(name) void name(game_memory *Memory, game_sound_output_buffer *SoundBuffer)</span></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">GAME_GET_SOUND_SAMPLES</span><span class="hljs-params">(game_get_sound_samples)</span></span>;</span><div class=" delete"><span class="line">GAME_GET_SOUND_SAMPLES(GameGetSoundSamplesStub) { }</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;7:</b> <file>[handmade.h]</file> Removing platform stub functions.</div></center>
+<p>
+
+
+This, however, means that if the load file failed, we must pass 0 instead:
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal win32_game_code</span>
+<span class="line"><span class="hljs-title">Win32LoadGameCode</span><span class="hljs-params">(<span class="hljs-keyword">char</span> *SourceDLLName, <span class="hljs-keyword">char</span> *TempDLLName)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    win32_game_code Result = {};</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-comment">// ...       </span></span>
+<span class="line">    <span class="hljs-keyword">if</span> (!Result.IsValid)</span>
+<span class="line">    {</span><div class=" edit"><span class="line">        Result.UpdateAndRender = <span class="hljs-number">0</span>;</span>
+<span class="line">        Result.GetSoundSamples = <span class="hljs-number">0</span>;</span></div><span class="line">    }</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">return</span>(Result);</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32UnloadGameCode</span><span class="hljs-params">(win32_game_code *GameCode)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-keyword">if</span> (GameCode-&gt;GameCodeDLL)</span>
+<span class="line">    {</span>
+<span class="line">        FreeLibrary(GameCode-&gt;GameCodeDLL);</span>
+<span class="line">        GameCode-&gt;GameCodeDLL = <span class="hljs-number">0</span>;</span>
+<span class="line">    }</span>
+<span class="line">    </span>
+<span class="line">    GameCode-&gt;IsValid = <span class="hljs-literal">false</span>;</span><div class=" edit"><span class="line">    GameCode-&gt;UpdateAndRender = <span class="hljs-number">0</span>;</span>
+<span class="line">    GameCode-&gt;GetSoundSamples = <span class="hljs-number">0</span>;</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;8:</b> <file>[win32_handmade.cpp]</file> Making sure that we don't get invalid pointers.</div></center>
+<p>
+
+
+This, in turn, means that inside WinMain, where we call these functions, we must gate ourselves from reaching broken pointers and only call the procedures when they're not 0.
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-keyword">if</span> (Game.UpdateAndRender)</span>
+<span class="line">{</span></div><span class="line">    Game.UpdateAndRender(&amp;GameMemory, NewInput, &amp;Buffer);</span><div class=" add"><span class="line">}</span></div><span class="line"></span>
+<span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-keyword">if</span> (Game.GetSoundSamples)</span>
+<span class="line">{</span></div><span class="line">    Game.GetSoundSamples(&amp;GameMemory, &amp;SoundBuffer);</span><div class=" add"><span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;9:</b> <file>[win32_handmade.cpp > WinMain]</file> Checking if functions are valid before calling them.</div></center>
+<p>
+
+
+Finally, we also can add a small comment inside the <code>win32_game_code</code> structure so that we don't forget that we need to check for this in the future.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_game_code</span></span>
+<span class="line">{</span></span>
+<span class="line">    HMODULE GameCodeDLL;</span>
+<span class="line">    FILETIME DLLLastWriteTime;</span>
+<span class="line">    </span><div class=" add"><span class="line">    <span class="hljs-comment">// IMPORTANT(casey): Either of the callbacks can be 0!</span></span>
+<span class="line">    <span class="hljs-comment">// You must check before calling.</span></span></div><span class="line">    game_update_and_render *UpdateAndRender;</span>
+<span class="line">    game_get_sound_samples *GetSoundSamples;</span>
+<span class="line">    </span>
+<span class="line">    b32 IsValid;</span>
+<span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;10:</b> <file>[win32_handmade.h]</file> Adding a comment for posterity.</div></center>
+
+<a class="target" name="improverecordingcode">&nbsp;</a><a class="target" name="improverecordingcode">&nbsp;</a><a class="target" name="toc2">&nbsp;</a><h1>Improve Recording Code</h1>
+<p>
+
+
+We now come to the most significant change for today. Our recording code saves its data inside the data folder, which we don't necessarily want. Ideally, we'd have the debug recordings being kept inside the build folder so that, if necessary, we can simply delete the folder and recreate it without any data loss.
+
+</p><p>
+
+Let's quickly review our code for writing dlls: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">char</span> SourceGameCodeDLLFilename[] = <span class="hljs-string">&quot;handmade.dll&quot;</span>;</span>
+<span class="line"><span class="hljs-keyword">char</span> SourceGameCodeDLLFullPath[MAX_PATH];</span>
+<span class="line"></span>
+<span class="line">CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(SourceGameCodeDLLFilename) - <span class="hljs-number">1</span>, SourceGameCodeDLLFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">char</span> TempGameCodeDLLFilename[] = <span class="hljs-string">&quot;handmade_temp.dll&quot;</span>;</span>
+<span class="line"><span class="hljs-keyword">char</span> TempGameCodeDLLFullPath[MAX_PATH];</span>
+<span class="line"></span>
+<span class="line">CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(TempGameCodeDLLFilename) - <span class="hljs-number">1</span>, TempGameCodeDLLFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(TempGameCodeDLLFullPath), TempGameCodeDLLFullPath);</span></code></pre><p>
+
+We already refactored this code in the past once, by adding possibility of checking the executable path and rebuilding the dll paths accordingly.
+
+</p><p>
+
+Now, we want to pull this code out even further to have an agnostic function that we can recycle.
+
+</p>
+<a class="target" name="removereferencestomax_path">&nbsp;</a><a class="target" name="improverecordingcode/removereferencestomax_path">&nbsp;</a><a class="target" name="toc2.1">&nbsp;</a><h2>Remove References to <code>MAX_PATH</code></h2>
+<p>
+
+
+First, we want to expand our <code>win32_state</code> to keep track of things like the EXE path and <code>OnePastLastSlash</code> pointer. This way, you don't need to pass them around alone.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_state</span></span>
+<span class="line">{</span></span>
+<span class="line">    u64 TotalSize;</span>
+<span class="line">    <span class="hljs-keyword">void</span> *GameMemoryBlock;</span>
+<span class="line">    </span>
+<span class="line">    HANDLE RecordingHandle;</span>
+<span class="line">    <span class="hljs-keyword">int</span> InputRecordingIndex;</span>
+<span class="line">    </span>
+<span class="line">    HANDLE PlaybackHandle;</span>
+<span class="line">    <span class="hljs-keyword">int</span> InputPlayingIndex;</span>
+<span class="line">    </span><div class=" add"><span class="line">    <span class="hljs-keyword">char</span> EXEFilename[MAX_PATH];</span>
+<span class="line">    <span class="hljs-keyword">char</span> *OnePastLastEXEFilenameSlash;</span></div><span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;11:</b> <file>[win32_handmade.h]</file> Preserving executable path.</div></center>
+<p>
+
+
+That said, we already mentioned in the past that using MAX_PATH is a bad idea. MAX_PATH is an old convention often ignored by modern API (which allows having a much longer path). This puts us at risk where the executable would be located deep in someone's file system, disallowing us from functioning correctly.
+
+</p><p>
+
+Let's use an intermediary <code>#define</code> so that we can eventually revisit and replace it. 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> WIN32_STATE_FILENAME_COUNT MAX_PATH</span></span></div><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_state</span></span>
+<span class="line">{</span></span>
+<span class="line">    u64 TotalSize;</span>
+<span class="line">    <span class="hljs-keyword">void</span> *GameMemoryBlock;</span>
+<span class="line">    </span>
+<span class="line">    HANDLE RecordingHandle;</span>
+<span class="line">    <span class="hljs-keyword">int</span> InputRecordingIndex;</span>
+<span class="line">    </span>
+<span class="line">    HANDLE PlaybackHandle;</span>
+<span class="line">    <span class="hljs-keyword">int</span> InputPlayingIndex;</span>
+<span class="line">    </span><div class=" edit"><span class="line">    <span class="hljs-keyword">char</span> EXEFilename[WIN32_STATE_FILENAME_COUNT];</span></div><span class="line">    <span class="hljs-keyword">char</span> *OnePastLastEXEFilenameSlash;</span>
+<span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;12:</b> <file>[win32_handmade.h]</file> Abstracting out <code>MAX_PATH</code>.</div></center>
+<p>
+
+
+Now we can safely remove any instance of <code>MAX_PATH</code> we have used in the past.
+
+</p><pre class="listing tilde"><code><div class=" delete"><span class="line"><span class="hljs-comment">// NOTE(casey): Never use MAX_PATH in code that is user-facing, because it</span></span>
+<span class="line"><span class="hljs-comment">// can be dangerous and lead to bad results.</span></span></div><span class="line"><span class="hljs-keyword">char</span> EXEFilename[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">DWORD SizeOfFilename = GetModuleFileNameA(<span class="hljs-number">0</span>, EXEFilename, <span class="hljs-keyword">sizeof</span>(EXEFilename));</span>
+<span class="line"><span class="hljs-keyword">char</span> *OnePastLastSlash = EXEFilename;</span>
+<span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">char</span> *Scan = EXEFilename;</span>
+<span class="line">        *Scan;</span>
+<span class="line">        ++Scan)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">if</span> (*Scan == <span class="hljs-string">&#x27;\\&#x27;</span>)</span>
+<span class="line">    {</span>
+<span class="line">        OnePastLastSlash = Scan + <span class="hljs-number">1</span>;</span>
+<span class="line">    }</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">char</span> SourceGameCodeDLLFilename[] = <span class="hljs-string">&quot;handmade.dll&quot;</span>;</span><div class=" edit"><span class="line"><span class="hljs-keyword">char</span> SourceGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];</span></div><span class="line"></span>
+<span class="line">CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(SourceGameCodeDLLFilename) - <span class="hljs-number">1</span>, SourceGameCodeDLLFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">char</span> TempGameCodeDLLFilename[] = <span class="hljs-string">&quot;handmade_temp.dll&quot;</span>;</span><div class=" edit"><span class="line"><span class="hljs-keyword">char</span> TempGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];</span></div><span class="line">CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(TempGameCodeDLLFilename) - <span class="hljs-number">1</span>, TempGameCodeDLLFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(TempGameCodeDLLFullPath), TempGameCodeDLLFullPath);</span>
+<span class="line">   </span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;13:</b> <file>[win32_handmade.cpp > WinMain]</file> Removing <code>MAX_PATH</code> usage.</div></center>
+
+<a class="target" name="storeexecutablefilename">&nbsp;</a><a class="target" name="improverecordingcode/storeexecutablefilename">&nbsp;</a><a class="target" name="toc2.2">&nbsp;</a><h2>Store Executable Filename</h2>
+<p>
+
+
+Let's quickly extract the code storing the <code>exe</code> filename. 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32GetEXEFilename</span><span class="hljs-params">(win32_state *State)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-keyword">char</span> EXEFilename[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">    DWORD SizeOfFilename = GetModuleFileNameA(<span class="hljs-number">0</span>, EXEFilename, <span class="hljs-keyword">sizeof</span>(EXEFilename));</span>
+<span class="line">    <span class="hljs-keyword">char</span> *OnePastLastSlash = EXEFilename;</span>
+<span class="line">    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">char</span> *Scan = EXEFilename;</span>
+<span class="line">         *Scan;</span>
+<span class="line">         ++Scan)</span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-keyword">if</span> (*Scan == <span class="hljs-string">&#x27;\\&#x27;</span>)</span>
+<span class="line">        {</span>
+<span class="line">            OnePastLastSlash = Scan + <span class="hljs-number">1</span>;</span>
+<span class="line">        }</span>
+<span class="line">    }</span>
+<span class="line">}</span></div><span class="line"></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">int</span> CALLBACK</span>
+<span class="line"><span class="hljs-title">WinMain</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span><div class=" add"><span class="line">    Win32GetEXEFilename(Win32State);</span></div><div class=" delete"><span class="line">    <span class="hljs-keyword">char</span> EXEFilename[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">    DWORD SizeOfFilename = GetModuleFileNameA(<span class="hljs-number">0</span>, EXEFilename, <span class="hljs-keyword">sizeof</span>(EXEFilename));</span>
+<span class="line">    <span class="hljs-keyword">char</span> *OnePastLastSlash = EXEFilename;</span>
+<span class="line">    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">char</span> *Scan = EXEFilename;</span>
+<span class="line">         *Scan;</span>
+<span class="line">         ++Scan)</span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-keyword">if</span> (*Scan == <span class="hljs-string">&#x27;\\&#x27;</span>)</span>
+<span class="line">        {</span>
+<span class="line">            OnePastLastSlash = Scan + <span class="hljs-number">1</span>;</span>
+<span class="line">        }</span>
+<span class="line">    }</span></div><span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;14:</b> <file>[win32_handmade.cpp]</file> Extracting Code.</div></center>
+<p>
+
+
+We'll need to access <code>Win32State</code>, so we'll move its initialization further up. Actually, this will be the first thing we do when we enter <code>WinMain</code>: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">win32_state Win32State = {};</span></div><span class="line">Win32GetEXEFilename(Win32State);</span>
+<span class="line"><span class="hljs-comment">// ...    </span></span>
+<span class="line"><span class="hljs-keyword">if</span> (Window)</span>
+<span class="line">{</span><div class=" delete"><span class="line">    win32_state Win32State = {};</span>
+<span class="line">    Win32State.InputRecordingIndex = <span class="hljs-number">0</span>;</span>
+<span class="line">    Win32State.InputPlayingIndex = <span class="hljs-number">0</span>;</span></div><span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;15:</b> <file>[win32_handmade.cpp > WinMain]</file> Moving <code>Win32State</code> initialization further up.</div></center>
+<p>
+
+
+Ok, back to the code that we extracted. We need to leverage the <code>State</code> that we're passing in to store <code>EXEFilename</code> and the place for others to write their filenames. 
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="256" width="416" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 40,112 L 40,128 " style="fill:none;"/>
+<path d="M 56,64 L 56,96 " style="fill:none;"/>
+<path d="M 56,128 L 56,160 " style="fill:none;"/>
+<path d="M 200,16 L 200,96 " style="fill:none;"/>
+<path d="M 200,136 L 200,192 " style="fill:none;"/>
+<path d="M 352,112 L 352,128 " style="fill:none;"/>
+<path d="M 40,128 L 352,128 " style="fill:none;"/>
+<polygon points="208,136 196,130.4 196,141.6 "  style="stroke:none" transform="rotate(270,200,136 )"/>
+<polygon points="208,96 196,90.4 196,101.6 "  style="stroke:none" transform="rotate(90,200,96 )"/>
+<polygon points="64,96 52,90.4 52,101.6 "  style="stroke:none" transform="rotate(90,56,96 )"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="144" y="4">O</text><text text-anchor="middle" x="152" y="4">n</text><text text-anchor="middle" x="160" y="4">e</text><text text-anchor="middle" x="168" y="4">P</text><text text-anchor="middle" x="176" y="4">a</text><text text-anchor="middle" x="184" y="4">s</text><text text-anchor="middle" x="192" y="4">t</text><text text-anchor="middle" x="200" y="4">L</text><text text-anchor="middle" x="208" y="4">a</text><text text-anchor="middle" x="216" y="4">s</text><text text-anchor="middle" x="224" y="4">t</text><text text-anchor="middle" x="232" y="4">S</text><text text-anchor="middle" x="240" y="4">l</text><text text-anchor="middle" x="248" y="4">a</text><text text-anchor="middle" x="256" y="4">s</text><text text-anchor="middle" x="264" y="4">h</text><text text-anchor="middle" x="24" y="52">E</text><text text-anchor="middle" x="32" y="52">X</text><text text-anchor="middle" x="40" y="52">E</text><text text-anchor="middle" x="48" y="52">F</text><text text-anchor="middle" x="56" y="52">i</text><text text-anchor="middle" x="64" y="52">l</text><text text-anchor="middle" x="72" y="52">e</text><text text-anchor="middle" x="80" y="52">n</text><text text-anchor="middle" x="88" y="52">a</text><text text-anchor="middle" x="96" y="52">m</text><text text-anchor="middle" x="104" y="52">e</text><text text-anchor="middle" x="56" y="116">w</text><text text-anchor="middle" x="64" y="116">:</text><text text-anchor="middle" x="72" y="116">\</text><text text-anchor="middle" x="80" y="116">h</text><text text-anchor="middle" x="88" y="116">a</text><text text-anchor="middle" x="96" y="116">n</text><text text-anchor="middle" x="104" y="116">d</text><text text-anchor="middle" x="112" y="116">m</text><text text-anchor="middle" x="120" y="116">a</text><text text-anchor="middle" x="128" y="116">d</text><text text-anchor="middle" x="136" y="116">e</text><text text-anchor="middle" x="144" y="116">\</text><text text-anchor="middle" x="152" y="116">b</text><text text-anchor="middle" x="160" y="116">u</text><text text-anchor="middle" x="168" y="116">i</text><text text-anchor="middle" x="176" y="116">l</text><text text-anchor="middle" x="184" y="116">d</text><text text-anchor="middle" x="192" y="116">\</text><text text-anchor="middle" x="200" y="116">w</text><text text-anchor="middle" x="208" y="116">i</text><text text-anchor="middle" x="216" y="116">n</text><text text-anchor="middle" x="224" y="116">3</text><text text-anchor="middle" x="232" y="116">2</text><text text-anchor="middle" x="240" y="116">_</text><text text-anchor="middle" x="248" y="116">h</text><text text-anchor="middle" x="256" y="116">a</text><text text-anchor="middle" x="264" y="116">n</text><text text-anchor="middle" x="272" y="116">d</text><text text-anchor="middle" x="280" y="116">m</text><text text-anchor="middle" x="288" y="116">a</text><text text-anchor="middle" x="296" y="116">d</text><text text-anchor="middle" x="304" y="116">e</text><text text-anchor="middle" x="312" y="116">.</text><text text-anchor="middle" x="320" y="116">e</text><text text-anchor="middle" x="328" y="116">x</text><text text-anchor="middle" x="336" y="116">e</text><text text-anchor="middle" x="24" y="180">M</text><text text-anchor="middle" x="32" y="180">o</text><text text-anchor="middle" x="40" y="180">d</text><text text-anchor="middle" x="48" y="180">u</text><text text-anchor="middle" x="56" y="180">l</text><text text-anchor="middle" x="64" y="180">e</text><text text-anchor="middle" x="80" y="180">f</text><text text-anchor="middle" x="88" y="180">i</text><text text-anchor="middle" x="96" y="180">l</text><text text-anchor="middle" x="104" y="180">e</text><text text-anchor="middle" x="112" y="180">n</text><text text-anchor="middle" x="120" y="180">a</text><text text-anchor="middle" x="128" y="180">m</text><text text-anchor="middle" x="136" y="180">e</text><text text-anchor="middle" x="112" y="212">P</text><text text-anchor="middle" x="120" y="212">l</text><text text-anchor="middle" x="128" y="212">a</text><text text-anchor="middle" x="136" y="212">c</text><text text-anchor="middle" x="144" y="212">e</text><text text-anchor="middle" x="160" y="212">f</text><text text-anchor="middle" x="168" y="212">o</text><text text-anchor="middle" x="176" y="212">r</text><text text-anchor="middle" x="192" y="212">o</text><text text-anchor="middle" x="200" y="212">t</text><text text-anchor="middle" x="208" y="212">h</text><text text-anchor="middle" x="216" y="212">e</text><text text-anchor="middle" x="224" y="212">r</text><text text-anchor="middle" x="232" y="212">s</text><text text-anchor="middle" x="248" y="212">t</text><text text-anchor="middle" x="256" y="212">o</text><text text-anchor="middle" x="272" y="212">w</text><text text-anchor="middle" x="280" y="212">r</text><text text-anchor="middle" x="288" y="212">i</text><text text-anchor="middle" x="296" y="212">t</text><text text-anchor="middle" x="304" y="212">e</text><text text-anchor="middle" x="136" y="228">t</text><text text-anchor="middle" x="144" y="228">h</text><text text-anchor="middle" x="152" y="228">e</text><text text-anchor="middle" x="160" y="228">i</text><text text-anchor="middle" x="168" y="228">r</text><text text-anchor="middle" x="184" y="228">f</text><text text-anchor="middle" x="192" y="228">i</text><text text-anchor="middle" x="200" y="228">l</text><text text-anchor="middle" x="208" y="228">e</text><text text-anchor="middle" x="216" y="228">n</text><text text-anchor="middle" x="224" y="228">a</text><text text-anchor="middle" x="232" y="228">m</text><text text-anchor="middle" x="240" y="228">e</text><text text-anchor="middle" x="248" y="228">s</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;4:</b> As a reminder, this is what these values represent.</div></center>
+
+</p><pre class="listing tilde"><code><div class=" delete"><span class="line"><span class="hljs-keyword">char</span> EXEFilename[WIN32_STATE_FILENAME_COUNT];</span></div><div class=" edit"><span class="line">DWORD SizeOfFilename = GetModuleFileNameA(<span class="hljs-number">0</span>, State-&gt;EXEFilename, <span class="hljs-keyword">sizeof</span>(State-&gt;EXEFilename));</span>
+<span class="line">State-&gt;OnePastLastEXEFilenameSlash = State-&gt;EXEFilename;</span>
+<span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">char</span> *Scan = State-&gt;EXEFilename;</span></div><span class="line">     *Scan;</span>
+<span class="line">     ++Scan)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">if</span> (*Scan == <span class="hljs-string">&#x27;\\&#x27;</span>)</span>
+<span class="line">    {</span><div class=" edit"><span class="line">        State-&gt;OnePastLastEXEFilenameSlash = Scan + <span class="hljs-number">1</span>;</span></div><span class="line">    }</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;16:</b> <file>[win32_handmade.cpp > Win32GetEXEFilename]</file> Using <code>win32_state</code> we store the <code>EXEFilename</code> and <code>OnePastLastSlash</code>.</div></center>
+
+<a class="target" name="buildacustomexepathfilename">&nbsp;</a><a class="target" name="improverecordingcode/buildacustomexepathfilename">&nbsp;</a><a class="target" name="toc2.3">&nbsp;</a><h2>Build a Custom EXE Path Filename</h2>
+<p>
+
+
+Now we can extract some more code. We have the following code that can be recycled: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">char</span> SourceGameCodeDLLFilename[] = <span class="hljs-string">&quot;handmade.dll&quot;</span>;</span>
+<span class="line"><span class="hljs-keyword">char</span> SourceGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line"></span>
+<span class="line">CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(SourceGameCodeDLLFilename) - <span class="hljs-number">1</span>, SourceGameCodeDLLFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">char</span> TempGameCodeDLLFilename[] = <span class="hljs-string">&quot;handmade_temp.dll&quot;</span>;</span>
+<span class="line"><span class="hljs-keyword">char</span> TempGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line"></span>
+<span class="line">CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(TempGameCodeDLLFilename) - <span class="hljs-number">1</span>, TempGameCodeDLLFilename, </span>
+<span class="line">            <span class="hljs-keyword">sizeof</span>(TempGameCodeDLLFullPath), TempGameCodeDLLFullPath);</span></code></pre><p>
+
+In fact, if you look closely, this is the same code repeating twice! Let's extract the repeating code and replace these blocks with the calls to it: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">Win32BuildEXEPathFilename</span><span class="hljs-params">(win32_state *State, <span class="hljs-keyword">char</span> *Filename,</span>
+<span class="line">                          <span class="hljs-keyword">int</span> DestCount, <span class="hljs-keyword">char</span> *Dest)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-keyword">char</span> SourceGameCodeDLLFilename[] = <span class="hljs-string">&quot;handmade.dll&quot;</span>;</span>
+<span class="line">    <span class="hljs-keyword">char</span> SourceGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">    </span>
+<span class="line">    CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, </span>
+<span class="line">               <span class="hljs-keyword">sizeof</span>(SourceGameCodeDLLFilename) - <span class="hljs-number">1</span>, SourceGameCodeDLLFilename, </span>
+<span class="line">               <span class="hljs-keyword">sizeof</span>(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);</span>
+<span class="line">}</span></div><span class="line"></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">int</span> CALLBACK</span>
+<span class="line"><span class="hljs-title">WinMain</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    win32_state Win32State = {};</span>
+<span class="line"></span>
+<span class="line">    Win32GetEXEFilename(Win32State);</span>
+<span class="line"></span><div class=" add"><span class="line">    <span class="hljs-keyword">char</span> SourceGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">    Win32BuildEXEPathFilename(&amp;Win32State, <span class="hljs-string">&quot;handmade.dll&quot;</span>, </span>
+<span class="line">                              <span class="hljs-keyword">sizeof</span>(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);</span>
+<span class="line">    <span class="hljs-keyword">char</span> TempGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">    Win32BuildEXEPathFilename(&amp;Win32State, <span class="hljs-string">&quot;handmade_temp.dll&quot;</span>, </span>
+<span class="line">                              <span class="hljs-keyword">sizeof</span>(TempGameCodeDLLFullPath), TempGameCodeDLLFullPath);</span>
+<span class="line">    </span></div><div class=" delete"><span class="line">    <span class="hljs-keyword">char</span> SourceGameCodeDLLFilename[] = <span class="hljs-string">&quot;handmade.dll&quot;</span>;</span>
+<span class="line">    <span class="hljs-keyword">char</span> SourceGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">    </span>
+<span class="line">    CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, </span>
+<span class="line">               <span class="hljs-keyword">sizeof</span>(SourceGameCodeDLLFilename) - <span class="hljs-number">1</span>, SourceGameCodeDLLFilename, </span>
+<span class="line">               <span class="hljs-keyword">sizeof</span>(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">char</span> TempGameCodeDLLFilename[] = <span class="hljs-string">&quot;handmade_temp.dll&quot;</span>;</span>
+<span class="line">    <span class="hljs-keyword">char</span> TempGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">    </span>
+<span class="line">    CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, </span>
+<span class="line">               <span class="hljs-keyword">sizeof</span>(TempGameCodeDLLFilename) - <span class="hljs-number">1</span>, TempGameCodeDLLFilename, </span>
+<span class="line">               <span class="hljs-keyword">sizeof</span>(TempGameCodeDLLFullPath), TempGameCodeDLLFullPath);</span></div><span class="line">    </span>
+<span class="line">    LARGE_INTEGER PerfCountFrequencyResult;</span>
+<span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;17:</b> <file>[win32_handmade.cpp]</file> Introducing <code>Win32BuildEXEPathFilename</code>.</div></center>
+<p>
+
+
+Let's start cleaning up the function. First, we don't need the filename and the full path container, so we can simply get rid of these: 
+
+</p><pre class="listing tilde"><code><div class=" delete"><span class="line"><span class="hljs-keyword">char</span> SourceGameCodeDLLFilename[] = <span class="hljs-string">&quot;handmade.dll&quot;</span>;</span>
+<span class="line"><span class="hljs-keyword">char</span> SourceGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;18:</b> <file>[win32_handmade.cpp > Win32BuildEXEPathFilename]</file> Cleaning out things we don't need.</div></center>
+<p>
+
+
+Our <code>CatStrings</code> call can cleaned up significantly: 
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">CatStrings(State-&gt;OnePastLastEXEFilenameSlash - State-&gt;EXEFilename, State-&gt;EXEFilename, </span>
+<span class="line">           StringLength(Filename), Filename, DestCount, Dest);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;19:</b> <file>[win32_handmade.cpp > Win32BuildEXEPathFilename]</file> Cleaning up <code>CatStrings</code> call from <code>Win32BuildEXEPathFilename</code>.</div></center>
+<p>
+
+
+You'll notice that we didn't ask for the <code>FilenameCount</code>; however, we did pass to <code>CatStrings</code> a magic function that we called <code>StringLength</code>. As we'll see in a moment, there's nothing magic about it.
+
+</p><p>
+
+C strings are just bytes of data, with the last byte being 0. (at least for the ASCII strings, Unicode is slightly more involved, but we won't mess around with that for now). So we'll count all the bytes until we reach 0, and that will be our string length:
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">int</span></span>
+<span class="line"><span class="hljs-title">StringLength</span><span class="hljs-params">(<span class="hljs-keyword">char</span> *String)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-keyword">int</span> Count = <span class="hljs-number">0</span>;</span>
+<span class="line">    <span class="hljs-keyword">while</span> (*String++) <span class="hljs-comment">// While the character is not 0 (do not confuse with &#x27;0&#x27; the character!)</span></span>
+<span class="line">    {</span>
+<span class="line">        ++Count;</span>
+<span class="line">    }</span>
+<span class="line">    <span class="hljs-keyword">return</span> (Count);</span>
+<span class="line">}</span></div><span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">Win32BuildEXEPathFilename</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">//...</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;20:</b> <file>[win32_handmade.cpp]</file> Introducing <code>StringLength</code>.</div></center>
+<p>
+
+
+Now we have a convenient function that we can use whenever we want to.
+
+</p>
+<a class="target" name="reorganizewin32_handmade.cpp">&nbsp;</a><a class="target" name="improverecordingcode/reorganizewin32_handmade.cpp">&nbsp;</a><a class="target" name="toc2.4">&nbsp;</a><h2>Reorganize <code>win32_handmade.cpp</code></h2>
+<p>
+
+
+Before we move on, let's do some reorganization. We need to move the functions <code>CatStrings</code>, <code>StringLength</code>, <code>Win32GetEXEFilename</code> and <code>Win32BuildEXEPathFilename</code> to the top of <code>win32_handmade.cpp</code>, just before our utility functions: 
+
+</p><pre class="listing tilde"><code><div class=" C++ "><span class="line">type<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">DIRECT_SOUND_CREATE</span><span class="hljs-params">(direct_sound_create)</span></span>;</span>
+<span class="line"></span></div><div class=" add"><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">CatStrings</span><span class="hljs-params">(<span class="hljs-keyword">size_t</span> SourceACount, <span class="hljs-keyword">char</span> *SourceA, </span>
+<span class="line">           <span class="hljs-keyword">size_t</span> SourceBCount, <span class="hljs-keyword">char</span> *SourceB,</span>
+<span class="line">           <span class="hljs-keyword">size_t</span> DestCount, <span class="hljs-keyword">char</span> *Dest)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// + contents </span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">int</span></span>
+<span class="line"><span class="hljs-title">StringLength</span><span class="hljs-params">(<span class="hljs-keyword">char</span> *String)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// + contents</span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32GetEXEFilename</span><span class="hljs-params">(win32_state *State)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// + contents</span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">Win32BuildEXEPathFilename</span><span class="hljs-params">(win32_state *State, <span class="hljs-keyword">char</span> *Filename,</span>
+<span class="line">                          <span class="hljs-keyword">int</span> DestCount, <span class="hljs-keyword">char</span> *Dest)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// + contents</span></span>
+<span class="line">}</span>
+<span class="line"></span></div><span class="line">DEBUG_PLATFORM_FREE_FILE_MEMORY(DEBUGPlatformFreeFileMemory)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// ... </span></span>
+<span class="line"></span>
+<span class="line"></span><div class=" delete"><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">CatStrings</span><span class="hljs-params">(<span class="hljs-keyword">size_t</span> SourceACount, <span class="hljs-keyword">char</span> *SourceA, </span>
+<span class="line">           <span class="hljs-keyword">size_t</span> SourceBCount, <span class="hljs-keyword">char</span> *SourceB,</span>
+<span class="line">           <span class="hljs-keyword">size_t</span> DestCount, <span class="hljs-keyword">char</span> *Dest)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">int</span></span>
+<span class="line"><span class="hljs-title">StringLength</span><span class="hljs-params">(<span class="hljs-keyword">char</span> *String)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32GetEXEFilename</span><span class="hljs-params">(win32_state *State)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">Win32BuildEXEPathFilename</span><span class="hljs-params">(win32_state *State, <span class="hljs-keyword">char</span> *Filename,</span>
+<span class="line">                          <span class="hljs-keyword">int</span> DestCount, <span class="hljs-keyword">char</span> *Dest)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">}</span></div><span class="line"><span class="hljs-function"><span class="hljs-keyword">int</span> CALLBACK</span>
+<span class="line"><span class="hljs-title">WinMain</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;21:</b> <file>[win32_handmade.cpp]</file> Remember to actually copy-paste the contents of these functions!!</div></center>
+<p>
+
+
+This allows us to use these path-assembling functions on our Input Recording/Playback functions! We don't want them to live inside our <code>data</code> folder; this is the folder for <em class="underscore">good</em> data.
+
+</p>
+<a class="target" name="updaterecordingandplaybackfunctions">&nbsp;</a><a class="target" name="improverecordingcode/updaterecordingandplaybackfunctions">&nbsp;</a><a class="target" name="toc2.5">&nbsp;</a><h2>Update Recording and Playback Functions</h2>
+<p>
+
+
+Finally, let's do the fix that we wanted. We want to create a new function that would provide anyone asking for a universal Input Storage name. Let's also rename the file as <code>loop_edit.hmi</code> instead of <code>foo.hmi</code> (<code>.hmi</code> standing for &ldquo;HandMade Input&rdquo;). 
+
+</p><p>
+
+We'll use the new function inside both <code>Win32BeginRecordingInput</code> and <code>Win32BeginInputPlayback</code>. 
+
+</p><p>
+
+Something for the future, we'll also assert that the <code>SlotIndex</code> is always 1.
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32GetInputFileLocation</span><span class="hljs-params">(win32_state *State, <span class="hljs-keyword">int</span> SlotIndex, <span class="hljs-keyword">int</span> DestCount, <span class="hljs-keyword">char</span> *Dest)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    Assert(SlotIndex == <span class="hljs-number">1</span>);</span>
+<span class="line">    Win32BuildEXEPathFilename(State, <span class="hljs-string">&quot;loop_edit.hmi&quot;</span>, DestCount, Dest);</span>
+<span class="line">}</span></div><span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32BeginRecordingInput</span><span class="hljs-params">(win32_state *State, <span class="hljs-keyword">int</span> InputRecordingIndex)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    State-&gt;InputRecordingIndex = InputRecordingIndex;</span>
+<span class="line">    </span><div class=" add"><span class="line">    <span class="hljs-keyword">char</span> Filename[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">    Win32GetInputFileLocation(State, InputRecordingIndex, WIN32_STATE_FILENAME_COUNT, Filename);</span></div><div class=" delete"><span class="line">    <span class="hljs-keyword">char</span> *Filename = <span class="hljs-string">&quot;foo.hmi&quot;</span>;</span></div><span class="line">    State-&gt;RecordingHandle = CreateFileA(Filename, GENERIC_WRITE, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, CREATE_ALWAYS, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>);</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32BeginInputPlayback</span><span class="hljs-params">(win32_state *State, <span class="hljs-keyword">int</span> InputPlayingIndex)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    State-&gt;InputPlayingIndex = InputPlayingIndex;</span>
+<span class="line">    </span><div class=" add"><span class="line">    <span class="hljs-keyword">char</span> Filename[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">    Win32GetInputFileLocation(State, InputPlayingIndex, WIN32_STATE_FILENAME_COUNT, Filename);</span></div><div class=" delete"><span class="line">    <span class="hljs-keyword">char</span> *Filename = <span class="hljs-string">&quot;foo.hmi&quot;</span>;</span></div><span class="line">    </span>
+<span class="line">    State-&gt;PlaybackHandle = CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, <span class="hljs-number">0</span>, OPEN_EXISTING, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>);</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;22:</b> <file>[win32_handmade.cpp]</file> Storing input recording inside the <code>build</code> directory.</div></center>
+
+<a class="target" name="recap">&nbsp;</a><a class="target" name="recap">&nbsp;</a><a class="target" name="toc3">&nbsp;</a><h1>Recap</h1>
+<p>
+
+
+We've made plenty lesser edits for one day, but still not enough to call it done. Next time, we will finish our prototype platform layer for good. 
+
+</p>
+<a class="target" name="navigation">&nbsp;</a><a class="target" name="navigation">&nbsp;</a><a class="target" name="toc4">&nbsp;</a><h1>Navigation</h1>
+<p>
+
+
+Previous: <a href="../html/day23.html">Day 23. Looped Live Code Editing</a>
+
+</p><p>
+
+Up Next: <a href="../html/day25.html">Day 25. Finishing the Win32 Prototyping Layer</a>
+
+</p><p>
+
+<a href="../index.md.html">Back to Index</a>
+
+</p>
+<div class="nonumberh1">Glossary </div>
+<p>
+
+
+<ul>
+<li class="asterisk">Dynamic Linking
+</li>
+<li class="asterisk">Static Linking</li></ul>
+
+</p>
+<div class="nonumberh1">MSDN</div>
+<p>
+
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfileattributesexa">GetFileAttributesEx</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/memory/large-page-support">Large-Page Support</a>
+
+</p><p>
+
+<style class="fallback">
+  body {
+    visibility: hidden;
+    font-family: sans-serif;
+  }
+</style>
+
+</p><p>
+
+<script>
+  markdeepOptions = { tocStyle: 'long' };
+  window.alreadyProcessedMarkdeep ||
+    (document.body.style.visibility = 'visible');
+</script>
+
+</p><p>
+
+</p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.13&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div>
