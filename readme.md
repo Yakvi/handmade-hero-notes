@@ -22,7 +22,7 @@ Do you want to contribute in design, writing, bugfixing? Check out our [Contribu
 * Bumbread
 
 ### Bug Reports
-* Cabiria
+* Chiara "Cabiria" Favaro
 * Bumbread
 * s9chroma
 * NghiaLam
