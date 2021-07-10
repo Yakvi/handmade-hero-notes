@@ -6,7 +6,7 @@ _Video Length (including Q&A): [1h39](https://hero.handmade.network/episode/code
 
 (insert intro.md.html here) 
 
-Today is the cleanup day. We went in fast and furious typing our way through the code, and there're some bugs and inconsistencies that we left behind. We'll dedicate the next two days to get rid of these.
+Today is the cleanup day. We went in fast and furious, typing our way through the code, and we have left behind some bugs and inconsistencies. We'll dedicate the next two days revisiting and, hopefully, optimizing them out.
 
 # Small Fixes
 
@@ -54,11 +54,11 @@ NewInput = OldInput;
 OldInput = Temp;
 ~~~~~~~
 
-So if we set `IsAnalog` on the previous frame, and then don't get any input on the next frame, this information will not be carried on. 
+So if we set IsAnalog on the previous frame and then don't get any input on the next one, this information will not be carried on.
 
 ![Figure [x]: Controller Rotation.](../media/day24/IsAnalog.gif) 
 
-For now this is not an issue, but we might have some future functionality depending on whether the user is doing analog input or not. So let's simply pass over this information from the `OldController`:
+This is not a serious issue just yet, but you never know in the future. So let's simply pass over this information from the `OldController`:
 
 ~~~~~~~ C++
 XINPUT_STATE ControllerState;
@@ -77,9 +77,7 @@ if (XInputGetState(ControllerIndex, &ControllerState) == ERROR_SUCCESS)
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Preserving `IsAnalog` state.]
 
-Would not setting `IsAnalog` create issues in the future? We don't know. But it is cleaner to do so, and it's the cleanup day. 
-
-Compile and make sure there're no errors. You can even step through the code and verify that `IsAnalog` state is preserved.
+Compile and make sure there're no errors. You can even step through the code and verify that the `IsAnalog` state is preserved.
 
 ## Set Fixed Window Output Size
 
@@ -89,7 +87,7 @@ The next thing we want to tackle is graphics output to the window. You might hav
 
 Image stretching is a more complex topic than it might seem. Pixel blending comes into play, calculations must be done on the sub-pixel level, and so on. We aren't ready to tackle all this just yet, so let's simply make the following hack: We will render pixels exactly how they appear in our buffer, without any stretching. 
 
-In practice, this means that, instead of passing `WindowWidth` and `WindowHeight` to `StretchDIBits` function, we will pass the buffer's width and height. Depending on the window size, this will result in the picture being cut or some unfilled pixels to be drawn outside of the buffer, but that's fine for our purposes for now. 
+In practice, this means that, instead of passing `WindowWidth` and `WindowHeight` to the `StretchDIBits` function, we will provide the buffer's width and height. This will result in the output not matching our window size, but that's fine for our purposes for now. 
 
 ~~~~~~~ C++
 internal void
@@ -112,7 +110,7 @@ Win32DisplayBufferInWindow(...)
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Setting Fixed Output Size.]
 
-![Figure [x]: If you `P`ause the game you can see that all the lines are now of equal width.](../media/day24/NoStretchBlit.jpg) 
+![Figure [x]: If you `P`ause the game, you can see that all the lines are now of equal width.](../media/day24/NoStretchBlit.jpg) 
 
 ## Improve `build.bat`
 
@@ -128,13 +126,13 @@ set compiler=%compiler%     -Gm-                   &:: Disable minimal rebuild
 [Listing [x]: <file>[build.bat]</file> Importing debug version of the CRT library.]
 
 !!! 
-    If you recall, _static linking_ simply means that we copy the library inside our code (at the cost of bigger executable). This is opposed to the _dynamic linking_, where we try to find and link with it at runtime. Dynamic linking results in smaller executables, but carries an inherent risk that the user might not have the necessary libraries installed on their machine.
+    If you recall, _static linking_ simply means that we copy the library inside our code (at the cost of a bigger executable). This is opposed to _dynamic linking_, where we try to find and link with it at runtime. Dynamic linking results in smaller executables but carries an inherent risk that the user might not have the necessary libraries installed on their machine.
 
-If you compile and run, you'll notice that not much has changed. However, this change might be handy in the future, as we dive deeper into the code.
+If you compile and run, you'll notice that not much has changed. However, this change might be handy in the future as we dive deeper into the code.
 
-## Get rid of topmost layered window for now
+## Get rid of the Topmost Layered Window
 
-Last time, we played around the idea of having our window always on top, and becoming semi-transparent when bringing it out off-focus. Unfortunately, this results in the window being always in the way, as we don't tell Windows to ignore mouse interaction with it. 
+Last time, we played around with the idea of having our window always on top and becoming semi-transparent when bringing it out off-focus. Unfortunately, this results in the window being continually in the way, as mouse clicks still end up inside the game.
 
 Let's get rid of this implementation for now. We can re-enable it when we want.
 
@@ -204,9 +202,9 @@ Win32GetLastWriteTime(char *Filename)
 }
 ~~~~~~~
 
-We currently have to open the file (get the `FindHandle`) to check its last write time. That's not the safest thing to do as it potentially creates conflicts with whoever tries to access the file at the same time. Additionally, we must always remember to close the handle which creates a potentially another point of failure. 
+We currently have to open the file (get the FindHandle) to check its last write time. That's not the safest thing to do, as it potentially creates conflicts with whoever tries to access the file at the same time. Additionally, we must never forget to close the handle, potentially another point of failure.
 
-The best thing to do here is to check the last write time without opening the file handle. Luckily, such a solution exists in Windows, it can be achieved by calling the [GetFileAttributesEx][] function.
+The best thing to do here is to check the last write time without opening the file handle. Luckily, such a solution exists in Windows; it can be achieved by calling the [GetFileAttributesEx][] function.
 
 `GetFileAttributesEx` takes the following parameters: 
 * The filename, absolute or relative. We already have it. 
@@ -256,7 +254,7 @@ GAME_GET_SOUND_SAMPLES(GameGetSoundSamplesStub) { }
 ~~~~~~~
 [Listing [x]: <file>[handmade.h]</file> Removing platform stub functions.]
 
-This however means that if the load file failed, we must pass 0 instead: 
+This, however, means that if the load file failed, we must pass 0 instead:
 
 ~~~~~~~ C++
 internal win32_game_code
@@ -294,7 +292,7 @@ Win32UnloadGameCode(win32_game_code *GameCode)
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Making sure that we don't get invalid pointers.]
 
-This, in turn, means that inside `WinMain` where we call these functions, we must gate ourselves from calling broken pointers, and only call the functions when they're not 0.
+This, in turn, means that inside WinMain, where we call these functions, we must gate ourselves from reaching broken pointers and only call the procedures when they're not 0.
 
 ~~~~~~~ C++ add
 if (Game.UpdateAndRender)
@@ -317,7 +315,7 @@ if (Game.GetSoundSamples)
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Checking if functions are valid before calling them.]
 
-Finally, we also can add a small comment inside `win32_game_code` structure so that we don't forget that we need to check for this in the future.
+Finally, we also can add a small comment inside the `win32_game_code` structure so that we don't forget that we need to check for this in the future.
 
 ~~~~~~~ C++
 struct win32_game_code
@@ -339,7 +337,7 @@ struct win32_game_code
 
 # Improve Recording Code
 
-We now come to the biggest change for today. At this moment, our recording code is saving its data inside `data` folder, thing that we don't necessarily want. Ideally, we'd have the debug recordings being saved inside the `build` folder, so that, if necessary, we can simply delete the folder and recreate without any data loss. 
+We now come to the most significant change for today. Our recording code saves its data inside the data folder, which we don't necessarily want. Ideally, we'd have the debug recordings being kept inside the build folder so that, if necessary, we can simply delete the folder and recreate it without any data loss.
 
 Let's quickly review our code for writing dlls: 
 
@@ -361,11 +359,11 @@ CatStrings(OnePastLastSlash - EXEFilename, EXEFilename,
 
 We already refactored this code in the past once, by adding possibility of checking the executable path and rebuilding the dll paths accordingly.
 
-Now, we want to pull this code out even further, so that we have an agnostic function that we can recycle. 
+Now, we want to pull this code out even further to have an agnostic function that we can recycle.
 
 ## Remove References to `MAX_PATH`
 
-First, we want to expand our `win32_state` to keep track of things like the EXE path and `OnePastLastSlash` pointer. This way you don't need to pass them around alone.
+First, we want to expand our `win32_state` to keep track of things like the EXE path and `OnePastLastSlash` pointer. This way, you don't need to pass them around alone.
 
 ~~~~~~~ C++
 struct win32_state
@@ -387,7 +385,7 @@ struct win32_state
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.h]</file> Preserving executable path.]
 
-That said, we already mentioned in the past that using `MAX_PATH` is a bad idea. `MAX_PATH` is a very old convention that is mostly ignored by modern API (which allow having a much longer path). This puts us at risk where the executable would be located deep in someone's file system, disallowing us from functioning properly. 
+That said, we already mentioned in the past that using MAX_PATH is a bad idea. MAX_PATH is an old convention often ignored by modern API (which allows having a much longer path). This puts us at risk where the executable would be located deep in someone's file system, disallowing us from functioning correctly.
 
 Let's use an intermediary `#define` so that we can eventually revisit and replace it. 
 
@@ -497,9 +495,9 @@ WinMain(...)
     // ...
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> Extracting Code .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Extracting Code.]
 
-We'll need to access `Win32State` so we'll move its initialization further up. Actually, this will be the first thing we do when we enter `WinMain`: 
+We'll need to access `Win32State`, so we'll move its initialization further up. Actually, this will be the first thing we do when we enter `WinMain`: 
 
 ~~~~~~~ C++ add
 win32_state Win32State = {};
@@ -650,7 +648,7 @@ CatStrings(State->OnePastLastEXEFilenameSlash - State->EXEFilename, State->EXEFi
 
 You'll notice that we didn't ask for the `FilenameCount`; however, we did pass to `CatStrings` a magic function that we called `StringLength`. As we'll see in a moment, there's nothing magic about it.
 
-The way the C strings are stored, they are just bytes of data with the last byte being 0. (at least for the ASCII strings, Unicode is a little bit more involved but we won't mess around that for now). So we'll count all the bytes until we reach 0, and that will be our string length: 
+C strings are just bytes of data, with the last byte being 0. (at least for the ASCII strings, Unicode is slightly more involved, but we won't mess around with that for now). So we'll count all the bytes until we reach 0, and that will be our string length:
 
 ~~~~~~~ C++ add
 internal int
@@ -756,13 +754,15 @@ WinMain(...)
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> Remember to actually copy-paste the contents of these functions!!]
 
-This allows us to use these path-assembling functions on our Input Recording/Playback functions! We don't want them to live inside our `data` folder, this is the folder for _good_ data.
+This allows us to use these path-assembling functions on our Input Recording/Playback functions! We don't want them to live inside our `data` folder; this is the folder for _good_ data.
 
 ## Update Recording and Playback Functions
 
-Finally, let's do the fix that we wanted. We want to create a new function that would provide any function that asks for it for a universal name. Let's also rename the file as `loop_edit.hmi` instead of `foo.hmi` (`.hmi` standing for "HandMade Input"). 
+Finally, let's do the fix that we wanted. We want to create a new function that would provide anyone asking for a universal Input Storage name. Let's also rename the file as `loop_edit.hmi` instead of `foo.hmi` (`.hmi` standing for "HandMade Input"). 
 
 We'll use the new function inside both `Win32BeginRecordingInput` and `Win32BeginInputPlayback`. 
+
+Something for the future, we'll also assert that the `SlotIndex` is always 1.
 
 ~~~~~~~ C++ add
 internal void
@@ -812,7 +812,7 @@ Win32BeginInputPlayback(win32_state *State, int InputPlayingIndex)
 
 # Recap 
 
-That's a lot of small edits for one day, but still not enough to call it done. Next time, we will finish our prototype platform layer for good. 
+We've made plenty lesser edits for one day, but still not enough to call it done. Next time, we will finish our prototype platform layer for good. 
 
 # Navigation 
 
