@@ -6,15 +6,61 @@ _Video Length (including Q&A): [1h39](https://hero.handmade.network/episode/code
 
 (insert intro.md.html here) 
 
-Today is the cleanup day. 
+Today is the cleanup day. We went in fast and furious typing our way through the code, and there're some bugs and inconsistencies that we left behind. We'll dedicate the next two days to get rid of these.
 
-# Set Controller Type
+# Small Fixes
+
+## Set Controller Type
+
+The first thing on our list is to clean up the state of the controller. Currently, the controller is set to `IsAnalog` only if it received input from D-Pad or the stick: 
 
 ~~~~~~~ C++
-DWORD OurControllerIndex = ControllerIndex + 1;
-game_controller_input *OldController = GetController(OldInput, OurControllerIndex);
-game_controller_input *NewController = GetController(NewInput, OurControllerIndex);
+if ((NewController->StickAverageX != 0.0f) ||
+    (NewController->StickAverageY != 0.0f))
+{
+    NewController->IsAnalog = true;
+}
 
+if (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP)
+{
+    NewController->StickAverageY = 1.0f;
+    NewController->IsAnalog = false;
+}
+
+if (Pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN)
+{
+    NewController->StickAverageY = -1.0f;
+    NewController->IsAnalog = false;
+}
+
+if (Pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT)
+{
+    NewController->StickAverageX = -1.0f;
+    NewController->IsAnalog = false;
+}
+
+if (Pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT)
+{
+    NewController->StickAverageX = 1.0f;
+    NewController->IsAnalog = false;
+}
+~~~~~~~
+
+At least, that's the assumption we make. However, this assumption is incorrect. See, we swap controllers back and forth at each frame:
+
+~~~~~~~ C++
+game_input *Temp = NewInput;
+NewInput = OldInput;
+OldInput = Temp;
+~~~~~~~
+
+So if we set `IsAnalog` on the previous frame, and then don't get any input on the next frame, this information will not be carried on. 
+
+![Figure [x]: Controller Rotation.](../media/day24/IsAnalog.gif) 
+
+For now this is not an issue, but we might have some future functionality depending on whether the user is doing analog input or not. So let's simply pass over this information from the `OldController`:
+
+~~~~~~~ C++
 XINPUT_STATE ControllerState;
 if (XInputGetState(ControllerIndex, &ControllerState) == ERROR_SUCCESS)
 {
@@ -26,49 +72,24 @@ if (XInputGetState(ControllerIndex, &ControllerState) == ERROR_SUCCESS)
     // NOTE(casey): This controller is plugged in
     // TODO(casey): See if ControllerState.dwPacketNumber increments too rapidly
     XINPUT_GAMEPAD *Pad = &ControllerState.Gamepad;
-
-    NewController->StickAverageX = Win32ProcessXInputStickValue
-        (Pad->sThumbLX,XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
-    NewController->StickAverageY = Win32ProcessXInputStickValue
-        (Pad->sThumbLY,XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
-    
-    if ((NewController->StickAverageX != 0.0f) ||
-        (NewController->StickAverageY != 0.0f))
-    {
-        NewController->IsAnalog = true;
-    }
-    
-    if (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP)
-    {
-        NewController->StickAverageY = 1.0f;
-        NewController->IsAnalog = false;
-    }
-    
-    if (Pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN)
-    {
-        NewController->StickAverageY = -1.0f;
-        NewController->IsAnalog = false;
-    }
-    
-    if (Pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT)
-    {
-        NewController->StickAverageX = -1.0f;
-        NewController->IsAnalog = false;
-    }
-    
-    if (Pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT)
-    {
-        NewController->StickAverageX = 1.0f;
-        NewController->IsAnalog = false;
-    }
     // ...
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Preserving `IsAnalog` state.]
 
-Would not setting `IsAnalog` create issues in the future? We don't know. But it is cleaner to do so, and it's cleanup day. 
+Would not setting `IsAnalog` create issues in the future? We don't know. But it is cleaner to do so, and it's the cleanup day. 
 
-# Set Fixed Output Size
+Compile and make sure there're no errors. You can even step through the code and verify that `IsAnalog` state is preserved.
+
+## Set Fixed Window Output Size
+
+The next thing we want to tackle is graphics output to the window. You might have noticed that some lines that we draw are thicker than the other: 
+
+![Figure [x]: You can see from our debug lines that some are thicker.](../media/day24/BufferStretch.jpg) 
+
+Image stretching is a more complex topic than it might seem. Pixel blending comes into play, calculations must be done on the sub-pixel level, and so on. We aren't ready to tackle all this just yet, so let's simply make the following hack: We will render pixels exactly how they appear in our buffer, without any stretching. 
+
+In practice, this means that, instead of passing `WindowWidth` and `WindowHeight` to `StretchDIBits` function, we will pass the buffer's width and height. Depending on the window size, this will result in the picture being cut or some unfilled pixels to be drawn outside of the buffer, but that's fine for our purposes for now. 
 
 ~~~~~~~ C++
 internal void
@@ -89,19 +110,238 @@ Win32DisplayBufferInWindow(...)
                   DIB_RGB_COLORS, SRCCOPY);
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Setting Fixed Output Size.]
 
-# Improve `build.bat`
+![Figure [x]: If you `P`ause the game you can see that all the lines are now of equal width.](../media/day24/NoStretchBlit.jpg) 
+
+## Improve `build.bat`
+
+We have one little thing to fix in `build.bat`. Right now, we're _statically_ linking with the _optimized version_ of the C Runtime Library. We're still not ready to ship our code to the final users, and we can definitely benefit from a slower, debug version of the library. This can be achieved by simply swapping the `-MT` flag with `-MTd` flag:
 
 ~~~~~~~ batch
 set compiler=%compiler%     -Oi                    &:: Use assembly intrinsics where possible
 ~~~~~~~ batch edit
-set compiler=%compiler%     -MTd                   &:: Include CRT library in the executable (static link)
+set compiler=%compiler%     -MTd                   &:: Include CRT library in the executable (static linking of the debug version)
 ~~~~~~~ batch
 set compiler=%compiler%     -Gm-                   &:: Disable minimal rebuild
 ~~~~~~~
-[Listing [x]: <file>[build.bat]</file> .]
+[Listing [x]: <file>[build.bat]</file> Importing debug version of the CRT library.]
 
+!!! 
+    If you recall, _static linking_ simply means that we copy the library inside our code (at the cost of bigger executable). This is opposed to the _dynamic linking_, where we try to find and link with it at runtime. Dynamic linking results in smaller executables, but carries an inherent risk that the user might not have the necessary libraries installed on their machine.
+
+If you compile and run, you'll notice that not much has changed. However, this change might be handy in the future, as we dive deeper into the code.
+
+## Get rid of topmost layered window for now
+
+Last time, we played around the idea of having our window always on top, and becoming semi-transparent when bringing it out off-focus. Unfortunately, this results in the window being always in the way, as we don't tell Windows to ignore mouse interaction with it. 
+
+Let's get rid of this implementation for now. We can re-enable it when we want.
+
+~~~~~~~ C++ edit
+HWND Window = CreateWindowEx(0, // WS_EX_TOPMOST | WS_EX_LAYERED, 
+~~~~~~~ C++
+                             WindowClass.lpszClassName, "Handmade Hero",
+                             WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                             CW_USEDEFAULT, CW_USEDEFAULT,
+                             CW_USEDEFAULT, CW_USEDEFAULT,
+                             0, 0, Instance, 0);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Commenting out flags enabling layering.]
+
+~~~~~~~ C++
+case WM_CLOSE:
+{
+    GlobalRunning = false;
+} break;
+
+case WM_ACTIVATEAPP:
+{
+~~~~~~~ C++ add
+#if 0
+~~~~~~~ C++
+    if (WParam == TRUE)
+    {
+        SetLayeredWindowAttributes(Window, RGB(0, 0, 0), 255, LWA_ALPHA);
+    }
+    else
+    {
+        SetLayeredWindowAttributes(Window, RGB(0, 0, 0), 64, LWA_ALPHA);
+    }
+~~~~~~~ C++ add
+#endif
+~~~~~~~ C++
+} break;
+
+case WM_DESTROY:
+{
+    GlobalRunning = false;
+} break;
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> Disabling Layering functionality.]
+
+If you compile and run now, you'll notice that the layering functionality is gone. 
+
+## Get the File Edit Date Without Opening It
+
+Another thing that's a concern is how we get the last write time of our `handmade.dll` file. This is how we implemented `Win32GetLastWriteTime` function: 
+
+~~~~~~~ C++
+inline FILETIME
+Win32GetLastWriteTime(char *Filename)
+{
+    FILETIME LastWriteTime = {};
+    
+    WIN32_FIND_DATA FindData;
+    HANDLE FindHandle = FindFirstFileA(Filename, &FindData);
+    if (FindHandle != INVALID_HANDLE_VALUE)
+    {
+        LastWriteTime = FindData.ftLastWriteTime;
+        FindClose(FindHandle);
+    }
+    
+    return (LastWriteTime);
+}
+~~~~~~~
+
+We currently have to open the file (get the `FindHandle`) to check its last write time. That's not the safest thing to do as it potentially creates conflicts with whoever tries to access the file at the same time. Additionally, we must always remember to close the handle which creates a potentially another point of failure. 
+
+The best thing to do here is to check the last write time without opening the file handle. Luckily, such a solution exists in Windows, it can be achieved by calling the [GetFileAttributesEx][] function.
+
+`GetFileAttributesEx` takes the following parameters: 
+* The filename, absolute or relative. We already have it. 
+* A very specific flag, `GetFileExInfoStandard`. You shouldn't pass anything else here.
+* A pointer to the `WIN32_FILE_ATTRIBUTE_DATA` structure that, if the function succeeds, will contain the information we're after.
+
+In practice this results in the following rewriting of `Win32GetLastWriteTime`.
+
+~~~~~~~ C++
+FILETIME LastWriteTime = {};
+~~~~~~~ C++ delete
+WIN32_FIND_DATA FindData;
+HANDLE FindHandle = FindFirstFileA(Filename, &FindData);
+if (FindHandle != INVALID_HANDLE_VALUE)
+{
+    LastWriteTime = FindData.ftLastWriteTime;
+    FindClose(FindHandle);
+}
+~~~~~~~ C++ add
+WIN32_FILE_ATTRIBUTE_DATA Data;
+if(GetFileAttributesExA(Filename, GetFileExInfoStandard, &Data))
+{
+    LastWriteTime = Data.ftLastWriteTime;
+}
+~~~~~~~ C++
+return (LastWriteTime);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32GetLastWriteTime]</file> Getting rid of unnecessary find handle.]
+
+## Remove Stub Functions for Platform Calls
+
+A small thing that we can also do to prevent compilation conflicts is to remove the stub functions in `handmade.h`. We currently have only two, so getting rid of those will be simple: 
+
+~~~~~~~ C++
+#define GAME_UPDATE_AND_RENDER(name) void name(game_memory *Memory, game_input *Input, game_offscreen_buffer* Buffer)
+typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
+~~~~~~~ C++ delete
+GAME_UPDATE_AND_RENDER(GameUpdateAndRenderStub) { }
+~~~~~~~ C++
+
+// ...
+
+#define GAME_GET_SOUND_SAMPLES(name) void name(game_memory *Memory, game_sound_output_buffer *SoundBuffer)
+typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
+~~~~~~~ C++ delete
+GAME_GET_SOUND_SAMPLES(GameGetSoundSamplesStub) { }
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> Removing platform stub functions.]
+
+This however means that if the load file failed, we must pass 0 instead: 
+
+~~~~~~~ C++
+internal win32_game_code
+Win32LoadGameCode(char *SourceDLLName, char *TempDLLName)
+{
+    win32_game_code Result = {};
+    
+    // ...       
+    if (!Result.IsValid)
+    {
+~~~~~~~ C++ edit
+        Result.UpdateAndRender = 0;
+        Result.GetSoundSamples = 0;
+~~~~~~~ C++
+    }
+    
+    return(Result);
+}
+
+internal void
+Win32UnloadGameCode(win32_game_code *GameCode)
+{
+    if (GameCode->GameCodeDLL)
+    {
+        FreeLibrary(GameCode->GameCodeDLL);
+        GameCode->GameCodeDLL = 0;
+    }
+    
+    GameCode->IsValid = false;
+~~~~~~~ C++ edit
+    GameCode->UpdateAndRender = 0;
+    GameCode->GetSoundSamples = 0;
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> Making sure that we don't get invalid pointers.]
+
+This, in turn, means that inside `WinMain` where we call these functions, we must gate ourselves from calling broken pointers, and only call the functions when they're not 0.
+
+~~~~~~~ C++ add
+if (Game.UpdateAndRender)
+{
+~~~~~~~ C++
+    Game.UpdateAndRender(&GameMemory, NewInput, &Buffer);
+~~~~~~~ C++ add
+}
+~~~~~~~ C++
+
+// ...
+
+~~~~~~~ C++ add
+if (Game.GetSoundSamples)
+{
+~~~~~~~ C++
+    Game.GetSoundSamples(&GameMemory, &SoundBuffer);
+~~~~~~~ C++ add
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Checking if functions are valid before calling them.]
+
+Finally, we also can add a small comment inside `win32_game_code` structure so that we don't forget that we need to check for this in the future.
+
+~~~~~~~ C++
+struct win32_game_code
+{
+    HMODULE GameCodeDLL;
+    FILETIME DLLLastWriteTime;
+    
+~~~~~~~ C++ add
+    // IMPORTANT(casey): Either of the callbacks can be 0!
+    // You must check before calling.
+~~~~~~~ C++
+    game_update_and_render *UpdateAndRender;
+    game_get_sound_samples *GetSoundSamples;
+    
+    b32 IsValid;
+};
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.h]</file> Adding a comment for posterity.]
+
+# Improve Recording Code
+
+We now come to the biggest change for today. At this moment, our recording code is saving its data inside `data` folder, thing that we don't necessarily want. Ideally, we'd have the debug recordings being saved inside the `build` folder, so that, if necessary, we can simply delete the folder and recreate without any data loss. 
+
+Let's quickly review our code for writing dlls: 
 
 ~~~~~~~ C++
 char SourceGameCodeDLLFilename[] = "handmade.dll";
@@ -119,7 +359,13 @@ CatStrings(OnePastLastSlash - EXEFilename, EXEFilename,
             sizeof(TempGameCodeDLLFullPath), TempGameCodeDLLFullPath);
 ~~~~~~~
 
-We want to pull this out in a separate function that we can recycle. But first, we want to expand our `win32_state` to keep track of things like the EXE path and `OnePastLastSlash` pointer.
+We already refactored this code in the past once, by adding possibility of checking the executable path and rebuilding the dll paths accordingly.
+
+Now, we want to pull this code out even further, so that we have an agnostic function that we can recycle. 
+
+## Remove References to `MAX_PATH`
+
+First, we want to expand our `win32_state` to keep track of things like the EXE path and `OnePastLastSlash` pointer. This way you don't need to pass them around alone.
 
 ~~~~~~~ C++
 struct win32_state
@@ -139,9 +385,11 @@ struct win32_state
 ~~~~~~~ C++
 };
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.h]</file> .]
+[Listing [x]: <file>[win32_handmade.h]</file> Preserving executable path.]
 
-We aren't 100% comfortable with using `MAX_PATH`. This is an obsolete structure which is sometimes ignored by modern API, so let's use an intermediary `define` so that we can eventually revisit it. 
+That said, we already mentioned in the past that using `MAX_PATH` is a bad idea. `MAX_PATH` is a very old convention that is mostly ignored by modern API (which allow having a much longer path). This puts us at risk where the executable would be located deep in someone's file system, disallowing us from functioning properly. 
+
+Let's use an intermediary `#define` so that we can eventually revisit and replace it. 
 
 ~~~~~~~ C++ add
 #define WIN32_STATE_FILENAME_COUNT MAX_PATH
@@ -157,20 +405,21 @@ struct win32_state
     HANDLE PlaybackHandle;
     int InputPlayingIndex;
     
-~~~~~~~ C++ add
+~~~~~~~ C++ edit
     char EXEFilename[WIN32_STATE_FILENAME_COUNT];
-    char *OnePastLastEXEFilenameSlash;
 ~~~~~~~ C++
+    char *OnePastLastEXEFilenameSlash;
 };
 ~~~~~~~ 
-[Listing [x]: <file>[win32_handmade.h]</file> .]
+[Listing [x]: <file>[win32_handmade.h]</file> Abstracting out `MAX_PATH`.]
 
+Now we can safely remove any instance of `MAX_PATH` we have used in the past.
 
-
-~~~~~~~ C++
+~~~~~~~ C++ delete
 // NOTE(casey): Never use MAX_PATH in code that is user-facing, because it
 // can be dangerous and lead to bad results.
-char EXEFilename[MAX_PATH];
+~~~~~~~ C++
+char EXEFilename[WIN32_STATE_FILENAME_COUNT];
 DWORD SizeOfFilename = GetModuleFileNameA(0, EXEFilename, sizeof(EXEFilename));
 char *OnePastLastSlash = EXEFilename;
 for (char *Scan = EXEFilename;
@@ -201,17 +450,17 @@ CatStrings(OnePastLastSlash - EXEFilename, EXEFilename,
             sizeof(TempGameCodeDLLFullPath), TempGameCodeDLLFullPath);
    
 ~~~~~~~ 
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Removing `MAX_PATH` usage.]
 
+## Store Executable Filename
 
+Let's quickly extract the code storing the `exe` filename. 
 
 ~~~~~~~ C++ add
 internal void
 Win32GetEXEFilename(win32_state *State)
 {
-    // NOTE(casey): Never use MAX_PATH in code that is user-facing, because it
-    // can be dangerous and lead to bad results.
-    char EXEFilename[MAX_PATH];
+    char EXEFilename[WIN32_STATE_FILENAME_COUNT];
     DWORD SizeOfFilename = GetModuleFileNameA(0, EXEFilename, sizeof(EXEFilename));
     char *OnePastLastSlash = EXEFilename;
     for (char *Scan = EXEFilename;
@@ -230,15 +479,9 @@ int CALLBACK
 WinMain(...)
 {
 ~~~~~~~ C++ add
-    win32_state Win32State = {};
-
     Win32GetEXEFilename(Win32State);
-
-
 ~~~~~~~ C++ delete
-    // NOTE(casey): Never use MAX_PATH in code that is user-facing, because it
-    // can be dangerous and lead to bad results.
-    char EXEFilename[MAX_PATH];
+    char EXEFilename[WIN32_STATE_FILENAME_COUNT];
     DWORD SizeOfFilename = GetModuleFileNameA(0, EXEFilename, sizeof(EXEFilename));
     char *OnePastLastSlash = EXEFilename;
     for (char *Scan = EXEFilename;
@@ -251,50 +494,60 @@ WinMain(...)
         }
     }
 ~~~~~~~ C++
-    
-    char SourceGameCodeDLLFilename[] = "handmade.dll";
-    char SourceGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];
-    
-    CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, 
-               sizeof(SourceGameCodeDLLFilename) - 1, SourceGameCodeDLLFilename, 
-               sizeof(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);
-    
-    char TempGameCodeDLLFilename[] = "handmade_temp.dll";
-    char TempGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];
-    
-    CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, 
-               sizeof(TempGameCodeDLLFilename) - 1, TempGameCodeDLLFilename, 
-               sizeof(TempGameCodeDLLFullPath), TempGameCodeDLLFullPath);
-    
-    LARGE_INTEGER PerfCountFrequencyResult;
-
-    // ...    
-    if (Window)
-    {
-~~~~~~~ C++ delete
-        win32_state Win32State = {};
-        Win32State.InputRecordingIndex = 0;
-        Win32State.InputPlayingIndex = 0;
-~~~~~~~ C++
-        // ...
-    }
     // ...
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Extracting Code .]
 
+We'll need to access `Win32State` so we'll move its initialization further up. Actually, this will be the first thing we do when we enter `WinMain`: 
+
+~~~~~~~ C++ add
+win32_state Win32State = {};
+~~~~~~~ C++
+Win32GetEXEFilename(Win32State);
+// ...    
+if (Window)
+{
+~~~~~~~ C++ delete
+    win32_state Win32State = {};
+    Win32State.InputRecordingIndex = 0;
+    Win32State.InputPlayingIndex = 0;
+~~~~~~~ C++
+    // ...
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Moving `Win32State` initialization further up.]
+
+Ok, back to the code that we extracted. We need to leverage the `State` that we're passing in to store `EXEFilename` and the place for others to write their filenames. 
+
+*****************************************************
+*                  OnePastLastSlash                 *
+*                         |                         *
+*                         |                         *
+*   EXEFilename           |                         *
+*       |                 |                         *
+*       |                 |                         *
+*       v                 v                         *
+*     | w:\handmade\build\win32_handmade.exe |      *
+*     '-+------------------------------------'      *
+*       |                 ^                         *
+*       |                 |                         *
+*   Module filename       |                         *
+*                         |                         *
+*              Place for others to write            *
+*                 their filenames                   *
+*****************************************************
+[Figure [x]: As a reminder, this is what these values represent.]
 
 ~~~~~~~ C++ delete
-// NOTE(casey): Never use MAX_PATH in code that is user-facing, because it
-// can be dangerous and lead to bad results.
-char EXEFilename[MAX_PATH];
+char EXEFilename[WIN32_STATE_FILENAME_COUNT];
 ~~~~~~~ C++ edit
 DWORD SizeOfFilename = GetModuleFileNameA(0, State->EXEFilename, sizeof(State->EXEFilename));
 State->OnePastLastEXEFilenameSlash = State->EXEFilename;
 for (char *Scan = State->EXEFilename;
 ~~~~~~~ C++
-        *Scan;
-        ++Scan)
+     *Scan;
+     ++Scan)
 {
     if (*Scan == '\\')
     {
@@ -304,14 +557,34 @@ for (char *Scan = State->EXEFilename;
     }
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > Win32GetEXEFilename]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp > Win32GetEXEFilename]</file> Using `win32_state` we store the `EXEFilename` and `OnePastLastSlash`.]
 
+## Build a Custom EXE Path Filename
 
+Now we can extract some more code. We have the following code that can be recycled: 
+
+~~~~~~~ C++
+char SourceGameCodeDLLFilename[] = "handmade.dll";
+char SourceGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];
+
+CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, 
+            sizeof(SourceGameCodeDLLFilename) - 1, SourceGameCodeDLLFilename, 
+            sizeof(SourceGameCodeDLLFullPath), SourceGameCodeDLLFullPath);
+
+char TempGameCodeDLLFilename[] = "handmade_temp.dll";
+char TempGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];
+
+CatStrings(OnePastLastSlash - EXEFilename, EXEFilename, 
+            sizeof(TempGameCodeDLLFilename) - 1, TempGameCodeDLLFilename, 
+            sizeof(TempGameCodeDLLFullPath), TempGameCodeDLLFullPath);
+~~~~~~~
+
+In fact, if you look closely, this is the same code repeating twice! Let's extract the repeating code and replace these blocks with the calls to it: 
 
 ~~~~~~~ C++ add
 internal void 
 Win32BuildEXEPathFilename(win32_state *State, char *Filename,
-                                        int DestCount, char *Dest)
+                          int DestCount, char *Dest)
 {
     char SourceGameCodeDLLFilename[] = "handmade.dll";
     char SourceGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];
@@ -357,29 +630,34 @@ WinMain(...)
     // ... 
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Introducing `Win32BuildEXEPathFilename`.]
 
-We don't need that `- 1` since we expect to get exactly the length we need.
+Let's start cleaning up the function. First, we don't need the filename and the full path container, so we can simply get rid of these: 
 
 ~~~~~~~ C++ delete
 char SourceGameCodeDLLFilename[] = "handmade.dll";
 char SourceGameCodeDLLFullPath[WIN32_STATE_FILENAME_COUNT];
-~~~~~~~ C++ edit
-    
-CatStrings(State->OnePastLastEXEFilenameSlash - State->EXEFilename, State->EXEFilename, 
-           StringLength(Filename), Filename, 
-           DestCount, Dest);
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > Win32BuildEXEPathFilename]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp > Win32BuildEXEPathFilename]</file> Cleaning out things we don't need.]
 
-The way the C strings are stored, they are just bytes of data with the last byte being 0. So we'll count all the bytes until we reach 0 (at least for the ASCII strings, Unicode is a little bit more involved but we won't mess around that for now). 
+Our `CatStrings` call can cleaned up significantly: 
+
+~~~~~~~ C++ edit
+CatStrings(State->OnePastLastEXEFilenameSlash - State->EXEFilename, State->EXEFilename, 
+           StringLength(Filename), Filename, DestCount, Dest);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32BuildEXEPathFilename]</file> Cleaning up `CatStrings` call from `Win32BuildEXEPathFilename`.]
+
+You'll notice that we didn't ask for the `FilenameCount`; however, we did pass to `CatStrings` a magic function that we called `StringLength`. As we'll see in a moment, there's nothing magic about it.
+
+The way the C strings are stored, they are just bytes of data with the last byte being 0. (at least for the ASCII strings, Unicode is a little bit more involved but we won't mess around that for now). So we'll count all the bytes until we reach 0, and that will be our string length: 
 
 ~~~~~~~ C++ add
 internal int
 StringLength(char *String)
 {
     int Count = 0;
-    while (*String++)
+    while (*String++) // While the character is not 0 (do not confuse with '0' the character!)
     {
         ++Count;
     }
@@ -393,11 +671,13 @@ Win32BuildEXEPathFilename(...)
     //...
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+[Listing [x]: <file>[win32_handmade.cpp]</file> Introducing `StringLength`.]
 
 Now we have a convenient function that we can use whenever we want to.
 
-Before we move on, let's do some reorganization. We'll move the functions `CatStrings`, `StringLength`, `Win32GetEXEFilename` and `Win32BuildEXEPathFilename` to the top of `win32_handmade.cpp`, just before our utility functions: 
+## Reorganize `win32_handmade.cpp`
+
+Before we move on, let's do some reorganization. We need to move the functions `CatStrings`, `StringLength`, `Win32GetEXEFilename` and `Win32BuildEXEPathFilename` to the top of `win32_handmade.cpp`, just before our utility functions: 
 
 ~~~~~~~ C++ 
 typedef DIRECT_SOUND_CREATE(direct_sound_create);
@@ -436,7 +716,10 @@ DEBUG_PLATFORM_FREE_FILE_MEMORY(DEBUGPlatformFreeFileMemory)
     // ... 
 }
 
+
 // ... 
+
+
 ~~~~~~~ C++ delete
 internal void
 CatStrings(size_t SourceACount, char *SourceA, 
@@ -474,6 +757,12 @@ WinMain(...)
 [Listing [x]: <file>[win32_handmade.cpp]</file> Remember to actually copy-paste the contents of these functions!!]
 
 This allows us to use these path-assembling functions on our Input Recording/Playback functions! We don't want them to live inside our `data` folder, this is the folder for _good_ data.
+
+## Update Recording and Playback Functions
+
+Finally, let's do the fix that we wanted. We want to create a new function that would provide any function that asks for it for a universal name. Let's also rename the file as `loop_edit.hmi` instead of `foo.hmi` (`.hmi` standing for "HandMade Input"). 
+
+We'll use the new function inside both `Win32BeginRecordingInput` and `Win32BeginInputPlayback`. 
 
 ~~~~~~~ C++ add
 internal void
@@ -519,243 +808,11 @@ Win32BeginInputPlayback(win32_state *State, int InputPlayingIndex)
     // ...
 }
 ~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> ]
-
-# Get rid of topmost layered window for now
-
-~~~~~~~ C++ edit
-HWND Window = CreateWindowEx(0, // WS_EX_TOPMOST | WS_EX_LAYERED, 
-                             WindowClass.lpszClassName, "Handmade Hero",
-                             WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-                             CW_USEDEFAULT, CW_USEDEFAULT,
-                             CW_USEDEFAULT, CW_USEDEFAULT,
-                             0, 0, Instance, 0);
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> ]
-
-~~~~~~~ C++
-case WM_CLOSE:
-{
-    GlobalRunning = false;
-} break;
-
-case WM_ACTIVATEAPP:
-{
-~~~~~~~ C++ add
-#if 0
-~~~~~~~ C++
-    if (WParam == TRUE)
-    {
-        SetLayeredWindowAttributes(Window, RGB(0, 0, 0), 255, LWA_ALPHA);
-    }
-    else
-    {
-        SetLayeredWindowAttributes(Window, RGB(0, 0, 0), 64, LWA_ALPHA);
-    }
-~~~~~~~ C++ add
-#endif
-~~~~~~~ C++
-} break;
-
-case WM_DESTROY:
-{
-    GlobalRunning = false;
-} break;
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > Win32MainWindowCallback]</file> ]
-
-# Get the date without opening files
-
-Let's review our `Win32GetLastWriteTime` function: 
-
-~~~~~~~ C++
-inline FILETIME
-Win32GetLastWriteTime(char *Filename)
-{
-    FILETIME LastWriteTime = {};
-    
-    WIN32_FIND_DATA FindData;
-    HANDLE FindHandle = FindFirstFileA(Filename, &FindData);
-    if (FindHandle != INVALID_HANDLE_VALUE)
-    {
-        LastWriteTime = FindData.ftLastWriteTime;
-        FindClose(FindHandle);
-    }
-    
-    return (LastWriteTime);
-}
-~~~~~~~
-
-We can optimize this function by preventing us from opening the file, by using the [GetFileAttributesEx][] function.
-
-~~~~~~~ C++ delete
-WIN32_FIND_DATA FindData;
-HANDLE FindHandle = FindFirstFileA(Filename, &FindData);
-if (FindHandle != INVALID_HANDLE_VALUE)
-{
-    LastWriteTime = FindData.ftLastWriteTime;
-    FindClose(FindHandle);
-}
-~~~~~~~ C++ add
-WIN32_FILE_ATTRIBUTE_DATA Data;
-if(GetFileAttributesExA(Filename, GetFileExInfoStandard, &Data))
-{
-    LastWriteTime = Data.ftLastWriteTime;
-}
-~~~~~~~ C++
-return (LastWriteTime);
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > Win32GetLastWriteTime]</file> ]
-
-# Remove Stub Functions for Platform Calls
-
-~~~~~~~ C++
-#define GAME_UPDATE_AND_RENDER(name) void name(game_memory *Memory, game_input *Input, game_offscreen_buffer* Buffer)
-typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
-~~~~~~~ C++ delete
-GAME_UPDATE_AND_RENDER(GameUpdateAndRenderStub) { }
-~~~~~~~ C++
-
-// ...
-
-#define GAME_GET_SOUND_SAMPLES(name) void name(game_memory *Memory, game_sound_output_buffer *SoundBuffer)
-typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
-~~~~~~~ C++ delete
-GAME_GET_SOUND_SAMPLES(GameGetSoundSamplesStub) { }
-~~~~~~~
-[Listing [x]: <file>[handmade.h]</file> ]
-
-~~~~~~~ C++
-internal win32_game_code
-Win32LoadGameCode(char *SourceDLLName, char *TempDLLName)
-{
-    win32_game_code Result = {};
-    
-    // ...       
-    if (!Result.IsValid)
-    {
-~~~~~~~ C++ edit
-        Result.UpdateAndRender = 0;
-        Result.GetSoundSamples = 0;
-~~~~~~~ C++
-    }
-    
-    return(Result);
-}
-
-internal void
-Win32UnloadGameCode(win32_game_code *GameCode)
-{
-    if (GameCode->GameCodeDLL)
-    {
-        FreeLibrary(GameCode->GameCodeDLL);
-        GameCode->GameCodeDLL = 0;
-    }
-    
-    GameCode->IsValid = false;
-~~~~~~~ C++ edit
-    GameCode->UpdateAndRender = 0;
-    GameCode->GetSoundSamples = 0;
-~~~~~~~ C++
-}
-
-// ...
-
-int CALLBACK
-WinMain(...)
-{
-~~~~~~~ C++ add
-    if (Game.UpdateAndRender)
-    {
-~~~~~~~ C++
-        Game.UpdateAndRender(&GameMemory, NewInput, &Buffer);
-~~~~~~~ C++ add
-    }
-~~~~~~~ C++
-    
-    // ...
-
-~~~~~~~ C++ add
-    if (Game.GetSoundSamples)
-    {
-    ~~~~~~~ C++
-        Game.GetSoundSamples(&GameMemory, &SoundBuffer);
-    ~~~~~~~ C++ add
-    }
-~~~~~~~ C++
-// ... 
-}
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp]</file> ]
-
-~~~~~~~ C++
-struct win32_game_code
-{
-    HMODULE GameCodeDLL;
-    FILETIME DLLLastWriteTime;
-    
-~~~~~~~ C++ add
-    // IMPORTANT(casey): Either of the callbacks can be 0!
-    // You must check before calling.
-~~~~~~~ C++
-    game_update_and_render *UpdateAndRender;
-    game_get_sound_samples *GetSoundSamples;
-    
-    b32 IsValid;
-};
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.h]</file> ]
-
-# Enable Large-Page Support
-
-[Large-Page Support][]
-
-~~~~~~~ C++
-Win32State.TotalSize = (GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize);
-Win32State.GameMemoryBlock = VirtualAlloc(BaseAddress, (size_t)Win32State.TotalSize,
-~~~~~~~ C++ edit
-                                          MEM_RESERVE | MEM_COMMIT | MEM_LARGE_PAGES, 
-~~~~~~~ C++
-                                          PAGE_READWRITE);
-~~~~~~~
-[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Enabling Large-page support for the game memory block.]
-
-------------------------
-<!-- 
-[Listing [x]: <file>[]</file> .]
-![Figure [x]: .](../media/day16/.jpg) 
-[Figure [x]: .]
--->
-------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+[Listing [x]: <file>[win32_handmade.cpp]</file> Storing input recording inside the `build` directory.]
 
 # Recap 
 
-# Exercises 
-
-# Programming Notions 
-
-# Side Considerations 
+That's a lot of small edits for one day, but still not enough to call it done. Next time, we will finish our prototype platform layer for good. 
 
 # Navigation 
 
