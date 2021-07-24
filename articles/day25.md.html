@@ -2,9 +2,354 @@
 <link rel="stylesheet" href="../css/style.css" />
 
 **Day 25. Finishing the Win32 Prototyping Layer** 
-_Video Length (including Q&A): [XhXX](https://hero.handmade.network/episode/code/day024/)_ 
+_Video Length (including Q&A): [02h30](https://hero.handmade.network/episode/code/day024/)_ 
 
 (insert intro.md.html here) 
+
+As you have seen, building a Win32 prototyping layer is not that hard. Of course, building a solid shippable platform layer takes more time, so there will be more Win32 work down the line. Even then, it won't be a _huge_ amount of work.
+
+Today marks the last day of Win32-specific coding. Moving forward, we will no longer be thinking about win32-specific code. We will be revisiting it, of course, but only as a part of our cross-platform work. For instance, we still don't have a logging service. We will be implementing it in the Win32 layer as we did with the other services and then provide it to the game.
+
+# Get Actual Monitor Refresh Rate
+
+Currently, we're hard-coding `MonitorRefreshHz` to 60. We need to know what the actual refresh rate is. We can do that by using the [GetDeviceCaps][] function.
+We looked into this function in the past, and we didn't use it because the `VREFRESH` value can be 0 or 1 which is not what we want. That said, most of the time the function will return the correct value, so we can use it. We will still initialize `MonitorRefreshHz` to 60 as a fallback.
+
+
+~~~~~~~ C++ delete
+// TODO(casey): How do we reliably query on monitor refresh rate on Windows?
+#define MonitorRefreshHz 60
+~~~~~~~ C++ add
+int MonitorRefreshHz = 60;
+int Win32RefreshRate = GetDeviceCaps(DeviceContext, VREFRESH);
+if (Win32RefreshRate > 1)
+{
+    MonitorRefreshHz = Win32RefreshRate;
+}
+~~~~~~~ C++
+#define GameUpdateHz (MonitorRefreshHz / 2)
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+We don't have the own device context anymore, so let's quickly get one and release it when we're done. Make sure that you already have the handle to the window (and if you don't, simply move the block below to when you have it).
+
+~~~~~~~ C++
+int MonitorRefreshHz = 60;
+~~~~~~~ C++ add
+HDC RefreshDC = GetDC(Window);
+~~~~~~~ C++ edit
+int Win32RefreshRate = GetDeviceCaps(RefreshDC, VREFRESH);
+~~~~~~~ C++ add
+ReleaseDC(Window, RefreshDC);
+~~~~~~~ C++
+if (Win32RefreshRate > 1)
+{
+    MonitorRefreshHz = Win32RefreshRate;
+}
+~~~~~~~ C++
+#define GameUpdateHz (MonitorRefreshHz / 2)
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+    
+Speaking of `GameUpdateHz`, we will eventually set it to the same value as `MonitorRefreshHz` so that our game will run at the same speed as the monitor. For now, though, we will leave it to half of the monitor refresh rate, for performance concerns. That said, this value is currently an integer and it might become an issue if the monitor refresh rate is odd (say, 59 instead of 60). We can directly define `MonitorRefreshHz` to be a float, and fix any code which relies on it being an integer.
+
+~~~~~~~ C++ edit
+f32 GameUpdateHz = (MonitorRefreshHz / 2.0f);
+f32 TargetSecondsPerFrame = 1.0f / GameUpdateHz;
+~~~~~~~ C++
+// NOTE(casey): Sound test
+win32_sound_output SoundOutput = {};
+SoundOutput.SamplesPerSecond = 48000;
+SoundOutput.BytesPerSample = sizeof(s16) * 2;
+SoundOutput.SecondaryBufferSize = 2 * SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample;
+SoundOutput.RunningSampleIndex = 0;
+// TODO(casey): Actually compute this variance and see
+// what the lowest reasonable value is.
+~~~~~~ C++ edit
+SoundOutput.SafetyBytes = (int)(((f32)SoundOutput.SamplesPerSecond * (f32)SoundOutput.BytesPerSample / GameUpdateHz) / 3.0f);
+~~~~~~~ C++
+// ...
+int DebugTimeMarkerIndex = 0;
+~~~~~~~ C++ edit
+win32_debug_time_marker DebugTimeMarkers[30] = {};
+~~~~~~~ C++
+// ...
+DWORD ByteToLock = ((SoundOutput.RunningSampleIndex * SoundOutput.BytesPerSample)
+                                                % SoundOutput.SecondaryBufferSize);
+                            
+~~~~~~~ C++ edit
+DWORD ExpectedSoundBytesPerFrame = (DWORD)((f32)(SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample)
+                                                                       / GameUpdateHz);
+~~~~~~~ C++
+
+f32 SecondsLeftUntilFlip = TargetSecondsPerFrame - FromBeginToAudioSeconds;
+DWORD ExpectedBytesUntilFlip = (DWORD)((SecondsLeftUntilFlip / TargetSecondsPerFrame) * (f32)ExpectedSoundBytesPerFrame);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+We're now compilable and can run the game again with no changes. However, if you set your breakpoint just before the `Win32RefreshRate` calculation, you can see that we're now using the actual monitor refresh rate.
+
+# Prepare for Future Multi-Threading
+
+There's one thing that we aren't going to touch right now. But, while we're at these early stages, it's a good idea to start preparing for. We'll introduce a structure to hold any information relating to the current _thread context_, i.e. what thread you're in when you're running multi-threaded. This structure will hold absolutely nothing for the time being but will become useful in the future. 
+
+~~~~~~~ C++
+inline u32
+SafeTruncateUInt64(u64 Value)
+{
+    Assert(Value <= 0xFFFFFFFF);
+    u32 Result = (u32)Value;
+    return (Result);
+}
+
+~~~~~~~ C++ add
+struct thread_context
+{
+    int Placeholder;
+};
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> .]
+
+We will pass a `thread_context` to any function speaking with the Platform layer (so all the functions currently listed in `handmade.h`): 
+
+~~~~~~~ C++ edit
+#define DEBUG_PLATFORM_FREE_FILE_MEMORY(name) void name (thread_context *Thread, void *Memory)
+~~~~~~~ C++
+typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory);
+
+~~~~~~~ C++ edit
+#define DEBUG_PLATFORM_READ_ENTIRE_FILE(name) debug_read_file_result name (thread_context *Thread, char *Filename)
+~~~~~~~ C++
+typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platform_read_entire_file);
+
+~~~~~~~ C++ edit
+#define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name) b32 name (thread_context *Thread, char *Filename, u32 MemorySize, void *Memory)
+~~~~~~~ C++
+typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
+
+// ... 
+
+~~~~~~~ C++ edit
+#define GAME_UPDATE_AND_RENDER(name) void name(thread_context *Thread, game_memory *Memory, game_input *Input, game_offscreen_buffer* Buffer)
+~~~~~~~ C++
+typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
+
+// NOTE(casey): At the moment, this has to be a very fast function, it cannot be
+// more than a millisecond or so.
+// TODO(casey): Reduce the pressure on this function's performance by measuring it
+// or asking about it, etc.
+
+~~~~~~~ C++ edit
+#define GAME_GET_SOUND_SAMPLES(name) void name(thread_context *Thread, game_memory *Memory, game_sound_output_buffer *SoundBuffer)
+~~~~~~~ C++
+typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
+~~~~~~~ 
+[Listing [x]: <file>[handmade.h]</file> .]
+
+We will propagate the usage for our thread context in the few places of `handmade.cpp` that we're currently using: 
+
+~~~~~~~ C++ edit
+debug_read_file_result FileData = Memory->DEBUGPlatformReadEntireFile(Thread, __FILE__);
+if (FileData.Contents)
+{
+    Memory->DEBUGPlatformWriteEntireFile(Thread, "test.out", FileData.ContentsSize, FileData.Contents);
+    Memory->DEBUGPlatformFreeFileMemory(Thread, FileData.Contents);
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> .]
+
+As well in a single place inside `win32_handmade.cpp`:
+
+~~~~~~~ C++
+DWORD BytesRead;
+if (ReadFile(FileHandle, Result.Contents, FileSize32, &BytesRead, 0) &&
+    (FileSize32 == BytesRead))
+{
+    // NOTE(casey): File read successfully
+    Result.ContentsSize = BytesRead;
+}
+else
+{
+    // Error: Read failed
+    // TODO(casey): Logging
+~~~~~~~ C++ edit
+    DEBUGPlatformFreeFileMemory(Thread, Result.Contents);
+~~~~~~~ C++
+    Result.Contents = 0;
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > DEBUGPlatformReadEntireFile]</file> .]
+
+Finally, we will introduce the thread context inside `WinMain`. Again, it will contain absolutely nothing for the time being but will become useful in the future.
+
+~~~~~~~ C++ add
+thread_context Thread = {};
+
+~~~~~~~ C++
+game_offscreen_buffer Buffer = {};
+// ... 
+
+if (Game.UpdateAndRender)
+{
+~~~~~~~ C++ edit
+    Game.UpdateAndRender(&Thread, &GameMemory, NewInput, &Buffer);
+~~~~~~~ C++
+}
+~~~~~~~ C++
+// ...
+
+if (Game.GetSoundSamples)
+{
+~~~~~~~ C++ edit
+    Game.GetSoundSamples(&Thread, &GameMemory, &SoundBuffer);
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+The reason we made this addition is because sometimes you might want to know which thread you're in, or access some data pertinent to the current thread. In Windows, most of the time you can access something called `ThreadLocalStorage`, which is a global variable that is specific to the current thread. This will sort of do this work for us, but it's not exactly ideal. Additionally, other platforms we might want to support might not have this feature. 
+
+So with the introduction of the `thread_context` structure, we're getting into a habit of having it around. That's it for now. 
+
+# Pass Mouse Input to the Game
+
+While our game is going to be more of a keyboard/gamepad type of game, we might definitely benefit from having mouse input data. For instance, if we develop some debug overlay systems, using mouse might be more appropriate.
+
+Let's expand our `game_input` structure to include mouse input data. It might have a single `u32` to store the mouse buttons state, and a couple of integers to store the mouse position.
+
+~~~~~~~ C++
+struct game_input
+{
+~~~~~~~ C++ add
+    u32 MouseButtons;
+    s32 MouseX, MouseY;
+    
+~~~~~~~ C++
+    game_controller_input Controllers[5];
+};
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> .]
+
+That said, we might want to use the `game_button_state` structures we already have. Let's say our mouse has 5 mouse buttons, and we want to store the state of each. We can also have a MouseZ which would capture the state of the mouse wheel.
+
+~~~~~~~ C++
+struct game_input
+{
+~~~~~~~ C++ edit
+    game_button_state MouseButtons[5];
+    s32 MouseX, MouseY, MouseZ;
+~~~~~~~ C++
+    
+    game_controller_input Controllers[5];
+};
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> .]
+
+To make our mouse input visible, let's reuse our `RenderPlayer` function. Instead of passing the game state data, we'll pass the mouse position instead.
+
+~~~~~~~ C++
+RenderWeirdGradient(Buffer, GameState->XOffset, GameState->YOffset);
+RenderPlayer(Buffer, GameState->PlayerX, GameState->PlayerY);
+
+~~~~~~~ C++ add
+RenderPlayer(Buffer, Input->MouseX, Input->MouseY);
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> .]
+
+Inside `win32_handmade.cpp`, we'll need to add a few more things to pass the mouse position to the game. It will look something like this: 
+
+~~~~~~~ C++
+if (!GlobalPause)
+{
+~~~~~~~ C++ add
+    NewInput->MouseX = ;
+    NewInput->MouseY = ;
+    NewInput->MouseZ = 0; // Not supporting wheel for now
+    NewInput->MouseButtons[0] = ;
+    NewInput->MouseButtons[1] = ;
+    NewInput->MouseButtons[2] = ;
+~~~~~~~ C++
+// ...
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+Mouse X and Y can be retrieved using the [GetCursorPos][] function. This function tells you where the cursor is supposed to be at any given time. The result is stored in a `POINT` structure which only contains `x` and `y` coordinates. Unfortunately, you cannot use them directly, something like this: 
+
+~~~~~~~ C++ add
+POINT MouseP;
+GetCursorPos(&MouseP);
+NewInput->MouseX = MouseP.x;
+NewInput->MouseY = MouseP.y;
+~~~~~~~ C++
+NewInput->MouseZ = 0; // Not supporting wheel for now
+~~~~~~~ C++ add
+/* 
+~~~~~~~ C++
+NewInput->MouseButtons[0] = ;
+NewInput->MouseButtons[1] = ;
+NewInput->MouseButtons[2] = ;
+~~~~~~~ C++ add
+*/
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+If you compile and run this, you'll notice that the player position doesn't match the mouse cursor position. It's flat-out wrong. What's going on there? Thing is, the `GetCursorPos` function returns a position relative to the corner of the _screen_, while the coordinate system of our window starts from the top left corner of the _window_ itself. 
+
+**************************************************************************
+*        Physical monitor border                                         *
+*    .---------------------------------------------------------------.   *
+*    | .-----------------------------------------------------------. |   *
+*    | |^                                                          | |   *
+*    | | \                                                         | |   *
+*    | |  \Screen (0, 0)                                           | |   *
+*    | |                                                           | |   *
+*    | |               .------------------------------+-.          | |   *
+*    | |               |Handmade Hero                 |X|          | |   *
+*    | |               +------------------------------+-+          | |   *
+*    | |               |^                               |          | |   *
+*    | |               | \                              |          | |   *
+*    | |               |  \Window (0, 0)                |          | |   *
+*    | |               |                                |          | |   *
+*    | |               |                                |          | |   *
+*    | |               |                                |          | |   *
+*    | |               |                                |          | |   *
+*    | |               '--------------------------------'          | |   *
+*    | |                                                           | |   *
+*    | '-----------------------------------------------------------' |   *
+*    |    Screen                                                     |   *
+*    '-----------------------------+---------------------------------'   *
+*                                 / \                                    *
+*                      ----------+---+----------                         *
+*                                                                        *
+**************************************************************************
+[Figure [x]: Screen coordinates and window coordinates have different origin points.]
+
+So what we need to do is to _map_ the mouse coordinates to the window coordinates. We can do this using the [ScreenToClient][] function. You pass it a window and a point in screen coordinates, and it will convert said point to window coordinates.
+
+~~~~~~~ C++
+POINT MouseP;
+GetCursorPos(&MouseP);
+~~~~~~~ C++ add
+ScreenToClient(Window, &MouseP);
+~~~~~~~ C++
+NewInput->MouseX = MouseP.x;
+NewInput->MouseY = MouseP.y;
+NewInput->MouseZ = 0; // Not supporting wheel for now
+/* 
+NewInput->MouseButtons[0] = ;
+NewInput->MouseButtons[1] = ;
+NewInput->MouseButtons[2] = ;
+*/
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+!!!
+    We will speak more about the coordinate systems in the future, so if you don't understand some of this now, don't worry about it too much. 
+
+This system is not something you want to use in a shipped game; for instance, if you move the mouse to another monitor in a multi-monitor setup, the mouse coordinates will be wrong. But since we don't plan to use this code in the actual game, we can just ignore it.
+
+// FIXME: 25:29
 
 ------------------------
 <!-- 
