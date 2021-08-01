@@ -3,9 +3,1095 @@
 <meta name="viewport" content="width=600, initial-scale=1">
 <link rel="stylesheet" href="../css/html-style.css">
 <link rel="stylesheet" href="../css/style.css">
+<span class="md"><p><title>Day 25. Finishing the Win32 Prototyping Layer</title><div class="title"> Day 25. Finishing the Win32 Prototyping Layer </div>
 
+<div class="afterTitles"></div>
+<em class="underscore">Video Length (including Q&A): <a href="https://hero.handmade.network/episode/code/day024/">02h30</a></em> 
+
+</p><p>
+
+Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with no external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
+
+</p><p>
+
+As you have seen, building a Win32 prototyping layer is not that hard. Of course, building a solid shippable platform layer takes more time, so there will be more Win32 work down the line. Even then, it won't be a tremendous amount of work.
+
+</p><p>
+
+Today marks the last day of Win32-specific coding. Moving forward, we will no longer be thinking about win32-specific code. We will be revisiting it, of course, but only as a part of our cross-platform work. For instance, we still don't have a logging service. We will be implementing it in the Win32 layer as we did with the other services and then provide it to the game.
+
+</p>
 <div class="longTOC"><p align="center">
     <span align="right"><a href="day24.html">Day 24</a></span>
     <a href="../index.html"><img src = "../media/logo.png"></a>
     <span align="left"><a href="day26.html">Day 26</a></span>
 </p><p><a href="#" class="tocTop">(Top)</a><br/>
+<a href="#getactualmonitorrefreshrate" class="level1"><span class="tocNumber">1&nbsp; </span>Get Actual Monitor Refresh Rate</a><br/>
+<a href="#prepareforfuturemulti-threading" class="level1"><span class="tocNumber">2&nbsp; </span>Prepare for Future Multi-Threading</a><br/>
+<a href="#passmouseinputtothegame" class="level1"><span class="tocNumber">3&nbsp; </span>Pass Mouse Input to the Game</a><br/>
+<a href="#revisitrecordingcode" class="level1"><span class="tocNumber">4&nbsp; </span>Revisit Recording Code</a><br/>
+&nbsp;&nbsp;<a href="#revisitrecordingcode/keepgamememoryinmemory" class="level2"><span class="tocNumber">4.1&nbsp; </span>Keep Game Memory in Memory</a><br/>
+&nbsp;&nbsp;<a href="#revisitrecordingcode/poorman'sprofiling" class="level2"><span class="tocNumber">4.2&nbsp; </span>Poor Man's Profiling</a><br/>
+&nbsp;&nbsp;<a href="#revisitrecordingcode/mapthereplayfiletomemory" class="level2"><span class="tocNumber">4.3&nbsp; </span>Map the Replay File to Memory</a><br/>
+&nbsp;&nbsp;<a href="#revisitrecordingcode/splitthefileoutput" class="level2"><span class="tocNumber">4.4&nbsp; </span>Split the File Output</a><br/>
+&nbsp;&nbsp;<a href="#revisitrecordingcode/interruptplayback" class="level2"><span class="tocNumber">4.5&nbsp; </span>Interrupt Playback</a><br/>
+<a href="#cleanupdebugcode" class="level1"><span class="tocNumber">5&nbsp; </span>Clean Up Debug Code</a><br/>
+&nbsp;&nbsp;<a href="#cleanupdebugcode/commentoutdebugsyncdisplay" class="level2"><span class="tocNumber">5.1&nbsp; </span>Comment Out DebugSyncDisplay</a><br/>
+&nbsp;&nbsp;<a href="#cleanupdebugcode/removeframerateprintout" class="level2"><span class="tocNumber">5.2&nbsp; </span>Remove Framerate Printout</a><br/>
+<a href="#recap" class="level1"><span class="tocNumber">6&nbsp; </span>Recap</a><br/>
+<a href="#navigation" class="level1"><span class="tocNumber">7&nbsp; </span>Navigation</a><br/>
+</p></div><a class="target" name="getactualmonitorrefreshrate">&nbsp;</a><a class="target" name="getactualmonitorrefreshrate">&nbsp;</a><a class="target" name="toc1">&nbsp;</a><h1>Get Actual Monitor Refresh Rate</h1>
+<p>
+
+
+Currently, we're hard-coding <code>MonitorRefreshHz</code> to 60. We need to know what the actual refresh rate is. We can do that by using the <a href="https://docs.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-getdevicecaps">GetDeviceCaps</a> function.
+We looked into this function in the past, and we didn't use it because the <code>VREFRESH</code> value can be 0 or 1, which is not what we want. That said, most of the time, the function will return the correct value to use it. We will still initialize <code>MonitorRefreshHz</code> to 60 as a fallback.
+
+</p><pre class="listing tilde"><code><div class=" delete"><span class="line"><span class="hljs-comment">// TODO(casey): How do we reliably query on monitor refresh rate on Windows?</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> MonitorRefreshHz 60</span></span></div><div class=" add"><span class="line"><span class="hljs-keyword">int</span> MonitorRefreshHz = <span class="hljs-number">60</span>;</span>
+<span class="line"><span class="hljs-keyword">int</span> Win32RefreshRate = GetDeviceCaps(DeviceContext, VREFRESH);</span>
+<span class="line"><span class="hljs-keyword">if</span> (Win32RefreshRate &gt; <span class="hljs-number">1</span>)</span>
+<span class="line">{</span>
+<span class="line">    MonitorRefreshHz = Win32RefreshRate;</span>
+<span class="line">}</span></div><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> GameUpdateHz (MonitorRefreshHz / 2)</span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;1:</b> <file>[win32_handmade.cpp > WinMain]</file> Getting actual refresh rate.</div></center>
+<p>
+
+
+We don't have the own device context anymore, so let's quickly get one and release it when we're done. Make sure that you already have the handle to the window (and if you don't, simply move the block below to when you have it).
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">int</span> MonitorRefreshHz = <span class="hljs-number">60</span>;</span><div class=" add"><span class="line">HDC RefreshDC = GetDC(Window);</span></div><div class=" edit"><span class="line"><span class="hljs-keyword">int</span> Win32RefreshRate = GetDeviceCaps(RefreshDC, VREFRESH);</span></div><div class=" add"><span class="line">ReleaseDC(Window, RefreshDC);</span></div><span class="line"><span class="hljs-keyword">if</span> (Win32RefreshRate &gt; <span class="hljs-number">1</span>)</span>
+<span class="line">{</span>
+<span class="line">    MonitorRefreshHz = Win32RefreshRate;</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;2:</b> <file>[win32_handmade.cpp > WinMain]</file> Retrieving and releasing a device context.</div></center>
+<p>
+
+    
+Speaking of GameUpdateHz, we will eventually set it to the same value as MonitorRefreshHz to run at the same speed as the monitor. For now, though, we will leave it to half of the monitor refresh rate for performance concerns. That said, this value is currently an integer, and it might become an issue if the monitor refresh rate is odd (say, 59 instead of 60). We can directly define MonitorRefreshHz as a float and fix any code that relies on it being an integer.
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">f32 GameUpdateHz = (MonitorRefreshHz / <span class="hljs-number">2.0f</span>);</span>
+<span class="line">f32 TargetSecondsPerFrame = <span class="hljs-number">1.0f</span> / GameUpdateHz;</span></div><span class="line"><span class="hljs-comment">// NOTE(casey): Sound test</span></span>
+<span class="line">win32_sound_output SoundOutput = {};</span>
+<span class="line">SoundOutput.SamplesPerSecond = <span class="hljs-number">48000</span>;</span>
+<span class="line">SoundOutput.BytesPerSample = <span class="hljs-keyword">sizeof</span>(s16) * <span class="hljs-number">2</span>;</span>
+<span class="line">SoundOutput.SecondaryBufferSize = <span class="hljs-number">2</span> * SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample;</span>
+<span class="line">SoundOutput.RunningSampleIndex = <span class="hljs-number">0</span>;</span>
+<span class="line"><span class="hljs-comment">// TODO(casey): Actually compute this variance and see</span></span>
+<span class="line"><span class="hljs-comment">// what the lowest reasonable value is.</span></span><div class=" edit"><span class="line">SoundOutput.SafetyBytes = (<span class="hljs-keyword">int</span>)(((f32)SoundOutput.SamplesPerSecond * (f32)SoundOutput.BytesPerSample / GameUpdateHz) / <span class="hljs-number">3.0f</span>);</span></div><span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line"><span class="hljs-keyword">int</span> DebugTimeMarkerIndex = <span class="hljs-number">0</span>;</span><div class=" edit"><span class="line">win32_debug_time_marker DebugTimeMarkers[<span class="hljs-number">30</span>] = {};</span></div><span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line">DWORD ByteToLock = ((SoundOutput.RunningSampleIndex * SoundOutput.BytesPerSample)</span>
+<span class="line">                                                % SoundOutput.SecondaryBufferSize);</span>
+<span class="line">                            </span><div class=" edit"><span class="line">DWORD ExpectedSoundBytesPerFrame = (DWORD)((f32)(SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample)</span>
+<span class="line">                                                                       / GameUpdateHz);</span></div><span class="line"></span>
+<span class="line">f32 SecondsLeftUntilFlip = TargetSecondsPerFrame - FromBeginToAudioSeconds;</span>
+<span class="line">DWORD ExpectedBytesUntilFlip = (DWORD)((SecondsLeftUntilFlip / TargetSecondsPerFrame) * (f32)ExpectedSoundBytesPerFrame);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;3:</b> <file>[win32_handmade.cpp > WinMain]</file> Changing <code>GameUpdateHz</code> to a floating-point value.</div></center>
+<p>
+
+
+We're now compilable and can rerun the game again with no changes. However, if you set your breakpoint just before the <code>Win32RefreshRate</code> calculation, you can see that we're now using the actual monitor refresh rate.
+
+</p>
+<a class="target" name="prepareforfuturemulti-threading">&nbsp;</a><a class="target" name="prepareforfuturemulti-threading">&nbsp;</a><a class="target" name="toc2">&nbsp;</a><h1>Prepare for Future Multi-Threading</h1>
+<p>
+
+
+There's one thing that we aren't going to touch right now. But, while we're at these early stages, it's a good idea to start preparing. We'll introduce a structure to hold any information relating to the current <em class="underscore">thread context</em>, i.e., what thread you're in when you're running multi-threaded. This structure will contain absolutely nothing for the time being but will become essential in the future. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function"><span class="hljs-keyword">inline</span> u32</span>
+<span class="line"><span class="hljs-title">SafeTruncateUInt64</span><span class="hljs-params">(u64 Value)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    Assert(Value &lt;= <span class="hljs-number">0xFFFFFFFF</span>);</span>
+<span class="line">    u32 Result = (u32)Value;</span>
+<span class="line">    <span class="hljs-keyword">return</span> (Result);</span>
+<span class="line">}</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">thread_context</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">int</span> Placeholder;</span>
+<span class="line">};</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;4:</b> <file>[handmade.h]</file> Introducing the <code>thread_context</code> structure.</div></center>
+<p>
+
+
+We will pass a <code>thread_context</code> to any function speaking with the Platform layer (so all the functions currently listed in <code>handmade.h</code>): 
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> DEBUG_PLATFORM_FREE_FILE_MEMORY(name) void name (thread_context *Thread, void *Memory)</span></span></div><span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">DEBUG_PLATFORM_FREE_FILE_MEMORY</span><span class="hljs-params">(debug_platform_free_file_memory)</span></span>;</span>
+<span class="line"></span><div class=" edit"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> DEBUG_PLATFORM_READ_ENTIRE_FILE(name) debug_read_file_result name (thread_context *Thread, char *Filename)</span></span></div><span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">DEBUG_PLATFORM_READ_ENTIRE_FILE</span><span class="hljs-params">(debug_platform_read_entire_file)</span></span>;</span>
+<span class="line"></span><div class=" edit"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name) b32 name (thread_context *Thread, char *Filename, u32 MemorySize, void *Memory)</span></span></div><span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">DEBUG_PLATFORM_WRITE_ENTIRE_FILE</span><span class="hljs-params">(debug_platform_write_entire_file)</span></span>;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// ... </span></span>
+<span class="line"></span><div class=" edit"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> GAME_UPDATE_AND_RENDER(name) void name(thread_context *Thread, game_memory *Memory, game_input *Input, game_offscreen_buffer* Buffer)</span></span></div><span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">GAME_UPDATE_AND_RENDER</span><span class="hljs-params">(game_update_and_render)</span></span>;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// NOTE(casey): At the moment, this has to be a very fast function, it cannot be</span></span>
+<span class="line"><span class="hljs-comment">// more than a millisecond or so.</span></span>
+<span class="line"><span class="hljs-comment">// TODO(casey): Reduce the pressure on this function&#x27;s performance by measuring it</span></span>
+<span class="line"><span class="hljs-comment">// or asking about it, etc.</span></span>
+<span class="line"></span><div class=" edit"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> GAME_GET_SOUND_SAMPLES(name) void name(thread_context *Thread, game_memory *Memory, game_sound_output_buffer *SoundBuffer)</span></span></div><span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">GAME_GET_SOUND_SAMPLES</span><span class="hljs-params">(game_get_sound_samples)</span></span>;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;5:</b> <file>[handmade.h]</file> Passing the thread context everywhere in the platform API.</div></center>
+<p>
+
+
+We will propagate the usage for our thread context in the few places of <code>handmade.cpp</code> that we're currently using: 
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">debug_read_file_result FileData = Memory-&gt;DEBUGPlatformReadEntireFile(Thread, __FILE__);</span>
+<span class="line"><span class="hljs-keyword">if</span> (FileData.Contents)</span>
+<span class="line">{</span>
+<span class="line">    Memory-&gt;DEBUGPlatformWriteEntireFile(Thread, <span class="hljs-string">&quot;test.out&quot;</span>, FileData.ContentsSize, FileData.Contents);</span>
+<span class="line">    Memory-&gt;DEBUGPlatformFreeFileMemory(Thread, FileData.Contents);</span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;6:</b> <file>[handmade.cpp]</file> Passing the thread context inside the platform-independent layer.</div></center>
+<p>
+
+
+As well in a single place inside <code>win32_handmade.cpp</code>:
+
+</p><pre class="listing tilde"><code><span class="line">DWORD BytesRead;</span>
+<span class="line"><span class="hljs-keyword">if</span> (ReadFile(FileHandle, Result.Contents, FileSize32, &amp;BytesRead, <span class="hljs-number">0</span>) &amp;&amp;</span>
+<span class="line">    (FileSize32 == BytesRead))</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// NOTE(casey): File read successfully</span></span>
+<span class="line">    Result.ContentsSize = BytesRead;</span>
+<span class="line">}</span>
+<span class="line"><span class="hljs-keyword">else</span></span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// Error: Read failed</span></span>
+<span class="line">    <span class="hljs-comment">// TODO(casey): Logging</span></span><div class=" edit"><span class="line">    DEBUGPlatformFreeFileMemory(Thread, Result.Contents);</span></div><span class="line">    Result.Contents = <span class="hljs-number">0</span>;</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;7:</b> <file>[win32_handmade.cpp > DEBUGPlatformReadEntireFile]</file> More thread context usage.</div></center>
+<p>
+
+
+Finally, we will introduce the thread context inside <code>WinMain</code>. Again, it will contain absolutely nothing for the time being but will become useful in the future.
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">thread_context Thread = {};</span>
+<span class="line"></span></div><span class="line">game_offscreen_buffer Buffer = {};</span>
+<span class="line"><span class="hljs-comment">// ... </span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">if</span> (Game.UpdateAndRender)</span>
+<span class="line">{</span><div class=" edit"><span class="line">    Game.UpdateAndRender(&amp;Thread, &amp;GameMemory, NewInput, &amp;Buffer);</span></div><span class="line">}</span><span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">if</span> (Game.GetSoundSamples)</span>
+<span class="line">{</span><div class=" edit"><span class="line">    Game.GetSoundSamples(&amp;Thread, &amp;GameMemory, &amp;SoundBuffer);</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;8:</b> <file>[win32_handmade.cpp > WinMain]</file> Thread context initialization in the Win32 layer.</div></center>
+<p>
+
+
+We made this addition because you might want to know which thread you're in or access some data pertinent to the current one. In Windows, most of the time, you can access something called <code>ThreadLocalStorage</code>, which is a global variable that is specific to the current thread. While this function can occasionally give decent results, we cannot rely on it for all uses. Additionally, other platforms we might want to support might not have this feature.
+
+</p><p>
+
+So with the introduction of the <code>thread_context</code> structure, we're getting into a habit of having it around. That's it for now. 
+
+</p>
+<a class="target" name="passmouseinputtothegame">&nbsp;</a><a class="target" name="passmouseinputtothegame">&nbsp;</a><a class="target" name="toc3">&nbsp;</a><h1>Pass Mouse Input to the Game</h1>
+<p>
+
+
+While our game will be more of a keyboard/gamepad type of game, we might definitely benefit from having mouse input data. For instance, if we develop some debug overlay systems, using the mouse might be more appropriate.
+
+</p><p>
+
+Let's expand our <code>game_input</code> structure to include mouse input data. We already have the <code>game_button_state</code> structures which we can reuse. Let's say our mouse has 5 mouse buttons, and we want to store the state of each. We can also want to capture the mouse X, Y, and Z axis movement, the latter capturing the state of the mouse wheel.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_input</span></span>
+<span class="line">{</span></span><div class=" add"><span class="line">    game_button_state MouseButtons[<span class="hljs-number">5</span>];</span>
+<span class="line">    s32 MouseX, MouseY, MouseZ;</span></div><span class="line">    </span>
+<span class="line">    game_controller_input Controllers[<span class="hljs-number">5</span>];</span>
+<span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;9:</b> <file>[handmade.h]</file> Storing mouse input.</div></center>
+<p>
+
+
+Let's say we'll visualize our mouse position by reusing the handy <code>RenderPlayer</code> function. As the input, we'll pass the mouse position instead of the game state.
+
+</p><pre class="listing tilde"><code><span class="line">RenderWeirdGradient(Buffer, GameState-&gt;XOffset, GameState-&gt;YOffset);</span>
+<span class="line">RenderPlayer(Buffer, GameState-&gt;PlayerX, GameState-&gt;PlayerY);</span>
+<span class="line"></span><div class=" add"><span class="line">RenderPlayer(Buffer, Input-&gt;MouseX, Input-&gt;MouseY);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;10:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Drawing Mouse Cursor.</div></center>
+<p>
+
+
+Now, how would we capture the mouse data? Inside <code>win32_handmade.cpp</code>, we'll need to add a few more things to pass the mouse position to the game. It will look something like this: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span> (!GlobalPause)</span>
+<span class="line">{</span><div class=" add"><span class="line">    NewInput-&gt;MouseX = ;</span>
+<span class="line">    NewInput-&gt;MouseY = ;</span>
+<span class="line">    NewInput-&gt;MouseZ = <span class="hljs-number">0</span>; <span class="hljs-comment">// TODO(casey): Support mousewheel? </span></span>
+<span class="line">    NewInput-&gt;MouseButtons[<span class="hljs-number">0</span>] = ;</span>
+<span class="line">    NewInput-&gt;MouseButtons[<span class="hljs-number">1</span>] = ;</span>
+<span class="line">    NewInput-&gt;MouseButtons[<span class="hljs-number">2</span>] = ;</span></div><span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;11:</b> <file>[win32_handmade.cpp > WinMain]</file> Sketching out mouse capture.</div></center>
+<p>
+
+
+Mouse X and Y can be retrieved using the <a href="https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getcursorpos">GetCursorPos</a> function. This function tells you where the cursor is supposed to be at any given time. The result is stored in a <code>POINT</code> structure, a simple struct only containing an <code>x</code> and a <code>y</code> coordinate. Unfortunately, you cannot use them directly, something like this: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">POINT MouseP;</span>
+<span class="line">GetCursorPos(&amp;MouseP);</span>
+<span class="line">NewInput-&gt;MouseX = MouseP.x;</span>
+<span class="line">NewInput-&gt;MouseY = MouseP.y;</span></div><span class="line">NewInput-&gt;MouseZ = <span class="hljs-number">0</span>; <span class="hljs-comment">// TODO(casey): Support mousewheel? </span></span><div class=" add"><span class="line"><span class="hljs-comment">/* </span></span></div><span class="line">NewInput-&gt;MouseButtons[<span class="hljs-number">0</span>] = ;</span>
+<span class="line">NewInput-&gt;MouseButtons[<span class="hljs-number">1</span>] = ;</span>
+<span class="line">NewInput-&gt;MouseButtons[<span class="hljs-number">2</span>] = ;</span><div class=" add"><span class="line">*/</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;12:</b> <file>[win32_handmade.cpp > WinMain]</file> Retrieving mouse position.</div></center>
+<p>
+
+
+If you compile and run this, you'll notice that the player position doesn't match the mouse cursor position. It's flat-out wrong. What's going on there? The thing is, the <code>GetCursorPos</code> function returns a position relative to the corner of the <em class="underscore">screen</em>, while the coordinate system of our window starts from the top left corner of the <em class="underscore">window</em> itself. 
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="416" width="584" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 32,16 L 32,336 " style="fill:none;"/>
+<path d="M 48,32 L 48,304 " style="fill:none;"/>
+<path d="M 176,112 L 176,272 " style="fill:none;"/>
+<path d="M 424,112 L 424,144 " style="fill:none;"/>
+<path d="M 440,112 L 440,272 " style="fill:none;"/>
+<path d="M 528,32 L 528,304 " style="fill:none;"/>
+<path d="M 544,16 L 544,336 " style="fill:none;"/>
+<path d="M 32,16 L 544,16 " style="fill:none;"/>
+<path d="M 48,32 L 528,32 " style="fill:none;"/>
+<path d="M 176,112 L 440,112 " style="fill:none;"/>
+<path d="M 176,144 L 440,144 " style="fill:none;"/>
+<path d="M 176,272 L 440,272 " style="fill:none;"/>
+<path d="M 48,304 L 528,304 " style="fill:none;"/>
+<path d="M 32,336 L 544,336 " style="fill:none;"/>
+<path d="M 176,368 L 368,368 " style="fill:none;"/>
+<path d="M 56,48 L 72,80 " style="fill:none;"/>
+<path d="M 180,152 L 200,192 " style="fill:none;"/>
+<path d="M 272,336 L 288,368 " style="fill:none;"/>
+<path d="M 256,368 L 272,336 " style="fill:none;"/>
+<polygon points="188,152 176,146.4 176,157.6 "  style="stroke:none" transform="rotate(243.43494882292202,180,152 )"/>
+<polygon points="64,48 52,42.4 52,53.6 "  style="stroke:none" transform="rotate(243.43494882292202,56,48 )"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="64" y="4">P</text><text text-anchor="middle" x="72" y="4">h</text><text text-anchor="middle" x="80" y="4">y</text><text text-anchor="middle" x="88" y="4">s</text><text text-anchor="middle" x="96" y="4">i</text><text text-anchor="middle" x="104" y="4">c</text><text text-anchor="middle" x="112" y="4">a</text><text text-anchor="middle" x="120" y="4">l</text><text text-anchor="middle" x="136" y="4">m</text><text text-anchor="middle" x="144" y="4">o</text><text text-anchor="middle" x="152" y="4">n</text><text text-anchor="middle" x="160" y="4">i</text><text text-anchor="middle" x="168" y="4">t</text><text text-anchor="middle" x="176" y="4">o</text><text text-anchor="middle" x="184" y="4">r</text><text text-anchor="middle" x="200" y="4">b</text><text text-anchor="middle" x="208" y="4">o</text><text text-anchor="middle" x="216" y="4">r</text><text text-anchor="middle" x="224" y="4">d</text><text text-anchor="middle" x="232" y="4">e</text><text text-anchor="middle" x="240" y="4">r</text><text text-anchor="middle" x="80" y="84">S</text><text text-anchor="middle" x="88" y="84">c</text><text text-anchor="middle" x="96" y="84">r</text><text text-anchor="middle" x="104" y="84">e</text><text text-anchor="middle" x="112" y="84">e</text><text text-anchor="middle" x="120" y="84">n</text><text text-anchor="middle" x="136" y="84">(</text><text text-anchor="middle" x="144" y="84">0</text><text text-anchor="middle" x="152" y="84">,</text><text text-anchor="middle" x="168" y="84">0</text><text text-anchor="middle" x="176" y="84">)</text><text text-anchor="middle" x="184" y="132">H</text><text text-anchor="middle" x="192" y="132">a</text><text text-anchor="middle" x="200" y="132">n</text><text text-anchor="middle" x="208" y="132">d</text><text text-anchor="middle" x="216" y="132">m</text><text text-anchor="middle" x="224" y="132">a</text><text text-anchor="middle" x="232" y="132">d</text><text text-anchor="middle" x="240" y="132">e</text><text text-anchor="middle" x="256" y="132">H</text><text text-anchor="middle" x="264" y="132">e</text><text text-anchor="middle" x="272" y="132">r</text><text text-anchor="middle" x="280" y="132">o</text><text text-anchor="middle" x="432" y="132">X</text><text text-anchor="middle" x="208" y="196">W</text><text text-anchor="middle" x="216" y="196">i</text><text text-anchor="middle" x="224" y="196">n</text><text text-anchor="middle" x="232" y="196">d</text><text text-anchor="middle" x="240" y="196">o</text><text text-anchor="middle" x="248" y="196">w</text><text text-anchor="middle" x="264" y="196">(</text><text text-anchor="middle" x="272" y="196">0</text><text text-anchor="middle" x="280" y="196">,</text><text text-anchor="middle" x="296" y="196">0</text><text text-anchor="middle" x="304" y="196">)</text><text text-anchor="middle" x="72" y="324">S</text><text text-anchor="middle" x="80" y="324">c</text><text text-anchor="middle" x="88" y="324">r</text><text text-anchor="middle" x="96" y="324">e</text><text text-anchor="middle" x="104" y="324">e</text><text text-anchor="middle" x="112" y="324">n</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;1:</b> Screen coordinates and window coordinates have different origin points.</div></center>
+
+</p><p>
+
+So what we need to do is to <em class="underscore">map</em> the mouse coordinates to the window coordinates. We can do this using the <a href="https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-screentoclient">ScreenToClient</a> function. You pass it a window and a point in screen coordinates, and it will convert said point to window coordinates.
+
+</p><pre class="listing tilde"><code><span class="line">POINT MouseP;</span>
+<span class="line">GetCursorPos(&amp;MouseP);</span><div class=" add"><span class="line">ScreenToClient(Window, &amp;MouseP);</span></div><span class="line">NewInput-&gt;MouseX = MouseP.x;</span>
+<span class="line">NewInput-&gt;MouseY = MouseP.y;</span>
+<span class="line">NewInput-&gt;MouseZ = <span class="hljs-number">0</span>; <span class="hljs-comment">// TODO(casey): Support mousewheel? </span></span>
+<span class="line"><span class="hljs-comment">/* </span>
+<span class="line">NewInput-&gt;MouseButtons[0] = ;</span>
+<span class="line">NewInput-&gt;MouseButtons[1] = ;</span>
+<span class="line">NewInput-&gt;MouseButtons[2] = ;</span>
+<span class="line">*/</span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;13:</b> <file>[win32_handmade.cpp > WinMain]</file> Translating mouse position to the client space.</div></center>
+<p>
+
+
+
+
+<div class="admonition ">We will revisit the coordinate systems in-depth in the future. Don't worry too much if you don't understand some of this now.</div>
+
+</p><p>
+
+This system is not something you want to use in a shipped game; for instance, if you move the mouse to another monitor in a multi-monitor setup, the mouse coordinates will be wrong. But since we don't plan to use this code in the actual game, we can ignore it.
+
+</p><p>
+
+To see the state of the mouse keys, we <em class="underscore">could</em> track the mouse-related Windows events. But we won't do that. Instead, we'll use the <a href="https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getkeystate">GetKeyState</a> function. This function returns the state of the key, which can be <code>0</code> or <code>1</code>. If the key is down, it will return <code>1</code>. If it's up, it will return <code>0</code>.
+
+</p><p>
+
+<code>GetKeyState</code> processes both keyboard and mouse keys. If you want to see the list of all the supported keys, check out the <a href="https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes">Virtual-Key Codes</a> article. The state of the Left, Middle, and Right buttons is available at the very top of the page (<code>VK_LBUTTON</code>, <code>VK_MBUTTON</code>, and <code>VK_RBUTTON</code>, respectively). You can even see the so-called &ldquo;XButtons&rdquo; right away, so let's code them in as well:
+
+</p><p>
+
+There's a critical note to this. If you check the documentation of <a href="https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getkeystate">GetKeyState</a>, you'll notice that the value returned is stored in the <em class="underscore">high bit</em> of a short (16-bit integer). This means that if we want to see if the value is true (1) or false (0), we need to apply the bitmask of the 16'th bit. We don't care about the low bit; it only refers to things like CAPS LOCK (whereby it can be “on” or “off”).
+
+</p><pre class="listing tilde"><code><span class="line">POINT MouseP;</span>
+<span class="line">GetCursorPos(&amp;MouseP);</span>
+<span class="line">ScreenToClient(Window, &amp;MouseP);</span>
+<span class="line">NewInput-&gt;MouseX = MouseP.x;</span>
+<span class="line">NewInput-&gt;MouseY = MouseP.y;</span>
+<span class="line">NewInput-&gt;MouseZ = <span class="hljs-number">0</span>; <span class="hljs-comment">// TODO(casey): Support mousewheel? </span></span><div class=" delete"><span class="line"><span class="hljs-comment">/* </span>
+<span class="line">NewInput-&gt;MouseButtons[0] = ;</span>
+<span class="line">NewInput-&gt;MouseButtons[1] = ;</span>
+<span class="line">NewInput-&gt;MouseButtons[2] = ;</span>
+<span class="line">*/</span></span></div><div class=" add"><span class="line">Win32ProcessKeyboardMessage(&amp;NewInput-&gt;MouseButtons[<span class="hljs-number">0</span>], GetKeyState(VK_LBUTTON) &amp; <span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">15</span>);</span>
+<span class="line">Win32ProcessKeyboardMessage(&amp;NewInput-&gt;MouseButtons[<span class="hljs-number">1</span>], GetKeyState(VK_MBUTTON) &amp; <span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">15</span>);</span>
+<span class="line">Win32ProcessKeyboardMessage(&amp;NewInput-&gt;MouseButtons[<span class="hljs-number">2</span>], GetKeyState(VK_RBUTTON) &amp; <span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">15</span>);</span>
+<span class="line">Win32ProcessKeyboardMessage(&amp;NewInput-&gt;MouseButtons[<span class="hljs-number">3</span>], GetKeyState(VK_XBUTTON1) &amp; <span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">15</span>);</span>
+<span class="line">Win32ProcessKeyboardMessage(&amp;NewInput-&gt;MouseButtons[<span class="hljs-number">4</span>], GetKeyState(VK_XBUTTON2) &amp; <span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">15</span>);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;14:</b> <file>[win32_handmade.cpp > WinMain]</file> Capturing mouse buttons.</div></center>
+<p>
+
+
+Let's see whether we are capturing our buttons! To do that... we'll use our <code>RenderPlayer</code> function again. This is how programming works: once you have functions that you can reuse, once you have something working, it builds on itself so quickly. 
+
+</p><p>
+
+So our mouse testing code will look something like this:
+
+</p><pre class="listing tilde"><code><span class="line">RenderPlayer(Buffer, GameState-&gt;PlayerX, GameState-&gt;PlayerY);</span>
+<span class="line">    </span><div class=" add"><span class="line"><span class="hljs-keyword">if</span> (Input-&gt;MouseButtons[<span class="hljs-number">0</span>].EndedDown)</span>
+<span class="line">{</span>
+<span class="line">    RenderPlayer(Buffer, <span class="hljs-number">10</span>, <span class="hljs-number">10</span>);</span>
+<span class="line">}</span></div><span class="line"></span>
+<span class="line">RenderPlayer(Buffer, Input-&gt;MouseX, Input-&gt;MouseY);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;15:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Visualizing left click.</div></center>
+<p>
+
+
+This means that a white rectangle will be visible at (10, 10) if the left mouse button is pressed. Nice and easy. 
+
+</p><p>
+
+Let's compile and test it... Unfortunately, we crash immediately. We triggered an assertion that we put in place some time ago, saying that the new mouse state is the same as the previous one. This is correct; we're simply reading the mouse input instead of being notified of the change via a system message. That's actually fine. Let's make this system more robust and change <code>Assert</code> to an <code>if</code> statement. If the requested key state has changed, record the new state.
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line"><span class="hljs-keyword">if</span>(NewState-&gt;EndedDown != IsDown)</span></div><div class=" add"><span class="line">{</span></div><span class="line">    NewState-&gt;EndedDown = IsDown;</span>
+<span class="line">    ++NewState-&gt;HalfTransitionCount;</span><div class=" add"><span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;16:</b> <file>[win32_handmade.cpp > Win32ProcessKeyboardMessage]</file> Modifying key capturing routine.</div></center>
+<p>
+
+
+This will fix the error, and now we're running correctly. 
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day25/left_click.jpg" target="_blank"><img class="markdeep" src="../media/day25/left_click.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;2:</b> While you're holding the left mouse button, you'll see a new rectangle in the top-right corner.</span></center></div></center> 
+
+</p><p>
+
+Now, if we want to test all buttons, we <em class="underscore">could</em> write more <code>RenderPlayer</code> calls. But we've written it once, no need to write it again. Let's use a <code>for</code> loop. We'll offset the horizontal position for each mouse button to test multiple buttons at once.
+
+</p><pre class="listing tilde"><code><span class="line">RenderPlayer(Buffer, GameState-&gt;PlayerX, GameState-&gt;PlayerY);</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> ButtonIndex = <span class="hljs-number">0</span>; </span>
+<span class="line">    ButtonIndex &lt; ArrayCount(Input-&gt;MouseButtons);</span>
+<span class="line">    ++ButtonIndex)</span>
+<span class="line">{</span></div><div class=" edit"><span class="line">    <span class="hljs-keyword">if</span>(Input-&gt;MouseButtons[ButtonIndex].EndedDown)</span></div><span class="line">    {</span><div class=" edit"><span class="line">        RenderPlayer(Buffer, <span class="hljs-number">10</span> + <span class="hljs-number">20</span> * ButtonIndex, <span class="hljs-number">10</span>);</span></div><span class="line">    }</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;17:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Testing all the mouse buttons.</div></center>
+<p>
+
+
+Compile, run.... Looks good! The game now responds correctly to both the cursor position and the state of the mouse buttons.
+
+</p><p>
+
+That's it for mouse code. 
+
+</p>
+<a class="target" name="revisitrecordingcode">&nbsp;</a><a class="target" name="revisitrecordingcode">&nbsp;</a><a class="target" name="toc4">&nbsp;</a><h1>Revisit Recording Code</h1>
+<p>
+
+
+Last time, we have done some additional work to our &ldquo;live replay&rdquo; code. However, we're still far from ideal here. Let's quickly review our recording code API: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32BeginRecordingInput</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// Open the file to write to.</span></span>
+<span class="line">    <span class="hljs-comment">// As the first thing, dump the whole memory block we&#x27;re currently using (as a starting snapshot).</span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32EndRecordingInput</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// Close whatever file we were writing to.</span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">Win32RecordInput</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// Write the user&#x27;s input for this frame to the recording file.</span></span>
+<span class="line">    <span class="hljs-comment">// This should happen while the file is open.</span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32BeginInputPlayback</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// Open the file to read from.</span></span>
+<span class="line">    <span class="hljs-comment">// As the first thing, load the memory snapshot as our current state.</span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32EndInputPlayback</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// Close the file we were reading from.</span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span> </span>
+<span class="line"><span class="hljs-title">Win32PlaybackInput</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// As long as there is some data inside the file, interpret it as subsequent frames of user input.</span></span>
+<span class="line">    <span class="hljs-comment">// Read one at a time, restart from the beginning once we&#x27;ve reached the end.</span></span>
+<span class="line">}</span></code></pre><p>
+
+
+<ul>
+<li class="asterisk">We start recording when we get user's input of a specific kind (namely, if they hit <code>L</code>). 
+</li>
+<li class="asterisk">We end recording when they hit <code>L</code> again and immediately start playback. 
+</li>
+<li class="asterisk">We don't really end playback on the user's request, so this is also something we'd need to do.
+</li>
+<li class="asterisk">Last, if we're recording or playing back, we write/read the user's input at each frame (inside our main loop).</li></ul>
+
+</p><p>
+
+Today, we'll try to achieve two goals:
+
+</p><p>
+
+<ul>
+<li class="asterisk">Reduce (or altogether remove) the amount of lag when starting recording.
+</li>
+<li class="asterisk">Be able to stop playback.</li></ul>
+
+</p>
+<a class="target" name="keepgamememoryinmemory">&nbsp;</a><a class="target" name="revisitrecordingcode/keepgamememoryinmemory">&nbsp;</a><a class="target" name="toc4.1">&nbsp;</a><h2>Keep Game Memory in Memory</h2>
+<p>
+
+
+In terms of supporting structures... we don't have any. We simply store the Recording/playback handles and recording/playback indices inside win32_state. Let's introduce the concept of <code>win32_replay_buffer</code>. This will store a pointer to the memory block that will contain data for our file and the name of the file. Let's say we'll have four of these:
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> WIN32_STATE_FILENAME_COUNT MAX_PATH</span></span><div class=" add"><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_replay_buffer</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">char</span> ReplayFilename[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">    <span class="hljs-keyword">void</span> *MemoryBlock;</span>
+<span class="line">};</span></div><span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_state</span></span>
+<span class="line">{</span></span>
+<span class="line">    u64 TotalSize;</span>
+<span class="line">    <span class="hljs-keyword">void</span> *GameMemoryBlock;</span><div class=" add"><span class="line">    win32_replay_buffer ReplayBuffers[<span class="hljs-number">4</span>];</span></div><span class="line">    </span>
+<span class="line">    HANDLE RecordingHandle;</span>
+<span class="line">    <span class="hljs-keyword">int</span> InputRecordingIndex;</span>
+<span class="line">    </span>
+<span class="line">    HANDLE PlaybackHandle;</span>
+<span class="line">    <span class="hljs-keyword">int</span> InputPlayingIndex;</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">char</span> EXEFilename[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">    <span class="hljs-keyword">char</span> *OnePastLastEXEFilenameSlash;</span>
+<span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;18:</b> <file>[win32_handmade.h]</file> Introducing <code>win32_replay_buffer</code>.</div></center>
+<p>
+
+
+So far, no changes to the code. We compile and run normally. What we'll try now is to <code>VirtualAlloc</code> a block of memory corresponding to our game memory size. 
+
+</p><pre class="listing tilde"><code><span class="line">Win32State.TotalSize = (GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize);</span>
+<span class="line">Win32State.GameMemoryBlock = VirtualAlloc(BaseAddress, (<span class="hljs-keyword">size_t</span>)Win32State.TotalSize,</span>
+<span class="line">                                            MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);</span>
+<span class="line"></span>
+<span class="line">GameMemory.PermanentStorage = Win32State.GameMemoryBlock;</span>
+<span class="line">GameMemory.TransientStorage = ((u8 *)GameMemory.PermanentStorage +</span>
+<span class="line">                                GameMemory.PermanentStorageSize);</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> ReplayIndex = <span class="hljs-number">0</span>;</span>
+<span class="line">    ReplayIndex &lt; ArrayCount(Win32State.ReplayBuffers);</span>
+<span class="line">    ++ReplayIndex)</span>
+<span class="line">{</span>
+<span class="line">    win32_replay_buffer *ReplayBuffer = &amp;Win32State.ReplayBuffers[ReplayIndex];</span>
+<span class="line">    ReplayBuffer-&gt;MemoryBlock = VirtualAlloc(<span class="hljs-number">0</span>, (<span class="hljs-keyword">size_t</span>)Win32State.TotalSize,</span>
+<span class="line">                                                    MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);</span>
+<span class="line">    <span class="hljs-keyword">if</span> (ReplayBuffer-&gt;MemoryBlock)</span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-comment">// All good</span></span>
+<span class="line">    }</span>
+<span class="line">    <span class="hljs-keyword">else</span></span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-comment">// TODO(casey): Diagnostic</span></span>
+<span class="line">    }</span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;19:</b> <file>[win32_handmade.cpp > WinMain]</file> Allocating memory for the replay buffers.</div></center>
+<p>
+
+
+Then, instead of writing (and subsequently reading) our game state to a file, we'll copy it to this memory block instead. We'll then write our input as before, after offsetting the file pointer as if we've written the memory to disk.
+
+</p><p>
+
+We didn't really go into the specifics of how file operations in Windows work. 
+
+</p><p>
+
+Windows uses a &ldquo;File Pointer&rdquo; concept, which is similar to how you'd have a cursor in a notepad. When you open a file handle for, let's say, writing, this pointer is automatically positioned at the beginning of the file. Each time you call <code>WriteFile</code>, the data is written at its position. Internally, the pointer then advances. The next time you call <code>WriteFile</code>, the data will be added immediately after (and not overwrite what you wrote last time). Of course, you can manipulate the pointer's position (using the <a href="https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfilepointerex">SetFilePointerEx</a> function), and that's what we're going to do.
+
+</p><p>
+
+Thus, we will then rewrite <code>Win32BeginRecordingInput</code> in the following way: 
+
+</p><pre class="listing tilde"><code><div class=" delete"><span class="line">DWORD BytesToWrite = (DWORD)State-&gt;TotalSize;</span>
+<span class="line">Assert(State-&gt;TotalSize == BytesToWrite);</span>
+<span class="line">DWORD BytesWritten;</span>
+<span class="line">WriteFile(State-&gt;RecordingHandle, State-&gt;GameMemoryBlock, BytesToWrite,</span>
+<span class="line">            &amp;BytesWritten, <span class="hljs-number">0</span>);    </span></div><div class=" add"><span class="line">LARGE_INTEGER FilePosition;</span>
+<span class="line">FilePosition.QuadPart = State-&gt;TotalSize;</span>
+<span class="line">SetFilePointerEx(State-&gt;RecordingHandle, FilePosition, <span class="hljs-number">0</span>, FILE_BEGIN);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;20:</b> <file>[win32_handmade.cpp > Win32BeginRecordingInput]</file> Manually offsetting game state.</div></center>
+<p>
+
+
+Instead of writing the game state to the file, we'll <a href="https://docs.microsoft.com/en-us/previous-versions/windows/desktop/legacy/aa366535(v=vs.85)">CopyMemory</a> it to our ReplayBuffer:
+
+</p><pre class="listing tilde"><code><span class="line">LARGE_INTEGER FilePosition;</span>
+<span class="line">FilePosition.QuadPart = State-&gt;TotalSize;</span>
+<span class="line">SetFilePointerEx(State-&gt;RecordingHandle, FilePosition, <span class="hljs-number">0</span>, FILE_BEGIN);</span>
+<span class="line"></span><div class=" add"><span class="line">CopyMemory(RecordBlock, State-&gt;GameMemoryBlock, State-&gt;TotalSize);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;21:</b> <file>[win32_handmade.cpp > Win32BeginRecordingInput]</file> Copying the game state to the dedicated buffer.</div></center>
+<p>
+
+
+This, of course, won't compile since we don't have a <code>RecordBlock</code>. We'll fetch it based on the index we get. Since we'll be repeating this operation in <code>Win32BeginInputPlayback</code>, let's add a utility function to do so.
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-function">internal win32_replay_buffer *</span>
+<span class="line"><span class="hljs-title">Win32GetReplayBuffer</span><span class="hljs-params">(win32_state *State, <span class="hljs-keyword">int</span> <span class="hljs-keyword">unsigned</span> Index)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    Assert (Index &lt; ArrayCount(State-&gt;ReplayBuffers));</span>
+<span class="line">    win32_replay_buffer *Result = &amp;State-&gt;ReplayBuffers[Index];</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">return</span> (Result);</span>
+<span class="line">}</span>
+<span class="line"></span></div><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32BeginRecordingInput</span><span class="hljs-params">(win32_state *State, <span class="hljs-keyword">int</span> InputRecordingIndex)</span></span>
+<span class="line"></span>{</span><div class=" add"><span class="line">    win32_replay_buffer *ReplayBuffer = Win32GetReplayBuffer(State, InputRecordingIndex);</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">if</span> (ReplayBuffer-&gt;MemoryBlock)</span>
+<span class="line">    {</span></div><span class="line">        State-&gt;InputRecordingIndex = InputRecordingIndex;</span>
+<span class="line">        </span>
+<span class="line">        <span class="hljs-keyword">char</span> Filename[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">        Win32GetInputFileLocation(State, InputRecordingIndex, WIN32_STATE_FILENAME_COUNT, Filename);</span>
+<span class="line">        State-&gt;RecordingHandle = CreateFileA(Filename, GENERIC_WRITE, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, CREATE_ALWAYS, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>);</span>
+<span class="line">        </span>
+<span class="line">        LARGE_INTEGER FilePosition;</span>
+<span class="line">        FilePosition.QuadPart = State-&gt;TotalSize;</span>
+<span class="line">        SetFilePointerEx(State-&gt;RecordingHandle, FilePosition, <span class="hljs-number">0</span>, FILE_BEGIN);</span>
+<span class="line">        </span><div class=" edit"><span class="line">        CopyMemory(ReplayBuffer-&gt;MemoryBlock, State-&gt;GameMemoryBlock, State-&gt;TotalSize);</span></div><div class=" add"><span class="line">    }</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;22:</b> <file>[win32_handmade.cpp]</file> Loading the replay buffer based on given index.</div></center>
+<p>
+
+
+Speaking of <code>Win32BeginInputPlayback</code>, let's rewrite it to use the same workflow. We'll load the game state from the replay buffer instead of the file, move the cursor and start reading.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32BeginInputPlayback</span><span class="hljs-params">(win32_state *State, <span class="hljs-keyword">int</span> InputPlayingIndex)</span></span>
+<span class="line"></span>{</span><div class=" add"><span class="line">    win32_replay_buffer *ReplayBuffer = Win32GetReplayBuffer(State, InputPlayingIndex);</span>
+<span class="line">    <span class="hljs-keyword">if</span> (ReplayBuffer-&gt;MemoryBlock)</span>
+<span class="line">    {</span></div><span class="line">        State-&gt;InputPlayingIndex = InputPlayingIndex;</span>
+<span class="line">        </span>
+<span class="line">        <span class="hljs-keyword">char</span> Filename[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">        Win32GetInputFileLocation(State, InputPlayingIndex, WIN32_STATE_FILENAME_COUNT, Filename);</span>
+<span class="line">        State-&gt;PlaybackHandle = CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, <span class="hljs-number">0</span>, OPEN_EXISTING, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>);</span>
+<span class="line"></span><div class=" delete"><span class="line">        DWORD BytesToRead = (DWORD)State-&gt;TotalSize;</span>
+<span class="line">        Assert(State-&gt;TotalSize == BytesToRead);</span>
+<span class="line">        DWORD BytesRead;</span>
+<span class="line">        ReadFile(State-&gt;PlaybackHandle, State-&gt;GameMemoryBlock, BytesToRead, &amp;BytesRead, <span class="hljs-number">0</span>);    </span></div><div class=" add"><span class="line">        LARGE_INTEGER FilePosition;</span>
+<span class="line">        FilePosition.QuadPart = State-&gt;TotalSize;</span>
+<span class="line">        SetFilePointerEx(State-&gt;PlaybackHandle, FilePosition, <span class="hljs-number">0</span>, FILE_BEGIN);</span>
+<span class="line">        </span>
+<span class="line">        CopyMemory(State-&gt;GameMemoryBlock, ReplayBuffer-&gt;MemoryBlock, State-&gt;TotalSize);</span>
+<span class="line">    }</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;23:</b> <file>[win32_handmade.cpp]</file> Mirroring changes for playback.</div></center>
+<p>
+
+
+Ok, let's compile and try it out... It might actually take even longer than before. 
+
+</p>
+<a class="target" name="poorman'sprofiling">&nbsp;</a><a class="target" name="revisitrecordingcode/poorman'sprofiling">&nbsp;</a><a class="target" name="toc4.2">&nbsp;</a><h2>Poor Man's Profiling</h2>
+<p>
+
+
+What's exactly happening? Something is slowing us down, but what? 
+
+</p><p>
+
+To answer this question, we'd need a profiler, a tool allowing us to analyze how much each call's execution takes. We could use the one available inside Visual Studio, but a more straightforward way would be to simply pepper our code with <code>OutputDebugStringA</code> calls. Whichever spot takes the longest to print out in the console, that is the culprit.
+
+</p><p>
+
+The slowdown evidently happens inside <code>Win32BeginRecordingInput</code>, so let's &ldquo;profile&rdquo; it: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">OutputDebugStringA(<span class="hljs-string">&quot;SPAM 0\n&quot;</span>);</span></div><span class="line">State-&gt;InputRecordingIndex = InputRecordingIndex;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">char</span> Filename[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">Win32GetInputFileLocation(State, InputRecordingIndex, WIN32_STATE_FILENAME_COUNT, Filename);</span>
+<span class="line"></span><div class=" add"><span class="line">OutputDebugStringA(<span class="hljs-string">&quot;SPAM 1\n&quot;</span>);</span></div><span class="line">State-&gt;RecordingHandle = CreateFileA(Filename, GENERIC_WRITE, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, CREATE_ALWAYS, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>);</span>
+<span class="line"></span><div class=" add"><span class="line">OutputDebugStringA(<span class="hljs-string">&quot;SPAM 2\n&quot;</span>);</span></div><span class="line">LARGE_INTEGER FilePosition;</span>
+<span class="line">FilePosition.QuadPart = State-&gt;TotalSize;</span>
+<span class="line">SetFilePointerEx(State-&gt;RecordingHandle, FilePosition, <span class="hljs-number">0</span>, FILE_BEGIN);</span>
+<span class="line"></span><div class=" add"><span class="line">OutputDebugStringA(<span class="hljs-string">&quot;SPAM 3\n&quot;</span>);</span></div><span class="line">CopyMemory(ReplayBuffer-&gt;MemoryBlock, State-&gt;GameMemoryBlock, State-&gt;TotalSize);</span>
+<span class="line"></span><div class=" add"><span class="line">OutputDebugStringA(<span class="hljs-string">&quot;SPAM 4\n&quot;</span>);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;24:</b> <file>[win32_handmade.cpp > Win32BeginRecordingInput]</file> Spamming the code.</div></center>
+<p>
+
+
+Let's compile and run this. If you pay close attention to the <code>Output</code> window when you press <code>L</code>, you'll see that <code>SPAM</code> 0-3 will appear almost instantly, while <code>SPAM</code> 4 will take a short while longer but still nowhere near to the overall delay. You will also notice that our debug timing string takes time to appear. This means that the lag spike happens somewhere else but before the end of the frame. Let's step through and maybe find the culprit this way. 
+
+</p><p>
+
+<ol start=1>
+<li class="number">Set the breakpoint at the start of <code>Win32BeginRecordingInput</code> and run the program.
+</li>
+<li class="number">When you hit <code>L</code>, the program will stop at the breakpoint.
+</li>
+<li class="number">Continue going with <code>F10</code>, and you'll see the <code>SPAM</code> strings appear.
+</li>
+<li class="number">Step out of <code>Win32BeginRecordingInput</code> and out of <code>Win32ProcessInput</code>.
+</li>
+<li class="number">Skip all the parts where we read input from the controllers. 
+</li>
+<li class="number">Get until the part where we write our first input snapshot to the file... what? It takes seconds!</li></ol>
+
+</p><p>
+
+What is going on here? 
+
+</p><p>
+
+The reason for such a delay is that, by itself, the pointer offset doesn't really write to file. Windows will only reserve all those skipped bytes only when the first write happens. Therefore, if we skip past many of bytes, we will have to write a lot of zeros on disk.
+
+</p><p>
+
+We can verify this if we simply <code>#if 0</code> the parts where we set pointer position.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32BeginRecordingInput</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    win32_replay_buffer *ReplayBuffer = Win32GetReplayBuffer(State, InputRecordingIndex);</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">if</span> (ReplayBuffer-&gt;MemoryBlock)</span>
+<span class="line">    {</span><div class=" delete"><span class="line">        OutputDebugStringA(<span class="hljs-string">&quot;SPAM 0\n&quot;</span>);</span></div><span class="line">        State-&gt;InputRecordingIndex = InputRecordingIndex;</span>
+<span class="line"></span>
+<span class="line">        <span class="hljs-keyword">char</span> Filename[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">        Win32GetInputFileLocation(State, InputRecordingIndex, WIN32_STATE_FILENAME_COUNT, Filename);</span>
+<span class="line"></span><div class=" delete"><span class="line">        OutputDebugStringA(<span class="hljs-string">&quot;SPAM 1\n&quot;</span>);</span></div><span class="line">        State-&gt;RecordingHandle = CreateFileA(Filename, GENERIC_WRITE, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, CREATE_ALWAYS, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>);</span>
+<span class="line"></span><div class=" delete"><span class="line">        OutputDebugStringA(<span class="hljs-string">&quot;SPAM 2\n&quot;</span>);</span></div><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> 0</span></span></div><span class="line">        LARGE_INTEGER FilePosition;</span>
+<span class="line">        FilePosition.QuadPart = State-&gt;TotalSize;</span>
+<span class="line">        SetFilePointerEx(State-&gt;RecordingHandle, FilePosition, <span class="hljs-number">0</span>, FILE_BEGIN);</span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div><span class="line"></span><div class=" delete"><span class="line">        OutputDebugStringA(<span class="hljs-string">&quot;SPAM 3\n&quot;</span>);</span></div><span class="line">        CopyMemory(ReplayBuffer-&gt;MemoryBlock, State-&gt;GameMemoryBlock, State-&gt;TotalSize);</span>
+<span class="line"></span><div class=" delete"><span class="line">        OutputDebugStringA(<span class="hljs-string">&quot;SPAM 4\n&quot;</span>);</span></div><span class="line">    }</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// ... </span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32BeginInputPlayback</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// ... </span></span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> 0</span></span></div><span class="line">    LARGE_INTEGER FilePosition;</span>
+<span class="line">    FilePosition.QuadPart = State-&gt;TotalSize;</span>
+<span class="line">    SetFilePointerEx(State-&gt;PlaybackHandle, FilePosition, <span class="hljs-number">0</span>, FILE_BEGIN);</span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div><span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;25:</b> <file>[win32_handmade.cpp]</file> Removing the pointer offset.</div></center>
+<p>
+
+
+Indeed. If we recompile and run, we'll see that the lag is almost gone if it's even noticeable.
+
+</p>
+<a class="target" name="mapthereplayfiletomemory">&nbsp;</a><a class="target" name="revisitrecordingcode/mapthereplayfiletomemory">&nbsp;</a><a class="target" name="toc4.3">&nbsp;</a><h2>Map the Replay File to Memory</h2>
+<p>
+
+
+Let's try a different thing and see what happens. Instead of opening the file and eventually closing it, we'll simply <em class="underscore">map</em> it into memory. The function <a href="https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-mapviewoffile">MapViewOfFile</a> tells Windows to correspond a piece of memory with the file. Every time you touch (update) the memory, the file will be updated accordingly. A mapping between the two, if you may.
+
+</p><p>
+
+We can call the <code>MapViewOfFile</code> function when we allocate the memory for our replay buffers. In fact, we will do it <em class="underscore">instead</em> of <code>VirtualAlloc</code>-ing this, and <code>MemoryBlock</code> will become the map view of file. Sort of, let's see how it works.
+
+</p><p>
+
+<code>MapViewOfFile</code> takes the following arguments:
+
+</p><p>
+
+<ul>
+<li class="asterisk"><code>hFileMappingObject</code>: let's say we have a <code>MemoryMap</code> handle in our <code>win32_replay_buffer</code> structure, and we'll think about actually getting it later.
+</li>
+<li class="asterisk"><code>dwDesiredAccess</code>: the access to the file mapping object. We want to read and write to it, so it's <code>FILE_MAP_ALL_ACCESS</code>.
+</li>
+<li class="asterisk"><code>dwFileOffsetHigh</code>: the high DWORD of the file offset. We don't need this, so we'll just pass <code>0</code>.
+</li>
+<li class="asterisk"><code>dwFileOffsetLow</code>: the low DWORD of the file offset. Again, <code>0</code> here.
+</li>
+<li class="asterisk"><code>dwNumberOfBytesToMap</code>: the number of bytes to map.</li></ul>
+
+</p><pre class="listing tilde"><code><span class="line">win32_replay_buffer *ReplayBuffer = &amp;Win32State.ReplayBuffers[ReplayIndex];</span><div class=" delete"><span class="line">ReplayBuffer-&gt;MemoryBlock = VirtualAlloc(<span class="hljs-number">0</span>, (<span class="hljs-keyword">size_t</span>)Win32State.TotalSize,</span>
+<span class="line">                                         MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);</span></div><div class=" add"><span class="line">ReplayBuffer-&gt;MemoryMap = ;</span>
+<span class="line">ReplayBuffer-&gt;MemoryBlock = MapViewOfFile(ReplayBuffer-&gt;MemoryMap, FILE_MAP_ALL_ACCESS, </span>
+<span class="line">                                          <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, Win32State.TotalSize);</span></div><span class="line"><span class="hljs-keyword">if</span> (ReplayBuffer-&gt;MemoryBlock)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// All good</span></span>
+<span class="line">}</span>
+<span class="line"><span class="hljs-keyword">else</span></span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// TODO(casey): Diagnostic</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;26:</b> <file>[win32_handmade.cpp > WinMain]</file> Mapping the input files to memory.</div></center>
+<p>
+
+
+To get the <code>MemoryMap</code> handle, we can call the <a href="https://docs.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-createfilemappinga">CreateFileMapping</a> function. This function requires the following: 
+
+</p><p>
+
+<ul>
+<li class="asterisk"><code>hFile</code>: the file handle. Again, something to add to <code>win32_replay_buffer</code>.
+</li>
+<li class="asterisk"><code>lpFileMappingAttributes</code>: the attributes of the file mapping object. We don't need this, so we'll just pass <code>0</code>.
+</li>
+<li class="asterisk"><code>flProtect</code>: the protection flags. We want to read and write to the file, so it's <code>PAGE_READWRITE</code>.
+</li>
+<li class="asterisk"><code>dwMaximumSizeHigh</code>: the high DWORD of the maximum size. We need to calculate it from our <code>TotalSize</code>.
+</li>
+<li class="asterisk"><code>dwMaximumSizeLow</code>: the low DWORD of the maximum size. Same as above.
+</li>
+<li class="asterisk"><code>lpName</code>: the name of the file mapping object. We can and will skip this.</li></ul>
+
+</p><p>
+
+Concerning the <code>MaximumSize</code>, Windows wants us to pass the high and low 32-bit parts of the 64-bit value separately. We can do it in two ways: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">We could use masking and shifting. High part will be achieved by shifting down our 64-bit <code>TotalSize</code> by 32 bits (<code>Win32State.TotalSize &gt;&gt; 32</code>), while the low part can be retrieved by masking with 0xFFFFFFFF (<code>Win32State.TotalSize &amp; 0xFFFFFFFF</code>).
+</li>
+<li class="asterisk">We can use a <code>LARGE_INTEGER</code> structure. This structure contains two 32-bit fields, <code>HighPart</code> and <code>LowPart</code>, as well as the corresponding 64-bit field, <code>QuadPart</code>. We can use the <code>QuadPart</code> field to store our 64-bit <code>TotalSize</code>, and then pass <code>HighPart</code> and <code>LowPart</code> to <code>CreateFileMapping</code> function.</li></ul>
+
+</p><p>
+
+You can use whichever option you prefer. Below we will showcase the second way as it's less error-prone.
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">LARGE_INTEGER MaxSize;</span>
+<span class="line">MaxSize.QuadPart = Win32State.TotalSize;</span></div><div class=" edit"><span class="line">ReplayBuffer-&gt;MemoryMap = CreateFileMapping(ReplayBuffer-&gt;FileHandle, <span class="hljs-number">0</span>, PAGE_READWRITE,</span>
+<span class="line">                                            MaxSize.HighPart, MaxSize.LowPart, <span class="hljs-number">0</span>);</span></div><span class="line">ReplayBuffer-&gt;MemoryBlock = MapViewOfFile(ReplayBuffer-&gt;MemoryMap, FILE_MAP_ALL_ACCESS, </span>
+<span class="line">                                          <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, Win32State.TotalSize);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;27:</b> <file>[win32_handmade.cpp > WinMain]</file> Getting map handle.</div></center>
+<p>
+
+
+Of course, we also should expand <code>win32_replay_buffer</code> structure to include the two handles.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">win32_replay_buffer</span></span>
+<span class="line">{</span></span><div class=" add"><span class="line">    HANDLE FileHandle;</span>
+<span class="line">    HANDLE MemoryMap;</span></div><span class="line">    <span class="hljs-keyword">char</span> Filename[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">    <span class="hljs-keyword">void</span> *MemoryBlock;</span>
+<span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;28:</b> <file>[win32_handmade.h]</file> Expanding <code>win32_replay_buffer</code>.</div></center>
+<p>
+
+
+Let's set this aside for a second and think of the names. At this point, we can expand our file names and have them follow the <code>ReplayIndex</code> value, 0 through 3. Luckily for us, we already extracted <code>Win32GetInputFileLocation</code>, and it already receives the <code>SlotIndex</code> so we only need to modify the logic there.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32GetInputFileLocation</span><span class="hljs-params">(win32_state *State, <span class="hljs-keyword">int</span> SlotIndex, <span class="hljs-keyword">int</span> DestCount, <span class="hljs-keyword">char</span> *Dest)</span></span>
+<span class="line"></span>{</span><div class=" delete"><span class="line">    Assert(SlotIndex == <span class="hljs-number">1</span>);</span></div><div class=" add"><span class="line">    <span class="hljs-keyword">char</span> Name[<span class="hljs-number">64</span>];</span>
+<span class="line">    wsprintf(Name, <span class="hljs-string">&quot;loop_edit_%d.hmi&quot;</span>, SlotIndex);</span></div><div class=" edit"><span class="line">    Win32BuildEXEPathFilename(State, Name, DestCount, Dest);</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;29:</b> <file>[win32_handmade.cpp]</file> Building replay file name based on its index.</div></center>
+<p>
+
+
+At this point, we're opening the file handle only when we start recording. But let's say we don't want any of this; we will open all the file handles directly on startup. They will have read/write permissions, and we'll all be happy. We also want to restore <code>SetFilePointerEx</code> even if it slows us down. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32BeginRecordingInput</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    win32_replay_buffer *ReplayBuffer = Win32GetReplayBuffer(State, InputRecordingIndex);</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">if</span> (ReplayBuffer-&gt;MemoryBlock)</span>
+<span class="line">    {</span>
+<span class="line">        State-&gt;InputRecordingIndex = InputRecordingIndex;</span><div class=" delete"><span class="line">        <span class="hljs-keyword">char</span> Filename[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">        Win32GetInputFileLocation(State, InputRecordingIndex, WIN32_STATE_FILENAME_COUNT, Filename);</span>
+<span class="line">        </span></div><div class=" edit"><span class="line">        State-&gt;RecordingHandle = ReplayBuffer-&gt;FileHandle;</span></div><div class=" delete"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> 0</span></span></div><span class="line">        LARGE_INTEGER FilePosition;</span>
+<span class="line">        FilePosition.QuadPart = State-&gt;TotalSize;</span>
+<span class="line">        SetFilePointerEx(State-&gt;RecordingHandle, FilePosition, <span class="hljs-number">0</span>, FILE_BEGIN);</span><div class=" delete"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div><span class="line">        </span>
+<span class="line">        CopyMemory(ReplayBuffer-&gt;MemoryBlock, State-&gt;GameMemoryBlock, State-&gt;TotalSize);</span>
+<span class="line">    }</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32BeginInputPlayback</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    win32_replay_buffer *ReplayBuffer = Win32GetReplayBuffer(State, InputPlayingIndex);</span>
+<span class="line">    <span class="hljs-keyword">if</span> (ReplayBuffer-&gt;MemoryBlock)</span>
+<span class="line">    {</span>
+<span class="line">        State-&gt;InputPlayingIndex = InputPlayingIndex;</span><div class=" delete"><span class="line">        <span class="hljs-keyword">char</span> Filename[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">        Win32GetInputFileLocation(State, InputPlayingIndex, WIN32_STATE_FILENAME_COUNT, Filename);</span></div><div class=" edit"><span class="line">        State-&gt;PlaybackHandle = ReplayBuffer-&gt;FileHandle;</span></div><div class=" delete"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> 0</span></span></div><div class="        "><span class="line">        LARGE_INTEGER FilePosition;</span>
+<span class="line">        FilePosition.QuadPart = State-&gt;TotalSize;</span>
+<span class="line">        SetFilePointerEx(State-&gt;PlaybackHandle, FilePosition, <span class="hljs-number">0</span>, FILE_BEGIN);</span></div><div class=" delete"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div><span class="line">        </span>
+<span class="line">        CopyMemory(State-&gt;GameMemoryBlock, ReplayBuffer-&gt;MemoryBlock, State-&gt;TotalSize);</span>
+<span class="line">    }</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">int</span> CALLBACK</span>
+<span class="line"><span class="hljs-title">WinMain</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span><div class=" add"><span class="line">    Win32GetInputFileLocation(&amp;Win32State, ReplayIndex,</span>
+<span class="line">                              <span class="hljs-keyword">sizeof</span>(ReplayBuffer-&gt;Filename), ReplayBuffer-&gt;Filename);</span>
+<span class="line">                </span>
+<span class="line">    ReplayBuffer-&gt;FileHandle = CreateFileA(ReplayBuffer-&gt;Filename, GENERIC_READ | GENERIC_WRITE, </span>
+<span class="line">                                           <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, CREATE_ALWAYS, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>);</span></div><span class="line">    LARGE_INTEGER MaxSize;</span>
+<span class="line">    MaxSize.QuadPart = Win32State.TotalSize;</span>
+<span class="line">    ReplayBuffer-&gt;MemoryMap = CreateFileMapping(ReplayBuffer-&gt;FileHandle, <span class="hljs-number">0</span>, PAGE_READWRITE,</span>
+<span class="line">                                                MaxSize.HighPart, MaxSize.LowPart, <span class="hljs-number">0</span>);</span>
+<span class="line">    ReplayBuffer-&gt;MemoryBlock = MapViewOfFile(ReplayBuffer-&gt;MemoryMap, FILE_MAP_ALL_ACCESS, </span>
+<span class="line">                                                <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, Win32State.TotalSize);</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;30:</b> <file>[win32_handmade.cpp]</file> Consolidating file handle opening.</div></center>
+<p>
+
+
+At this point, you can compile and make sure that <code>FileHandle</code>, <code>MemoryMap</code> and <code>MemoryBlock</code> are returned correctly (non zero) for each <code>ReplayBuffer</code>. You will also notice that new files <code>loop_edit</code> 0 to 3 <code>.hmi</code> have been created inside the <code>build</code> directory. However, we still face the issue of a big delay when we start recording. Also our playback seems to be broken. Let's fix all of this. 
+
+</p>
+<a class="target" name="splitthefileoutput">&nbsp;</a><a class="target" name="revisitrecordingcode/splitthefileoutput">&nbsp;</a><a class="target" name="toc4.4">&nbsp;</a><h2>Split the File Output</h2>
+<p>
+
+
+The biggest issue we're facing right now is that our we're writing all the memory state to file during the first input recording. Maybe if we split the two outputs, game state and input records, we can improve the lag? Let's try it.
+
+</p><p>
+
+For <code>Win32GetInputFileLocation</code>, we will start requesting another argument. This argument will determine whether the file is the input stream or the game state. <code>ReplayBuffer</code> will store the handle to the state file, while the <code>RecordingHandle</code>/<code>PlaybackHandle</code> will store the handle to the input stream. This means that we need to roll back some changes we just did, namely comment out <code>SetFilePointerEx</code> calls once again.
+
+</p><pre class="listing tilde"><code><span class="line">internal <span class="hljs-keyword">void</span></span><div class=" edit"><span class="line">Win32GetInputFileLocation(win32_state *State, b32 InputStream, </span></div><span class="line">                          <span class="hljs-keyword">int</span> SlotIndex, <span class="hljs-keyword">int</span> DestCount, <span class="hljs-keyword">char</span> *Dest)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">char</span> Name[<span class="hljs-number">64</span>];</span><div class=" edit"><span class="line">    wsprintf(Name, <span class="hljs-string">&quot;loop_edit_%d_%s.hmi&quot;</span>, SlotIndex, </span></div><div class=" add"><span class="line">                 InputStream ? <span class="hljs-string">&quot;input&quot;</span> : <span class="hljs-string">&quot;state&quot;</span>);</span></div><span class="line">    Win32BuildEXEPathFilename(State, Name, DestCount, Dest);</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32BeginRecordingInput</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    win32_replay_buffer *ReplayBuffer = Win32GetReplayBuffer(State, InputRecordingIndex);</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">if</span> (ReplayBuffer-&gt;MemoryBlock)</span>
+<span class="line">    {</span>
+<span class="line">        State-&gt;InputRecordingIndex = InputRecordingIndex;</span>
+<span class="line"></span><div class=" add"><span class="line">        <span class="hljs-keyword">char</span> Filename[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">        Win32GetInputFileLocation(State, <span class="hljs-literal">true</span>, InputRecordingIndex, <span class="hljs-keyword">sizeof</span>(Filename), Filename);</span></div><div class=" edit"><span class="line">        State-&gt;RecordingHandle = CreateFileA(Filename, GENERIC_WRITE, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, CREATE_ALWAYS, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>);</span>
+<span class="line">        </span></div><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> 0</span></span></div><span class="line">        LARGE_INTEGER FilePosition;</span>
+<span class="line">        FilePosition.QuadPart = State-&gt;TotalSize;</span>
+<span class="line">        SetFilePointerEx(State-&gt;RecordingHandle, FilePosition, <span class="hljs-number">0</span>, FILE_BEGIN);</span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span> </span></span></div><span class="line">        CopyMemory(ReplayBuffer-&gt;MemoryBlock, State-&gt;GameMemoryBlock, State-&gt;TotalSize);</span>
+<span class="line">    }</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32BeginInputPlayback</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    win32_replay_buffer *ReplayBuffer = Win32GetReplayBuffer(State, InputPlayingIndex);</span>
+<span class="line">    <span class="hljs-keyword">if</span> (ReplayBuffer-&gt;MemoryBlock)</span>
+<span class="line">    {</span>
+<span class="line">        State-&gt;InputPlayingIndex = InputPlayingIndex;</span>
+<span class="line">        </span><div class=" add"><span class="line">        <span class="hljs-keyword">char</span> Filename[WIN32_STATE_FILENAME_COUNT];</span>
+<span class="line">        Win32GetInputFileLocation(State, <span class="hljs-literal">true</span>, InputPlayingIndex, <span class="hljs-keyword">sizeof</span>(Filename), Filename);</span></div><div class=" edit"><span class="line">        State-&gt;PlaybackHandle = CreateFileA(Filename, GENERIC_READ, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, OPEN_EXISTING, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>);</span>
+<span class="line">        </span></div><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> 0</span></span></div><span class="line">        LARGE_INTEGER FilePosition;</span>
+<span class="line">        FilePosition.QuadPart = State-&gt;TotalSize;</span>
+<span class="line">        SetFilePointerEx(State-&gt;PlaybackHandle, FilePosition, <span class="hljs-number">0</span>, FILE_BEGIN);</span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div><span class="line">        </span>
+<span class="line">        CopyMemory(State-&gt;GameMemoryBlock, ReplayBuffer-&gt;MemoryBlock, State-&gt;TotalSize);</span>
+<span class="line">    }</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// ... </span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">int</span> CALLBACK</span>
+<span class="line"><span class="hljs-title">WinMain</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span><div class=" edit"><span class="line">    Win32GetInputFileLocation(&amp;Win32State, <span class="hljs-literal">false</span>, ReplayIndex,</span></div><div class="    "><span class="line">                              <span class="hljs-keyword">sizeof</span>(ReplayBuffer-&gt;Filename), ReplayBuffer-&gt;Filename);</span>
+<span class="line">    ReplayBuffer-&gt;FileHandle = CreateFileA(ReplayBuffer-&gt;Filename, GENERIC_READ | GENERIC_WRITE, </span>
+<span class="line">                                           <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, CREATE_ALWAYS, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>);</span>
+<span class="line">    <span class="hljs-comment">// ...    </span></span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;31:</b> <file>[win32_handmade.cpp]</file> Separating game state and input streams.</div></center>
+<p>
+
+
+Ok, that was a lot of back and forth (roughly) but if you compile and run, you'll notice that the lag is much, much smaller! It's a bit weird that setting the pointer creates such a lag, so that might be something to investigate. One day. Let's leave a note for posterity:
+
+</p><pre class="listing tilde"><code><span class="line">win32_replay_buffer *ReplayBuffer = &amp;Win32State.ReplayBuffers[ReplayIndex];</span>
+<span class="line">                </span><div class=" add"><span class="line"><span class="hljs-comment">// TODO(casey): Recording system still seems to take too long</span></span>
+<span class="line"><span class="hljs-comment">// on record start - find out what Windows is doing and if</span></span>
+<span class="line"><span class="hljs-comment">// we can speed up / defer some of that processing.</span></span></div><span class="line"></span>
+<span class="line">Win32GetInputFileLocation(&amp;Win32State, <span class="hljs-literal">false</span>, ReplayIndex,</span>
+<span class="line">                            <span class="hljs-keyword">sizeof</span>(ReplayBuffer-&gt;Filename), ReplayBuffer-&gt;Filename);</span>
+<span class="line"></span>
+<span class="line">ReplayBuffer-&gt;FileHandle = CreateFileA(ReplayBuffer-&gt;Filename, GENERIC_READ | GENERIC_WRITE, </span>
+<span class="line">                                        <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, CREATE_ALWAYS, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;32:</b> <file>[win32_handmade.cpp > WinMain]</file> Adding a note for the future.</div></center>
+
+<a class="target" name="interruptplayback">&nbsp;</a><a class="target" name="revisitrecordingcode/interruptplayback">&nbsp;</a><a class="target" name="toc4.5">&nbsp;</a><h2>Interrupt Playback</h2>
+<p>
+
+
+Ok, that's one issue (somewhat) out of the way, let's look at the other: how do we interrupt playback?
+
+</p><p>
+
+Well, this is actually very simple. Whenever the user presses <code>L</code>, we will check if <code>InputPlayingIndex</code> is zero. If it's not, we stop the playback. (if it is, we do the same check for recording). 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (VKCode == <span class="hljs-string">&#x27;L&#x27;</span>)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">if</span> (IsDown)</span>
+<span class="line">    {</span><div class=" add"><span class="line">        <span class="hljs-keyword">if</span> (Start-&gt;InputPlayingIndex == <span class="hljs-number">0</span>)</span>
+<span class="line">        {</span></div><span class="line">            <span class="hljs-keyword">if</span> (State-&gt;InputRecordingIndex == <span class="hljs-number">0</span>)</span>
+<span class="line">            {</span>
+<span class="line">                Win32BeginRecordingInput(State, <span class="hljs-number">1</span>);</span>
+<span class="line">            }</span>
+<span class="line">            <span class="hljs-keyword">else</span></span>
+<span class="line">            {</span>
+<span class="line">                Win32EndRecordingInput(State);</span>
+<span class="line">                Win32BeginInputPlayback(State, <span class="hljs-number">1</span>);</span>
+<span class="line">                }</span>
+<span class="line">            }</span><div class=" add"><span class="line">        <span class="hljs-keyword">else</span></span>
+<span class="line">        {</span>
+<span class="line">            Win32EndInputPlayback(State);</span>
+<span class="line">        }</span></div><span class="line">    }</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;33:</b> <file>[win32_handmade.cpp > Win32ProcessPendingMessages]</file> Terminating playback.</div></center>
+<p>
+
+
+This should do the trick. Certainly not shippable quality, but for our debug purposes will suffice.
+
+</p>
+<a class="target" name="cleanupdebugcode">&nbsp;</a><a class="target" name="cleanupdebugcode">&nbsp;</a><a class="target" name="toc5">&nbsp;</a><h1>Clean Up Debug Code</h1>
+<p>
+
+
+We're at the end of the last day of the initial platform prototype layer. Next time, we will start diving into the architecture of the game proper, so we won't be spending so much time in Windows. Let's quickly make a few changes to make sure the platform layer doesn't get in our way. 
+
+</p>
+<a class="target" name="commentoutdebugsyncdisplay">&nbsp;</a><a class="target" name="cleanupdebugcode/commentoutdebugsyncdisplay">&nbsp;</a><a class="target" name="toc5.1">&nbsp;</a><h2>Comment Out DebugSyncDisplay</h2>
+<p>
+
+
+<code>Win32DebugSyncDisplay</code> served us well when we were debugging audio. For now audio seems to be in a good place, so let's comment the function out, and delete the call.
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> 0</span></span></div><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32DebugSyncDisplay</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div><span class="line"></span>
+<span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">int</span> CALLBACK</span>
+<span class="line"><span class="hljs-title">WinMain</span><span class="hljs-params">(...)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span><div class=" delete"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> HANDMADE_INTERNAL</span></span>
+<span class="line">    <span class="hljs-comment">// TODO(casey): Note, current is wrong on the zero&#x27;th index</span></span>
+<span class="line">    Win32DebugSyncDisplay(&amp;GlobalBackbuffer, ArrayCount(DebugTimeMarkers), DebugTimeMarkers,</span>
+<span class="line">                        DebugTimeMarkerIndex - <span class="hljs-number">1</span>, &amp;SoundOutput, TargetSecondsPerFrame);</span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div><span class="line">    HDC DeviceContext = GetDC(Window);</span>
+<span class="line">    Win32DisplayBufferInWindow(&amp;GlobalBackbuffer, DeviceContext, Dimension.Width, Dimension.Height);</span>
+<span class="line">    ReleaseDC(Window, DeviceContext);</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;34:</b> <file>[win32_handmade.cpp]</file> Removing audio debug lines.</div></center>
+
+<a class="target" name="removeframerateprintout">&nbsp;</a><a class="target" name="cleanupdebugcode/removeframerateprintout">&nbsp;</a><a class="target" name="toc5.2">&nbsp;</a><h2>Remove Framerate Printout</h2>
+<p>
+
+
+Another thing that we can get rid of is the spam of the <code>Output</code> window. We had two printouts: audio data, and the framerate. 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> HANDMADE_INTERNAL</span></span>
+<span class="line">win32_debug_time_marker *Marker = &amp;DebugTimeMarkers[DebugTimeMarkerIndex];</span>
+<span class="line">Marker-&gt;OutputPlayCursor = PlayCursor;</span>
+<span class="line">Marker-&gt;OutputWriteCursor = WriteCursor;</span>
+<span class="line">Marker-&gt;OutputLocation = ByteToLock;</span>
+<span class="line">Marker-&gt;OutputByteCount = BytesToWrite;</span>
+<span class="line">Marker-&gt;ExpectedFlipPlayCursor = ExpectedFrameBoundaryByte;</span>
+<span class="line"></span></div><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> 0</span></span></div><span class="line">DWORD UnwrappedWriteCursor = WriteCursor;</span>
+<span class="line"><span class="hljs-keyword">if</span> (UnwrappedWriteCursor &lt; PlayCursor)</span>
+<span class="line">{</span>
+<span class="line">    UnwrappedWriteCursor += SoundOutput.SecondaryBufferSize;</span>
+<span class="line">}</span>
+<span class="line">DWORD AudioLatencyBytes = UnwrappedWriteCursor - PlayCursor;</span>
+<span class="line">f32 AudioLatencySeconds = ((f32)AudioLatencyBytes / (f32)SoundOutput.BytesPerSample) /</span>
+<span class="line">    (f32)SoundOutput.SamplesPerSecond;</span>
+<span class="line"><span class="hljs-keyword">char</span> TextBuffer[<span class="hljs-number">256</span>];</span>
+<span class="line">sprintf_s(TextBuffer, <span class="hljs-keyword">sizeof</span>(TextBuffer), <span class="hljs-string">&quot;BTL:%u TC:%u BTW:%u - PC:%u WC:%u DELTA:%u (%.3fs)\n&quot;</span>,</span>
+<span class="line">            ByteToLock, TargetCursor, BytesToWrite,</span>
+<span class="line">            PlayCursor, WriteCursor, AudioLatencyBytes, AudioLatencySeconds);</span>
+<span class="line">OutputDebugStringA(TextBuffer);</span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> 0</span></span><span class="line"><span class="hljs-comment">// debug timing output</span></span>
+<span class="line"></span>
+<span class="line">f32 FPS = <span class="hljs-number">0.0f</span>;</span>
+<span class="line">f32 MegaCyclesPerFrame = (f32)CyclesElapsed / (<span class="hljs-number">1000.0f</span> * <span class="hljs-number">1000.0f</span>);</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">char</span> FPSBuffer[<span class="hljs-number">256</span>];</span>
+<span class="line">sprintf_s(FPSBuffer, <span class="hljs-keyword">sizeof</span>(FPSBuffer), <span class="hljs-string">&quot;%.02fms/f, %.02ff/s, %.02fMc/f\n&quot;</span>, MSPerFrame, FPS, MegaCyclesPerFrame);</span>
+<span class="line">OutputDebugStringA(FPSBuffer);</span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;35:</b> <file>[win32_handmade.cpp]</file> Removing console output logs.</div></center>
+<p>
+
+
+Now we don't print out something each frame, so that's good. In the future, we'll have our debug logging system that we can use for debugging the data.
+
+</p><p>
+
+Everything else seems relatively good. 
+
+</p>
+<a class="target" name="recap">&nbsp;</a><a class="target" name="recap">&nbsp;</a><a class="target" name="toc6">&nbsp;</a><h1>Recap</h1>
+<p>
+
+
+This marks the end of day 25 and with it, the initial work on the Win32 platform layer. There's still more that we need to learn; so we might revisit our existing systems in the future. 
+
+</p><p>
+
+But for now, this is all behind us. Next time, we'll start playing around with the game's architecture.
+
+</p>
+<a class="target" name="navigation">&nbsp;</a><a class="target" name="navigation">&nbsp;</a><a class="target" name="toc7">&nbsp;</a><h1>Navigation</h1>
+<p>
+
+
+Previous: <a href="../html/day24.html">Day 24. Win32 Platform Layer Cleanup</a>
+
+</p><p>
+
+Up Next: <a href="../html/day26.html">Day 26. Introduction to Game Architecture</a>
+
+</p><p>
+
+<a href="../index.md.html">Back to Index</a>
+
+</p>
+<div class="nonumberh1">Glossary </div>
+<p>
+
+* 
+
+</p>
+<div class="nonumberh1">MSDN</div>
+<p>
+
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes">Virtual-Key Codes</a>
+
+</p>
+<div class="nonumberh1">Win32 API </div>
+<p>
+
+
+<a href="https://docs.microsoft.com/en-us/previous-versions/windows/desktop/legacy/aa366535(v=vs.85)">CopyMemory</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-createfilemappinga">CreateFileMapping</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getcursorpos">GetCursorPos</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-getdevicecaps">GetDeviceCaps</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getkeystate">GetKeyState</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-mapviewoffile">MapViewOfFile</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-screentoclient">ScreenToClient</a>
+
+</p><p>
+
+<a href="https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfilepointerex">SetFilePointerEx</a>
+
+</p><p>
+
+<style class="fallback">
+  body {
+    visibility: hidden;
+    font-family: sans-serif;
+  }
+</style>
+
+</p><p>
+
+<script>
+  markdeepOptions = { tocStyle: 'long' };
+  window.alreadyProcessedMarkdeep ||
+    (document.body.style.visibility = 'visible');
+</script>
+
+</p><p>
+
+</p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.13&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div>
