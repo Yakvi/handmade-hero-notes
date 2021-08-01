@@ -254,7 +254,7 @@ RenderPlayer(Buffer, GameState->PlayerX, GameState->PlayerY);
 ~~~~~~~ C++ add
 RenderPlayer(Buffer, Input->MouseX, Input->MouseY);
 ~~~~~~~
-[Listing [x]: <file>[handmade.cpp]</file> .]
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> .]
 
 Inside `win32_handmade.cpp`, we'll need to add a few more things to pass the mouse position to the game. It will look something like this: 
 
@@ -264,7 +264,7 @@ if (!GlobalPause)
 ~~~~~~~ C++ add
     NewInput->MouseX = ;
     NewInput->MouseY = ;
-    NewInput->MouseZ = 0; // Not supporting wheel for now
+    NewInput->MouseZ = 0; // TODO(casey): Support mousewheel? 
     NewInput->MouseButtons[0] = ;
     NewInput->MouseButtons[1] = ;
     NewInput->MouseButtons[2] = ;
@@ -282,7 +282,7 @@ GetCursorPos(&MouseP);
 NewInput->MouseX = MouseP.x;
 NewInput->MouseY = MouseP.y;
 ~~~~~~~ C++
-NewInput->MouseZ = 0; // Not supporting wheel for now
+NewInput->MouseZ = 0; // TODO(casey): Support mousewheel? 
 ~~~~~~~ C++ add
 /* 
 ~~~~~~~ C++
@@ -335,7 +335,7 @@ ScreenToClient(Window, &MouseP);
 ~~~~~~~ C++
 NewInput->MouseX = MouseP.x;
 NewInput->MouseY = MouseP.y;
-NewInput->MouseZ = 0; // Not supporting wheel for now
+NewInput->MouseZ = 0; // TODO(casey): Support mousewheel? 
 /* 
 NewInput->MouseButtons[0] = ;
 NewInput->MouseButtons[1] = ;
@@ -349,50 +349,890 @@ NewInput->MouseButtons[2] = ;
 
 This system is not something you want to use in a shipped game; for instance, if you move the mouse to another monitor in a multi-monitor setup, the mouse coordinates will be wrong. But since we don't plan to use this code in the actual game, we can just ignore it.
 
-// FIXME: 25:29
+To see the state of the mouse keys, we _could_ track the mouse-related Windows events. But we won't do that. Instead, we'll use the [GetKeyState][] function. This function returns the state of the key, which can be `0` or `1`. If the key is down, it will return `1`. If it's up, it will return `0`.
 
-------------------------
-<!-- 
-[Listing [x]: <file>[]</file> .]
-![Figure [x]: .](../media/day16/.jpg) 
-[Figure [x]: .]
--->
-------------------------
+`GetKeyState` processes both keyboard and mouse keys. If you want to see the list of all the supported keys, check out [Virtual-Key Codes][] article. The state of the Left, Middle and Right buttons is available on the very top of the page (`VK_LBUTTON`, `VK_MBUTTON` and `VK_RBUTTON`, respectively). You can even see the so-called "XButtons" right away, so let's code them in as well:
+
+There's one important note to this. If you check the documentation of [GetKeyState][], you'll notice that the value returned is stored in the _high bit_ of a short (16-bit integer). This means that, if we want to see if the value is true (1) or false (0), we need to apply the bit mask of the 16'th bit. We don't care about the low bit, it only refers to things like CAPS LOCK (whereby it can "on" or "off"). 
+
+~~~~~~~ C++
+POINT MouseP;
+GetCursorPos(&MouseP);
+ScreenToClient(Window, &MouseP);
+NewInput->MouseX = MouseP.x;
+NewInput->MouseY = MouseP.y;
+NewInput->MouseZ = 0; // TODO(casey): Support mousewheel? 
+~~~~~~~ C++ delete
+/* 
+NewInput->MouseButtons[0] = ;
+NewInput->MouseButtons[1] = ;
+NewInput->MouseButtons[2] = ;
+*/
+~~~~~~~ C++ add
+Win32ProcessKeyboardMessage(&NewInput->MouseButtons[0], GetKeyState(VK_LBUTTON) & 1 << 15);
+Win32ProcessKeyboardMessage(&NewInput->MouseButtons[1], GetKeyState(VK_MBUTTON) & 1 << 15);
+Win32ProcessKeyboardMessage(&NewInput->MouseButtons[2], GetKeyState(VK_RBUTTON) & 1 << 15);
+Win32ProcessKeyboardMessage(&NewInput->MouseButtons[3], GetKeyState(VK_XBUTTON1) & 1 << 15);
+Win32ProcessKeyboardMessage(&NewInput->MouseButtons[4], GetKeyState(VK_XBUTTON2) & 1 << 15);
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+Let's see whether we are capturing our buttons! To do that... we'll use our `RenderPlayer` function again. This is how programming works: once you have functions that you can reuse, once you have something working, it builds on itself so quickly. 
+
+So our mouse testing code will look something like this:
+
+~~~~~~~ C++
+RenderPlayer(Buffer, GameState->PlayerX, GameState->PlayerY);
+    
+~~~~~~~ C++ add
+if (Input->MouseButtons[0].EndedDown)
+{
+    RenderPlayer(Buffer, 10, 10);
+}
+~~~~~~~ C++
+
+RenderPlayer(Buffer, Input->MouseX, Input->MouseY);
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> .]
+
+This means that a white rectangle will be visible at (10, 10) if the left mouse button is pressed. Nice and easy. 
+
+Let's compile and test it... Unfortunately, we crash immediately. The assertion we put in place some time ago fired, saying that the new mouse state is the same as the previous one. This is correct; we're simply reading the mouse input, instead of being notified of change via a system message. That's actually fine. Let's make this system more robust and change `Assert` to an `if` statement. If the requested key state has changed, record the new state. 
+
+~~~~~~~ C++ edit
+if(NewState->EndedDown != IsDown)
+~~~~~~~ C++ add
+{
+~~~~~~~ C++
+    NewState->EndedDown = IsDown;
+    ++NewState->HalfTransitionCount;
+~~~~~~~ C++ add
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32ProcessKeyboardMessage]</file> .]
+
+This will fix the error, and now we're running correctly. 
+
+![Figure [x]: While you're holding the left mouse button, you'll see a new rectangle in the top-right corner.](../media/day25/left_click.jpg) 
+
+Now, if we want to test all buttons, we _could_ write more `RenderPlayer` calls. But we've wrote it once, no need to write it again. Let's use a `for` loop. We'll offset the horizontal position for each mouse button, so that we can test multiple buttons at once. 
+
+~~~~~~~ C++
+RenderPlayer(Buffer, GameState->PlayerX, GameState->PlayerY);
+
+~~~~~~~ C++ add
+for(int ButtonIndex = 0; 
+    ButtonIndex < ArrayCount(Input->MouseButtons);
+    ++ButtonIndex)
+{
+~~~~~~~ C++ edit
+    if(Input->MouseButtons[ButtonIndex].EndedDown)
+~~~~~~~ C++
+    {
+~~~~~~~ C++ edit
+        RenderPlayer(Buffer, 10 + 20 * ButtonIndex, 10);
+~~~~~~~ C++
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> .]
+
+Looks good! That's it for mouse code. 
+
+# Revisit Recording Code
+
+Last time, we have done some additional work to our "live replay" code. However, we're still far from ideal here. Let's quickly review our recording code API: 
+
+~~~~~~~ C++
+internal void
+Win32BeginRecordingInput(...)
+{
+    // Open the file to write to.
+    // As the first thing, dump the whole memory block we're currently using (as a starting snapshot).
+}
+
+internal void
+Win32EndRecordingInput(...)
+{
+    // Close whatever file we were writing to.
+}
+
+internal void 
+Win32RecordInput(...)
+{
+    // Write the user's input for this frame to the recording file.
+    // This should happen while the file is open.
+}
+
+internal void
+Win32BeginInputPlayback(...)
+{
+    // Open the file to read from.
+    // As the first thing, load the memory snapshot as our current state.
+}
+
+internal void
+Win32EndInputPlayback(...)
+{
+    // Close the file we were reading from.
+}
+
+internal void 
+Win32PlaybackInput(...)
+{
+    // As long as there is content inside the file, interpret it as subsequent frames of user input.
+    // Read one at a time, restart from the beginning once we've reached the end.
+}
+~~~~~~~
+
+* We start recording when we get user's input of a specific kind (namely, if they hit `L`). 
+* We end recording when they hit `L` again, and immediately start playback. 
+* Currently we don't really end playback on user's request so this is also something we'd need to do. 
+* Last, if we're recording or playing back, we write/read user's input at each frame (inside our main loop).
 
 
+Today, we'll try to achieve two goals:
+
+* Reduce (or completely remove) the amount of lag when starting recording.
+* Be able to stop playback. 
+
+## Keep Game Memory in Memory
+
+In terms of supporting structures... we don't have any. We simply store the Recording/playback handles, as well as recording/playback indices (1) inside `win32_state`. Let's introduce the concept of `win32_replay_buffer`. This will store a pointer to the memory block that will contain data for our file, as well as the name of the file. Let's say we'll have four of these:
+
+~~~~~~~ C++
+#define WIN32_STATE_FILENAME_COUNT MAX_PATH
+~~~~~~~ C++ add
+struct win32_replay_buffer
+{
+    char ReplayFilename[WIN32_STATE_FILENAME_COUNT];
+    void *MemoryBlock;
+};
+~~~~~~~ C++
+
+struct win32_state
+{
+    u64 TotalSize;
+    void *GameMemoryBlock;
+~~~~~~~ C++ add
+    win32_replay_buffer ReplayBuffers[4];
+~~~~~~~ C++
+    
+    HANDLE RecordingHandle;
+    int InputRecordingIndex;
+    
+    HANDLE PlaybackHandle;
+    int InputPlayingIndex;
+    
+    char EXEFilename[WIN32_STATE_FILENAME_COUNT];
+    char *OnePastLastEXEFilenameSlash;
+};
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.h]</file> .]
+
+So far, no changes to the code. We compile and run normally. What we'll try now is to `VirtualAlloc` a block of memory corresponding to our game memory size. 
+
+~~~~~~~ C++
+Win32State.TotalSize = (GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize);
+Win32State.GameMemoryBlock = VirtualAlloc(BaseAddress, (size_t)Win32State.TotalSize,
+                                            MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+
+GameMemory.PermanentStorage = Win32State.GameMemoryBlock;
+GameMemory.TransientStorage = ((u8 *)GameMemory.PermanentStorage +
+                                GameMemory.PermanentStorageSize);
+
+~~~~~~~ C++ add
+for(int ReplayIndex = 0;
+    ReplayIndex < ArrayCount(Win32State.ReplayBuffers);
+    ++ReplayIndex)
+{
+    win32_replay_buffer *ReplayBuffer = &Win32State.ReplayBuffers[ReplayIndex];
+    ReplayBuffer->MemoryBlock = VirtualAlloc(0, (size_t)Win32State.TotalSize,
+                                                    MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    if (ReplayBuffer->MemoryBlock)
+    {
+        // All good
+    }
+    else
+    {
+        // TODO(casey): Diagnostic
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+Then, instead of writing (and subsequently reading) our game state to a file, we'll copy it to this memory block instead. We'll then write our input normally after offsetting the file pointer as if we've written the memory to disk. 
+
+We didn't really go into the specifics of how file operations in Windows work previously. 
+
+Windows uses a concept of "File Pointer", which is similar to how you'd have a cursor in a notepad. When you open a file handle for, let's say, writing, this pointer is automatically positioned at the beginning of the file. Each time you call `WriteFile`, the data is written at its position. Internally, the pointer then advances. The next time you call `WriteFile`, the data will be written at the next position (and not overwrite what you wrote last time). Of course, you can manipulate the pointer's position (using the [SetFilePointerEx][] function), and that's what we're going to do.
+
+Thus, we will then rewrite `Win32BeginRecordingInput` in the following way: 
+
+~~~~~~~ C++ delete
+DWORD BytesToWrite = (DWORD)State->TotalSize;
+Assert(State->TotalSize == BytesToWrite);
+DWORD BytesWritten;
+WriteFile(State->RecordingHandle, State->GameMemoryBlock, BytesToWrite,
+            &BytesWritten, 0);    
+~~~~~~~ C++ add
+LARGE_INTEGER FilePosition;
+FilePosition.QuadPart = State->TotalSize;
+SetFilePointerEx(State->RecordingHandle, FilePosition, 0, FILE_BEGIN);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32BeginRecordingInput]</file> .]
+
+Instead of writing the game state to the file, we'll [CopyMemory][] it to our ReplayBuffer:
+
+~~~~~~~ C++
+LARGE_INTEGER FilePosition;
+FilePosition.QuadPart = State->TotalSize;
+SetFilePointerEx(State->RecordingHandle, FilePosition, 0, FILE_BEGIN);
+
+~~~~~~~ C++ add
+CopyMemory(RecordBlock, State->GameMemoryBlock, State->TotalSize);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32BeginRecordingInput]</file> .]
+
+This, of course, won't compile since we don't have a `RecordBlock`. We'll fetch it based on the index we get. Since we'll be repeating this operation in `Win32BeginInputPlayback`, let's add a utility function to do so.
+
+~~~~~~~ C++ add
+internal win32_replay_buffer *
+Win32GetReplayBuffer(win32_state *State, int unsigned Index)
+{
+    Assert (Index < ArrayCount(State->ReplayBuffers));
+    win32_replay_buffer *Result = &State->ReplayBuffers[Index];
+    
+    return (Result);
+}
+
+~~~~~~~ C++
+internal void
+Win32BeginRecordingInput(win32_state *State, int InputRecordingIndex)
+{
+~~~~~~~ C++ add
+    win32_replay_buffer *ReplayBuffer = Win32GetReplayBuffer(State, InputRecordingIndex);
+    
+    if (ReplayBuffer->MemoryBlock)
+    {
+~~~~~~~ C++
+        State->InputRecordingIndex = InputRecordingIndex;
+        
+        char Filename[WIN32_STATE_FILENAME_COUNT];
+        Win32GetInputFileLocation(State, InputRecordingIndex, WIN32_STATE_FILENAME_COUNT, Filename);
+        State->RecordingHandle = CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+        
+        LARGE_INTEGER FilePosition;
+        FilePosition.QuadPart = State->TotalSize;
+        SetFilePointerEx(State->RecordingHandle, FilePosition, 0, FILE_BEGIN);
+        
+~~~~~~~ C++ edit
+        CopyMemory(ReplayBuffer->MemoryBlock, State->GameMemoryBlock, State->TotalSize);
+~~~~~~~ C++ add
+    }
+~~~~~~~ C++
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+
+Speaking of `Win32BeginInputPlayback`, let's rewrite it to use the same workflow. We'll load the game state from the replay buffer instead of the file, move the cursor and start reading.
+
+~~~~~~~ C++
+internal void
+Win32BeginInputPlayback(win32_state *State, int InputPlayingIndex)
+{
+~~~~~~~ C++ add
+    win32_replay_buffer *ReplayBuffer = Win32GetReplayBuffer(State, InputPlayingIndex);
+    if (ReplayBuffer->MemoryBlock)
+    {
+~~~~~~~ C++
+        State->InputPlayingIndex = InputPlayingIndex;
+        
+        char Filename[WIN32_STATE_FILENAME_COUNT];
+        Win32GetInputFileLocation(State, InputPlayingIndex, WIN32_STATE_FILENAME_COUNT, Filename);
+        State->PlaybackHandle = CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+
+~~~~~~~ C++ delete
+        DWORD BytesToRead = (DWORD)State->TotalSize;
+        Assert(State->TotalSize == BytesToRead);
+        DWORD BytesRead;
+        ReadFile(State->PlaybackHandle, State->GameMemoryBlock, BytesToRead, &BytesRead, 0);    
+~~~~~~~ C++ add
+        LARGE_INTEGER FilePosition;
+        FilePosition.QuadPart = State->TotalSize;
+        SetFilePointerEx(State->PlaybackHandle, FilePosition, 0, FILE_BEGIN);
+        
+        CopyMemory(State->GameMemoryBlock, ReplayBuffer->MemoryBlock, State->TotalSize);
+    }
+~~~~~~~ C++
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+
+Ok, let's compile and try it out... It might actually take even longer than before. 
+
+## Poor Man's Profiling
+
+What's exactly happening? Something is slowing us down, but what? 
+
+To answer this question, we'd need a profiler, a tool allowing to analyze how much each call's execution takes. We could use the one available inside Visual Studio, but a simpler way would be to simply pepper our code with `OutputDebugStringA` calls. Whichever spot takes the longest to print out in the console, that is the culprit.
+
+The slowdown evidently happens inside `Win32BeginRecordingInput`, so let's "profile" it: 
+
+~~~~~~~ C++ add
+OutputDebugStringA("SPAM 0\n");
+~~~~~~~ C++
+State->InputRecordingIndex = InputRecordingIndex;
+
+char Filename[WIN32_STATE_FILENAME_COUNT];
+Win32GetInputFileLocation(State, InputRecordingIndex, WIN32_STATE_FILENAME_COUNT, Filename);
+
+~~~~~~~ C++ add
+OutputDebugStringA("SPAM 1\n");
+~~~~~~~ C++
+State->RecordingHandle = CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+
+~~~~~~~ C++ add
+OutputDebugStringA("SPAM 2\n");
+~~~~~~~ C++
+LARGE_INTEGER FilePosition;
+FilePosition.QuadPart = State->TotalSize;
+SetFilePointerEx(State->RecordingHandle, FilePosition, 0, FILE_BEGIN);
+
+~~~~~~~ C++ add
+OutputDebugStringA("SPAM 3\n");
+~~~~~~~ C++
+CopyMemory(ReplayBuffer->MemoryBlock, State->GameMemoryBlock, State->TotalSize);
+
+~~~~~~~ C++ add
+OutputDebugStringA("SPAM 4\n");
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32BeginRecordingInput]</file> .]
+
+Let's compile and run this. If you pay close attention to the `Output` window when you press `L`, you'll see that `SPAM` 0-3 will appear almost instantly, while `SPAM` 4 will take a short while longer but still, nowhere near to the overall delay. You will also notice that our debug timing string takes a while to appear. This means that the big lag happens somewhere else but before the end of the frame. Let's step through and maybe find the culprit this way. 
+
+1. Set the breakpoint at the start of `Win32BeginRecordingInput` and run the program.
+2. When you hit `L`, the program will stop at the breakpoint.
+3. Continue going with `F10` and you'll see the `SPAM` strings appear.
+4. Step out of `Win32BeginRecordingInput` and out of `Win32ProcessInput`.
+5. Skip all the parts where we read input from the controllers. 
+6. Get until the part where we write our first input snapshot to the file... what? It take seconds!
+
+What is going on here? 
+
+The reason for such a delay is that, by itself, the pointer offset doesn't really write to file. Windows will only reserve all those skipped bytes only when the first write happens. This means that, if we skip a lot of bytes, we will have to write a lot of zeros on disk.
+
+We can verify this if we simply `#if 0` the parts where we set pointer position.
+
+~~~~~~~ C++
+internal void
+Win32BeginRecordingInput(...)
+{
+    win32_replay_buffer *ReplayBuffer = Win32GetReplayBuffer(State, InputRecordingIndex);
+    
+    if (ReplayBuffer->MemoryBlock)
+    {
+~~~~~~~ C++ delete
+        OutputDebugStringA("SPAM 0\n");
+~~~~~~~ C++
+        State->InputRecordingIndex = InputRecordingIndex;
+
+        char Filename[WIN32_STATE_FILENAME_COUNT];
+        Win32GetInputFileLocation(State, InputRecordingIndex, WIN32_STATE_FILENAME_COUNT, Filename);
+
+~~~~~~~ C++ delete
+        OutputDebugStringA("SPAM 1\n");
+~~~~~~~ C++
+        State->RecordingHandle = CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+
+~~~~~~~ C++ delete
+        OutputDebugStringA("SPAM 2\n");
+~~~~~~~ C++ add
+#if 0
+~~~~~~~ C++
+        LARGE_INTEGER FilePosition;
+        FilePosition.QuadPart = State->TotalSize;
+        SetFilePointerEx(State->RecordingHandle, FilePosition, 0, FILE_BEGIN);
+~~~~~~~ C++ add
+#endif
+~~~~~~~ C++
+
+~~~~~~~ C++ delete
+        OutputDebugStringA("SPAM 3\n");
+~~~~~~~ C++
+        CopyMemory(ReplayBuffer->MemoryBlock, State->GameMemoryBlock, State->TotalSize);
+
+~~~~~~~ C++ delete
+        OutputDebugStringA("SPAM 4\n");
+~~~~~~~ C++
+    }
+}
+
+// ... 
 
 
+internal void
+Win32BeginInputPlayback(...)
+{
+    // ... 
+~~~~~~~ C++ add
+#if 0
+~~~~~~~ C++
+    LARGE_INTEGER FilePosition;
+    FilePosition.QuadPart = State->TotalSize;
+    SetFilePointerEx(State->PlaybackHandle, FilePosition, 0, FILE_BEGIN);
+~~~~~~~ C++ add
+#endif
+~~~~~~~ C++
+    // ...
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> .]
 
+Indeed. If we recompile and run, we'll see that the lag is almost gone if it's even noticeable.
 
+## Map the Replay File to Memory
 
+Let's try a different thing and see what happens. Instead of opening the file and taking care of eventually closing it, we'll simply _map_ it into memory. The function [MapViewOfFile][] tells Windows to correspond a piece of memory with the file. Every time you touch (update) the memory, the file will be updated accordingly. A mapping between the two, if you may.
 
+We can call the `MapViewOfFile` function when we allocate the memory for our replay buffers. In fact, we will do it _instead_ of `VirtualAlloc`-ing this, and `MemoryBlock` will become the map view of file. Sort of, let's see how it works.
 
+`MapViewOfFile` takes the following arguments:
 
+* `hFileMappingObject`: let's say we have a `MemoryMap` handle in our `win32_replay_buffer` structure, and we'll think about actually getting it later.
+* `dwDesiredAccess`: the access to the file mapping object. We want to read and write to it, so it's `FILE_MAP_ALL_ACCESS`.
+* `dwFileOffsetHigh`: the high DWORD of the file offset. We don't need this, so we'll just pass `0`.
+* `dwFileOffsetLow`: the low DWORD of the file offset. Again, `0` here.
+* `dwNumberOfBytesToMap`: the number of bytes to map. 
 
+~~~~~~~ C++
+win32_replay_buffer *ReplayBuffer = &Win32State.ReplayBuffers[ReplayIndex];
+~~~~~~~ C++ delete
+ReplayBuffer->MemoryBlock = VirtualAlloc(0, (size_t)Win32State.TotalSize,
+                                         MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+~~~~~~~ C++ add
+ReplayBuffer->MemoryMap = ;
+ReplayBuffer->MemoryBlock = MapViewOfFile(ReplayBuffer->MemoryMap, FILE_MAP_ALL_ACCESS, 
+                                          0, 0, Win32State.TotalSize);
+~~~~~~~ C++
+if (ReplayBuffer->MemoryBlock)
+{
+    // All good
+}
+else
+{
+    // TODO(casey): Diagnostic
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
 
+In order to get the `MemoryMap` handle, we can call [CreateFileMapping][] function. This function requires the following: 
 
+* `hFile`: the file handle. Again, something to add to `win32_replay_buffer`.
+* `lpFileMappingAttributes`: the attributes of the file mapping object. We don't need this, so we'll just pass `0`.
+* `flProtect`: the protection flags. We want to read and write to the file, so it's `PAGE_READWRITE`.
+* `dwMaximumSizeHigh`: the high DWORD of the maximum size. We need to calculate it from our `TotalSize`.
+* `dwMaximumSizeLow`: the low DWORD of the maximum size. Same as above.
+* `lpName`: the name of the file mapping object. We can and will skip this. 
 
+Concerning the `MaximumSize`, Windows wants us to pass the high and low 32-bit parts of the 64-bit value separately. We can do it in two ways: 
 
+* We could use masking and shifting. High part will be achieved by shifting down our 64-bit `TotalSize` by 32 bits (`Win32State.TotalSize >> 32`), while the low part can be retrieved by masking with 0xFFFFFFFF (`Win32State.TotalSize & 0xFFFFFFFF`).
+* We can use a `LARGE_INTEGER` structure. This structure contains two 32-bit fields, `HighPart` and `LowPart`, as well as the corresponding 64-bit field, `QuadPart`. We can use the `QuadPart` field to store our 64-bit `TotalSize`, and then pass `HighPart` and `LowPart` to `CreateFileMapping` function.
 
+You can use whichever option you prefer. Below we will showcase the second way as it's less error-prone.
 
+~~~~~~~ C++ add
+LARGE_INTEGER MaxSize;
+MaxSize.QuadPart = Win32State.TotalSize;
+~~~~~~~ C++ edit
+ReplayBuffer->MemoryMap = CreateFileMapping(ReplayBuffer->FileHandle, 0, PAGE_READWRITE,
+                                            MaxSize.HighPart, MaxSize.LowPart, 0);
+~~~~~~~ C++
+ReplayBuffer->MemoryBlock = MapViewOfFile(ReplayBuffer->MemoryMap, FILE_MAP_ALL_ACCESS, 
+                                          0, 0, Win32State.TotalSize);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
 
+Of course, we also should expand `win32_replay_buffer` structure to include the two handles.
 
+~~~~~~~ C++
+struct win32_replay_buffer
+{
+~~~~~~~ C++ add
+    HANDLE FileHandle;
+    HANDLE MemoryMap;
+~~~~~~~ C++
+    char Filename[WIN32_STATE_FILENAME_COUNT];
+    void *MemoryBlock;
+};
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.h]</file> .]
 
+Let's set this aside for a second and think of the names. At this point, we can expand our file names and have them follow the `ReplayIndex` value, 0 through 3. Luckily for us, we already extracted `Win32GetInputFileLocation`, and it already receives the `SlotIndex` so we only need to modify the logic there.
 
+~~~~~~~ C++
+internal void
+Win32GetInputFileLocation(win32_state *State, int SlotIndex, int DestCount, char *Dest)
+{
+~~~~~~~ C++ delete
+    Assert(SlotIndex == 1);
+~~~~~~~ C++ add
+    char Name[64];
+    wsprintf(Name, "loop_edit_%d.hmi", SlotIndex);
+~~~~~~~ C++ edit
+    Win32BuildEXEPathFilename(State, Name, DestCount, Dest);
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+
+Now, at this point, we're opening the file handle only when we start recording. But let's say we don't want any of this; we will open all the file handles directly on startup. They will have read/write permissions, and we'll all be happy. We also want to restore `SetFilePointerEx` even if it slows us down. 
+
+~~~~~~~ C++
+internal void
+Win32BeginRecordingInput(...)
+{
+    win32_replay_buffer *ReplayBuffer = Win32GetReplayBuffer(State, InputRecordingIndex);
+    
+    if (ReplayBuffer->MemoryBlock)
+    {
+        State->InputRecordingIndex = InputRecordingIndex;
+~~~~~~~ C++ delete
+        char Filename[WIN32_STATE_FILENAME_COUNT];
+        Win32GetInputFileLocation(State, InputRecordingIndex, WIN32_STATE_FILENAME_COUNT, Filename);
+        
+~~~~~~~ C++ edit
+        State->RecordingHandle = ReplayBuffer->FileHandle;
+~~~~~~~ C++ delete
+#if 0
+~~~~~~~ C++
+        LARGE_INTEGER FilePosition;
+        FilePosition.QuadPart = State->TotalSize;
+        SetFilePointerEx(State->RecordingHandle, FilePosition, 0, FILE_BEGIN);
+~~~~~~~ C++ delete
+#endif
+~~~~~~~ C++
+        
+        CopyMemory(ReplayBuffer->MemoryBlock, State->GameMemoryBlock, State->TotalSize);
+    }
+}
+
+// ...
+
+internal void
+Win32BeginInputPlayback(...)
+{
+    win32_replay_buffer *ReplayBuffer = Win32GetReplayBuffer(State, InputPlayingIndex);
+    if (ReplayBuffer->MemoryBlock)
+    {
+        State->InputPlayingIndex = InputPlayingIndex;
+~~~~~~~ C++ delete
+        char Filename[WIN32_STATE_FILENAME_COUNT];
+        Win32GetInputFileLocation(State, InputPlayingIndex, WIN32_STATE_FILENAME_COUNT, Filename);
+~~~~~~~ C++ edit
+        State->PlaybackHandle = ReplayBuffer->FileHandle;
+~~~~~~~ C++ delete
+#if 0
+~~~~~~~ C++        
+        LARGE_INTEGER FilePosition;
+        FilePosition.QuadPart = State->TotalSize;
+        SetFilePointerEx(State->PlaybackHandle, FilePosition, 0, FILE_BEGIN);
+~~~~~~~ C++ delete
+#endif
+~~~~~~~ C++
+        
+        CopyMemory(State->GameMemoryBlock, ReplayBuffer->MemoryBlock, State->TotalSize);
+    }
+}
+
+int CALLBACK
+WinMain(...)
+{
+    // ...
+~~~~~~~ C++ add
+    Win32GetInputFileLocation(&Win32State, ReplayIndex,
+                              sizeof(ReplayBuffer->Filename), ReplayBuffer->Filename);
+                
+    ReplayBuffer->FileHandle = CreateFileA(ReplayBuffer->Filename, GENERIC_READ | GENERIC_WRITE, 
+                                           0, 0, CREATE_ALWAYS, 0, 0);
+~~~~~~~ C++
+    LARGE_INTEGER MaxSize;
+    MaxSize.QuadPart = Win32State.TotalSize;
+    ReplayBuffer->MemoryMap = CreateFileMapping(ReplayBuffer->FileHandle, 0, PAGE_READWRITE,
+                                                MaxSize.HighPart, MaxSize.LowPart, 0);
+    ReplayBuffer->MemoryBlock = MapViewOfFile(ReplayBuffer->MemoryMap, FILE_MAP_ALL_ACCESS, 
+                                                0, 0, Win32State.TotalSize);
+    // ...
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+
+At this point, you can compile and make sure that `FileHandle`, `MemoryMap` and `MemoryBlock` are returned correctly (non zero) for each `ReplayBuffer`. You will also notice that new files `loop_edit` 0 to 3 `.hmi` have been created inside the `build` directory. However, we still face the issue of a big delay when we start recording. Also our playback seems to be broken. Let's fix all of this. 
+
+## Split the File Output
+
+The biggest issue we're facing right now is that our we're writing all the memory state to file during the first input recording. Maybe if we split the two outputs, game state and input records, we can improve the lag? Let's try it.
+
+For `Win32GetInputFileLocation`, we will start requesting another argument. This argument will determine whether the file is the input stream or the game state. `ReplayBuffer` will store the handle to the state file, while the `RecordingHandle`/`PlaybackHandle` will store the handle to the input stream. This means that we need to roll back some changes we just did, namely comment out `SetFilePointerEx` calls once again.
+
+~~~~~~~ C++
+internal void
+~~~~~~~ C++ edit
+Win32GetInputFileLocation(win32_state *State, b32 InputStream, 
+~~~~~~~ C++
+                          int SlotIndex, int DestCount, char *Dest)
+{
+    char Name[64];
+~~~~~~~ C++ edit
+    wsprintf(Name, "loop_edit_%d_%s.hmi", SlotIndex, 
+~~~~~~~ C++ add
+                 InputStream ? "input" : "state");
+~~~~~~~ C++
+    Win32BuildEXEPathFilename(State, Name, DestCount, Dest);
+}
+
+// ...
+
+internal void
+Win32BeginRecordingInput(...)
+{
+    win32_replay_buffer *ReplayBuffer = Win32GetReplayBuffer(State, InputRecordingIndex);
+    
+    if (ReplayBuffer->MemoryBlock)
+    {
+        State->InputRecordingIndex = InputRecordingIndex;
+
+~~~~~~~ C++ add
+        char Filename[WIN32_STATE_FILENAME_COUNT];
+        Win32GetInputFileLocation(State, true, InputRecordingIndex, sizeof(Filename), Filename);
+~~~~~~~ C++ edit
+        State->RecordingHandle = CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+        
+~~~~~~~ C++ add
+#if 0
+~~~~~~~ C++
+        LARGE_INTEGER FilePosition;
+        FilePosition.QuadPart = State->TotalSize;
+        SetFilePointerEx(State->RecordingHandle, FilePosition, 0, FILE_BEGIN);
+~~~~~~~ C++ add
+#endif 
+~~~~~~~ C++
+        CopyMemory(ReplayBuffer->MemoryBlock, State->GameMemoryBlock, State->TotalSize);
+    }
+}
+
+// ...
+
+internal void
+Win32BeginInputPlayback(...)
+{
+    win32_replay_buffer *ReplayBuffer = Win32GetReplayBuffer(State, InputPlayingIndex);
+    if (ReplayBuffer->MemoryBlock)
+    {
+        State->InputPlayingIndex = InputPlayingIndex;
+        
+~~~~~~~ C++ add
+        char Filename[WIN32_STATE_FILENAME_COUNT];
+        Win32GetInputFileLocation(State, true, InputPlayingIndex, sizeof(Filename), Filename);
+~~~~~~~ C++ edit
+        State->PlaybackHandle = CreateFileA(Filename, GENERIC_READ, 0, 0, OPEN_EXISTING, 0, 0);
+        
+~~~~~~~ C++ add
+#if 0
+~~~~~~~ C++
+        LARGE_INTEGER FilePosition;
+        FilePosition.QuadPart = State->TotalSize;
+        SetFilePointerEx(State->PlaybackHandle, FilePosition, 0, FILE_BEGIN);
+~~~~~~~ C++ add
+#endif
+~~~~~~~ C++
+        
+        CopyMemory(State->GameMemoryBlock, ReplayBuffer->MemoryBlock, State->TotalSize);
+    }
+}
+
+// ... 
+
+int CALLBACK
+WinMain(...)
+{
+    // ...
+~~~~~~~ C++ edit
+    Win32GetInputFileLocation(&Win32State, false, ReplayIndex,
+~~~~~~~ C++    
+                              sizeof(ReplayBuffer->Filename), ReplayBuffer->Filename);
+    ReplayBuffer->FileHandle = CreateFileA(ReplayBuffer->Filename, GENERIC_READ | GENERIC_WRITE, 
+                                           0, 0, CREATE_ALWAYS, 0, 0);
+    // ...    
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+
+Ok, that was a lot of back and forth (roughly) but if you compile and run, you'll notice that the lag is much, much smaller! It's a bit weird that setting the pointer creates such a lag, so that might be something to investigate. One day. Let's leave a note for posterity:
+
+~~~~~~~ C++
+win32_replay_buffer *ReplayBuffer = &Win32State.ReplayBuffers[ReplayIndex];
+                
+~~~~~~~ C++ add
+// TODO(casey): Recording system still seems to take too long
+// on record start - find out what Windows is doing and if
+// we can speed up / defer some of that processing.
+~~~~~~~ C++
+
+Win32GetInputFileLocation(&Win32State, false, ReplayIndex,
+                            sizeof(ReplayBuffer->Filename), ReplayBuffer->Filename);
+
+ReplayBuffer->FileHandle = CreateFileA(ReplayBuffer->Filename, GENERIC_READ | GENERIC_WRITE, 
+                                        0, 0, CREATE_ALWAYS, 0, 0);
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> .]
+
+## Interrupt Playback
+
+Ok, that's one issue (somewhat) out of the way, let's look at the other: how do we interrupt playback?
+
+Well, this is actually very simple. Whenever the user presses `L`, we will check if `InputPlayingIndex` is zero. If it's not, we stop the playback. (if it is, we do the same check for recording). 
+
+~~~~~~~ C++
+else if (VKCode == 'L')
+{
+    if (IsDown)
+    {
+~~~~~~~ C++ add
+        if (Start->InputPlayingIndex == 0)
+        {
+~~~~~~~ C++
+            if (State->InputRecordingIndex == 0)
+            {
+                Win32BeginRecordingInput(State, 1);
+            }
+            else
+            {
+                Win32EndRecordingInput(State);
+                Win32BeginInputPlayback(State, 1);
+                }
+            }
+~~~~~~~ C++ add
+        else
+        {
+            Win32EndInputPlayback(State);
+        }
+~~~~~~~ C++
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > Win32ProcessPendingMessages]</file> .]
+
+This should do the trick. Certainly not shippable quality, but for our debug purposes will suffice.
+
+# Clean Up Debug Code
+
+We're at the end of the last day of the initial platform prototype layer. Next time, we will start diving into the architecture of the game proper, so we won't be spending so much time in Windows. Let's quickly make a few changes to make sure the platform layer doesn't get in our way. 
+
+## Comment Out DebugSyncDisplay
+
+`Win32DebugSyncDisplay` served us well when we were debugging audio. For now audio seems to be in a good place, so let's comment the function out, and delete the call.
+
+~~~~~~~ C++ add
+#if 0
+~~~~~~~ C++
+internal void
+Win32DebugSyncDisplay(...)
+{
+    // ...
+}
+~~~~~~~ C++ add
+#endif
+~~~~~~~ C++
+
+// ...
+
+int CALLBACK
+WinMain(...)
+{
+    // ...
+~~~~~~~ C++ delete
+#if HANDMADE_INTERNAL
+    // TODO(casey): Note, current is wrong on the zero'th index
+    Win32DebugSyncDisplay(&GlobalBackbuffer, ArrayCount(DebugTimeMarkers), DebugTimeMarkers,
+                        DebugTimeMarkerIndex - 1, &SoundOutput, TargetSecondsPerFrame);
+#endif
+~~~~~~~ C++
+    HDC DeviceContext = GetDC(Window);
+    Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext, Dimension.Width, Dimension.Height);
+    ReleaseDC(Window, DeviceContext);
+    // ...
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+
+## Remove Framerate Printout
+
+Another thing that we can get rid of is the spam of the `Output` window. We had two printouts: audio data, and the framerate. 
+
+~~~~~~~ C++ add
+#if HANDMADE_INTERNAL
+win32_debug_time_marker *Marker = &DebugTimeMarkers[DebugTimeMarkerIndex];
+Marker->OutputPlayCursor = PlayCursor;
+Marker->OutputWriteCursor = WriteCursor;
+Marker->OutputLocation = ByteToLock;
+Marker->OutputByteCount = BytesToWrite;
+Marker->ExpectedFlipPlayCursor = ExpectedFrameBoundaryByte;
+
+~~~~~~~ C++ add
+#if 0
+~~~~~~~ C++
+DWORD UnwrappedWriteCursor = WriteCursor;
+if (UnwrappedWriteCursor < PlayCursor)
+{
+    UnwrappedWriteCursor += SoundOutput.SecondaryBufferSize;
+}
+DWORD AudioLatencyBytes = UnwrappedWriteCursor - PlayCursor;
+f32 AudioLatencySeconds = ((f32)AudioLatencyBytes / (f32)SoundOutput.BytesPerSample) /
+    (f32)SoundOutput.SamplesPerSecond;
+char TextBuffer[256];
+sprintf_s(TextBuffer, sizeof(TextBuffer), "BTL:%u TC:%u BTW:%u - PC:%u WC:%u DELTA:%u (%.3fs)\n",
+            ByteToLock, TargetCursor, BytesToWrite,
+            PlayCursor, WriteCursor, AudioLatencyBytes, AudioLatencySeconds);
+OutputDebugStringA(TextBuffer);
+~~~~~~~ C++ add
+#endif
+~~~~~~~ C++
+#endif
+
+// ...
+
+#if 0
+~~~~~~~ C++
+// debug timing output
+
+f32 FPS = 0.0f;
+f32 MegaCyclesPerFrame = (f32)CyclesElapsed / (1000.0f * 1000.0f);
+
+char FPSBuffer[256];
+sprintf_s(FPSBuffer, sizeof(FPSBuffer), "%.02fms/f, %.02ff/s, %.02fMc/f\n", MSPerFrame, FPS, MegaCyclesPerFrame);
+OutputDebugStringA(FPSBuffer);
+~~~~~~~ C++ add
+#endif
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> .]
+
+Now we don't print out something each frame, so that's good. In the future, we'll have our debug logging system that we can use for debugging the data.
+
+Everything else seems relatively good. 
 
 # Recap 
 
-# Exercises 
+This marks the end of day 25 and with it, the initial work on the Win32 platform layer. There's still more that we need to learn; so we might revisit our existing systems in the future. 
 
-# Programming Notions 
-
-# Side Considerations 
+But for now, this is all behind us. Next time, we'll start playing around with the game's architecture.
 
 # Navigation 
 
-Previous: [Day 23. Looped Live Code Editing][day 23]
+Previous: [Day 24. Win32 Platform Layer Cleanup][day 24]
 
-<!-- Up Next: [Day 25. ][day 25] -->
+Up Next: [Day 26. Introduction to Game Architecture][day 26]
 
 [Back to Index](../index.md.html)
 
