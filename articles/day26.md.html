@@ -1,0 +1,117 @@
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../css/style.css" />
+
+**Day 26. Introduction to Game Architecture** 
+_Video Length (including Q&A): [1h30](https://hero.handmade.network/episode/code/day026/)_ 
+
+(insert intro.md.html here) 
+
+## Our Journey So Far
+
+In the past 25 days, we've been working on the platform layer. We tried to get it done first to avoid getting tangled in the platform code moving forward. 
+
+Of course, there would be tons of things to clean up in the prototyping layer we've written so far. But, for the moment, it's plenty good for our purposes. Since we can already say that we'll eventually revisit our platform layer to complete it, we can call it a day there and move on. There will be other moments where we'll need to come back and add a feature here and there, but that'll be dictated by how our game evolves.
+
+While we had some moments of fun, up until now, we were mostly trying to get something out of the system that we knew it could provide. In other words, we were trying to interface with something that some other programmers wrote. It might not be a terrific piece of code, accurately documented, or indeed created with your specific needs in mind. That's a lot less satisfying. Another reason is we might not know what's happening under the hood. It often boiled down to "We call Windows, and it does what it does. Hopefully, it's always consistent in bringing back the results we expect."
+
+Today is the first day when we will be making the _game_ part of Handmade Hero. We'll be programming in quite a different manner than what we've been doing so far. It will be exciting, full of mysteries and puzzles to crack, and we don't have to think about the complexities of the underlying platforms. Even with the rendering system: the first version of the renderer will be written by ourselves, so we won't rely on the graphics card driver doing all the magic. We will know why every last pixel is on the screen, why it got there, why it looks like it does, how it was computed, everything. 
+
+After all, we are building this game from scratch. And we're doing it for several reasons. One, it's actually a lot of fun, and hopefully, now that we're in our own code territory with everything under our control, you'll see that. On the other hand, working on such a project is very educational. One of the big reasons this project was started is precisely to show how every last thing works. It's so interesting, and all of this is often lost when working in a prefabbed game engine. You don't get to see everything that's going on, and it's useful for everyone who works on the game programming to do the whole pipeline at least once.
+
+# About Software Architecture
+
+Today we'll do some theory: let's talk about architecture. 
+
+## Software Architecture vs. Real Architecture
+
+The term is, of course, coming from the building construction. The  architects, the people working on said buildings, make the "blueprints." The latter are the designs printed on rolls of blue paper (hence the name) containing information on the whole building. For complex structures, they might be printed out by the hundreds. Some blueprints might have information on the plumbing, others are about electricity, and so on. 
+
+![Figure [x]: A typical blueprint.](../media/day26/blueprint.jpg) 
+
+So the architects make the blueprints and give them to the contractors: carpenters, electricians, and other people who would take them and actually build the thing. 
+
+Building a building involves a lot of stuff. You nail things together, there's some masonry involved, cranes haul other things around... It's always a complex project. 
+
+A blueprint (or the collection of blueprints) is the document containing the information on the whole building. If I hand two contractors the same blueprints, the quality of their work aside, the end building will be the same. It's not like one would build a long rectangular structure and the other a sphere dome. 
+
+Now here lies a big difference when it comes down to software. Some who talk about software architecture take this metaphor literally: the end result of the software architect's work should be an ever-encompassing document describing every aspect of the program (using, say, a [UML][] diagram).
+
+![Figure [x]: UMA diagrams seek to describe a process from start to finish.](../media/day26/UMADiagram.png) 
+
+These methodologies try to define the program definition or program spec, and whichever programmer comes to work on such a "blueprint" would produce precisely the same program. You might encounter such methodology in a hardcore object-oriented school of thought. There would be a lot of pre-planning, diagram drawing, and so on. 
+
+Such an approach is not only the opposite of exciting. Programs are very complex, with many moving parts involved. If you can actually make a blueprint specifying the program to a significant degree of detail necessary, leaving no room for the variability of what comes out as a result... then you essentially have just written the program, just as a diagram. A sufficiently advanced programming language might as well interpret it and produce sufficient machine code from that process.
+
+A couple decades ago, building the program in this way was the bleeding edge of the industry thought. Luckily, many people nowadays share concerns similar to the ones above. If such a tool is used, it's used sparsely or to provide a higher-level overview.
+
+// Bookmark: 12:21
+
+
+------------------------
+<!-- 
+Useful captions
+Caption under the listing: [Listing [x]: <file>[]</file> .]
+Picture or gif: ![Figure [x]: .](../media/dayXXX/.jpg) 
+Chart: [Figure [x]: .]
+-->
+------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Recap 
+
+# Exercises 
+
+# Programming Notions 
+
+# Side Considerations 
+
+# Navigation 
+
+Up Next: [Day 25. Finishing the Win32 Prototyping Layer][day 25]
+
+Up Next: [Day 27. Exploration-based Architecture][day 27]
+
+[Back to Index](../index.md.html)
+
+(#) Glossary 
+
+(insert glossary/glossary_day26.md.html here)
+
+(insert references/refs_day26.md.html here) 
+
+(insert links.md.html here)
+
+<style class="fallback">
+  body {
+    visibility: hidden;
+    font-family: sans-serif;
+  }
+</style>
+<!-- Markdeep: https://casual-effects.com/markdeep/ -->
+<script>
+  markdeepOptions = { tocStyle: 'long' };
+  window.alreadyProcessedMarkdeep ||
+    (document.body.style.visibility = 'visible');
+</script>
+<script src="../js/markdeep.min.js" charset="utf-8"></script>
