@@ -80,5 +80,25 @@
     ],
     "gitlens.currentLine.enabled": false,
     "gitlens.hovers.currentLine.over": "line",
-    "gitlens.codeLens.enabled": false
+    "gitlens.codeLens.enabled": false,
+    "grammarly.overrides": [
+        {
+            "files": [
+                "**/articles/day26.md.html"
+            ],
+            "config": {
+                "audience": "general",
+                "dialect": "american",
+                "domain": "casual",
+                "emotions": [
+                    "confident",
+                    "friendly"
+                ],
+                "goals": [
+                    "inform",
+                    "describe"
+                ]
+            }
+        }
+    ]
 }
