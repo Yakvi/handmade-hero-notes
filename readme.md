@@ -19,7 +19,8 @@ Do you want to contribute in design, writing, bugfixing? Check out our [Contribu
 
 ### Contributors
 * Ivan "Yakvi" Yakymchak
-* Bumbread
+* [Bumbread](https://github.com/bumbread)
+* [Andrew "azmr" Reece](https://github.com/azmr)
 
 ### Bug Reports
 * Chiara "Cabiria" Favaro
