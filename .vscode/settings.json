@@ -38,6 +38,7 @@
         "READWRITE",
         "Redistributable",
         "SETCURSOR",
+        "SIMD",
         "SYSKEYDOWN",
         "SYSKEYUP",
         "TIMERR",

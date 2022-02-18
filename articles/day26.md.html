@@ -118,13 +118,45 @@ In the case of Handmade Hero, we are all writing the game by ourselves, so it's 
 ### Mental Clarity
 When you tackle large programs, regardless of their size, most programmers will face the challenge of keeping the entire thing in their heads. As your programs grow larger and larger, your architecture becomes about keeping things separate, so you don't have to consider them at once. 
  
-Imagine the other way around: if everything is interconnected, then any change to the program would have consequences for the rest of it. That would be an $\O(n^2)$ problem for your brain. We didn't discuss the [Big O notation][] yet but suffice to say, it's becoming exponentially more difficult. That's a lot of brainpower. It would be much simpler put labels on some pieces of code and worry only about connecting those.
+Imagine the other way around: if everything is interconnected, then any change to the program would have consequences for the rest of it. That would be an $\O(n^2)$ problem for your brain. (We didn't discuss the [Big O notation][] yet but suffice to say, it's becoming exponentially more difficult.) That's a lot of brainpower. It would be much simpler put labels on some pieces of code and worry only about connecting those.
 
 ## Measurements of Success
 
+Now that we defined the objective, the "Why" we adopt this approach, let's briefly talk about how we would measure our goals being met. Programming, in general, is a hard thing to quantify, but we can use specific hints left along the way.
+
+When a game executes, things happen: entities update their position, the sound is written to some buffers, the image is written to others, etc. We can draw boundaries between these various "components" as we defined above. However, the sequence in which the various components are executed is not necessarily arbitrary. 
+
+Let's make a simple example. Say, we have two systems, each with a well defined boundary: a physics system and a renderer. The latter is responsible for drawing the game on the screen, while the former moves the things in the game. If that's the case, we can't just run these two components randomly. We can only Render the image on screen after the Physics system has finished placing the things around the world. 
+
+***************************
+*                         *
+*    .----------.         *
+*    | Physics  |         *
+*    '----------'         *
+*         |               *
+*         |  .----------. *
+*         | | World data |*
+*         |  '----------' *
+*         |               *
+*    .----------.         *
+*    | Renderer |         *
+*    '----------'         *
+*                         *
+***************************
+[Figure [x]: Renderer cannot start until Physics finished its job.]
+
+This is known as temporal [coupling][]: one thing must always be executed before the other, therefore two (or more!) components effectively become one.
+
+If you look at the two systems outlined above, you'll also notice that one system produces useful _data_ for another. The way this data is actually laid out in structs can have various implications. For instance, there might be a performance concern because the systems would prefer to use different parts of the data: the physics system would care about the object's position and, say, velocity, while the renderer would look at the position and size. 
+
+So how do we approach this problem? Do we translate the data? Do we accept that one system is slower? Do we make a compromise layout which is "good enough" for both? This sort of "Layout Coupling" issues are also things we can address.
+
+There're other coupling factors we can consider. For instance, we can build our program differently depending on whether or not it uses a multithreading system of some kind, how the memory is used, if it makes _wide_ calculations on a single core (SIMD etc.), and so on. 
+
+Finally, we can measure a program's _fluidity_. How simple is it to bring big changes to the architecture, without it all coming down? Especially during the first phases of the development, this aspect can be quite important indeed.
 
 
-// BOOKMARK: 26:50
+// BOOKMARK: 33:02
 
 ------------------------
 <!-- 
