@@ -39,7 +39,7 @@ Compiling and linking are two different stages of producing executable file from
 
 This course assumes you follow along on a machine with x86 (preferably one with 64-bit support) processor running Windows 7, 8 or Windows 10.
 
-We will use the <b>M</b>icro<b>s</b>oft <b>V</b>isual <b>C</b>++ compiler, or MSVC. MSVC is part of Visual Studio IDE (Integrated Developmen Environment). You can download the free Community Edition at [visualstudio.microsoft.com][msvc] and follow the installation instructions: 
+We will use the <b>M</b>icro<b>s</b>oft <b>V</b>isual <b>C</b>++ compiler, or MSVC. MSVC is part of Visual Studio IDE (Integrated Development Environment). You can download the free Community Edition at [visualstudio.microsoft.com][msvc] and follow the installation instructions: 
 
 1. Run `vs_community.exe` file that will be downloaded after the prompt.
 2. Accept the terms and conditions.
@@ -146,9 +146,9 @@ One thing to note that, as a rule of the thumb, when selecting your editor you s
 ### 4coder Setup
 
 !!!
-    4coder is a paid editor, but once you purchased it, it's yours to keep. You can also download a free demo to test it out.
+    4coder is a minimalist, cross platform, programmable, code editing environment, catering to the needs of low level programmers. It is available for free on [itch.io][4coder].
 
-After you downloaded 4coder, you will get a zipped folder. Unzip it somewhere, for example to `w:\apps`. Now, you can open it by doubleclicking `4ed.exe`, and it will open with 4coder as its working directory.
+After you downloaded 4coder, you will get a zipped folder. Unzip it somewhere, for example to `w:\apps`. Now, you can open it by double-clicking `4ed.exe`, and it will open with 4coder as its working directory.
 
 ![Figure [X]: Main window of 4coder](../media/day1/1.5-4coder.png)
 
@@ -320,7 +320,7 @@ For Visual Studio 2019 Community edition, this path would therefore be `C:\Progr
 ![Figure [X]: Path to VCVars64.bat](../media/day1/1.8-vcvars.png)
 
 !!! Trivia Trivia: History of "Program Files (x86)"
-    The reason Visual Studio is in `Program Files (x86)` folder (instead of simply `Program Files`) is a historical accident. When Windows was running only in 32-bit on [x86](https://en.wikipedia.org/wiki/X86) processors, there was a push from Intel to go to a new processor line called [Itanium](https://en.wikipedia.org/wiki/Itanium), based on a proprietary 64-bit architecture. Meanwhile, due to the licensing limitation AMD stayed with x86. They started developping their own version of x64 achitecture though, to stay competitive.
+    The reason Visual Studio is in `Program Files (x86)` folder (instead of simply `Program Files`) is a historical accident. When Windows was running only in 32-bit on [x86](https://en.wikipedia.org/wiki/X86) processors, there was a push from Intel to go to a new processor line called [Itanium](https://en.wikipedia.org/wiki/Itanium), based on a proprietary 64-bit architecture. Meanwhile, due to the licensing limitation AMD stayed with x86. They started developing their own version of x64 architecture though, to stay competitive.
 
     At the end, the Itanium project didn't pan out at all, even if it was championed by Intel. Nobody wanted to go to a completely new architecture and switch to this whole new thing so that didn't work out. It was [AMD's architecture](https://en.wikipedia.org/wiki/X86-64), a version of x86 upgraded to handle 64 bit (while being able to run the x86 code just fine) that was endorsed and adopted. 
     
@@ -406,7 +406,7 @@ set path=w:\handmade\misc;%path%
 [Listing [X]: <file>[shell.bat]</file> Expanding your Path.]
 
 !!! Tip Quick 4coder launch
-    If you use 4coder, you can now add a shorcut `4ed.bat` file inside your `misc` folder, containing the path to your editor:
+    If you use 4coder, you can now add a shortcut `4ed.bat` file inside your `misc` folder, containing the path to your editor:
     ~~~~~~~ batch
     @echo off
 
@@ -462,7 +462,7 @@ cl code\win32_handmade.cpp
 
 We would take the source file we created in Subsection [Minimum Code You Will Need] and build it. This would be enough. However, we don't want to build it where it is right now, inside `code` directory. The compilation creates many secondary files which quickly mess up the `code` directory. Instead, we want the build output to go in a separate folder, let's call it `build`, to keep our source directory clean. For this, we will "virtually change" the folder using commands `pushd` and `popd`. Unlike the `cd` command, `pushd` remembers the original directory it switched from, so that `popd` can return to it once we're done.
 
-We will also create a `build` directory if it doesn't exist already (using the command `mkdir`). The `build` directory will be living in `handmade` directory, so one step higher than the folder we're currently in (`code`), so we'll need to navigate "up" using the `..\\` pseudodirectory.
+We will also create a `build` directory if it doesn't exist already (using the command `mkdir`). The `build` directory will be living in `handmade` directory, so one step higher than the folder we're currently in (`code`), so we'll need to navigate "up" using the `..\\` pseudo-directory.
 
 ~~~~~~~ batch
 @echo off
@@ -750,7 +750,7 @@ cl -Zi ..\code\win32_handmade.cpp user32.lib
 
 # Recap
 
-And there you have it! Today, we covered a lot of ground: set up our tools for writing, building and debugging our program, our dev environment, compiled our first program, and even dived a bit into the intricansies of the compiler and linker! Tomorrow, we will start laying down the groundwork to open our window and display something on the screen.
+And there you have it! Today, we covered a lot of ground: set up our tools for writing, building and debugging our program, our dev environment, compiled our first program, and even dived a bit into the intricacies of the compiler and linker! Tomorrow, we will start laying down the groundwork to open our window and display something on the screen.
 
 ![Figure [X]: Our message box](../media/day1/1-messagebox.png)
 

@@ -110,7 +110,7 @@ This course assumes you follow along on a machine with x86 (preferably one with 
 
 </p><p>
 
-We will use the <b>M</b>icro<b>s</b>oft <b>V</b>isual <b>C</b>++ compiler, or MSVC. MSVC is part of Visual Studio IDE (Integrated Developmen Environment). You can download the free Community Edition at <a href="https://visualstudio.microsoft.com/">visualstudio.microsoft.com</a> and follow the installation instructions: 
+We will use the <b>M</b>icro<b>s</b>oft <b>V</b>isual <b>C</b>++ compiler, or MSVC. MSVC is part of Visual Studio IDE (Integrated Development Environment). You can download the free Community Edition at <a href="https://visualstudio.microsoft.com/">visualstudio.microsoft.com</a> and follow the installation instructions: 
 
 </p><p>
 
@@ -313,11 +313,11 @@ One thing to note that, as a rule of the thumb, when selecting your editor you s
 
 
 
-<div class="admonition ">4coder is a paid editor, but once you purchased it, it's yours to keep. You can also download a free demo to test it out.</div>
+<div class="admonition ">4coder is a minimalist, cross platform, programmable, code editing environment, catering to the needs of low level programmers. It is available for free on <a href="https://4coder.itch.io/4coder">itch.io</a>.</div>
 
 </p><p>
 
-After you downloaded 4coder, you will get a zipped folder. Unzip it somewhere, for example to <code>w:\apps</code>. Now, you can open it by doubleclicking <code>4ed.exe</code>, and it will open with 4coder as its working directory.
+After you downloaded 4coder, you will get a zipped folder. Unzip it somewhere, for example to <code>w:\apps</code>. Now, you can open it by double-clicking <code>4ed.exe</code>, and it will open with 4coder as its working directory.
 
 </p><p>
 
@@ -586,7 +586,7 @@ For Visual Studio 2019 Community edition, this path would therefore be <code>C:\
 
 </p><p>
 
-    The reason Visual Studio is in <code>Program Files (x86)</code> folder (instead of simply <code>Program Files</code>) is a historical accident. When Windows was running only in 32-bit on <a href="https://en.wikipedia.org/wiki/X86">x86</a> processors, there was a push from Intel to go to a new processor line called <a href="https://en.wikipedia.org/wiki/Itanium">Itanium</a>, based on a proprietary 64-bit architecture. Meanwhile, due to the licensing limitation AMD stayed with x86. They started developping their own version of x64 achitecture though, to stay competitive.
+    The reason Visual Studio is in <code>Program Files (x86)</code> folder (instead of simply <code>Program Files</code>) is a historical accident. When Windows was running only in 32-bit on <a href="https://en.wikipedia.org/wiki/X86">x86</a> processors, there was a push from Intel to go to a new processor line called <a href="https://en.wikipedia.org/wiki/Itanium">Itanium</a>, based on a proprietary 64-bit architecture. Meanwhile, due to the licensing limitation AMD stayed with x86. They started developing their own version of x64 architecture though, to stay competitive.
 
 </p><p>
 
@@ -694,7 +694,7 @@ You can go even one step further and expand your Path to include the <code>misc<
 
 </p><p>
 
-    If you use 4coder, you can now add a shorcut <code>4ed.bat</code> file inside your <code>misc</code> folder, containing the path to your editor:
+    If you use 4coder, you can now add a shortcut <code>4ed.bat</code> file inside your <code>misc</code> folder, containing the path to your editor:
     </p><pre class="listing tilde"><code><span class="line">@echo off</span>
 <span class="line"></span>
 <span class="line">start [PATH_TO_4CODER]\4ed</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;5:</b> <file>[4ed.bat]</file> Shortcut to your editor.</div></center></div>
@@ -772,7 +772,7 @@ We would take the source file we created in Subsection  <a href="#toc2.1">2.1</a
 
 </p><p>
 
-We will also create a <code>build</code> directory if it doesn't exist already (using the command <code>mkdir</code>). The <code>build</code> directory will be living in <code>handmade</code> directory, so one step higher than the folder we're currently in (<code>code</code>), so we'll need to navigate &ldquo;up&rdquo; using the `..\` pseudodirectory.
+We will also create a <code>build</code> directory if it doesn't exist already (using the command <code>mkdir</code>). The <code>build</code> directory will be living in <code>handmade</code> directory, so one step higher than the folder we're currently in (<code>code</code>), so we'll need to navigate &ldquo;up&rdquo; using the `..\` pseudo-directory.
 
 </p><pre class="listing tilde"><code><span class="line">@echo off</span><div class=" add"><span class="line">mkdir build</span>
 <span class="line">pushd build</span>
@@ -1138,7 +1138,7 @@ To recap, when the linker combines all the <code>.obj</code> files and makes an 
 <p>
 
 
-And there you have it! Today, we covered a lot of ground: set up our tools for writing, building and debugging our program, our dev environment, compiled our first program, and even dived a bit into the intricansies of the compiler and linker! Tomorrow, we will start laying down the groundwork to open our window and display something on the screen.
+And there you have it! Today, we covered a lot of ground: set up our tools for writing, building and debugging our program, our dev environment, compiled our first program, and even dived a bit into the intricacies of the compiler and linker! Tomorrow, we will start laying down the groundwork to open our window and display something on the screen.
 
 </p><p>
 
