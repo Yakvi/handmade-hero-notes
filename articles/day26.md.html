@@ -103,11 +103,11 @@ This is where urban planners and software architecture meets. In urban planning,
 
 In our opinion, doing the above is both a natural and the right thing to do. Therefore, when we talk about software architecture, we don't talk about real-world architecture but urban planning. The high-level zoning and traffic strategy for our program, if you will. Thinking through roughly where each thing has to be, what it should do, how much it will cost us, and how efficient it should be to move items around.
 
-## Our Objective
+## Why Do We Need Architecture
 
-In software architecture, our goal is to develop strategies for essentially the efficient separation of code. Here the urban planning metaphor comes up nicely. We draw the property map by first defining where each thing is going to live. We make sure they don't overlap and define the traffic patterns. Crucially, we explain what each area is trying to achieve. 
+In software architecture, all the strategies that we develop essentially boil down to efficient code separation. Here the urban planning metaphor comes up nicely. We draw the property map by first defining where each thing is going to live. We make sure they don't overlap and define the traffic patterns. Crucially, we explain what each area is trying to achieve. 
 
-Software architecture is about defining boundaries. We need those for the following reasons:
+Software architecture is about defining boundaries. We need those for Reuse, Division of Labor, and Mental Clarity.
 
 ### Reuse
 On Handmade Hero, our platform layer currently doesn't know a whole lot about the game whatsoever. We've done a thorough job _setting boundaries_. Therefore, turning it into a reusable platform layer wouldn't take much work if we wanted to. 
@@ -137,7 +137,7 @@ Let's make a simple example. Say, we have two systems, each with a well-defined 
 *         |  .----------. *
 *         | | World data |*
 *         |  '----------' *
-*         |               *
+*         v               *
 *    .----------.         *
 *    | Renderer |         *
 *    '----------'         *
@@ -145,15 +145,93 @@ Let's make a simple example. Say, we have two systems, each with a well-defined 
 ***************************
 [Figure [x]: Renderer cannot start until Physics finished its job.]
 
-This is known as temporal [coupling][]: one thing must always be executed before the other, therefore two (or more!) components effectively become one.
+This is known as [temporal coupling][coupling]: one thing must always be executed before the other, therefore two (or more!) components effectively become one.
 
-If you look at the two systems outlined above, you'll also notice that one system produces useful _data_ for another. The way this data is actually laid out in structs can have various implications. For instance, there might be a performance concern because the systems would prefer to use different parts of the data: the physics system would care about the object's position and, say, velocity, while the renderer would look at the position and size. 
+If you look at the two systems outlined above, you'll also notice that one system produces useful _data_ for another. The way this data is laid out in structs can have various implications, therefore you can think of it as "layout" coupling. For instance, there might be a performance concern because the systems would prefer to use different parts of the data: the physics system would care about the object's position and, say, velocity, while the renderer would look at the position and size. 
 
-So how do we approach this problem? Do we translate the data? Do we accept that one system is slower? Do we make a compromised layout that is "good enough" for both? These "Layout Coupling" issues are also things we can address.
+So how would we approach this problem? Do we translate the data? Do we accept that one system is slower? Do we make a compromised layout that is "good enough" for both? These "Layout Coupling" issues are also things we can address.
 
-There're other coupling factors we can consider. For instance, we can build our program differently depending on whether or not it uses a multithreading system of some kind, how the memory is used, if it makes _wide_ calculations on a single core (SIMD etc.), and so on. 
+There're other "couplings" we can consider. For instance, we can build our program differently depending on whether or not it uses a multithreading system of some kind, how the memory is used, if it makes _wide_ calculations on a single core (SIMD etc.), and so on. This can be summed up as "ideological" coupling.
 
-Finally, we can measure a program's _fluidity_. How simple is it to bring big changes to the architecture, without it all coming down? Especially during the first phases of development, this aspect can be quite important indeed.
+Finally, we can measure a program's "fluidity". Fluidity falls in the category "you know it when you see it". How simple is it to bring big changes to the architecture, without having to rewrite it all from scratch? Especially during the first phases of development, this aspect can be quite important indeed! A fluid system would allow these changes with relative ease.
+
+## Game Architecture 
+
+Let's talk about game architecture, and more specifically, the game architecture we chose for Handmade Hero. Up until now, we were laying out the foundation, our platform layer, for the rest of the game. But in doing so, we made specific choices that, up until now, weren't explained in depth. You can say that we cheated a bit and skipped ahead, as we have a good idea of how a good prototyping layer and a good platform layer should be. 
+
+At the very bottom of our game, we have our Win32, and we'll have our OpenGL or Direct3D later down the line: things underneath us that we can't do anything about. Above it lies a platform layer that we have a skeleton for. It needs more work before it's production-ready, but we already have a good idea of how it will look. 
+
+We then have Game Update And Render (or GUAR for short) and Game Get Sound Samples (GGSS). These things call into the Game.
+
+Until now, we didn't even pretend that we didn't know what we were doing. It wasn't all that interesting. With the Game, however, we will explore the path as we go, and discuss the different principles as we go.
+
+*************************************
+*    .--------------------------.   *
+*    |          GAME            |   *
+*    '--------------------------'   *
+*         ^           ^             *
+*         |GUAR       | GGSS        *
+*    .--------------------------.   *
+*    |      PLATFORM LAYER      |   *
+*    '--------------------------'   *
+*         |           |             *
+*         v           v             *
+*    .-------. .-----------------.  *
+*    | Win32 | | OpenGL/Direct3D |  *
+*    '-------' '-----------------'  *
+*                                   *
+*************************************
+[Figure [x]: The design of our Handmade Hero world.]
+
+## Logic Flow
+
+Let's try and dive into this "Game". What we will need for it? Well, as the entry points we have the GUAR and GGSS. 
+
+Game Update and Render is our first entry point. 
+
+* We wait for a call from the system containing information about `t`, how much time we need to advance our world by. This means:
+  * Processing user input. We must do it as close to world update as possible, to avoid introducing input lag.
+  * Running a physics simulation of the world.
+* We render the world to bitmap.
+
+The Game Get Sound Samples function doesn't even need to be considered as a separate function call, just as an extension of GUAR. Maybe eventually we'll be able to tie the two in a single call. This stage boils down to:
+
+* Output the sound samples.
+
+Update and Render are often separate functions that many games process at different moments. It's an ideological choice, it makes sense in terms of the desired set of operations. But even if these two functions are processed one after the other, a boundary between the two is established. We won't be doing this. Drawing a boundary at the architectural level between the two precludes the road to some potential optimizations, where it would be more cache-friendly to do the physics update and render call in one fell swoop. Again, consider this "render" step more as a "render prep", since the rendering itself is delegated to the GPU these days. We'll do rendering ourselves, for a short while, but even then we'll use the same methods a GPU would function.
+
+Our boundaries will therefore look like this: 
+
+********************************
+*    Game Update and Render    *
+*    .---.-----------------.   *
+*    | 1 | User Input      |   *
+*    +---+-----------------.   *
+*    | 2 | Update / Render |   *
+*    '---'-----------------'   *
+*    Game Get Sound Samples    *
+*    .---.-----------------.   *
+*    | 1 | Sound Output    |   *
+*    '---'-----------------'   *
+*                              *
+********************************
+[Figure [x]: Drawing first boundaries.]
+
+## Data Flow
+
+That's not all. We need also to think about how the data would flow. Here, there're two popular schools of thought: "Loading screen" and "Streaming".
+
+In the "Loading Screen" architecture, the game waits for a specific event (e.g. change of level) where it loads all the information related to that level. The user in the meantime gets to watch a little spinning thing and maybe an interesting fact about the game world. During that time the resources are being loaded from somewhere: a CD/DVD, Hard disk, or even the network. These are the resources used to prepare video and audio outputs, as well as those strictly gameplay-related: level maps, monster data, etc. The bottom line is that when the loading happens, nothing else is. There's no input processing, sound usually dies down, etc.
+
+When you are "Streaming", 
+
+// BOOKMARK: 54.00
+
+
+
+
+
+
 
 
 
