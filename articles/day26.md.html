@@ -24,31 +24,31 @@ After all, we are writing everything from scratch. And we're doing it for severa
 
 Today we'll mostly do theory. Specifically, we'll start defining our game's architecture. 
 
-The term "Software Architecture" encompasses many practices. Some good that you should adopt into your work, Some quite harmful that you should avoid. So before we go into the actual architecture, we should talk about what we intend by it. It's important to discuss why we call things the way we call them and what stands behind them. 
+The term "Software Architecture" encompasses many practices. Some good that you should adopt into your work, but some quite harmful that you should avoid. So before we go into the actual architecture, we should talk about what we intend for it. It's important to discuss why we call things the way we call them and what stands behind them. 
 
 ## Software Architecture vs. Real Architecture
 
-The term is, of course, coming from the building construction. The architects, the people designing said buildings, would draw detailed charts containing all the information on the building: walls thickness, location, even material, electrics, water loops, and so on. These "blueprints" would be _printed_ on rolls of traditionally _blue_ paper, hence the name. Of course, for large constructions, one single sheet might not contain _all_ the information, but the whole complex of the blueprints would. 
+The term is, of course, coming from the building construction. The architects, the people designing said buildings, would draw detailed charts containing all the information on the building: wall thickness, location, even material, electrics, water loops, and so on. These "blueprints" would be _printed_ on rolls of traditionally _blue_ paper, hence the name. Of course, for large constructions, one single sheet might not contain _all_ the information, but the whole complex of the blueprints would. 
 
 ![Figure [x]: A typical blueprint.](../media/day26/blueprint.jpg) 
 
 So the architects make the blueprints and give them to the contractors: carpenters, electricians, and other people who would take them and do the actual building. After all, the construction process involves a lot of _stuff_: nail things together, there's some masonry involved, and the cranes haul other things around... It's always a complex project. 
 
-A blueprint (or the collection of blueprints) _is_ the document containing the information on the whole building. If I hand two contractors the same blueprints, leaving the quality of their work aside, the end building will be the same. It's not like one would build a long rectangular structure and the other a sphere dome. 
+A blueprint (or the collection of blueprints) _is the_ document containing the information on the whole building. If I hand two contractors the same blueprints, leaving the quality of their work aside, the end building will be the same. It's not like one would build a long rectangular structure and the other a sphere dome. 
 
-Now here lies a big difference when it comes down to software. Some who talk about software architecture take the above metaphor literally. The end result of the software architect's work should be an ever-encompassing document describing every aspect of the program (using, say, a [UML][] diagram).
+Now here lies a big difference when it comes down to software. Some who talk about software architecture take the above metaphor literally. The result of the software architect's work should be an ever-encompassing document describing every aspect of the program (using, say, a [UML][] diagram).
 
 ![Figure [x]: UMA diagrams seek to describe a process from start to finish.](../media/day26/UMADiagram.png) 
 
 These methodologies try to define the _program definition_ or the _program spec_. Whichever programmer comes to work on such a "blueprint" would produce precisely the same program. You might encounter such a methodology in a hardcore object-oriented school of thought. There would be a lot of preplanning, diagram drawing, and so on.
 
-Such an approach is not only the opposite of exciting. Programs are very complex, with many moving parts involved. If you can actually make a blueprint specifying the program to a significant degree of detail, leaving no room for the variability of what comes out as a result... You essentially have just written the program, just as a diagram. A sufficiently advanced programming language might as well interpret it and produce sufficient machine code from that product.
+Such an approach is not only the opposite of exciting. Programs are very complex, with many moving parts involved. If you can make a blueprint specifying the program to a significant degree of detail, leaving no room for the variability of what comes out as a result... You essentially have just written the program, just as a diagram. A sufficiently advanced programming language might as well interpret it and produce sufficient machine code from that product.
 
-A couple decades ago, building the program in this way was the bleeding edge of the industry thought. Luckily, many people nowadays mostly understand the concerns above. Using an approach like this results in a lot of up-front work with not enough payoff. Even further than that, anecdotally, products designed upfront often fail to produce good quality programs in a reasonable amount of time. If such a tool is used, it's used sparsely or to provide a higher-level overview. 
+A couple of decades ago, building the program in this way was the bleeding edge of industry thought. Luckily, many people nowadays mostly understand the concerns above. Using an approach like this results in a lot of up-front work with not enough payoff. Even further than that, anecdotally, products designed upfront often fail to produce good quality programs in a reasonable amount of time. If such a tool is used, it's used sparsely or to provide a higher-level overview. 
 
 ## Pick the Right Term
 
-Having said all this, "Software Architecture" is coming out to be a little of a misnomer. If we really want to go with the construction world metaphors, a more precise term would be "Software Urban Planners," or simply designers.
+Having said all this, "Software Architecture" is coming out to be a little of a misnomer. If we want to go with the construction world metaphors, a more precise term would be "Software Urban Planners," or simply designers.
 
 Let's look at the big picture.
 
@@ -59,7 +59,7 @@ Let's look at the big picture.
 *   Urban Planner --->  Architect --->  Contractor       *
 *                                                        *
 **********************************************************
-[Figure [x]: The two worlds of architecture.]
+[Figure [x]: Two worlds of architecture.]
 
 In this metaphor, what people call "software architecture" would be the role of the designer. The actual "architects" would be the programmers, people making the "blueprints," code for the compilers to execute upon. 
 
@@ -71,7 +71,7 @@ Thus, the act of preplanning the architecture of a building takes place entirely
 
 ## Compression-Oriented Programming and Urban Planning
 
-We already talked a bit about compression-oriented programming (on [Day 8][] and [Day 19][]). We first splat some functionality out the way it comes to us. Then, when we see that some concepts start taking shape, we abstract them out as necessary. It's a very fluid system, and if one could build a building this way, they probably would. 
+We already talked a bit about compression-oriented programming (on [Day 8][] and [Day 19][]). We first splat some functionality out the way it comes to us. Then, when we see that some concepts start taking shape, we abstract them out as necessary. It's a very fluid system, and if one could build a building this way, one probably would. 
 
 Mutating code is not complicated unless you factor it into pieces prematurely. 
 
@@ -99,9 +99,9 @@ If you look at someone talking about software architecture, they don't draw thin
 **********************************************************
 [Figure [x]: A simple architecture sketch.]
 
-This is where the urban planners and software architecture meets. In urban planning, you're not talking about a specific building. An urban planner thinks about how a city works: zoning, height limits, etc. And if you look at the Figure above, what you see is... street maps. They talk about the "traffic flow," their relationship with each other, and their responsibilities. That's it.
+This is where urban planners and software architecture meets. In urban planning, you're not talking about a specific building. An urban planner thinks about how a city works: zoning, height limits, etc. And if you look at the Figure above, what you see are... street maps. They talk about the "traffic flow," their relationship with each other, and their responsibilities. That's it.
 
-In our opinion, doing the above is both a natural and the right thing to do. Therefore, when we talk about software architecture, we don't talk about real-world architecture but urban planning. The high-level zoning and traffic strategy for our program, if you will. Thinking through roughly where each thing has to be, what it should do, how much it will cost us, how efficient it should be to move items around.
+In our opinion, doing the above is both a natural and the right thing to do. Therefore, when we talk about software architecture, we don't talk about real-world architecture but urban planning. The high-level zoning and traffic strategy for our program, if you will. Thinking through roughly where each thing has to be, what it should do, how much it will cost us, and how efficient it should be to move items around.
 
 ## Our Objective
 
@@ -113,7 +113,7 @@ Software architecture is about defining boundaries. We need those for the follow
 On Handmade Hero, our platform layer currently doesn't know a whole lot about the game whatsoever. We've done a thorough job _setting boundaries_. Therefore, turning it into a reusable platform layer wouldn't take much work if we wanted to. 
 
 ### Division of Labor 
-In the case of Handmade Hero, we are all writing the game by ourselves, so it's not really a problem here. But let's say we have a small team of two to four programmers (or, worst-case scenario, an operative system project with 500 people on it). We will need to have different people working on various components so that communication requirements wouldn't overwhelm the entire project. If each of us works on code we want at any time we want, eventually, you'd run into all sorts of problems. 
+In the case of Handmade Hero, we are all writing the game by ourselves, so it's not a problem here. But let's say we have a small team of two to four programmers (or, worst-case scenario, an operative system project with 500 people on it). We will need to have different people working on various components so that communication requirements wouldn't overwhelm the entire project. If each of us works on code we want at any time we want, eventually, you'd run into all sorts of problems. 
 
 ### Mental Clarity
 When you tackle large programs, regardless of their size, most programmers will face the challenge of keeping the entire thing in their heads. As your programs grow larger and larger, your architecture becomes about keeping things separate, so you don't have to consider them at once. 
@@ -122,11 +122,11 @@ Imagine the other way around: if everything is interconnected, then any change t
 
 ## Measurements of Success
 
-Now that we defined the objective, the "Why" we adopt this approach, let's briefly talk about how we would measure our goals being met. Programming, in general, is a hard thing to quantify, but we can use specific hints left along the way.
+Now that we defined the objective, and the "Why" we adopt this approach, let's briefly talk about how we would measure our goals being met. Programming, in general, is a hard thing to quantify, but we can use specific hints left along the way.
 
 When a game executes, things happen: entities update their position, the sound is written to some buffers, the image is written to others, etc. We can draw boundaries between these various "components" as we defined above. However, the sequence in which the various components are executed is not necessarily arbitrary. 
 
-Let's make a simple example. Say, we have two systems, each with a well defined boundary: a physics system and a renderer. The latter is responsible for drawing the game on the screen, while the former moves the things in the game. If that's the case, we can't just run these two components randomly. We can only Render the image on screen after the Physics system has finished placing the things around the world. 
+Let's make a simple example. Say, we have two systems, each with a well-defined boundary: a physics system and a renderer. The latter is responsible for drawing the game on the screen, while the former moves the things in the game. If that's the case, we can't just run these two components randomly. We can only Render the image on screen after the Physics system has finished placing the things around the world. 
 
 ***************************
 *                         *
@@ -149,14 +149,13 @@ This is known as temporal [coupling][]: one thing must always be executed before
 
 If you look at the two systems outlined above, you'll also notice that one system produces useful _data_ for another. The way this data is actually laid out in structs can have various implications. For instance, there might be a performance concern because the systems would prefer to use different parts of the data: the physics system would care about the object's position and, say, velocity, while the renderer would look at the position and size. 
 
-So how do we approach this problem? Do we translate the data? Do we accept that one system is slower? Do we make a compromise layout which is "good enough" for both? This sort of "Layout Coupling" issues are also things we can address.
+So how do we approach this problem? Do we translate the data? Do we accept that one system is slower? Do we make a compromised layout that is "good enough" for both? These "Layout Coupling" issues are also things we can address.
 
 There're other coupling factors we can consider. For instance, we can build our program differently depending on whether or not it uses a multithreading system of some kind, how the memory is used, if it makes _wide_ calculations on a single core (SIMD etc.), and so on. 
 
-Finally, we can measure a program's _fluidity_. How simple is it to bring big changes to the architecture, without it all coming down? Especially during the first phases of the development, this aspect can be quite important indeed.
+Finally, we can measure a program's _fluidity_. How simple is it to bring big changes to the architecture, without it all coming down? Especially during the first phases of development, this aspect can be quite important indeed.
 
 
-// BOOKMARK: 33:02
 
 ------------------------
 <!-- 
