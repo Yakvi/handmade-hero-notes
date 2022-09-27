@@ -215,64 +215,38 @@ Our boundaries will therefore look like this:
 *    '---'-----------------'   *
 *                              *
 ********************************
-[Figure [x]: Drawing first boundaries.]
+[Figure [x]: Drawing our first boundaries.]
 
 ## Data Flow
 
-That's not all. We need also to think about how the data would flow. Here, there're two popular schools of thought: "Loading screen" and "Streaming".
+We need also to think about how the data would flow. Here, there're two popular schools of thought: "Loading screen" and "Streaming".
 
-In the "Loading Screen" architecture, the game waits for a specific event (e.g. change of level) where it loads all the information related to that level. The user in the meantime gets to watch a little spinning thing and maybe an interesting fact about the game world. During that time the resources are being loaded from somewhere: a CD/DVD, Hard disk, or even the network. These are the resources used to prepare video and audio outputs, as well as those strictly gameplay-related: level maps, monster data, etc. The bottom line is that when the loading happens, nothing else is. There's no input processing, sound usually dies down, etc.
+In the "Loading Screen" architecture, the game waits for a specific event (e.g. change of level) where it loads all the information related to that level. The user in the meantime gets to watch a little spinning thing and maybe an interesting fact about the game world. During that time the resources are being loaded from somewhere: a CD/DVD, Hard disk, or even the network. These are the resources used to prepare video and audio outputs, as well as those strictly gameplay-related: level maps, monster data, etc. 
 
-When you are "Streaming", 
+Ultimately, one chooses the Loading Screen architecture because there is not a lot of real architecture going on. While the loading happens, nothing else is. There's no input processing, sound usually dies down, the physics system sleeps, etc.
 
-// BOOKMARK: 54.00
+On the other hand, when you are "Streaming", all the resources are procured by the game while it's running. It's a process that happens in the background, usually on another thread. This results in another architectural boundary. There's a back-and-forth communication going on between the loading system and the rest of the game to ensure that the required assets are ready to be used. 
 
+************************************************************************
+*    Game Update and Render     |                                      *
+*    .---.-----------------.    |      Streaming                       *
+*    | 1 | User Input      |    |    .-----------.                     *
+*    +---+-----------------.    |    |           |                     *
+*    | 2 | Update / Render | ~~~~~~> | A / V / S |      .------------. *
+*    '---'-----------------'    |    | Resources |<-----| Laser Disc | *
+*    Game Get Sound Samples  <~~~~~~ |           |      |   HDD/SSD  | *
+*    .---.-----------------.    |    '-----------'      |   Network  | *
+*    | 1 | Sound Output    |    |                       '------------' *
+*    '---'-----------------'    |                                      *
+*                               |                                      *
+************************************************************************
+[Figure [x]: The communication lines between the loading system and the game are fuzzy due to the nature of this boundary.]
 
-
-
-
-
-
-
-
-------------------------
-<!-- 
-Useful captions
-Caption under the listing: [Listing [x]: <file>[]</file> .]
-Picture or gif: ![Figure [x]: .](../media/dayXXX/.jpg) 
-Chart: [Figure [x]: .]
--->
-------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+It's important to get this boundary right. Many projects do it wrong. There are considerations like "do we want to use immediate mode or retained mode?". But that is something that we can look into when we will get to. We don't want to get bogged down in too much planning. Time to get our hands dirty, but we'll do it next time.
 
 # Recap 
 
-# Exercises 
-
-# Programming Notions 
-
-# Side Considerations 
+Wow, that was a whole lot of theory! And not enough actual code. But it's oh so important to have a good overview of the voyage we are about to embark on before we do so.
 
 # Navigation 
 
