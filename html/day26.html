@@ -4,8 +4,519 @@
 <link rel="stylesheet" href="../css/html-style.css">
 <link rel="stylesheet" href="../css/style.css">
 
+<script type="text/x-mathjax-config">MathJax.Hub.Config({ TeX: { equationNumbers: {autoNumber: "AMS"} } });</script><span style="display:none">$$\newcommand{\n}{\hat{n}}\newcommand{\thetai}{\theta_\mathrm{i}}\newcommand{\thetao}{\theta_\mathrm{o}}\newcommand{\d}[1]{\mathrm{d}#1}\newcommand{\w}{\hat{\omega}}\newcommand{\wi}{\w_\mathrm{i}}\newcommand{\wo}{\w_\mathrm{o}}\newcommand{\wh}{\w_\mathrm{h}}\newcommand{\Li}{L_\mathrm{i}}\newcommand{\Lo}{L_\mathrm{o}}\newcommand{\Le}{L_\mathrm{e}}\newcommand{\Lr}{L_\mathrm{r}}\newcommand{\Lt}{L_\mathrm{t}}\newcommand{\O}{\mathrm{O}}\newcommand{\degrees}{{^{\large\circ}}}\newcommand{\T}{\mathsf{T}}\newcommand{\mathset}[1]{\mathbb{#1}}\newcommand{\Real}{\mathset{R}}\newcommand{\Integer}{\mathset{Z}}\newcommand{\Boolean}{\mathset{B}}\newcommand{\Complex}{\mathset{C}}\newcommand{\un}[1]{\,\mathrm{#1}}$$
+</span>
+<span class="md"><p><title>Day 26. Introduction to Game Architecture</title><div class="title"> Day 26. Introduction to Game Architecture </div>
+
+<div class="afterTitles"></div>
+<em class="underscore">Video Length (including Q&A): <a href="https://hero.handmade.network/episode/code/day026/">1h30</a></em> 
+
+</p><p>
+
+Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with no external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
+
+</p>
 <div class="longTOC"><p align="center">
     <span align="right"><a href="day25.html">Day 25</a></span>
     <a href="../index.html"><img src = "../media/logo.png"></a>
     <span align="left"><a href="day27.html">Day 27</a></span>
 </p><p><a href="#" class="tocTop">(Top)</a><br/>
+&nbsp;&nbsp;<a href="#/ourjourneysofar" class="level2"><span class="tocNumber">0.1&nbsp; </span>Our Journey So Far</a><br/>
+<a href="#aboutsoftwarearchitecture" class="level1"><span class="tocNumber">1&nbsp; </span>About Software Architecture</a><br/>
+&nbsp;&nbsp;<a href="#aboutsoftwarearchitecture/softwarearchitecturevs.realarchitecture" class="level2"><span class="tocNumber">1.1&nbsp; </span>Software Architecture vs. Real Architecture</a><br/>
+&nbsp;&nbsp;<a href="#aboutsoftwarearchitecture/picktherightterm" class="level2"><span class="tocNumber">1.2&nbsp; </span>Pick the Right Term</a><br/>
+&nbsp;&nbsp;<a href="#aboutsoftwarearchitecture/compression-orientedprogrammingandurbanplanning" class="level2"><span class="tocNumber">1.3&nbsp; </span>Compression-Oriented Programming and Urban Planning</a><br/>
+&nbsp;&nbsp;<a href="#aboutsoftwarearchitecture/whydoweneedarchitecture" class="level2"><span class="tocNumber">1.4&nbsp; </span>Why Do We Need Architecture</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#aboutsoftwarearchitecture/whydoweneedarchitecture/reuse" class="level3"><span class="tocNumber">1.4.1&nbsp; </span>Reuse</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#aboutsoftwarearchitecture/whydoweneedarchitecture/divisionoflabor" class="level3"><span class="tocNumber">1.4.2&nbsp; </span>Division of Labor</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#aboutsoftwarearchitecture/whydoweneedarchitecture/mentalclarity" class="level3"><span class="tocNumber">1.4.3&nbsp; </span>Mental Clarity</a><br/>
+&nbsp;&nbsp;<a href="#aboutsoftwarearchitecture/measurementsofsuccess" class="level2"><span class="tocNumber">1.5&nbsp; </span>Measurements of Success</a><br/>
+&nbsp;&nbsp;<a href="#aboutsoftwarearchitecture/gamearchitecture" class="level2"><span class="tocNumber">1.6&nbsp; </span>Game Architecture</a><br/>
+&nbsp;&nbsp;<a href="#aboutsoftwarearchitecture/logicflow" class="level2"><span class="tocNumber">1.7&nbsp; </span>Logic Flow</a><br/>
+&nbsp;&nbsp;<a href="#aboutsoftwarearchitecture/dataflow" class="level2"><span class="tocNumber">1.8&nbsp; </span>Data Flow</a><br/>
+<a href="#recap" class="level1"><span class="tocNumber">2&nbsp; </span>Recap</a><br/>
+<a href="#navigation" class="level1"><span class="tocNumber">3&nbsp; </span>Navigation</a><br/>
+</p></div><a class="target" name="ourjourneysofar">&nbsp;</a><a class="target" name="/ourjourneysofar">&nbsp;</a><a class="target" name="toc0.1">&nbsp;</a><h2>Our Journey So Far</h2>
+<p>
+
+
+In the past 25 days, we've been working on the platform layer. We tried to get it done first to avoid getting tangled in the platform code moving forward. Looking back, we succeeded. 
+
+</p><p>
+
+Of course, there would be tons of things to clean up in the prototyping layer we've written so far. But, for the moment, it's plenty good for our purposes. Since we can already say that we'll eventually revisit our platform layer to complete it, we can call it a day there and move on. Sure, there will be other moments where we'll need to come back and add a feature here and there. Those will be dictated by how our project evolves.
+
+</p><p>
+
+While we had some moments of fun, up until now, we were mostly trying to get something out of the system that we knew it could provide. In other words, we were interfacing with the code that some other programmers wrote. It might not be a terrific piece of code, accurately documented, or indeed created with your specific needs in mind. We also might not know what's happening under the hood. It often boiled down to &ldquo;We call Windows, and it does what it does. Hopefully, it's always consistent in bringing back the results we expect.&rdquo; 
+
+</p><p>
+
+This type of work, while necessary, is a lot less satisfying.
+
+</p><p>
+
+Today is the first day when we will be making the <em class="underscore">game</em> part of Handmade Hero. We'll be programming in quite a different manner than what we've been doing so far. It will be exciting, full of mysteries and puzzles to crack, and we don't have to think about the complexities of the underlying platforms. Even with the rendering system: the first version of the renderer will be written by ourselves, without leaving it to the graphics card driver to do all the magic. We will know every last pixel on the screen, why it got there, why it looks like it does, how we computed it, and so on. 
+
+</p><p>
+
+After all, we are writing everything from scratch. And we're doing it for several reasons. One, it's a lot of fun, and hopefully, now that we're in our code territory with everything under our control, you'll see that. On the other hand, working on such a project is very educational. One of the big reasons why this project exists is precisely to show how every last thing works. It's so interesting, and all of this is often lost when working in a prefabbed game engine. You don't get to see everything that's going on, and it's useful for everyone who works on the game programming to do the whole pipeline at least once.
+
+</p>
+<a class="target" name="aboutsoftwarearchitecture">&nbsp;</a><a class="target" name="aboutsoftwarearchitecture">&nbsp;</a><a class="target" name="toc1">&nbsp;</a><h1>About Software Architecture</h1>
+<p>
+
+
+Today we'll mostly do theory. Specifically, we'll start defining our game's architecture. 
+
+</p><p>
+
+The term &ldquo;Software Architecture&rdquo; encompasses many practices. Some good that you should adopt into your work, but some quite harmful that you should avoid. So before we go into the actual architecture, we should talk about what we intend for it. It's important to discuss why we call things the way we call them and what stands behind them. 
+
+</p>
+<a class="target" name="softwarearchitecturevs.realarchitecture">&nbsp;</a><a class="target" name="aboutsoftwarearchitecture/softwarearchitecturevs.realarchitecture">&nbsp;</a><a class="target" name="toc1.1">&nbsp;</a><h2>Software Architecture vs. Real Architecture</h2>
+<p>
+
+
+The term is, of course, coming from the building construction. The architects, the people designing said buildings, would draw detailed charts containing all the information on the building: wall thickness, location, even material, electrics, water loops, and so on. These &ldquo;blueprints&rdquo; would be <em class="underscore">printed</em> on rolls of traditionally <em class="underscore">blue</em> paper, hence the name. Of course, for large constructions, one single sheet might not contain <em class="underscore">all</em> the information, but the whole complex of the blueprints would. 
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day26/blueprint.jpg" target="_blank"><img class="markdeep" src="../media/day26/blueprint.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;1:</b> A typical blueprint.</span></center></div></center> 
+
+</p><p>
+
+So the architects make the blueprints and give them to the contractors: carpenters, electricians, and other people who would take them and do the actual building. After all, the construction process involves a lot of <em class="underscore">stuff</em>: nail things together, there's some masonry involved, and the cranes haul other things around... It's always a complex project. 
+
+</p><p>
+
+A blueprint (or the collection of blueprints) <em class="underscore">is the</em> document containing the information on the whole building. If I hand two contractors the same blueprints, leaving the quality of their work aside, the end building will be the same. It's not like one would build a long rectangular structure and the other a sphere dome. 
+
+</p><p>
+
+Now here lies a big difference when it comes down to software. Some who talk about software architecture take the above metaphor literally. The result of the software architect's work should be an ever-encompassing document describing every aspect of the program (using, say, a <a href="https://en.wikipedia.org/wiki/Unified_Modeling_Language">UML</a> diagram).
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day26/UMADiagram.png" target="_blank"><img class="markdeep" src="../media/day26/UMADiagram.png" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;2:</b> UMA diagrams seek to describe a process from start to finish.</span></center></div></center> 
+
+</p><p>
+
+These methodologies try to define the <em class="underscore">program definition</em> or the <em class="underscore">program spec</em>. Whichever programmer comes to work on such a &ldquo;blueprint&rdquo; would produce precisely the same program. You might encounter such a methodology in a hardcore object-oriented school of thought. There would be a lot of preplanning, diagram drawing, and so on.
+
+</p><p>
+
+Such an approach is not only the opposite of exciting. Programs are very complex, with many moving parts involved. If you can make a blueprint specifying the program to a significant degree of detail, leaving no room for the variability of what comes out as a result... You essentially have just written the program, just as a diagram. A sufficiently advanced programming language might as well interpret it and produce sufficient machine code from that product.
+
+</p><p>
+
+A couple of decades ago, building the program in this way was the bleeding edge of industry thought. Luckily, many people nowadays mostly understand the concerns above. Using an approach like this results in a lot of up-front work with not enough payoff. Even further than that, anecdotally, products designed upfront often fail to produce good quality programs in a reasonable amount of time. If such a tool is used, it's used sparsely or to provide a higher-level overview. 
+
+</p>
+<a class="target" name="picktherightterm">&nbsp;</a><a class="target" name="aboutsoftwarearchitecture/picktherightterm">&nbsp;</a><a class="target" name="toc1.2">&nbsp;</a><h2>Pick the Right Term</h2>
+<p>
+
+
+Having said all this, &ldquo;Software Architecture&rdquo; is coming out to be a little of a misnomer. If we want to go with the construction world metaphors, a more precise term would be &ldquo;Software Urban Planners,&rdquo; or simply designers.
+
+</p><p>
+
+Let's look at the big picture.
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="96" width="456" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 120,16 L 152,16 " style="fill:none;"/>
+<path d="M 264,16 L 296,16 " style="fill:none;"/>
+<path d="M 136,48 L 160,48 " style="fill:none;"/>
+<path d="M 264,48 L 288,48 " style="fill:none;"/>
+<polygon points="304,16 292,10.4 292,21.6 "  style="stroke:none" transform="rotate(0,296,16 )"/>
+<polygon points="296,48 284,42.4 284,53.6 "  style="stroke:none" transform="rotate(0,288,48 )"/>
+<polygon points="168,48 156,42.4 156,53.6 "  style="stroke:none" transform="rotate(0,160,48 )"/>
+<polygon points="160,16 148,10.4 148,21.6 "  style="stroke:none" transform="rotate(0,152,16 )"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="40" y="20">D</text><text text-anchor="middle" x="48" y="20">e</text><text text-anchor="middle" x="56" y="20">s</text><text text-anchor="middle" x="64" y="20">i</text><text text-anchor="middle" x="72" y="20">g</text><text text-anchor="middle" x="80" y="20">n</text><text text-anchor="middle" x="88" y="20">e</text><text text-anchor="middle" x="96" y="20">r</text><text text-anchor="middle" x="176" y="20">P</text><text text-anchor="middle" x="184" y="20">r</text><text text-anchor="middle" x="192" y="20">o</text><text text-anchor="middle" x="200" y="20">g</text><text text-anchor="middle" x="208" y="20">r</text><text text-anchor="middle" x="216" y="20">a</text><text text-anchor="middle" x="224" y="20">m</text><text text-anchor="middle" x="232" y="20">m</text><text text-anchor="middle" x="240" y="20">e</text><text text-anchor="middle" x="248" y="20">r</text><text text-anchor="middle" x="320" y="20">C</text><text text-anchor="middle" x="328" y="20">o</text><text text-anchor="middle" x="336" y="20">m</text><text text-anchor="middle" x="344" y="20">p</text><text text-anchor="middle" x="352" y="20">i</text><text text-anchor="middle" x="360" y="20">l</text><text text-anchor="middle" x="368" y="20">e</text><text text-anchor="middle" x="376" y="20">r</text><text text-anchor="middle" x="24" y="52">U</text><text text-anchor="middle" x="32" y="52">r</text><text text-anchor="middle" x="40" y="52">b</text><text text-anchor="middle" x="48" y="52">a</text><text text-anchor="middle" x="56" y="52">n</text><text text-anchor="middle" x="72" y="52">P</text><text text-anchor="middle" x="80" y="52">l</text><text text-anchor="middle" x="88" y="52">a</text><text text-anchor="middle" x="96" y="52">n</text><text text-anchor="middle" x="104" y="52">n</text><text text-anchor="middle" x="112" y="52">e</text><text text-anchor="middle" x="120" y="52">r</text><text text-anchor="middle" x="184" y="52">A</text><text text-anchor="middle" x="192" y="52">r</text><text text-anchor="middle" x="200" y="52">c</text><text text-anchor="middle" x="208" y="52">h</text><text text-anchor="middle" x="216" y="52">i</text><text text-anchor="middle" x="224" y="52">t</text><text text-anchor="middle" x="232" y="52">e</text><text text-anchor="middle" x="240" y="52">c</text><text text-anchor="middle" x="248" y="52">t</text><text text-anchor="middle" x="312" y="52">C</text><text text-anchor="middle" x="320" y="52">o</text><text text-anchor="middle" x="328" y="52">n</text><text text-anchor="middle" x="336" y="52">t</text><text text-anchor="middle" x="344" y="52">r</text><text text-anchor="middle" x="352" y="52">a</text><text text-anchor="middle" x="360" y="52">c</text><text text-anchor="middle" x="368" y="52">t</text><text text-anchor="middle" x="376" y="52">o</text><text text-anchor="middle" x="384" y="52">r</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;3:</b> Two worlds of architecture.</div></center>
+
+</p><p>
+
+In this metaphor, what people call &ldquo;software architecture&rdquo; would be the role of the designer. The actual &ldquo;architects&rdquo; would be the programmers, people making the &ldquo;blueprints,&rdquo; code for the compilers to execute upon. 
+
+</p><p>
+
+That sounds good, but why do we even make a distinction between architects and programmers? 
+
+</p><p>
+
+Once defined, real-world architects rarely make significant alterations to their buildings <em class="underscore">during the construction process</em>. It's very costly. It's not because it's better or easier to have a preplanned project before you start building it. It would be very convenient if the architect, say, designed and erected a lobby, and then went about saying: &ldquo;huh, it's not hitting the sun quite right! Let's tear it down and rotate it a bit.&rdquo; They would love to do that, but it takes too much money and time to build things in the real world. 
+
+</p><p>
+
+Thus, the act of preplanning the architecture of a building takes place entirely because of real-world constraints. In the programming world, the structure of things is more <em class="underscore">malleable</em>. As an architect who'd want to constantly mutate their building, programmers can constantly mutate the shape of their programs.
+
+</p>
+<a class="target" name="compression-orientedprogrammingandurbanplanning">&nbsp;</a><a class="target" name="aboutsoftwarearchitecture/compression-orientedprogrammingandurbanplanning">&nbsp;</a><a class="target" name="toc1.3">&nbsp;</a><h2>Compression-Oriented Programming and Urban Planning</h2>
+<p>
+
+
+We already talked a bit about compression-oriented programming (on <a href="../html/day8.html">Day 8</a> and <a href="../html/day19.html">Day 19</a>). We first splat some functionality out the way it comes to us. Then, when we see that some concepts start taking shape, we abstract them out as necessary. It's a very fluid system, and if one could build a building this way, one probably would. 
+
+</p><p>
+
+Mutating code is not complicated unless you factor it into pieces prematurely. 
+
+</p><p>
+
+If you look at someone talking about software architecture, they don't draw things resembling blueprints. They don't sketch out the structure of the program as the CPU would execute it. They would sketch out something like this: 
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="304" width="456" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 96,48 L 96,80 " style="fill:none;"/>
+<path d="M 144,144 L 144,176 " style="fill:none;"/>
+<path d="M 144,224 L 144,256 " style="fill:none;"/>
+<path d="M 160,48 L 160,80 " style="fill:none;"/>
+<path d="M 176,184 L 176,216 " style="fill:none;"/>
+<path d="M 208,144 L 208,176 " style="fill:none;"/>
+<path d="M 208,224 L 208,256 " style="fill:none;"/>
+<path d="M 232,48 L 232,80 " style="fill:none;"/>
+<path d="M 296,48 L 296,80 " style="fill:none;"/>
+<path d="M 96,48 L 160,48 " style="fill:none;"/>
+<path d="M 232,48 L 296,48 " style="fill:none;"/>
+<path d="M 176,64 L 216,64 " style="fill:none;"/>
+<path d="M 96,80 L 160,80 " style="fill:none;"/>
+<path d="M 232,80 L 296,80 " style="fill:none;"/>
+<path d="M 144,144 L 208,144 " style="fill:none;"/>
+<path d="M 144,176 L 208,176 " style="fill:none;"/>
+<path d="M 144,224 L 208,224 " style="fill:none;"/>
+<path d="M 144,256 L 208,256 " style="fill:none;"/>
+<path d="M 132,88 L 156,136 " style="fill:none;"/>
+<path d="M 216,128 L 236,88 " style="fill:none;"/>
+<polygon points="224,128 212,122.4 212,133.6 "  style="stroke:none" transform="rotate(116.56505117707799,216,128 )"/>
+<polygon points="184,216 172,210.4 172,221.6 "  style="stroke:none" transform="rotate(90,176,216 )"/>
+<polygon points="184,64 172,58.4 172,69.6 "  style="stroke:none" transform="rotate(180,176,64 )"/>
+<polygon points="164,136 152,130.4 152,141.6 "  style="stroke:none" transform="rotate(63.43494882292201,156,136 )"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="24" y="4">&quot;</text><text text-anchor="middle" x="32" y="4">H</text><text text-anchor="middle" x="40" y="4">e</text><text text-anchor="middle" x="48" y="4">r</text><text text-anchor="middle" x="56" y="4">e</text><text text-anchor="middle" x="64" y="4">'</text><text text-anchor="middle" x="72" y="4">s</text><text text-anchor="middle" x="88" y="4">a</text><text text-anchor="middle" x="104" y="4">l</text><text text-anchor="middle" x="112" y="4">i</text><text text-anchor="middle" x="120" y="4">b</text><text text-anchor="middle" x="128" y="4">r</text><text text-anchor="middle" x="136" y="4">a</text><text text-anchor="middle" x="144" y="4">r</text><text text-anchor="middle" x="152" y="4">y</text><text text-anchor="middle" x="48" y="20">t</text><text text-anchor="middle" x="56" y="20">h</text><text text-anchor="middle" x="64" y="20">a</text><text text-anchor="middle" x="72" y="20">t</text><text text-anchor="middle" x="88" y="20">w</text><text text-anchor="middle" x="96" y="20">e</text><text text-anchor="middle" x="112" y="20">l</text><text text-anchor="middle" x="120" y="20">i</text><text text-anchor="middle" x="128" y="20">c</text><text text-anchor="middle" x="136" y="20">e</text><text text-anchor="middle" x="144" y="20">n</text><text text-anchor="middle" x="152" y="20">s</text><text text-anchor="middle" x="160" y="20">e</text><text text-anchor="middle" x="168" y="20">d</text><text text-anchor="middle" x="264" y="20">&quot;</text><text text-anchor="middle" x="272" y="20">H</text><text text-anchor="middle" x="280" y="20">e</text><text text-anchor="middle" x="288" y="20">r</text><text text-anchor="middle" x="296" y="20">e</text><text text-anchor="middle" x="304" y="20">'</text><text text-anchor="middle" x="312" y="20">s</text><text text-anchor="middle" x="328" y="20">t</text><text text-anchor="middle" x="336" y="20">h</text><text text-anchor="middle" x="344" y="20">e</text><text text-anchor="middle" x="360" y="20">g</text><text text-anchor="middle" x="368" y="20">a</text><text text-anchor="middle" x="376" y="20">m</text><text text-anchor="middle" x="384" y="20">e</text><text text-anchor="middle" x="392" y="20">&quot;</text><text text-anchor="middle" x="72" y="36">d</text><text text-anchor="middle" x="80" y="36">o</text><text text-anchor="middle" x="88" y="36">i</text><text text-anchor="middle" x="96" y="36">n</text><text text-anchor="middle" x="104" y="36">g</text><text text-anchor="middle" x="120" y="36">b</text><text text-anchor="middle" x="128" y="36">l</text><text text-anchor="middle" x="136" y="36">a</text><text text-anchor="middle" x="144" y="36">h</text><text text-anchor="middle" x="152" y="36">&quot;</text><text text-anchor="middle" x="120" y="68">L</text><text text-anchor="middle" x="128" y="68">I</text><text text-anchor="middle" x="136" y="68">B</text><text text-anchor="middle" x="256" y="68">G</text><text text-anchor="middle" x="264" y="68">a</text><text text-anchor="middle" x="272" y="68">m</text><text text-anchor="middle" x="280" y="68">e</text><text text-anchor="middle" x="160" y="164">E</text><text text-anchor="middle" x="168" y="164">n</text><text text-anchor="middle" x="176" y="164">g</text><text text-anchor="middle" x="184" y="164">i</text><text text-anchor="middle" x="192" y="164">n</text><text text-anchor="middle" x="200" y="164">e</text><text text-anchor="middle" x="232" y="164">&quot;</text><text text-anchor="middle" x="240" y="164">H</text><text text-anchor="middle" x="248" y="164">e</text><text text-anchor="middle" x="256" y="164">r</text><text text-anchor="middle" x="264" y="164">e</text><text text-anchor="middle" x="272" y="164">'</text><text text-anchor="middle" x="280" y="164">s</text><text text-anchor="middle" x="296" y="164">t</text><text text-anchor="middle" x="304" y="164">h</text><text text-anchor="middle" x="312" y="164">e</text><text text-anchor="middle" x="328" y="164">e</text><text text-anchor="middle" x="336" y="164">n</text><text text-anchor="middle" x="344" y="164">g</text><text text-anchor="middle" x="352" y="164">i</text><text text-anchor="middle" x="360" y="164">n</text><text text-anchor="middle" x="368" y="164">e</text><text text-anchor="middle" x="376" y="164">&quot;</text><text text-anchor="middle" x="160" y="244">W</text><text text-anchor="middle" x="168" y="244">i</text><text text-anchor="middle" x="176" y="244">n</text><text text-anchor="middle" x="184" y="244">3</text><text text-anchor="middle" x="192" y="244">2</text><text text-anchor="middle" x="232" y="244">&quot;</text><text text-anchor="middle" x="240" y="244">H</text><text text-anchor="middle" x="248" y="244">e</text><text text-anchor="middle" x="256" y="244">r</text><text text-anchor="middle" x="264" y="244">e</text><text text-anchor="middle" x="272" y="244">'</text><text text-anchor="middle" x="280" y="244">s</text><text text-anchor="middle" x="296" y="244">t</text><text text-anchor="middle" x="304" y="244">h</text><text text-anchor="middle" x="312" y="244">e</text><text text-anchor="middle" x="328" y="244">w</text><text text-anchor="middle" x="336" y="244">i</text><text text-anchor="middle" x="344" y="244">n</text><text text-anchor="middle" x="352" y="244">3</text><text text-anchor="middle" x="360" y="244">2</text><text text-anchor="middle" x="376" y="244">p</text><text text-anchor="middle" x="384" y="244">a</text><text text-anchor="middle" x="392" y="244">r</text><text text-anchor="middle" x="400" y="244">t</text><text text-anchor="middle" x="408" y="244">&quot;</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;4:</b> A simple architecture sketch.</div></center>
+
+</p><p>
+
+This is where urban planners and software architecture meets. In urban planning, you're not talking about a specific building. An urban planner thinks about how a city works: zoning, height limits, etc. And if you look at the Figure above, what you see are... street maps. They talk about the &ldquo;traffic flow,&rdquo; their relationship with each other, and their responsibilities. That's it.
+
+</p><p>
+
+In our opinion, doing the above is both a natural and the right thing to do. Therefore, when we talk about software architecture, we don't talk about real-world architecture but urban planning. The high-level zoning and traffic strategy for our program, if you will. Thinking through roughly where each thing has to be, what it should do, how much it will cost us, and how efficient it should be to move items around.
+
+</p>
+<a class="target" name="whydoweneedarchitecture">&nbsp;</a><a class="target" name="aboutsoftwarearchitecture/whydoweneedarchitecture">&nbsp;</a><a class="target" name="toc1.4">&nbsp;</a><h2>Why Do We Need Architecture</h2>
+<p>
+
+
+In software architecture, all the strategies that we develop essentially boil down to efficient code separation. Here the urban planning metaphor comes up nicely. We draw the property map by first defining where each thing is going to live. We make sure they don't overlap and define the traffic patterns. Crucially, we explain what each area is trying to achieve. 
+
+</p><p>
+
+Software architecture is about defining boundaries. We need those for Reuse, Division of Labor, and Mental Clarity.
+
+</p>
+<a class="target" name="reuse">&nbsp;</a><a class="target" name="aboutsoftwarearchitecture/whydoweneedarchitecture/reuse">&nbsp;</a><a class="target" name="toc1.4.1">&nbsp;</a><h3>Reuse</h3>
+<p>
+
+On Handmade Hero, our platform layer currently doesn't know a whole lot about the game whatsoever. We've done a thorough job <em class="underscore">setting boundaries</em>. Therefore, turning it into a reusable platform layer wouldn't take much work if we wanted to. 
+
+</p>
+<a class="target" name="divisionoflabor">&nbsp;</a><a class="target" name="aboutsoftwarearchitecture/whydoweneedarchitecture/divisionoflabor">&nbsp;</a><a class="target" name="toc1.4.2">&nbsp;</a><h3>Division of Labor</h3>
+<p>
+
+In the case of Handmade Hero, we are all writing the game by ourselves, so it's not a problem here. But let's say we have a small team of two to four programmers (or, worst-case scenario, an operative system project with 500 people on it). We will need to have different people working on various components so that communication requirements wouldn't overwhelm the entire project. If each of us works on code we want at any time we want, eventually, you'd run into all sorts of problems. 
+
+</p>
+<a class="target" name="mentalclarity">&nbsp;</a><a class="target" name="aboutsoftwarearchitecture/whydoweneedarchitecture/mentalclarity">&nbsp;</a><a class="target" name="toc1.4.3">&nbsp;</a><h3>Mental Clarity</h3>
+<p>
+
+When you tackle large programs, regardless of their size, most programmers will face the challenge of keeping the entire thing in their heads. As your programs grow larger and larger, your architecture becomes about keeping things separate, so you don't have to consider them at once. 
+
+</p><p>
+
+Imagine the other way around: if everything is interconnected, then any change to the program would have consequences for the rest of it. That would be an \(\O(n^2)\) problem for your brain. (We didn't discuss the <a href="https://en.wikipedia.org/wiki/Big_O_notation">Big O notation</a> yet but suffice to say, it's becoming exponentially more difficult.) That's a lot of brainpower. It would be much simpler put labels on some pieces of code and worry only about connecting those.
+
+</p>
+<a class="target" name="measurementsofsuccess">&nbsp;</a><a class="target" name="aboutsoftwarearchitecture/measurementsofsuccess">&nbsp;</a><a class="target" name="toc1.5">&nbsp;</a><h2>Measurements of Success</h2>
+<p>
+
+
+Now that we defined the objective, and the &ldquo;Why&rdquo; we adopt this approach, let's briefly talk about how we would measure our goals being met. Programming, in general, is a hard thing to quantify, but we can use specific hints left along the way.
+
+</p><p>
+
+When a game executes, things happen: entities update their position, the sound is written to some buffers, the image is written to others, etc. We can draw boundaries between these various &ldquo;components&rdquo; as we defined above. However, the sequence in which the various components are executed is not necessarily arbitrary. 
+
+</p><p>
+
+Let's make a simple example. Say, we have two systems, each with a well-defined boundary: a physics system and a renderer. The latter is responsible for drawing the game on the screen, while the former moves the things in the game. If that's the case, we can't just run these two components randomly. We can only Render the image on screen after the Physics system has finished placing the things around the world. 
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="224" width="208" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 32,16 L 32,48 " style="fill:none;"/>
+<path d="M 32,144 L 32,176 " style="fill:none;"/>
+<path d="M 72,56 L 72,136 " style="fill:none;"/>
+<path d="M 120,16 L 120,48 " style="fill:none;"/>
+<path d="M 120,144 L 120,176 " style="fill:none;"/>
+<path d="M 32,16 L 120,16 " style="fill:none;"/>
+<path d="M 32,48 L 120,48 " style="fill:none;"/>
+<path d="M 104,80 L 176,80 " style="fill:none;"/>
+<path d="M 104,112 L 176,112 " style="fill:none;"/>
+<path d="M 32,144 L 120,144 " style="fill:none;"/>
+<path d="M 32,176 L 120,176 " style="fill:none;"/>
+<path d="M 104,80 C 87.2,80 88,96 88,96 " style="fill:none;"/>
+<path d="M 176,80 C 192.8,80 192,96 192,96 " style="fill:none;"/>
+<path d="M 104,112 C 87.2,112 88,96 88,96 " style="fill:none;"/>
+<path d="M 176,112 C 192.8,112 192,96 192,96 " style="fill:none;"/>
+<polygon points="80,136 68,130.4 68,141.6 "  style="stroke:none" transform="rotate(90,72,136 )"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="48" y="36">P</text><text text-anchor="middle" x="56" y="36">h</text><text text-anchor="middle" x="64" y="36">y</text><text text-anchor="middle" x="72" y="36">s</text><text text-anchor="middle" x="80" y="36">i</text><text text-anchor="middle" x="88" y="36">c</text><text text-anchor="middle" x="96" y="36">s</text><text text-anchor="middle" x="104" y="100">W</text><text text-anchor="middle" x="112" y="100">o</text><text text-anchor="middle" x="120" y="100">r</text><text text-anchor="middle" x="128" y="100">l</text><text text-anchor="middle" x="136" y="100">d</text><text text-anchor="middle" x="152" y="100">d</text><text text-anchor="middle" x="160" y="100">a</text><text text-anchor="middle" x="168" y="100">t</text><text text-anchor="middle" x="176" y="100">a</text><text text-anchor="middle" x="48" y="164">R</text><text text-anchor="middle" x="56" y="164">e</text><text text-anchor="middle" x="64" y="164">n</text><text text-anchor="middle" x="72" y="164">d</text><text text-anchor="middle" x="80" y="164">e</text><text text-anchor="middle" x="88" y="164">r</text><text text-anchor="middle" x="96" y="164">e</text><text text-anchor="middle" x="104" y="164">r</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;5:</b> Renderer cannot start until Physics finished its job.</div></center>
+
+</p><p>
+
+This is known as <a href="https://en.wikipedia.org/wiki/Coupling_%28computer_programming%29">temporal coupling</a>: one thing must always be executed before the other, therefore two (or more!) components effectively become one.
+
+</p><p>
+
+If you look at the two systems outlined above, you'll also notice that one system produces useful <em class="underscore">data</em> for another. The way this data is laid out in structs can have various implications, therefore you can think of it as &ldquo;layout&rdquo; coupling. For instance, there might be a performance concern because the systems would prefer to use different parts of the data: the physics system would care about the object's position and, say, velocity, while the renderer would look at the position and size. 
+
+</p><p>
+
+So how would we approach this problem? Do we translate the data? Do we accept that one system is slower? Do we make a compromised layout that is &ldquo;good enough&rdquo; for both? These &ldquo;Layout Coupling&rdquo; issues are also things we can address.
+
+</p><p>
+
+There're other &ldquo;couplings&rdquo; we can consider. For instance, we can build our program differently depending on whether or not it uses a multithreading system of some kind, how the memory is used, if it makes <em class="underscore">wide</em> calculations on a single core (SIMD etc.), and so on. This can be summed up as &ldquo;ideological&rdquo; coupling.
+
+</p><p>
+
+Finally, we can measure a program's &ldquo;fluidity&rdquo;. Fluidity falls in the category &ldquo;you know it when you see it&rdquo;. How simple is it to bring big changes to the architecture, without having to rewrite it all from scratch? Especially during the first phases of development, this aspect can be quite important indeed! A fluid system would allow these changes with relative ease.
+
+</p>
+<a class="target" name="gamearchitecture">&nbsp;</a><a class="target" name="aboutsoftwarearchitecture/gamearchitecture">&nbsp;</a><a class="target" name="toc1.6">&nbsp;</a><h2>Game Architecture</h2>
+<p>
+
+
+Let's talk about game architecture, and more specifically, the game architecture we chose for Handmade Hero. Up until now, we were laying out the foundation, our platform layer, for the rest of the game. But in doing so, we made specific choices that, up until now, weren't explained in depth. You can say that we cheated a bit and skipped ahead, as we have a good idea of how a good prototyping layer and a good platform layer should be. 
+
+</p><p>
+
+At the very bottom of our game, we have our Win32, and we'll have our OpenGL or Direct3D later down the line: things underneath us that we can't do anything about. Above it lies a platform layer that we have a skeleton for. It needs more work before it's production-ready, but we already have a good idea of how it will look. 
+
+</p><p>
+
+We then have Game Update And Render (or GUAR for short) and Game Get Sound Samples (GGSS). These things call into the Game.
+
+</p><p>
+
+Until now, we didn't even pretend that we didn't know what we were doing. It wasn't all that interesting. With the Game, however, we will explore the path as we go, and discuss the different principles as we go.
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="240" width="288" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 32,0 L 32,32 " style="fill:none;"/>
+<path d="M 32,80 L 32,112 " style="fill:none;"/>
+<path d="M 32,160 L 32,192 " style="fill:none;"/>
+<path d="M 72,40 L 72,72 " style="fill:none;"/>
+<path d="M 72,120 L 72,152 " style="fill:none;"/>
+<path d="M 96,160 L 96,192 " style="fill:none;"/>
+<path d="M 112,160 L 112,192 " style="fill:none;"/>
+<path d="M 168,40 L 168,72 " style="fill:none;"/>
+<path d="M 168,120 L 168,152 " style="fill:none;"/>
+<path d="M 248,0 L 248,32 " style="fill:none;"/>
+<path d="M 248,80 L 248,112 " style="fill:none;"/>
+<path d="M 256,160 L 256,192 " style="fill:none;"/>
+<path d="M 32,0 L 248,0 " style="fill:none;"/>
+<path d="M 32,32 L 248,32 " style="fill:none;"/>
+<path d="M 32,80 L 248,80 " style="fill:none;"/>
+<path d="M 32,112 L 248,112 " style="fill:none;"/>
+<path d="M 32,160 L 96,160 " style="fill:none;"/>
+<path d="M 112,160 L 256,160 " style="fill:none;"/>
+<path d="M 32,192 L 96,192 " style="fill:none;"/>
+<path d="M 112,192 L 256,192 " style="fill:none;"/>
+<polygon points="176,152 164,146.4 164,157.6 "  style="stroke:none" transform="rotate(90,168,152 )"/>
+<polygon points="176,40 164,34.4 164,45.6 "  style="stroke:none" transform="rotate(270,168,40 )"/>
+<polygon points="80,152 68,146.4 68,157.6 "  style="stroke:none" transform="rotate(90,72,152 )"/>
+<polygon points="80,40 68,34.4 68,45.6 "  style="stroke:none" transform="rotate(270,72,40 )"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="120" y="20">G</text><text text-anchor="middle" x="128" y="20">A</text><text text-anchor="middle" x="136" y="20">M</text><text text-anchor="middle" x="144" y="20">E</text><text text-anchor="middle" x="80" y="68">G</text><text text-anchor="middle" x="88" y="68">U</text><text text-anchor="middle" x="96" y="68">A</text><text text-anchor="middle" x="104" y="68">R</text><text text-anchor="middle" x="184" y="68">G</text><text text-anchor="middle" x="192" y="68">G</text><text text-anchor="middle" x="200" y="68">S</text><text text-anchor="middle" x="208" y="68">S</text><text text-anchor="middle" x="88" y="100">P</text><text text-anchor="middle" x="96" y="100">L</text><text text-anchor="middle" x="104" y="100">A</text><text text-anchor="middle" x="112" y="100">T</text><text text-anchor="middle" x="120" y="100">F</text><text text-anchor="middle" x="128" y="100">O</text><text text-anchor="middle" x="136" y="100">R</text><text text-anchor="middle" x="144" y="100">M</text><text text-anchor="middle" x="160" y="100">L</text><text text-anchor="middle" x="168" y="100">A</text><text text-anchor="middle" x="176" y="100">Y</text><text text-anchor="middle" x="184" y="100">E</text><text text-anchor="middle" x="192" y="100">R</text><text text-anchor="middle" x="48" y="180">W</text><text text-anchor="middle" x="56" y="180">i</text><text text-anchor="middle" x="64" y="180">n</text><text text-anchor="middle" x="72" y="180">3</text><text text-anchor="middle" x="80" y="180">2</text><text text-anchor="middle" x="128" y="180">O</text><text text-anchor="middle" x="136" y="180">p</text><text text-anchor="middle" x="144" y="180">e</text><text text-anchor="middle" x="152" y="180">n</text><text text-anchor="middle" x="160" y="180">G</text><text text-anchor="middle" x="168" y="180">L</text><text text-anchor="middle" x="176" y="180">/</text><text text-anchor="middle" x="184" y="180">D</text><text text-anchor="middle" x="192" y="180">i</text><text text-anchor="middle" x="200" y="180">r</text><text text-anchor="middle" x="208" y="180">e</text><text text-anchor="middle" x="216" y="180">c</text><text text-anchor="middle" x="224" y="180">t</text><text text-anchor="middle" x="232" y="180">3</text><text text-anchor="middle" x="240" y="180">D</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;6:</b> The design of our Handmade Hero world.</div></center>
+
+</p>
+<a class="target" name="logicflow">&nbsp;</a><a class="target" name="aboutsoftwarearchitecture/logicflow">&nbsp;</a><a class="target" name="toc1.7">&nbsp;</a><h2>Logic Flow</h2>
+<p>
+
+
+Let's try and dive into this &ldquo;Game&rdquo;. What we will need for it? Well, as the entry points we have the GUAR and GGSS. 
+
+</p><p>
+
+Game Update and Render is our first entry point. 
+
+</p><p>
+
+<ul>
+<li class="asterisk">We wait for a call from the system containing information about <code>t</code>, how much time we need to advance our world by. This means:
+<ul>
+  <li class="asterisk">Processing user input. We must do it as close to world update as possible, to avoid introducing input lag.
+</li>
+  <li class="asterisk">Running a physics simulation of the world.
+</li></ul>
+<li class="asterisk">We render the world to bitmap.</li></ul>
+
+</p><p>
+
+The Game Get Sound Samples function doesn't even need to be considered as a separate function call, just as an extension of GUAR. Maybe eventually we'll be able to tie the two in a single call. This stage boils down to:
+
+</p><p>
+
+<ul>
+<li class="asterisk">Output the sound samples.</li></ul>
+
+</p><p>
+
+Update and Render are often separate functions that many games process at different moments. It's an ideological choice, it makes sense in terms of the desired set of operations. But even if these two functions are processed one after the other, a boundary between the two is established. We won't be doing this. Drawing a boundary at the architectural level between the two precludes the road to some potential optimizations, where it would be more cache-friendly to do the physics update and render call in one fell swoop. Again, consider this &ldquo;render&rdquo; step more as a &ldquo;render prep&rdquo;, since the rendering itself is delegated to the GPU these days. We'll do rendering ourselves, for a short while, but even then we'll use the same methods a GPU would function.
+
+</p><p>
+
+Our boundaries will therefore look like this: 
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="192" width="248" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 32,16 L 32,80 " style="fill:none;"/>
+<path d="M 32,112 L 32,144 " style="fill:none;"/>
+<path d="M 64,16 L 64,80 " style="fill:none;"/>
+<path d="M 64,112 L 64,144 " style="fill:none;"/>
+<path d="M 208,16 L 208,80 " style="fill:none;"/>
+<path d="M 208,112 L 208,144 " style="fill:none;"/>
+<path d="M 32,16 L 208,16 " style="fill:none;"/>
+<path d="M 32,48 L 208,48 " style="fill:none;"/>
+<path d="M 32,80 L 208,80 " style="fill:none;"/>
+<path d="M 32,112 L 208,112 " style="fill:none;"/>
+<path d="M 32,144 L 208,144 " style="fill:none;"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="32" y="4">G</text><text text-anchor="middle" x="40" y="4">a</text><text text-anchor="middle" x="48" y="4">m</text><text text-anchor="middle" x="56" y="4">e</text><text text-anchor="middle" x="72" y="4">U</text><text text-anchor="middle" x="80" y="4">p</text><text text-anchor="middle" x="88" y="4">d</text><text text-anchor="middle" x="96" y="4">a</text><text text-anchor="middle" x="104" y="4">t</text><text text-anchor="middle" x="112" y="4">e</text><text text-anchor="middle" x="128" y="4">a</text><text text-anchor="middle" x="136" y="4">n</text><text text-anchor="middle" x="144" y="4">d</text><text text-anchor="middle" x="160" y="4">R</text><text text-anchor="middle" x="168" y="4">e</text><text text-anchor="middle" x="176" y="4">n</text><text text-anchor="middle" x="184" y="4">d</text><text text-anchor="middle" x="192" y="4">e</text><text text-anchor="middle" x="200" y="4">r</text><text text-anchor="middle" x="48" y="36">1</text><text text-anchor="middle" x="80" y="36">U</text><text text-anchor="middle" x="88" y="36">s</text><text text-anchor="middle" x="96" y="36">e</text><text text-anchor="middle" x="104" y="36">r</text><text text-anchor="middle" x="120" y="36">I</text><text text-anchor="middle" x="128" y="36">n</text><text text-anchor="middle" x="136" y="36">p</text><text text-anchor="middle" x="144" y="36">u</text><text text-anchor="middle" x="152" y="36">t</text><text text-anchor="middle" x="48" y="68">2</text><text text-anchor="middle" x="80" y="68">U</text><text text-anchor="middle" x="88" y="68">p</text><text text-anchor="middle" x="96" y="68">d</text><text text-anchor="middle" x="104" y="68">a</text><text text-anchor="middle" x="112" y="68">t</text><text text-anchor="middle" x="120" y="68">e</text><text text-anchor="middle" x="136" y="68">/</text><text text-anchor="middle" x="152" y="68">R</text><text text-anchor="middle" x="160" y="68">e</text><text text-anchor="middle" x="168" y="68">n</text><text text-anchor="middle" x="176" y="68">d</text><text text-anchor="middle" x="184" y="68">e</text><text text-anchor="middle" x="192" y="68">r</text><text text-anchor="middle" x="32" y="100">G</text><text text-anchor="middle" x="40" y="100">a</text><text text-anchor="middle" x="48" y="100">m</text><text text-anchor="middle" x="56" y="100">e</text><text text-anchor="middle" x="72" y="100">G</text><text text-anchor="middle" x="80" y="100">e</text><text text-anchor="middle" x="88" y="100">t</text><text text-anchor="middle" x="104" y="100">S</text><text text-anchor="middle" x="112" y="100">o</text><text text-anchor="middle" x="120" y="100">u</text><text text-anchor="middle" x="128" y="100">n</text><text text-anchor="middle" x="136" y="100">d</text><text text-anchor="middle" x="152" y="100">S</text><text text-anchor="middle" x="160" y="100">a</text><text text-anchor="middle" x="168" y="100">m</text><text text-anchor="middle" x="176" y="100">p</text><text text-anchor="middle" x="184" y="100">l</text><text text-anchor="middle" x="192" y="100">e</text><text text-anchor="middle" x="200" y="100">s</text><text text-anchor="middle" x="48" y="132">1</text><text text-anchor="middle" x="80" y="132">S</text><text text-anchor="middle" x="88" y="132">o</text><text text-anchor="middle" x="96" y="132">u</text><text text-anchor="middle" x="104" y="132">n</text><text text-anchor="middle" x="112" y="132">d</text><text text-anchor="middle" x="128" y="132">O</text><text text-anchor="middle" x="136" y="132">u</text><text text-anchor="middle" x="144" y="132">t</text><text text-anchor="middle" x="152" y="132">p</text><text text-anchor="middle" x="160" y="132">u</text><text text-anchor="middle" x="168" y="132">t</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;7:</b> Drawing our first boundaries.</div></center>
+
+</p>
+<a class="target" name="dataflow">&nbsp;</a><a class="target" name="aboutsoftwarearchitecture/dataflow">&nbsp;</a><a class="target" name="toc1.8">&nbsp;</a><h2>Data Flow</h2>
+<p>
+
+
+We need also to think about how the data would flow. Here, there're two popular schools of thought: &ldquo;Loading screen&rdquo; and &ldquo;Streaming&rdquo;.
+
+</p><p>
+
+In the &ldquo;Loading Screen&rdquo; architecture, the game waits for a specific event (e.g. change of level) where it loads all the information related to that level. The user in the meantime gets to watch a little spinning thing and maybe an interesting fact about the game world. During that time the resources are being loaded from somewhere: a CD/DVD, Hard disk, or even the network. These are the resources used to prepare video and audio outputs, as well as those strictly gameplay-related: level maps, monster data, etc. 
+
+</p><p>
+
+Ultimately, one chooses the Loading Screen architecture because there is not a lot of real architecture going on. While the loading happens, nothing else is. There's no input processing, sound usually dies down, the physics system sleeps, etc.
+
+</p><p>
+
+On the other hand, when you are &ldquo;Streaming&rdquo;, all the resources are procured by the game while it's running. It's a process that happens in the background, usually on another thread. This results in another architectural boundary. There's a back-and-forth communication going on between the loading system and the rest of the game to ensure that the required assets are ready to be used. 
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="192" width="568" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 32,16 L 32,80 " style="fill:none;"/>
+<path d="M 32,112 L 32,144 " style="fill:none;"/>
+<path d="M 64,16 L 64,80 " style="fill:none;"/>
+<path d="M 64,112 L 64,144 " style="fill:none;"/>
+<path d="M 208,16 L 208,80 " style="fill:none;"/>
+<path d="M 208,112 L 208,144 " style="fill:none;"/>
+<path d="M 248,0 L 248,48 " style="fill:none;"/>
+<path d="M 248,112 L 248,160 " style="fill:none;"/>
+<path d="M 288,32 L 288,112 " style="fill:none;"/>
+<path d="M 384,32 L 384,112 " style="fill:none;"/>
+<path d="M 440,64 L 440,128 " style="fill:none;"/>
+<path d="M 544,64 L 544,128 " style="fill:none;"/>
+<path d="M 32,16 L 208,16 " style="fill:none;"/>
+<path d="M 288,32 L 384,32 " style="fill:none;"/>
+<path d="M 32,48 L 208,48 " style="fill:none;"/>
+<path d="M 440,64 L 544,64 " style="fill:none;"/>
+<path d="M 32,80 L 208,80 " style="fill:none;"/>
+<path d="M 392,80 L 432,80 " style="fill:none;"/>
+<path d="M 32,112 L 208,112 " style="fill:none;"/>
+<path d="M 288,112 L 384,112 " style="fill:none;"/>
+<path d="M 440,128 L 544,128 " style="fill:none;"/>
+<path d="M 32,144 L 208,144 " style="fill:none;"/>
+<polygon points="400,80 388,74.4 388,85.6 "  style="stroke:none" transform="rotate(180,392,80 )"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="32" y="4">G</text><text text-anchor="middle" x="40" y="4">a</text><text text-anchor="middle" x="48" y="4">m</text><text text-anchor="middle" x="56" y="4">e</text><text text-anchor="middle" x="72" y="4">U</text><text text-anchor="middle" x="80" y="4">p</text><text text-anchor="middle" x="88" y="4">d</text><text text-anchor="middle" x="96" y="4">a</text><text text-anchor="middle" x="104" y="4">t</text><text text-anchor="middle" x="112" y="4">e</text><text text-anchor="middle" x="128" y="4">a</text><text text-anchor="middle" x="136" y="4">n</text><text text-anchor="middle" x="144" y="4">d</text><text text-anchor="middle" x="160" y="4">R</text><text text-anchor="middle" x="168" y="4">e</text><text text-anchor="middle" x="176" y="4">n</text><text text-anchor="middle" x="184" y="4">d</text><text text-anchor="middle" x="192" y="4">e</text><text text-anchor="middle" x="200" y="4">r</text><text text-anchor="middle" x="304" y="20">S</text><text text-anchor="middle" x="312" y="20">t</text><text text-anchor="middle" x="320" y="20">r</text><text text-anchor="middle" x="328" y="20">e</text><text text-anchor="middle" x="336" y="20">a</text><text text-anchor="middle" x="344" y="20">m</text><text text-anchor="middle" x="352" y="20">i</text><text text-anchor="middle" x="360" y="20">n</text><text text-anchor="middle" x="368" y="20">g</text><text text-anchor="middle" x="48" y="36">1</text><text text-anchor="middle" x="80" y="36">U</text><text text-anchor="middle" x="88" y="36">s</text><text text-anchor="middle" x="96" y="36">e</text><text text-anchor="middle" x="104" y="36">r</text><text text-anchor="middle" x="120" y="36">I</text><text text-anchor="middle" x="128" y="36">n</text><text text-anchor="middle" x="136" y="36">p</text><text text-anchor="middle" x="144" y="36">u</text><text text-anchor="middle" x="152" y="36">t</text><text text-anchor="middle" x="48" y="68">2</text><text text-anchor="middle" x="80" y="68">U</text><text text-anchor="middle" x="88" y="68">p</text><text text-anchor="middle" x="96" y="68">d</text><text text-anchor="middle" x="104" y="68">a</text><text text-anchor="middle" x="112" y="68">t</text><text text-anchor="middle" x="120" y="68">e</text><text text-anchor="middle" x="136" y="68">/</text><text text-anchor="middle" x="152" y="68">R</text><text text-anchor="middle" x="160" y="68">e</text><text text-anchor="middle" x="168" y="68">n</text><text text-anchor="middle" x="176" y="68">d</text><text text-anchor="middle" x="184" y="68">e</text><text text-anchor="middle" x="192" y="68">r</text><text text-anchor="middle" x="224" y="68">~</text><text text-anchor="middle" x="232" y="68">~</text><text text-anchor="middle" x="240" y="68">~</text><text text-anchor="middle" x="248" y="68">~</text><text text-anchor="middle" x="256" y="68">~</text><text text-anchor="middle" x="264" y="68">~</text><text text-anchor="middle" x="272" y="68">&gt;</text><text text-anchor="middle" x="304" y="68">A</text><text text-anchor="middle" x="320" y="68">/</text><text text-anchor="middle" x="336" y="68">V</text><text text-anchor="middle" x="352" y="68">/</text><text text-anchor="middle" x="368" y="68">S</text><text text-anchor="middle" x="248" y="84">|</text><text text-anchor="middle" x="304" y="84">R</text><text text-anchor="middle" x="312" y="84">e</text><text text-anchor="middle" x="320" y="84">s</text><text text-anchor="middle" x="328" y="84">o</text><text text-anchor="middle" x="336" y="84">u</text><text text-anchor="middle" x="344" y="84">r</text><text text-anchor="middle" x="352" y="84">c</text><text text-anchor="middle" x="360" y="84">e</text><text text-anchor="middle" x="368" y="84">s</text><text text-anchor="middle" x="456" y="84">L</text><text text-anchor="middle" x="464" y="84">a</text><text text-anchor="middle" x="472" y="84">s</text><text text-anchor="middle" x="480" y="84">e</text><text text-anchor="middle" x="488" y="84">r</text><text text-anchor="middle" x="504" y="84">D</text><text text-anchor="middle" x="512" y="84">i</text><text text-anchor="middle" x="520" y="84">s</text><text text-anchor="middle" x="528" y="84">c</text><text text-anchor="middle" x="32" y="100">G</text><text text-anchor="middle" x="40" y="100">a</text><text text-anchor="middle" x="48" y="100">m</text><text text-anchor="middle" x="56" y="100">e</text><text text-anchor="middle" x="72" y="100">G</text><text text-anchor="middle" x="80" y="100">e</text><text text-anchor="middle" x="88" y="100">t</text><text text-anchor="middle" x="104" y="100">S</text><text text-anchor="middle" x="112" y="100">o</text><text text-anchor="middle" x="120" y="100">u</text><text text-anchor="middle" x="128" y="100">n</text><text text-anchor="middle" x="136" y="100">d</text><text text-anchor="middle" x="152" y="100">S</text><text text-anchor="middle" x="160" y="100">a</text><text text-anchor="middle" x="168" y="100">m</text><text text-anchor="middle" x="176" y="100">p</text><text text-anchor="middle" x="184" y="100">l</text><text text-anchor="middle" x="192" y="100">e</text><text text-anchor="middle" x="200" y="100">s</text><text text-anchor="middle" x="224" y="100">&lt;</text><text text-anchor="middle" x="232" y="100">~</text><text text-anchor="middle" x="240" y="100">~</text><text text-anchor="middle" x="248" y="100">~</text><text text-anchor="middle" x="256" y="100">~</text><text text-anchor="middle" x="264" y="100">~</text><text text-anchor="middle" x="272" y="100">~</text><text text-anchor="middle" x="472" y="100">H</text><text text-anchor="middle" x="480" y="100">D</text><text text-anchor="middle" x="488" y="100">D</text><text text-anchor="middle" x="496" y="100">/</text><text text-anchor="middle" x="504" y="100">S</text><text text-anchor="middle" x="512" y="100">S</text><text text-anchor="middle" x="520" y="100">D</text><text text-anchor="middle" x="472" y="116">N</text><text text-anchor="middle" x="480" y="116">e</text><text text-anchor="middle" x="488" y="116">t</text><text text-anchor="middle" x="496" y="116">w</text><text text-anchor="middle" x="504" y="116">o</text><text text-anchor="middle" x="512" y="116">r</text><text text-anchor="middle" x="520" y="116">k</text><text text-anchor="middle" x="48" y="132">1</text><text text-anchor="middle" x="80" y="132">S</text><text text-anchor="middle" x="88" y="132">o</text><text text-anchor="middle" x="96" y="132">u</text><text text-anchor="middle" x="104" y="132">n</text><text text-anchor="middle" x="112" y="132">d</text><text text-anchor="middle" x="128" y="132">O</text><text text-anchor="middle" x="136" y="132">u</text><text text-anchor="middle" x="144" y="132">t</text><text text-anchor="middle" x="152" y="132">p</text><text text-anchor="middle" x="160" y="132">u</text><text text-anchor="middle" x="168" y="132">t</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;8:</b> The communication lines between the loading system and the game are fuzzy due to the nature of this boundary.</div></center>
+
+</p><p>
+
+It's important to get this boundary right. Many projects do it wrong. There are considerations like &ldquo;do we want to use immediate mode or retained mode?&rdquo;. But that is something that we can look into when we will get to. We don't want to get bogged down in too much planning. Time to get our hands dirty, but we'll do it next time.
+
+</p>
+<a class="target" name="recap">&nbsp;</a><a class="target" name="recap">&nbsp;</a><a class="target" name="toc2">&nbsp;</a><h1>Recap</h1>
+<p>
+
+
+Wow, that was a whole lot of theory! And not enough actual code. But it's oh so important to have a good overview of the voyage we are about to embark on before we do so.
+
+</p>
+<a class="target" name="navigation">&nbsp;</a><a class="target" name="navigation">&nbsp;</a><a class="target" name="toc3">&nbsp;</a><h1>Navigation</h1>
+<p>
+
+
+Up Next: <a href="../html/day25.html">Day 25. Finishing the Win32 Prototyping Layer</a>
+
+</p><p>
+
+Up Next: <a href="../html/day27.html">Day 27. Exploration-based Architecture</a>
+
+</p><p>
+
+<a href="../index.md.html">Back to Index</a>
+
+</p>
+<div class="nonumberh1">Glossary </div>
+<p>
+
+
+<ul>
+<li class="asterisk">Fluidity
+</li>
+<li class="asterisk">Software Architecture
+</li>
+<li class="asterisk">Program Spec
+</li>
+<li class="asterisk">Temporal Coupling
+</li>
+<li class="asterisk">Resource Streaming</li></ul>
+
+</p>
+<div class="nonumberh1">Resources</div>
+<p>
+
+
+<a href="https://en.wikipedia.org/wiki/Unified_Modeling_Language">UML</a>
+
+</p><p>
+
+<a href="https://en.wikipedia.org/wiki/Big_O_notation">Big O notation</a>
+
+</p><p>
+
+<a href="https://en.wikipedia.org/wiki/Coupling_%28computer_programming%29">Coupling</a>
+
+</p><p>
+
+<style class="fallback">
+  body {
+    visibility: hidden;
+    font-family: sans-serif;
+  }
+</style>
+
+</p><p>
+
+<script>
+  markdeepOptions = { tocStyle: 'long' };
+  window.alreadyProcessedMarkdeep ||
+    (document.body.style.visibility = 'visible');
+</script>
+
+</p><p>
+
+</p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.13&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.6/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
