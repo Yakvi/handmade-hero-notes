@@ -355,7 +355,7 @@ If you remember, C Runtime Library (or CRT Library) is the standard set of funct
 
 Normally dynamic linking would be fine for our purposes. You offload some of the functions to the operating system, and your distribution is overall smaller. However, there's a catch. CRT has versions, many many versions in fact, and you can't really guarantee that the user has a version of the C Runtime Library that you are linking against. This forces you to include the "Microsoft Visual C++ XXXX Redistributable" with your game and run it when the user installs it. 
 
-It's definitely a bad idea but somehow many developers still do it... Not us, we will use [-MT][CRT] flag. `-MT` says "use the static library, pack everything in and don't look for DLLs at runtime". That's something you absolutely want to be set. It's default on the command line but still good to specify.
+It's definitely a bad idea but somehow many developers still do it... Not us, we will use [-MT][-CRT] flag. `-MT` says "use the static library, pack everything in and don't look for DLLs at runtime". That's something you absolutely want to be set. It's default on the command line but still good to specify.
 
 ~~~~~~~ batch
 :: GENERAL COMPILER FLAGS
@@ -371,7 +371,7 @@ set compiler=%compiler%     -WX     &:: Treat all warnings as errors
 In general, this is the reason why you want to test on as many machines as possible: to see the compatibility of your game on different setups. That said, there's software like the [Dependency Walker][depends] (a free tool which we recommend you to check out) which allows to see what the executable relies on.
 
 !!!     
-    You can remove your dependency on the CRT Library completely, but you'll need to perform some specific actions to do so though. [This guide][CRT] should get you started.
+    You can remove your dependency on the CRT Library completely, but you'll need to perform some specific actions to do so though. [This guide][NO_CRT] should get you started.
 
 ## Map File
 
