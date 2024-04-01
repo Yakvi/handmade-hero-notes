@@ -10,7 +10,7 @@ We did quite a bit of theory last time; let's get to practice!
 
 # Project State Space
 
-If we put on our fantasy hats and head into the fantasy land of unicorns, magic, and Project State Space, we will find a map showing our progress on the project. In our case, we're essentially at Day 0 of the project (if you exclude the excruciating need of having to talk to Windows), and our map looks quite empty: 
+If we put on our fantasy hats and head into the fantasy land of unicorns, magic, and trolls called Project State Space, we will find a map showing our progress on the project. In our case, we're essentially at Day 0 of the project (if you exclude the excruciating need of having to talk to Windows), and our map looks quite empty: 
 
 ******************************************************
 *                                                    *
@@ -33,7 +33,7 @@ If we put on our fantasy hats and head into the fantasy land of unicorns, magic,
 ******************************************************
 [Figure [x]: You are here.]
 
-But in that imaginary land, there's a point when we will ship our project:
+There's also a point where we will ship our project. We start somewhere, and that somewhere is the finish: 
 
 ******************************************************
 *          Day 700? * <----- Ship                    *
@@ -55,7 +55,7 @@ But in that imaginary land, there's a point when we will ship our project:
 Of course, if you worked on any project, you know that the path from start to finish is _never_ straight. It's even more the case in the wonderful world of software development. This path to victory is often arduous, full of deviations and even setbacks: 
 
 ******************************************************
-*          Day 700? * <----- Ship                    *
+*           Day 700 *                                *
 *                   ^           .---.                *
 *                   |          |     |               *
 *                    '--------'      |               *
@@ -73,9 +73,152 @@ Of course, if you worked on any project, you know that the path from start to fi
 
 Often, you don't even know how the final product will look! You only have a vague idea, but unless it's anything more complex than a "hello world" project, any additional details will be revealed as the project grows stronger. It's not even necessarily a "point" that you're trying to reach, but more of a nebulous blob of possibilities that slowly condenses into the final product.
 
+******************************************************
+*            .--.       .----.                       *
+*           |    |     |      |                      *
+*       .--'      '---'        '-.                   *
+*      |      Day 700?  Ship      |                  *
+*       '---.             .------'                   *
+*            |           |                           *
+*             '---------'                            *
+*                                                    *
+*                                                    *
+*                                                    *
+*                                                    *
+*                                                    *
+*                                                    *
+*                                                    *
+*                                                    *
+*            Day 0 *                                 *
+******************************************************
+[Figure [x]: The shipping point is more of a shipping nebula when you're starting.]
+
+Because of this, you might initially set towards a specific point in the "shipping nebula" and even progress there for a while, before realizing that the actual thing you're trying to reach is further away. Eventually, the nebula will condense into a point, and you will ship your project.
+
+## Waypoints
+
 So how should one approach this voyage, sitting down for the new day and hoping it will bring the project (or even individual pieces of code) closer to the finish? 
 
-8:21
+At any given point in your project journey, be it day 0, day 100 or whatever, you would set yourself an objective for the day, maybe it's upgrading the object system because it doesn't handle the amount of objects we're trying to draw, or optimizing something, who knows. By doing this, you're effectively picking a new point on your Project State Space, and advancing yourself towards that point. Thus, day by day, you'd choose new points from wherever you left the day before. The better you're at dead reckoning, the fewer switchbacks and backtraces there are, the faster you get to shipping your project.
+
+******************************************************
+*            .--.       .----.                       *
+*           |    |     |      |                      *
+*       .--'      '---'        '-.                   *
+*      |      Day 700?  Ship      |                  *
+*       '---.             .------'                   *
+*            |           |                           *
+*             '---------'                            *
+*                                                    *
+*                                                    *
+*                                                    *
+*                                                    *
+*                                                    *
+*                                                    *
+*            Day 103 *<--.  o o                      *
+*                         \ ^ ^                      *
+*                   o o    \|/                       *
+*                   ^ ^ .-->* Day 102                *
+*                    \|/                             *
+*               o  o  * Day 101                      *
+*                ^ ^ ^                               *
+*                 \|/                                *
+*          Day 100 *---> o                           *
+*                  |                                 *
+******************************************************
+[Figure [x]: Day after day, you build your way towards your goal.]
+
+This is where the __compression-oriented programming__ comes into play. It allows us to write code, see how it works at the low level and eventually elevate it into the bigger designs as we go, without needing to do a whole lot of pre-planning.
+
+For more information about the compression-oriented programming, see Subsection [compression-oriented programming] for a broader definition. 
+
+The main issue with pre-planning is that it assumes that you know what the final code would look like. If you have to do the pre-plan, you need to set your final point in advance and create the "waypoints" through which the project should go. 
+
+******************************************************
+*            .--.       .----.                       *
+*           |    |     |      |                      *
+*       .--'      '---'        '-.                   *
+*      |    Day 700 *   Ship      |                  *
+*       '---.             .------'                   *
+*            |      X    |                           *
+*             '---------'                            *
+*                                                    *
+*                   X                                *
+*                                                    *
+*                                                    *
+*                   X                                *
+*                                                    *
+*                                                    *
+*                   X                                *
+*                                                    *
+*                                                    *
+*                   X                                *
+*                                                    *
+*             Day 0 *                                *
+******************************************************
+[Figure [x]: Expectation: an ideal plan everyone tries to achieve.]
+
+But if you don't know the final point, there's no way to do the waypoints. What happens in reality is that the final point is set way off course
+
+******************************************************
+*    * What we plan to ship                          *
+*            .--.       .----.                       *
+*           |    |     |      |                      *
+*       .--'      '---'        '-.                   *
+*      |  X      o What we want   |                  *
+*       '---.             .------'                   *
+*            |           |                           *
+*             '---------'                            *
+*             X                                      *
+*                                                    *
+*                                                    *
+*                                                    *
+*                 X                                  *
+*                                                    *
+*                                                    *
+*             Day 0 *                                *
+******************************************************
+[Figure [x]: Reality.]
+
+So when someone tries to follow that plan, things get progressively janky, and by the time you get to a certain point and realize it's a disaster, it's usually way too late to change things. The code is awful, we're fighting the architecture the whole way, and you end up either shipping something that's sub-optimal, or you try to course-correct towards the actual goal. 
+
+## Explore and Lock
+
+Thus, upfront design is about putting forward some waypoints on this map, but without actually knowing your destination. That just doesn't work, and you should try to avoid looking too far ahead. 
+
+What we want to encourage instead, and the way we'll be approaching everything [^win-32] will be focused around unknown (to you) problems. Hopefully, by the end of this course you'll develop skills to approach these problems. That's the hard thing, one that actually makes you a code architect. 
+
+To achieve that, we'll be taking an "Explore and Lock" approach. Our approach will be the opposite of these waypoints. For each point we're at, we'll be spending some time exploring around us and seeing what we find. When we find something that we _feel_ is along the path that gets us to shipping the product, we will lock it in and make it our new starting location. 
+
+******************************************************
+*            .--.       .----.                       *
+*           |    |     |      |                      *
+*       .--'      '---'        '-.                   *
+*      |         o Ship           |                  *
+*       '---.             .------'                   *
+*            |           |                           *
+*             '---------'                            *
+*                                                    *
+*                                                    *
+*                                                    *
+*                        .                           *
+*                         .                          *
+*                          .                         *
+*                           * <----- Rinse and repeat*
+*                          /                         *
+*                       .-+---.                      *
+*                      / * <---\----- Lock this point*
+*                     /o  \   o \                    *
+*                 +--|-->o * <---|--- Start here     *
+*                /    \o      o /                    *
+* Explore around+-+----\-->o   /                     *
+*                       '-----'                      *
+******************************************************
+[Figure [x]: Explore and Lock.]
+
+In doing so, you would hopefully develop a feel for a _gradient_ along which the path to shipping lies. This way, you'll also learn when an architecture is good or bad, leading you to being more at ease with new architectures and staying on a right track.
+
+
 
 ------------------------
 <!-- 
@@ -113,7 +256,31 @@ Chart: [Figure [x]: .]
 
 # Programming Notions 
 
+## Compression-oriented programming
+
+We briefly mentioned [Semantic Compression][] at the end of [Day 22][]. The approach that we can coin as "Compression-oriented programming", and we define it as follows: 
+
+> "Like a good compressor, I don’t reuse anything until I have at least two instances of it occurring. Many programmers don’t understand how important this is, and try to write “reusable” code right off the bat, but that is probably one of the biggest mistakes you can make. My mantra is, “make your code usable before you try to make it reusable”.
+>
+> I always begin by just typing out exactly what I want to happen in each specific case, without any regard to “correctness” or “abstraction” or any other buzzword, and I get that working. Then, when I find myself doing the same thing a second time somewhere else, that is when I pull out the reusable portion and share it, effectively “compressing” the code. I like “compress” better as an analogy, because it means something useful, as opposed to the often-used “abstracting”, which doesn’t really imply anything useful. Who cares if code is abstract?
+>
+> Waiting until there are (at least) two examples of a piece of code means I not only save time thinking about how to reuse it until I know I really need to, but it also means I always have at least two different real examples of what the code has to do before I try to make it reusable. This is crucial for efficiency, because if you only have one example, or worse, no examples (in the case of code written preemptively), then you are very likely to make mistakes in the way you write it and end up with code that isn’t conveniently reusable. This leads to even more wasted time once you go to use it, because either it will be cumbersome, or you will have to redo it to make it work the way you need it to. So I try very hard to never make code “prematurely reusable”, to evoke Knuth.
+>
+> Similarly, like a magical globally optimizing compressor [...], when you are presented with new places where a previously reused piece of code could be reused again, you make a decision: if the reusable code is already suitable, you just use it, but if it’s not, you decide whether or not you should modify how it works, or whether you should introduce a new layer on top of or underneath it. [...]
+>
+> Finally, the underlying assumption in all of this is, if you compress your code to a nice compact form, it is easy to read, because there’s a minimal amount of it, and the semantics tend to mirror the real “language” of the problem, because like a real language, those things that are expressed most often are given their own names and are used consistently. Well-compressed code is also easy to maintain, because all the places in the code that are doing identical things all go through the same paths, but code that is unique is not needlessly complicated or separated from its use. Finally, well-compressed code is easy to extend, because producing more code that does similar operations is simple, as all the necessary code is there in a nicely recomposable way."
+>
+>      -- Casey Muratori, 2014-05-28
+
+Now, you can look at this definition at the surface and say - this is exactly what DRY (Don't Repeat Yourself) principle does! But there's a very fine line between making code that uses itself, making the maximally overlapping set of functions, that DRY recommends, and setting things up to allow quick "blast style" optimization. In the latter approach, core operations are broken out so that they can be optimized individually.
+
+With the compression-oriented programming approach, individual operations that are super simple (4-5 lines of code maximum) but not entirely homogenous are usually not collapsed. They are left as is to leave room for eventual rewriting of individual functions in a more efficient way. Instead, we leave the patterns to emerge from the code that we're writing explicitly and with understanding that we get from it.
+
+This is but the first glimpse into what compression-oriented programming means. It will be the backbone of how we approach code, and you will have ample opportunity to see it in action.
+
 # Side Considerations 
+
+[^win-32]: We could say that, to a large extent, we've already been applying this approach in the Win32 layer but in reality we've been cheating a bit. We knew what the end result would be so we could roughly set our waypoints. But that isn't an interesting architectural problem, more like cutting and pasting functions from your brain. We didn't even have the waypoints, we just knew the final destination and wrote it. 
 
 # Navigation 
 
