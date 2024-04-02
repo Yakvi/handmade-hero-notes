@@ -218,7 +218,68 @@ To achieve that, we'll be taking an "Explore and Lock" approach. Our approach wi
 
 In doing so, you would hopefully develop a feel for a _gradient_ along which the path to shipping lies. This way, you'll also learn when an architecture is good or bad, leading you to being more at ease with new architectures and staying on a right track.
 
+# Our Game Design
 
+With all of this theory out of the way, let's briefly talk about the game we want to make. Specifically, we'll touch upon how our game looks and plays, just to see what we are building in terms of engine to support it. 
+
+It's important to note that this course doesn't have game design as its focus, and we're trying to make the simplest design possible while maintaining a complex programming challenge.
+
+We'll take major inspiration from the classic games like _The Legend of Zelda_, and these are the main points we'd like to focus on: 
+
+* Tile-based map
+* Things that move on the map
+* Fancy renderer/compositor - complete departure from NES/SNES-era games.
+* Separation between the overworld and dungeons
+* Consistent space
+* Totally procedural
+* No dimension limits
+* Combinatorics
+
+All of these should be simple enough so that we can finish them but complex enough so that we can learn advanced programming techniques.
+
+## Inspiration
+
+The original _Legend of Zelda_ released to NES and other platforms in 1986 and became a became an instant hit. Even today, after decades after its release, it's often considered one of the greatest games of all time, and even less questionably so one of the most influential. 
+
+![Figure [x]: The Legend of Zelda.](../media/day27/zelda.png) 
+
+Among the things in which this game was different its many successors was an extremely open-ended experience. The game would drop you in a rich and interesting world and set you free to explore. There were no constraints or limitations about what you could do, there was no fairy telling you where to go, etc.
+
+This feeling of exploration when you really have no idea about what's coming next is what we will try to capture in _Handmade Hero_. Additionally, _Zelda_ being a game limited by the technology of its time would be a good model for us, where we would take its different system and try to modernize them.
+
+## The Tile Map
+
+Similarly to the old _Zelda_ games, we want to make a world map based on tile-based grid, with tiles like Water, Grass, Land, Shop, etc. Our game would have the same _feel_ of the old classics, but without the tile-map graphics. While the tile-map graphics might have been a necessary tool for its technology, there are real benefits to having a tile-map _design_. For instance, if a tile is blocked, the player would get a clear message that you can't go through until a passage is cleared. We want to preserve this, as it would clarify the _game_ rules to the player.
+
+Therefore, what we want to have is a game that has tiles but which aren't rendered as a tile map. This would avoid us having repeating the same asset over and over on a rigid grid if we, for example, want to draw several forest tiles in a row.
+
+We will allow for certain things to float outside of the rigid grid structure. The player in _the Legend of Zelda_, for example, wasn't bound to a tile grid and could move freely, same as some enemies.
+
+## The Game World
+
+When we talk about the game world, once again we're thinking about _The Legend of Zelda_. In it, the player would traverse the overworld, talk to NPCs, and find entrances to the dungeons. The latter would in turn be filled with enemies, traps, and treasures. We want to recreate some of that with one notable departure: consistent space. 
+
+When you enter the dungeon, you would effectively go under the world map, and should you find another exit from it, it would bring you to another point on the map consistent with the space you traversed underground. The only departure from this would be some magical context where it would be clear that it's supposed to be broken.
+
+Every new world would be made from scratch, and nothing that we do will be hardcoded, aside from a few selected rooms (start screen, end screen, maybe a few others).
+
+We want to avoid hard boundaries on the map. You can quickly learn a 256x256x256 world and it could get boring. We'd be much happier with an _impractical_ world limit (like 4,000,000,000 x 4,000,000,000 x 4,000,000,000) that the player has no way of traversing. 
+
+## Combinatorics
+
+Ultimately, our game engine would support an insane amount of possible combinations. We call these "combinatorics" - any property that you can think of can deal in a consistent way with other properties. 
+
+For instance, if our game has a monster that can walk around, and we have a property called "fear" we should be able to hit them with something that could inflict fear on that monster. Additionally, these effects should be transmitted in a logic manner - I might have a scepter that I could imbue with gems, and if one of these gems happens to be a fear gem I can cast it to a tile, and if the monster goes through that tile it becomes fearful, and if it combines with another trait the monster might run away.... 
+
+Combinatorics is not an easy thing to implement, and we're going to spend a long time in the course dealing with them. That said, it's not something we'll get to anytime soon. We want to create a world where we can move around and that can drive our renderer design first, but once we get that up and running, most of our time will be spent here.
+
+## Into the Unknown
+
+So this is where we stand in terms of the game design. We start on this journey together and we don't know where it will lead us. The final code is unkown to us since, up until now, we never really attempted a _Legend of Zelda_ __clone__, let alone a completely new thing that takes it into completely new directions. So we have a ton of stuff that's totally unknown and we don't have a plan on how to write it, at all. We don't even know how to approach the tile map. We could brainstorm and imagine a few ways in which we _could_ implement something like this but we don't have a direct experience of writing a tile map in 50 games or anything that would us direct knowledge on how to do things specifically. 
+
+So here we are, at Day 0 of our project, without knowledge of what the road ahead is and what it looks like, and we're going to do exactly what we said. Start here, explore around our space by just looking at what it takes to implement basic version. How do I get a rectangle moving around on a tile map? How do I make a tile? We'll try an approach, see how the game reacts to it, and let the architecture work itself up from there. If it feels like it's working pretty well, we will say OK and move on.
+
+36:17
 
 ------------------------
 <!-- 
