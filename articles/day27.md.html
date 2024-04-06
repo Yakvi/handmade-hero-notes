@@ -33,7 +33,7 @@ If we put on our fantasy hats and head into the fantasy land of unicorns, magic,
 ******************************************************
 [Figure [x]: You are here.]
 
-There's also a point where we will ship our project. We start somewhere, and that somewhere is the finish: 
+There's also a point at which we will ship our project. We start somewhere, and that somewhere is the finish: 
 
 ******************************************************
 *          Day 700? * <----- Ship                    *
@@ -71,7 +71,7 @@ Of course, if you worked on any project, you know that the path from start to fi
 ******************************************************
 [Figure [x]: This is a map of a good project. It gets to ship.]
 
-Often, you don't even know how the final product will look! You only have a vague idea, but unless it's anything more complex than a "hello world" project, any additional details will be revealed as the project grows stronger. It's not even necessarily a "point" that you're trying to reach, but more of a nebulous blob of possibilities that slowly condenses into the final product.
+Often, you don't even know how the final product will look! You only have a vague idea, but unless it's anything more complex than a "hello world" project, any additional details will be revealed as the project grows stronger. It's not necessarily a "point" you're trying to reach but more of a nebulous blob of possibilities that slowly condenses into the final product.
 
 ******************************************************
 *            .--.       .----.                       *
@@ -93,13 +93,13 @@ Often, you don't even know how the final product will look! You only have a vagu
 ******************************************************
 [Figure [x]: The shipping point is more of a shipping nebula when you're starting.]
 
-Because of this, you might initially set towards a specific point in the "shipping nebula" and even progress there for a while, before realizing that the actual thing you're trying to reach is further away. Eventually, the nebula will condense into a point, and you will ship your project.
+Because of this, you might initially set towards a specific point in the "shipping nebula" and even progress there for a while before realizing that the actual thing you're trying to reach is further away. Eventually, the nebula will condense into a point, and you will ship your project.
 
 ## Waypoints
 
 So how should one approach this voyage, sitting down for the new day and hoping it will bring the project (or even individual pieces of code) closer to the finish? 
 
-At any given point in your project journey, be it day 0, day 100 or whatever, you would set yourself an objective for the day, maybe it's upgrading the object system because it doesn't handle the amount of objects we're trying to draw, or optimizing something, who knows. By doing this, you're effectively picking a new point on your Project State Space, and advancing yourself towards that point. Thus, day by day, you'd choose new points from wherever you left the day before. The better you're at dead reckoning, the fewer switchbacks and backtraces there are, the faster you get to shipping your project.
+At any given point in your project journey, be it day 0, day 100, etc., you would set yourself an objective for the day. Maybe it's upgrading the object system because it doesn't handle the number of objects we're trying to draw or optimizing something. Who knows? By doing this, you're effectively picking a new point on your Project State Space and advancing yourself towards that point. Thus, day by day, you'd choose new points from wherever you left the day before. The better you're at dead reckoning, the fewer switchbacks and backtraces there are, the faster you ship your project.
 
 ******************************************************
 *            .--.       .----.                       *
@@ -128,11 +128,11 @@ At any given point in your project journey, be it day 0, day 100 or whatever, yo
 ******************************************************
 [Figure [x]: Day after day, you build your way towards your goal.]
 
-This is where the __compression-oriented programming__ comes into play. It allows us to write code, see how it works at the low level and eventually elevate it into the bigger designs as we go, without needing to do a whole lot of pre-planning.
+This is where __compression-oriented programming__ comes into play. It allows us to write code, see how it works at the low level, and eventually elevate it into more significant designs as we go without needing a lot of pre-planning.
 
-For more information about the compression-oriented programming, see Subsection [compression-oriented programming] for a broader definition. 
+For more information about compression-oriented programming, see Subsection [compression-oriented programming] for a broader definition. 
 
-The main issue with pre-planning is that it assumes that you know what the final code would look like. If you have to do the pre-plan, you need to set your final point in advance and create the "waypoints" through which the project should go. 
+The main issue with pre-planning is that it assumes that you know what the final code would look like. If you have to do the pre-plan, you set your final point in advance and create the "waypoints" through which the project should go. 
 
 ******************************************************
 *            .--.       .----.                       *
@@ -158,7 +158,7 @@ The main issue with pre-planning is that it assumes that you know what the final
 ******************************************************
 [Figure [x]: Expectation: an ideal plan everyone tries to achieve.]
 
-But if you don't know the final point, there's no way to do the waypoints. What happens in reality is that the final point is set way off course
+But if you don't know the final point, there's no way to do the waypoints. In reality, the final point is often set way off course.
 
 ******************************************************
 *    * What we plan to ship                          *
@@ -180,15 +180,13 @@ But if you don't know the final point, there's no way to do the waypoints. What 
 ******************************************************
 [Figure [x]: Reality.]
 
-So when someone tries to follow that plan, things get progressively janky, and by the time you get to a certain point and realize it's a disaster, it's usually way too late to change things. The code is awful, we're fighting the architecture the whole way, and you end up either shipping something that's sub-optimal, or you try to course-correct towards the actual goal. 
+So when someone tries to follow that plan, things get progressively janky, and by the time you get to a certain point and realize it's a disaster, it's usually way too late to change things. The code is awful; we're fighting the architecture the whole way, and you either ship something sub-optimal or try to course-correct toward the actual goal. 
 
 ## Explore and Lock
 
-Thus, upfront design is about putting forward some waypoints on this map, but without actually knowing your destination. That just doesn't work, and you should try to avoid looking too far ahead. 
+Thus, upfront design is about putting some waypoints on this map without knowing your destination. We showed that it doesn't work, and you should avoid looking too far ahead. What we want to encourage instead and how we'll approach everything[^win-32] will be focused on unknown (to us) problems. Hopefully, by the end of this course, you'll develop skills to approach these problems. That's the tricky thing, one that makes you a code architect. 
 
-What we want to encourage instead, and the way we'll be approaching everything [^win-32] will be focused around unknown (to you) problems. Hopefully, by the end of this course you'll develop skills to approach these problems. That's the hard thing, one that actually makes you a code architect. 
-
-To achieve that, we'll be taking an "Explore and Lock" approach. Our approach will be the opposite of these waypoints. For each point we're at, we'll be spending some time exploring around us and seeing what we find. When we find something that we _feel_ is along the path that gets us to shipping the product, we will lock it in and make it our new starting location. 
+We'll take an "Explore and Lock" approach to achieve that. Our approach will be the opposite of these waypoints. We'll explore and see what we find around us at each point we're at. When we find something that we _feel_ is along the path that gets us to shipping the product, we will lock it in and make it our new starting location. 
 
 ******************************************************
 *            .--.       .----.                       *
@@ -216,22 +214,22 @@ To achieve that, we'll be taking an "Explore and Lock" approach. Our approach wi
 ******************************************************
 [Figure [x]: Explore and Lock.]
 
-In doing so, you would hopefully develop a feel for a _gradient_ along which the path to shipping lies. This way, you'll also learn when an architecture is good or bad, leading you to being more at ease with new architectures and staying on a right track.
+In doing so, you would hopefully develop a feel for a _gradient_ along the path to shipping. This way, you'll also learn when architecture is good or bad, making you more at ease when faced with a new architecture and staying on the right track.
 
 # Our Game Design
 
-With all of this theory out of the way, let's briefly talk about the game we want to make. Specifically, we'll touch upon how our game looks and plays, just to see what we are building in terms of engine to support it. 
+With this theory out of the way, let's briefly discuss the game we want to make. Specifically, we'll touch upon how our game looks and plays to see what engine we build to support it. 
 
-It's important to note that this course doesn't have game design as its focus, and we're trying to make the simplest design possible while maintaining a complex programming challenge.
+It's important to note that this course doesn't focus on game design, and we're trying to make the most straightforward design possible while maintaining a complex programming challenge.
 
-We'll take major inspiration from the classic games like _The Legend of Zelda_, and these are the main points we'd like to focus on: 
+We'll take significant inspiration from the classic games like _The Legend of Zelda_, and these are the main points we'd like to focus on: 
 
 * Tile-based map
 * Things that move on the map
-* Fancy renderer/compositor - complete departure from NES/SNES-era games.
+* Fancy renderer/compositor - a complete departure from NES/SNES-era games.
 * Separation between the overworld and dungeons
 * Consistent space
-* Totally procedural
+* Procedurally generated
 * No dimension limits
 * Combinatorics
 
@@ -239,47 +237,49 @@ All of these should be simple enough so that we can finish them but complex enou
 
 ## Inspiration
 
-The original _Legend of Zelda_ released to NES and other platforms in 1986 and became a became an instant hit. Even today, after decades after its release, it's often considered one of the greatest games of all time, and even less questionably so one of the most influential. 
+The original _Legend _of Zelda_ was released to NES and other platforms in 1986 and became an instant hit. Even today, decades after its release, it's often considered one of the greatest games of all time and, even less questionably so, one of the most influential. 
 
 ![Figure [x]: The Legend of Zelda.](../media/day27/zelda.png) 
 
-Among the things in which this game was different its many successors was an extremely open-ended experience. The game would drop you in a rich and interesting world and set you free to explore. There were no constraints or limitations about what you could do, there was no fairy telling you where to go, etc.
-
-This feeling of exploration when you really have no idea about what's coming next is what we will try to capture in _Handmade Hero_. Additionally, _Zelda_ being a game limited by the technology of its time would be a good model for us, where we would take its different system and try to modernize them.
+Among the things in which this game was different from its many successors was an extremely open-ended experience. The game would drop you into a rich and exciting world and allow you to explore it. There were no constraints or limitations about what you could do; no fairy told you where to go, etc. In _Handmade Hero_, we will try to capture this feeling of exploration when you don't know what's coming next. Additionally, _Zelda_, being a game limited by the technology of its time, would be a good model for us, where we would take its different system and try to modernize them.
 
 ## The Tile Map
 
-Similarly to the old _Zelda_ games, we want to make a world map based on tile-based grid, with tiles like Water, Grass, Land, Shop, etc. Our game would have the same _feel_ of the old classics, but without the tile-map graphics. While the tile-map graphics might have been a necessary tool for its technology, there are real benefits to having a tile-map _design_. For instance, if a tile is blocked, the player would get a clear message that you can't go through until a passage is cleared. We want to preserve this, as it would clarify the _game_ rules to the player.
+Similarly to the old _Zelda_ games, we want to make a tile-based world grid with tiles like Water, Grass, Land, Shop, and others. Our game would have the same _feel_ as the old classics but not their tile-map graphics. While the latter might have been a necessary tool for its time, and nowadays, we can supersede it, there are real benefits to having a tile-map _design_. For instance, if a tile is blocked, the player would get a clear message that you can't go through. We want to preserve this to clarify the _game_ rules to the player.
 
-Therefore, what we want to have is a game that has tiles but which aren't rendered as a tile map. This would avoid us having repeating the same asset over and over on a rigid grid if we, for example, want to draw several forest tiles in a row.
+Therefore, what we want to have is a game that has tiles but does not render them as a tile map. This would avoid repeating the same asset on a rigid grid if we, for example, want to draw several forest tiles in a row.
 
-We will allow for certain things to float outside of the rigid grid structure. The player in _the Legend of Zelda_, for example, wasn't bound to a tile grid and could move freely, same as some enemies.
+We will also allow certain things to float outside the rigid grid structure. For example, the player in _The Legend of Zelda__ wasn't bound to a tile grid and could move freely, the same as some enemies.
 
 ## The Game World
 
-When we talk about the game world, once again we're thinking about _The Legend of Zelda_. In it, the player would traverse the overworld, talk to NPCs, and find entrances to the dungeons. The latter would in turn be filled with enemies, traps, and treasures. We want to recreate some of that with one notable departure: consistent space. 
+When we talk about the game world, once again, we're thinking about _The Legend of Zelda_. In it, the player would traverse the overworld, talk to NPCs, and find entrances to the dungeons. The player would discover enemies, traps, and treasures in the dungeons. We want to recreate some of that with one notable sidenote: consistent space. 
 
-When you enter the dungeon, you would effectively go under the world map, and should you find another exit from it, it would bring you to another point on the map consistent with the space you traversed underground. The only departure from this would be some magical context where it would be clear that it's supposed to be broken.
+What do we mean by that? When you enter the dungeon, you will effectively go under the world map, and should you find another exit from it, it will bring you to another point on the map consistent with the space you traversed underground. The only departure from this would be some magical context where it would be clear that it's supposed to be this way: a teleport, a portal, and similar.
 
-Every new world would be made from scratch, and nothing that we do will be hardcoded, aside from a few selected rooms (start screen, end screen, maybe a few others).
+Our game would generate every new world from scratch, and nothing we do will be hardcoded, aside from a few selected rooms (start screen, end screen, maybe a few others). That said, we probably won't be able to support a fixed random seed to generate the world around like many other games do; it will have to be more involved.
 
-We want to avoid hard boundaries on the map. You can quickly learn a 256x256x256 world and it could get boring. We'd be much happier with an _impractical_ world limit (like 4,000,000,000 x 4,000,000,000 x 4,000,000,000) that the player has no way of traversing. 
+We want to avoid rigid boundaries on the map. You can quickly learn a 256x256x256 world, and it could get boring. We'd be much happier with an _impractical_ world limit (like 4,000,000,000 x 4,000,000,000 x 4,000,000,000) that would make it infinite for the player.
 
 ## Combinatorics
 
-Ultimately, our game engine would support an insane amount of possible combinations. We call these "combinatorics" - any property that you can think of can deal in a consistent way with other properties. 
+Ultimately, our game engine would support an enormous amount of possible combinations. We call these "combinatorics" - any property you can think of can invariably deal with other properties. 
 
-For instance, if our game has a monster that can walk around, and we have a property called "fear" we should be able to hit them with something that could inflict fear on that monster. Additionally, these effects should be transmitted in a logic manner - I might have a scepter that I could imbue with gems, and if one of these gems happens to be a fear gem I can cast it to a tile, and if the monster goes through that tile it becomes fearful, and if it combines with another trait the monster might run away.... 
+For instance, if our game has a monster that can walk around, and we have a property called "fear," we should be able to hit it with something that could inflict fear on that monster. Additionally, there would be a logical way to transmit these effects: I might have a wand that I could imbue with gems, and if one of these gems happens to be a fear gem, I can cast it to a tile, and if the monster goes through that tile it becomes fearful, and if it combines with another trait the monster might run away...
 
-Combinatorics is not an easy thing to implement, and we're going to spend a long time in the course dealing with them. That said, it's not something we'll get to anytime soon. We want to create a world where we can move around and that can drive our renderer design first, but once we get that up and running, most of our time will be spent here.
+Combinatorics is not easy to implement, and we will spend a long time dealing with them in the course. That said, it's not something we'll get to anytime soon. We want to create a world where we can move around, which can drive our renderer design first. Once we get that up and running, though, we will dedicate most of our time to this.
 
 ## Into the Unknown
 
-So this is where we stand in terms of the game design. We start on this journey together and we don't know where it will lead us. The final code is unkown to us since, up until now, we never really attempted a _Legend of Zelda_ __clone__, let alone a completely new thing that takes it into completely new directions. So we have a ton of stuff that's totally unknown and we don't have a plan on how to write it, at all. We don't even know how to approach the tile map. We could brainstorm and imagine a few ways in which we _could_ implement something like this but we don't have a direct experience of writing a tile map in 50 games or anything that would us direct knowledge on how to do things specifically. 
+So, this is where we stand in terms of the game design. We start this journey together and don't know where it will lead us. The final code is unknown to us since, until now, we never really attempted a _Legend of Zelda_ **clone**, let alone a completely new thing that takes it in entirely new directions. So, we have a ton of unknown stuff, and we don't have a plan for how to write it. We don't even know how to approach the tilemap! We could brainstorm and imagine a few ways to implement something like this. Still, we don't have direct experience writing a tilemap in dozens of games or anything that would give us direct knowledge on how to do things specifically.
 
-So here we are, at Day 0 of our project, without knowledge of what the road ahead is and what it looks like, and we're going to do exactly what we said. Start here, explore around our space by just looking at what it takes to implement basic version. How do I get a rectangle moving around on a tile map? How do I make a tile? We'll try an approach, see how the game reacts to it, and let the architecture work itself up from there. If it feels like it's working pretty well, we will say OK and move on.
+So here we are, on Day 0 of our project, without knowledge of the road ahead and what it looks like, and we're going to walk this road precisely like we said. Explore our space by looking at what it takes to implement the basic version. How do I get a rectangle moving around on a tile map? How do I make a tile? We'll try an approach, see how the game reacts to it, and let the architecture work itself up from there. If it feels like it's working well, we will say OK and move on.
 
-36:17
+# Back to Code
+
+## Get Target Seconds Per Frame
+
+It's been one and a half days since we last coded. Let's get back to it! First, a quick thing that we forgot to add was how much time we will 
 
 ------------------------
 <!-- 

@@ -107,5 +107,6 @@
             "language": "markdown",
             "scheme": "file"
         }
-    ]
+    ],
+    "cSpell.enabled": false
 }
