@@ -277,9 +277,315 @@ So here we are, on Day 0 of our project, without knowledge of the road ahead and
 
 # Back to Code
 
+It's been one and a half days since we last coded. Let's get back to it! 
+
 ## Get Target Seconds Per Frame
 
-It's been one and a half days since we last coded. Let's get back to it! First, a quick thing that we forgot to add was how much time we will 
+First, we forgot to add was how much time we will have for each frame. In `win32_handmade.cpp` we already define our `TargetSecondsPerFrame`, so it's only a matter of passing this value to the game. Of course, it's a bit early to actually use that still, but let's add it right away as a part of our `game_input` struct. In the industry this value is known as DeltaTime, but let's be more explicit here and call it `SecondsToAdvanceOverUpdate`. We will store it as a real32.
+
+~~~~~~~ C++
+struct game_input
+{
+    game_button_state MouseButtons[5];
+    s32 MouseX, MouseY, MouseZ;
+~~~~~~~ C++ add
+    r32 SecondsToAdvanceOverUpdate;
+~~~~~~~ C++
+    game_controller_input Controllers[5];
+}
+~~~~~~~ 
+[Listing [x]: <file>[handmade.h]</file> Introduce `game_input.SecondsToAdvanceOverUpdate`.]
+
+For now, we will not be doing precise calculations and just pass the `TargetSecondsPerFrame` inside the main loop, assuming that we will hit this value: 
+
+~~~~~~~ C++
+int MonitorRefreshHz = 60;
+// ...
+f32 GameUpdateHz = (MonitorRefreshHz / 2.0f)
+f32 TargetSecondsPerFrame = 1.0f / (f32)GameUpdateHz;
+// ...
+while (GlobalRunning)
+{
+~~~~~~~ C++ add
+    NewInput->SecondsToAdvanceOverUpdate = TargetSecondsPerFrame;
+~~~~~~~ C++
+// ...
+}
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Setting `SecondsToAdvanceOverUpdate`.]
+
+If you compile, run the debugger, and inspect your `Input` somewher in the `handmade.cpp -> GameUpdateAndRender` function, you should see its value to be around `0.0333333` to confirm that everything is in order.
+
+![Figure [x]: Inspecting `Input->SecondsToAdvanceOverUpdate` in the debugger.](../media/day27/debug_1.jpg) 
+
+## Remove Test Code
+
+We wrote plenty of test code back in `handmade.cpp` to make sure that our platform layer was working as intended. It's time for it to go, it's day 0 for us so we need a blank slate. Since we set up hot dll reload, we can even have the game running while we're processing these changes.
+
+### Remove Test Sound
+
+If you haven't done it already on [Day 23][], you can disable the test sound by simply adding an `#if 0` guard and output instead of the sine wave: 
+
+~~~~~~~ C++ add
+#if 0
+~~~~~~~ C++
+        f32 SineValue = sinf(GameState->tSine);
+        s16 SampleValue = (s16)(SineValue * ToneVolume);
+~~~~~~~ C++ add
+#else
+        s16 SampleValue = 0;
+#endif
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameOutputSound]</file> Disabling the sine wave.]
+
+### Remove the Weird Gradient
+
+The gradient that we're filling our screen with is being drawn in a separate function, so to disable it, we can simply remove the call to it from `GameUpdateAndRender`: 
+
+~~~~~~~ C++ delete
+RenderWeirdGradient(Buffer, GameState->XOffset, GameState->YOffset);
+~~~~~~~ C++
+RenderPlayer(Buffer, GameState->PlayerX, GameState->PlayerY);
+~~~~~~~ 
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Remove `RenderWeirdGradient` call.]
+
+However, you will notice that you now cannot compile due to a warning C4505: 
+
+~~~~~~~ batch
+W:\handmade\code\handmade.cpp(67): error C2220: the following warning is treated as an error
+W:\handmade\code\handmade.cpp(67): warning C4505: 'RenderWeirdGradient': unreferenced local function has been removed
+~~~~~~~
+
+We don't mind having unused functions in our code, they can always return handy later, so let's add another keyword to our `build.bat` to ignore these warnings: 
+
+~~~~~~~ batch
+set compiler=%compiler%     -wd4189                &:: Local variable not referenced
+~~~~~~~ batch add
+set compiler=%compiler%     -wd4505                &:: Unreferenced local function has been removed
+~~~~~~~
+[Listing [x]: <file>[build.bat]</file> Ignore warning C4505.]
+
+Coming to think of it, we _could_ actually delete the `RenderWeirdGradient` function, or at least move it to the end of the file. 
+
+If your game was running during this time, you will notice that the gradient is still there, altough it's getting progressively "dirtier" as you move the mouse around. This is because the gradient was actually performing double duty: 
+
+* It was drawing the gradient
+* It was clearing whatever was in the buffer the previous frame (by overwriting its data)
+
+We need to take a mental note of it and return to clearing our window later.
+
+### Remove RenderPlayer calls
+
+We were also rendering the indications that the mouse buttons were pressed, the mouse position, and the player that we were controlling with our controller input. All of these were using the same function, `RenderPlayer`, and this code can go, too: 
+
+~~~~~~~ C++ delete
+RenderPlayer(Buffer, GameState->PlayerX, GameState->PlayerY);
+
+for (int ButtonIndex = 0;
+        ButtonIndex < ArrayCount(Input->MouseButtons);
+        ++ButtonIndex)
+{
+    if (Input->MouseButtons[ButtonIndex].EndedDown)
+    {
+        RenderPlayer(Buffer, 10 + 20 * ButtonIndex, 10);
+    }
+}
+
+RenderPlayer(Buffer, Input->MouseX, Input->MouseY);
+~~~~~~~ 
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Remove `RenderPlayer` calls.]
+
+### Remove File Calls
+
+To test `DEBUGPlatformReadEntireFile`, we'd also load and read outputs of a test file. We don't need it anymore: 
+
+~~~~~~~ C++
+if(!Memory->IsInitialized)
+{
+~~~~~~~ C++ delete
+    debug_read_file_result FileData = Memory->DEBUGPlatformReadEntireFile(Thread, __FILE__);
+    if (FileData.Contents)
+    {
+        Memory->DEBUGPlatformWriteEntireFile(Thread, "test.out", FileData.ContentsSize, FileData.Contents);
+        Memory->DEBUGPlatformFreeFileMemory(Thread, FileData.Contents);
+    }
+~~~~~~~ C++
+    GameState->XOffset = 0;
+    GameState->YOffset = 0;
+    GameState->ToneHz = 256;
+    
+    GameState->PlayerX = 100;
+    GameState->PlayerY = 100;
+    
+    Memory->IsInitialized = true;
+}
+
+for (int ControllerIndex = 0;
+     ControllerIndex < ArrayCount(Input->Controllers);
+     ++ControllerIndex)
+{
+    
+    game_controller_input *Controller = GetController(Input, ControllerIndex);
+    if (Controller->IsAnalog)
+    {
+        // NOTE(casey): Use analog movement tuning
+~~~~~~~ C++ delete
+        GameState->XOffset += (int)(4.0f * Controller->StickAverageX);
+        GameState->ToneHz = 256 + (int)(128.0f * (Controller->StickAverageY));
+~~~~~~~ C++
+    }
+    else
+    {
+        // NOTE(casey): Use digital movement tuning
+~~~~~~~ C++ delete
+        if (Controller->MoveLeft.EndedDown)
+        {
+            GameState->XOffset -= 1;
+        }
+        
+        if (Controller->MoveRight.EndedDown)
+        {
+            GameState->XOffset += 1;
+        }
+~~~~~~~ C++
+    }
+    
+~~~~~~~ C++ delete
+    GameState->PlayerX += (int)(4.0f * Controller->StickAverageX);
+    GameState->PlayerY -= (int)(4.0f * Controller->StickAverageY);
+    if (GameState->tJump > 0)
+    {
+        GameState->PlayerY += (int)(10.0f * sinf(2.0f * Pi32 * GameState->tJump));
+    }
+    if(Controller->ActionDown.EndedDown)
+    {
+        GameState->tJump = 1.0f;
+    }
+    GameState->tJump -= 0.033f;
+~~~~~~~ C++
+}
+~~~~~~~ 
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Remove test file reading and writing.]
+
+### Clean Up the Game State
+
+Our `game_state` contained a few values that we wrote for storing some test information. They are no longer necessary, so we can get rid of their initialization code: 
+
+~~~~~~~ C++
+if(!Memory->IsInitialized)
+{
+~~~~~~~ C++ delete
+    GameState->XOffset = 0;
+    GameState->YOffset = 0;
+    GameState->ToneHz = 256;
+    
+    GameState->PlayerX = 100;
+    GameState->PlayerY = 100;
+~~~~~~~ C++
+    Memory->IsInitialized = true;
+}
+~~~~~~~ 
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Remove references to test game state fields.]
+
+Same comes to definition. In fact, we can get rid of all the contents of our `game_state` entirely, leaving the struct empty for the time being: 
+
+~~~~~~~ C++
+struct game_state
+{
+~~~~~~~ C++ delete
+    int ToneHz;
+    int XOffset;
+    int YOffset;
+    
+    f32 tSine;
+    
+    int PlayerX;
+    int PlayerY;
+    f32 tJump;
+~~~~~~~ C++
+};
+~~~~~~~ 
+[Listing [x]: <file>[handmade.h]</file> Remove definitions of the test game state fields.]
+
+Trying to compile the game now leads us to `#if 0` another piece of `GameOutputSound` function (you can also delete it if you prefer so):
+
+~~~~~~~ C++
+#if 0
+        f32 SineValue = sinf(GameState->tSine);
+        s16 SampleValue = (s16)(SineValue * ToneVolume);
+#else
+        s16 SampleValue = 0;
+#endif
+        
+        *SampleOut++ = SampleValue;
+        *SampleOut++ = SampleValue;
+~~~~~~~ C++ add
+#if 0
+~~~~~~~ C++
+        GameState->tSine += 2.0f * Pi32 * 1.0f / (f32)WavePeriod;
+        
+        if (GameState->tSine > 2.0f * Pi32)
+        {
+            GameState->tSine -= 2.0f * Pi32;
+        }
+~~~~~~~ C++ add
+#endif
+~~~~~~~ 
+[Listing [x]: <file>[handmade.cpp > GameOutputSound]</file> Remove definitions of the test game state fields.]
+
+And, instead of passing `GameState->ToneHz`, we could pass a hard number to `GameOutputSound` for the time being: 
+
+~~~~~~~ C++
+GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
+{
+    game_state *GameState = (game_state*)Memory->PermanentStorage;
+~~~~~~~ C++ edit
+    GameOutputSound(GameState, SoundBuffer, 400);
+~~~~~~~ C++
+}
+~~~~~~~ 
+[Listing [x]: <file>[handmade.cpp]</file> Remove yet another reference to `ToneHz`.]
+
+And that's it! We're now back to something that does _absolutely nothing_. We're back at square one.
+
+## Decide on the Game Resolution
+
+Let's make a Decision! Those are always fun. This one involves our game resolution. In fact, it's an important decision for a 2D game like ours.
+
+In a 3D game, everything is always resampled. You map the polygons to draw, textures to these polygons. The final output can be rendered to any target resolution, and you don't really need to think about it, aside from maybe how dense the textures should be and how closely would they be seen. It's not the case for a 2D game. If the artist wants to be very specific about how things should look like, we should be able to draw them in a resolution and aspect ratio allowing to not lose any detail or create distortions.
+
+These days, we see an emergence of 4K and 1440p monitors, as well as ultrawide monitors of different size. But the de-facto baseline resolution remains 1920x1080, "Full HD" resolution. 
+
+Another consideration is that we want to make is that we will write our first version of the renderer (the _software renderer_) to run on the CPU; we will eventually transition to the much faster _hardware renderer_ running on the GPU. 
+
+So let's decide the following: 
+
+* Target 1920x1080 at 60Hz for the _hardware renderer_.
+* Half all these values for our _software renderer_: 960x540 at 30Hz. 
+
+If we half all three values, we'd get $1/2 * 1/2 * 1/2 = 1/8$ low need of calculations, so hopefully this will be small enough for us to handle.
+
+In `win32_handmade.cpp`, we're already defining the size of our DIB section, so let's create two dimensions for us to switch between. We'll disable one we don't need, of course.
+
+~~~~~~~ C++
+Win32LoadXInput();
+
+~~~~~~~ C++ delete
+Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
+~~~~~~~ C++ add
+// Win32ResizeDIBSection(&GlobalBackbuffer, 1920, 1080);
+Win32ResizeDIBSection(&GlobalBackbuffer, 960, 540);
+~~~~~~~ C++
+WNDCLASS WindowClass = {0};
+~~~~~~~ 
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Define our two target dimensions.]
+
+For the target framerate, we're already using the monitor's refresh rate and then halving it. This gives us 30Hz on 60Hz monitors which is fine for now.
+
+# Draw Rectangle Function
+
+47:50
+
 
 ------------------------
 <!-- 
