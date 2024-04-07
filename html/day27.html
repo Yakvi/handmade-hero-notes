@@ -36,7 +36,7 @@ We did quite a bit of theory last time; let's wrap it up and get to practice!
 &nbsp;&nbsp;<a href="#backtocode/removetestcode" class="level2"><span class="tocNumber">3.2&nbsp; </span>Remove Test Code</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#backtocode/removetestcode/removetestsound" class="level3"><span class="tocNumber">3.2.1&nbsp; </span>Remove Test Sound</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#backtocode/removetestcode/removetheweirdgradient" class="level3"><span class="tocNumber">3.2.2&nbsp; </span>Remove the Weird Gradient</a><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#backtocode/removetestcode/removerenderplayercalls" class="level3"><span class="tocNumber">3.2.3&nbsp; </span>Remove RenderPlayer calls</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#backtocode/removetestcode/removerenderplayercalls" class="level3"><span class="tocNumber">3.2.3&nbsp; </span>Remove <code>RenderPlayer</code> calls</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#backtocode/removetestcode/removefilecalls" class="level3"><span class="tocNumber">3.2.4&nbsp; </span>Remove File Calls</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#backtocode/removetestcode/cleanupthegamestate" class="level3"><span class="tocNumber">3.2.5&nbsp; </span>Clean Up the Game State</a><br/>
 &nbsp;&nbsp;<a href="#backtocode/decideonthegameresolution" class="level2"><span class="tocNumber">3.3&nbsp; </span>Decide on the Game Resolution</a><br/>
@@ -408,7 +408,7 @@ Similarly to the old <em class="underscore">Zelda</em> games, we want to make a 
 
 </p><p>
 
-Therefore, what we want to have is a game that has tiles but does not render them as a tile map. This would avoid repeating the same asset on a rigid grid if we, for example, want to draw several forest tiles in a row.
+Therefore, what we want to have is a game that has tiles but does not render them as a tile map. This approach would avoid repeating the same asset on a rigid grid if we, for example, want to draw several forest tiles in a row.
 
 </p><p>
 
@@ -453,7 +453,7 @@ Combinatorics is not easy to implement, and we will spend a long time dealing wi
 <p>
 
 
-So, this is where we stand in terms of the game design. We start this journey together and don't know where it will lead us. The final code is unknown to us since, until now, we never really attempted a <em class="underscore">Legend of Zelda</em> <strong class="asterisk">clone</strong>, let alone a completely new thing that takes it in entirely new directions. So, we have a ton of unknown stuff, and we don't have a plan for how to write it. We don't even know how to approach the tilemap! We could brainstorm and imagine a few ways to implement something like this. Still, we don't have direct experience writing a tilemap in dozens of games or anything that would give us direct knowledge on how to do things specifically.
+So, this is where we stand in terms of game design. We start this journey together and don't know where it will lead us. The final code is unknown to us since, until now, we never really attempted a <em class="underscore">Legend of Zelda</em> <strong class="asterisk">clone</strong>, let alone a completely new thing that takes it in entirely new directions. So, we have a ton of unknown stuff, and we don't have a plan for how to write it. We don't even know how to approach the tilemap! We could brainstorm and imagine a few ways to implement something like this. Still, we don't have direct experience writing a tilemap in dozens of games or anything that would give us direct knowledge on how to do things specifically.
 
 </p><p>
 
@@ -471,7 +471,7 @@ It's been one and a half days since we last coded. Let's get back to it!
 <p>
 
 
-First, we forgot to add was how much time we will have for each frame. In <code>win32_handmade.cpp</code> we already define our <code>TargetSecondsPerFrame</code>, so it's only a matter of passing this value to the game. Of course, it's a bit early to actually use that still, but let's add it right away as a part of our <code>game_input</code> struct. In the industry this value is known as DeltaTime, but let's be more explicit here and call it <code>SecondsToAdvanceOverUpdate</code>. We will store it as a real32.
+First, we forgot to provide the game with the information on how much time we would have for each frame. In <code>win32_handmade.cpp</code>, we have already defined our <code>TargetSecondsPerFrame</code>, so it's only a matter of passing this value to the game. Of course, it's still a bit early to use that, but let's add it immediately as part of our <code>game_input</code> struct. This value is also known as <em class="underscore">Delta Time</em>, but let's be more explicit here: <code>SecondsToAdvanceOverUpdate</code>. We will store it as a real32.
 
 </p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_input</span></span>
 <span class="line">{</span></span>
@@ -481,7 +481,7 @@ First, we forgot to add was how much time we will have for each frame. In <code>
 <p>
 
 
-For now, we will not be doing precise calculations and just pass the <code>TargetSecondsPerFrame</code> inside the main loop, assuming that we will hit this value: 
+For now, we will not be doing precise calculations and pass the <code>TargetSecondsPerFrame</code> inside the main loop, assuming that we will hit this value: 
 
 </p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">int</span> MonitorRefreshHz = <span class="hljs-number">60</span>;</span>
 <span class="line"><span class="hljs-comment">// ...</span></span>
@@ -494,7 +494,7 @@ For now, we will not be doing precise calculations and just pass the <code>Targe
 <p>
 
 
-If you compile, run the debugger, and inspect your <code>Input</code> somewher in the <code>handmade.cpp -&gt; GameUpdateAndRender</code> function, you should see its value to be around <code>0.0333333</code> to confirm that everything is in order.
+If you compile, run the debugger, and inspect your <code>Input</code> somewhere in the <code>handmade.</code>cpp &rarr; GameUpdateAndRender<code> function, you should see its value around `0.0333333</code> to confirm everything is in order.
 
 </p><p>
 
@@ -505,14 +505,14 @@ If you compile, run the debugger, and inspect your <code>Input</code> somewher i
 <p>
 
 
-We wrote plenty of test code back in <code>handmade.cpp</code> to make sure that our platform layer was working as intended. It's time for it to go, it's day 0 for us so we need a blank slate. Since we set up hot dll reload, we can even have the game running while we're processing these changes.
+We wrote plenty of test code back in <code>handmade.cpp</code> to ensure our platform layer worked as intended. It's time to go; it's day 0 for us, so we need a blank slate. Since we set up a hot dll reload, we can keep the game running while processing these changes.
 
 </p>
 <a class="target" name="removetestsound">&nbsp;</a><a class="target" name="backtocode/removetestcode/removetestsound">&nbsp;</a><a class="target" name="toc3.2.1">&nbsp;</a><h3>Remove Test Sound</h3>
 <p>
 
 
-If you haven't done it already on <a href="../html/day23.html">Day 23</a>, you can disable the test sound by simply adding an <code>#if 0</code> guard and output instead of the sine wave: 
+If you haven't done it already on <a href="../html/day23.html">Day 23</a>, you can turn off the test sound by simply adding an <code>#if 0</code> guard and output instead of the sine wave: 
 
 </p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> 0</span></span></div><span class="line">        f32 SineValue = sinf(GameState-&gt;tSine);</span>
 <span class="line">        s16 SampleValue = (s16)(SineValue * ToneVolume);</span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span></span>
@@ -523,7 +523,7 @@ If you haven't done it already on <a href="../html/day23.html">Day 23</a>, you c
 <p>
 
 
-The gradient that we're filling our screen with is being drawn in a separate function, so to disable it, we can simply remove the call to it from <code>GameUpdateAndRender</code>: 
+The gradient that we're filling our screen with is being drawn in a separate function, so to turn it off, we can remove the call to it from <code>GameUpdateAndRender</code>: 
 
 </p><pre class="listing tilde"><code><div class=" delete"><span class="line">RenderWeirdGradient(Buffer, GameState-&gt;XOffset, GameState-&gt;YOffset);</span></div><span class="line">RenderPlayer(Buffer, GameState-&gt;PlayerX, GameState-&gt;PlayerY);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;4:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Remove <code>RenderWeirdGradient</code> call.</div></center>
 <p>
@@ -534,35 +534,35 @@ However, you will notice that you now cannot compile due to a warning C4505:
 </p><pre class="listing tilde"><code><span class="line">W:\handmade\code\handmade.cpp(67): error C2220: the following warning is treated as an error</span>
 <span class="line">W:\handmade\code\handmade.cpp(67): warning C4505: &#x27;RenderWeirdGradient&#x27;: unreferenced local function has been removed</span></code></pre><p>
 
-We don't mind having unused functions in our code, they can always return handy later, so let's add another keyword to our <code>build.bat</code> to ignore these warnings: 
+We don't mind having unused functions in our code; they can always return handy later. So let's add another keyword to our <code>build.bat</code> to ignore these warnings: 
 
 </p><pre class="listing tilde"><code><span class="line">set compiler=%compiler%     -wd4189                &amp;:: Local variable not referenced</span><div class=" add"><span class="line">set compiler=%compiler%     -wd4505                &amp;:: Unreferenced local function has been removed</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;5:</b> <file>[build.bat]</file> Ignore warning C4505.</div></center>
 <p>
 
 
-Coming to think of it, we <em class="underscore">could</em> actually delete the <code>RenderWeirdGradient</code> function, or at least move it to the end of the file. 
+Of course, we <em class="underscore">could</em> delete the <code>RenderWeirdGradient</code> function or move it to the end of the file. 
 
 </p><p>
 
-If your game was running during this time, you will notice that the gradient is still there, altough it's getting progressively &ldquo;dirtier&rdquo; as you move the mouse around. This is because the gradient was actually performing double duty: 
+If your game was running during this time, you will notice that the gradient is still there, although it's getting progressively &ldquo;dirtier&rdquo; as you move the mouse cursor around. This effect is due to the gradient performing double duty: 
 
 </p><p>
 
 <ul>
 <li class="asterisk">It was drawing the gradient
 </li>
-<li class="asterisk">It was clearing whatever was in the buffer the previous frame (by overwriting its data)</li></ul>
+<li class="asterisk">It was clearing whatever was in the buffer in the previous frame (by overwriting its data)</li></ul>
 
 </p><p>
 
-We need to take a mental note of it and return to clearing our window later.
+We need to mentally note it and return to clearing our window later.
 
 </p>
-<a class="target" name="removerenderplayercalls">&nbsp;</a><a class="target" name="backtocode/removetestcode/removerenderplayercalls">&nbsp;</a><a class="target" name="toc3.2.3">&nbsp;</a><h3>Remove RenderPlayer calls</h3>
+<a class="target" name="removerenderplayercalls">&nbsp;</a><a class="target" name="backtocode/removetestcode/removerenderplayercalls">&nbsp;</a><a class="target" name="toc3.2.3">&nbsp;</a><h3>Remove <code>RenderPlayer</code> calls</h3>
 <p>
 
 
-We were also rendering the indications that the mouse buttons were pressed, the mouse position, and the player that we were controlling with our controller input. All of these were using the same function, <code>RenderPlayer</code>, and this code can go, too: 
+We drew small rectangles whenever we pressed mouse buttons; another rectangle represented the mouse position; finally, a rectangle represented the player we moved with our controller input. All of these were using the same function, <code>RenderPlayer</code>, and this code can go, too: 
 
 </p><pre class="listing tilde"><code><div class=" delete"><span class="line">RenderPlayer(Buffer, GameState-&gt;PlayerX, GameState-&gt;PlayerY);</span>
 <span class="line"></span>
@@ -582,7 +582,7 @@ We were also rendering the indications that the mouse buttons were pressed, the 
 <p>
 
 
-To test <code>DEBUGPlatformReadEntireFile</code>, we'd also load and read outputs of a test file. We don't need it anymore: 
+To test <code>DEBUGPlatformReadEntireFile</code>, we'd also load and read the outputs of a test file. We don't need it anymore: 
 
 </p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span>(!Memory-&gt;IsInitialized)</span>
 <span class="line">{</span><div class=" delete"><span class="line">    debug_read_file_result FileData = Memory-&gt;DEBUGPlatformReadEntireFile(Thread, __FILE__);</span>
@@ -637,7 +637,7 @@ To test <code>DEBUGPlatformReadEntireFile</code>, we'd also load and read output
 <p>
 
 
-Our <code>game_state</code> contained a few values that we wrote for storing some test information. They are no longer necessary, so we can get rid of their initialization code: 
+Our <code>game_state</code> contained a few values we wrote to store some test information. They are no longer necessary, so we can get rid of their initialization code: 
 
 </p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span>(!Memory-&gt;IsInitialized)</span>
 <span class="line">{</span><div class=" delete"><span class="line">    GameState-&gt;XOffset = <span class="hljs-number">0</span>;</span>
@@ -650,7 +650,7 @@ Our <code>game_state</code> contained a few values that we wrote for storing som
 <p>
 
 
-Same comes to definition. In fact, we can get rid of all the contents of our <code>game_state</code> entirely, leaving the struct empty for the time being: 
+Same comes to definition. We can get rid of all the contents of our <code>game_state</code> entirely, leaving the struct empty for the time being: 
 
 </p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_state</span></span>
 <span class="line">{</span></span><div class=" delete"><span class="line">    <span class="hljs-keyword">int</span> ToneHz;</span>
@@ -661,7 +661,7 @@ Same comes to definition. In fact, we can get rid of all the contents of our <co
 <span class="line">    </span>
 <span class="line">    <span class="hljs-keyword">int</span> PlayerX;</span>
 <span class="line">    <span class="hljs-keyword">int</span> PlayerY;</span>
-<span class="line">    f32 tJump;</span></div><span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;9:</b> <file>[handmade.h]</file> Remove definitions of the test game state fields.</div></center>
+<span class="line">    f32 tJump;</span></div><span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;9:</b> <file>[handmade.h]</file> Removing definitions of the test game state fields.</div></center>
 <p>
 
 
@@ -684,7 +684,7 @@ Trying to compile the game now leads us to <code>#if 0</code> another piece of <
 <p>
 
 
-And, instead of passing <code>GameState-&gt;ToneHz</code>, we could pass a hard number to <code>GameOutputSound</code> for the time being: 
+And, instead of passing <code>GameState-&gt;ToneHz</code>, we could directly pass a number to <code>GameOutputSound</code> for the time being: 
 
 </p><pre class="listing tilde"><code><span class="line">GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)</span>
 <span class="line">{</span>
@@ -699,19 +699,19 @@ And that's it! We're now back to something that does <em class="underscore">abso
 <p>
 
 
-Let's make a Decision! Those are always fun. This one involves our game resolution. In fact, it's an important decision for a 2D game like ours.
+Let's make a Decision! Those are always fun. This one involves our game resolution. It's an important decision for a 2D game like ours.
 
 </p><p>
 
-In a 3D game, everything is always resampled. You map the polygons to draw, textures to these polygons. The final output can be rendered to any target resolution, and you don't really need to think about it, aside from maybe how dense the textures should be and how closely would they be seen. It's not the case for a 2D game. If the artist wants to be very specific about how things should look like, we should be able to draw them in a resolution and aspect ratio allowing to not lose any detail or create distortions.
+In a 3D game, everything is always resampled. You map the polygons to draw and the textures of these polygons. The engine can render the final output to any target resolution, and you don't need to think about it, aside from maybe how dense the textures should be and how closely the players would see them. It's not the case for a 2D game. If the artist wants to be very specific about how things should look, we should be able to draw them in a resolution and aspect ratio, allowing us not to lose any detail or create distortions.
 
 </p><p>
 
-These days, we see an emergence of 4K and 1440p monitors, as well as ultrawide monitors of different size. But the de-facto baseline resolution remains 1920&times;1080, &ldquo;Full HD&rdquo; resolution. 
+These days, we see an emergence of 4K and 1440p monitors and ultrawide monitors of different sizes. However, the de-facto baseline remains 1920&times;1080, a &ldquo;Full HD&rdquo; resolution. 
 
 </p><p>
 
-Another consideration is that we want to make is that we will write our first version of the renderer (the <em class="underscore">software renderer</em>) to run on the CPU; we will eventually transition to the much faster <em class="underscore">hardware renderer</em> running on the GPU. 
+Another consideration we want to make is that we will write our first version of the renderer (the <em class="underscore">software renderer</em>) to run on the CPU; we will eventually transition to the much faster <em class="underscore">hardware renderer</em> running on the GPU. 
 
 </p><p>
 
@@ -722,15 +722,15 @@ So let's decide the following:
 <ul>
 <li class="asterisk">Target 1920&times;1080 at 60Hz for the <em class="underscore">hardware renderer</em>.
 </li>
-<li class="asterisk">Half all these values for our <em class="underscore">software renderer</em>: 960&times;540 at 30Hz.</li></ul>
+<li class="asterisk">Halve these values for our <em class="underscore">software renderer</em> to 960&times;540 at 30Hz.</li></ul>
 
 </p><p>
 
-If we half all three values, we'd get \(1/2 * 1/2 * 1/2 = 1/8\) low need of calculations, so hopefully this will be small enough for us to handle.
+If we halve all three values, we will get \(1/2 * 1/2 * 1/2 = 1/8\) lower need of calculations, so hopefully, this will be small enough for us to handle.
 
 </p><p>
 
-In <code>win32_handmade.cpp</code>, we're already defining the size of our DIB section, so let's create two dimensions for us to switch between. We'll disable one we don't need, of course.
+In <code>win32_handmade.cpp</code>, we're already defining the size of our DIB section, so let's create two dimensions to switch between. We'll disable one we don't need, of course.
 
 </p><pre class="listing tilde"><code><span class="line">Win32LoadXInput();</span>
 <span class="line"></span><div class=" delete"><span class="line">Win32ResizeDIBSection(&amp;GlobalBackbuffer, <span class="hljs-number">1280</span>, <span class="hljs-number">720</span>);</span></div><div class=" add"><span class="line"><span class="hljs-comment">// Win32ResizeDIBSection(&amp;GlobalBackbuffer, 1920, 1080);</span></span>
@@ -738,14 +738,14 @@ In <code>win32_handmade.cpp</code>, we're already defining the size of our DIB s
 <p>
 
 
-For the target framerate, we're already using the monitor's refresh rate and then halving it. This gives us 30Hz on 60Hz monitors which is fine for now.
+We're already using the monitor's refresh rate for the target framerate and then halving it. This gives us 30Hz on 60Hz monitors, which is fine for now.
 
 </p>
 <a class="target" name="drawrectanglefunction">&nbsp;</a><a class="target" name="drawrectanglefunction">&nbsp;</a><a class="target" name="toc4">&nbsp;</a><h1>Draw Rectangle Function</h1>
 <p>
 
 
-In our test code, there is one function that we can reuse: <code>RenderPlayer</code>. It's a simple function that draws a small 10&times;10 rectangle at a given position. We can convert this function to officially draw a rectangle of arbitrary size and, in the future, color (and, who knows, maybe even texture!). 
+In our test code, there is one function that we can reuse: <code>RenderPlayer</code>. It's a simple function that draws a small 10&times;10 rectangle at a given position. We can convert this function to draw a rectangle of arbitrary size and, in the future, color (and, who knows, maybe even texture!). 
 
 </p>
 <a class="target" name="repurposerenderplayerintodrawrectangle">&nbsp;</a><a class="target" name="drawrectanglefunction/repurposerenderplayerintodrawrectangle">&nbsp;</a><a class="target" name="toc4.1">&nbsp;</a><h2>Repurpose <code>RenderPlayer</code> into <code>DrawRectangle</code></h2>
@@ -761,7 +761,7 @@ Let's begin by changing the function's name.
 <p>
 
 
-We want this function to accept a position marking the beginning of the rectangle (min X and Y), and another one marking its end (max X and Y). Remember that we're starting our screen coordinates in the top-left corner.
+We want this function to accept a position marking the beginning of the rectangle (min X and Y) and another marking its end (max X and Y). Remember that we're starting our screen coordinates in the top-left corner.
 
 </p><p>
 
@@ -788,7 +788,7 @@ We want this function to accept a position marking the beginning of the rectangl
 
 </p><p>
 
-That said, for future expansions we probably want to pass these as real numbers, not integers. The reasons for it might not be immediately obvious, and we touch on some of them in Subsection  <a href="#toc7.1">7.1</a>.
+We probably want to pass these as real numbers, not integers, for future expansions. The reasons might not be immediately apparent, but we will discuss some in the Subsection  <a href="#toc7.1">7.1</a>.
 
 </p><pre class="listing tilde"><code><span class="line">internal <span class="hljs-keyword">void</span></span><div class=" edit"><span class="line">DrawRectangle(game_offscreen_buffer *Buffer,</span></div><div class=" add"><span class="line">             f32 RealMinX, f32 RealMinY, f32 RealMaxX, f32 RealMaxY)</span></div><span class="line">{</span>
 <span class="line">    u8 *EndOfBuffer = (u8 *)Buffer-&gt;Memory + Buffer-&gt;Pitch * Buffer-&gt;Height;</span>
@@ -818,14 +818,14 @@ Based on this convention, the first thing we need to do inside the function is t
 <p>
 
 
-We don't have a rounding function yet, we'll think about it in a second.
+We don't have a rounding function yet; we'll think about it in a second.
 
 </p>
 <a class="target" name="clipboundaries">&nbsp;</a><a class="target" name="drawrectanglefunction/clipboundaries">&nbsp;</a><a class="target" name="toc4.2">&nbsp;</a><h2>Clip Boundaries</h2>
 <p>
 
 
-As we discussed during <a href="../html/day4.html">Day 4</a> (section 4.4, figure 4), our buffer is just a chunk of raw memory that we can write into. Each 32-bit value inside it represents a pixel color. So, now that we have the min and max points, we want to clip them to the these boundaries.
+As discussed during <a href="../html/day4.html">Day 4</a> (section 4.4, figure 4), our buffer is just a chunk of raw memory we can write into. Each 32-bit value inside it represents a pixel color. So, now that we have the minimum and maximum points, we want to clip them to these boundaries.
 
 </p><p>
 
@@ -849,11 +849,11 @@ As we discussed during <a href="../html/day4.html">Day 4</a> (section 4.4, figur
 
 </p><p>
 
-(Because of how we laid out the buffer memory, going over the sides would bleed the pixels to the opposite side of the screen, while going above or below would flat out crash the program for trying to access unauthorized memory).
+(Because of how we laid out the buffer memory, going over the sides would bleed the pixels to the opposite side of the screen, while going above or below would flat-out crash the program for trying to access unauthorized memory).
 
 </p><p>
 
-Actual clipping is very simple: 
+Actual clipping is trivial:
 
 </p><pre class="listing tilde"><code><span class="line">s32 MinX = RoundReal32ToInt32(RealMinX);</span>
 <span class="line">s32 MinY = RoundReal32ToInt32(RealMinY);</span>
@@ -881,14 +881,14 @@ Actual clipping is very simple:
 <p>
 
 
-You might think that we should make sure that Max x/y should be clipped if the value is greater <em class="underscore">or equal</em> than the buffer width/height, but because we're filling the rectangles <em class="underscore">excluding</em> Max values we're actually fine.
+You might think that we should clip Max x/y if the value is greater <em class="underscore">or equal</em> to the buffer width/height, but because we're filling the rectangles <em class="underscore">excluding</em> Max values, we're fine.
 
 </p>
 <a class="target" name="fillthepixels">&nbsp;</a><a class="target" name="drawrectanglefunction/fillthepixels">&nbsp;</a><a class="target" name="toc4.3">&nbsp;</a><h2>Fill the Pixels</h2>
 <p>
 
 
-We want to change the sequence in which we fill our pixels. Right now we're getting a pixel and then shift it by every row. It's inefficient since usually you want to send continguous memory blocks to the processor. So let's invert the loops we have:
+We want to change the sequence in which we fill our pixels. We're getting a pixel and then shifting it by every row. It's inefficient since you usually want to send contiguous memory blocks to the processor. So, let's invert the loops we have:
 
 </p><pre class="listing tilde"><code><div class=" delete"><span class="line">u8 *EndOfBuffer = (u8 *)Buffer-&gt;Memory + Buffer-&gt;Pitch * Buffer-&gt;Height;</span></div><span class="line">u32 Color = <span class="hljs-number">0xFFFFFFFF</span>;   </span><div class=" delete"><span class="line"><span class="hljs-keyword">int</span> Left = PlayerX;</span>
 <span class="line"><span class="hljs-keyword">int</span> Right = PlayerX + <span class="hljs-number">10</span>;</span>
@@ -919,7 +919,7 @@ We want to position ourselves at (MinX, MinY) before we enter the loop as follow
 </li>
 <li class="asterisk">We then move &ldquo;horizontally&rdquo; by <code>MinX</code> amount of pixels, multiplied by the size of our pixels. We have saved this size as <code>BytesPerPixel</code>.
 </li>
-<li class="asterisk">Finally, we move &ldquo;vertically&rdquo; by <code>MinY</code> amount of pixels, multiplied by the <em class="underscore">stride</em> or <code>Pitch</code> of our row. 
+<li class="asterisk">Finally, we move &ldquo;vertically&rdquo; by <code>MinY</code> pixels, multiplied by the <em class="underscore">stride</em> or <code>Pitch</code> of our row. 
 </li>
 <li class="asterisk">We then advance our row by pitch until we fill the rectangle we need.</li></ul>
 
@@ -1007,7 +1007,7 @@ We want to position ourselves at (MinX, MinY) before we enter the loop as follow
 <p>
 
 
-Similarly to the row pointer, we can define the pixel pointer, with an exception that it can be directly a 32-bit value. Finally, within the loop we can write our color and advance the pixel pointer: 
+Similarly to the row pointer, we can define the pixel pointer, except it can be a 32-bit value. Finally, within the loop, we can write our color and advance the pixel pointer: 
 
 </p><pre class="listing tilde"><code><div class=" add"><span class="line">u32 *Pixel = (u32 *)Row;</span></div><span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> X = MinX;</span>
 <span class="line">        X &lt; MaxX;</span>
@@ -1016,7 +1016,7 @@ Similarly to the row pointer, we can define the pixel pointer, with an exception
 <p>
 
 
-This is not how we will approach this problem in the final renderer, just a simple fill to get things going. 
+We will approach this problem differently in the final renderer, but a simple fill to get things going is enough for now.
 
 </p>
 <a class="target" name="writetheroundingfunction">&nbsp;</a><a class="target" name="drawrectanglefunction/writetheroundingfunction">&nbsp;</a><a class="target" name="toc4.4">&nbsp;</a><h2>Write the Rounding Function</h2>
@@ -1027,7 +1027,7 @@ Our rounding function will be super simple.
 
 </p><p>
 
-Rounding is an operation that brings a real number to its nearest integer. In C, you could simply truncate (cut off) decimal numbers by casting a <code>f32</code> to <code>(u32)Number</code>. 
+Rounding is an operation that brings a real number to its nearest integer. You could truncate (cut off) decimal numbers in C by casting a <code>f32</code> to <code>(u32)Number</code>. 
 
 </p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-function">internal s32</span>
 <span class="line"><span class="hljs-title">RoundReal32ToInt32</span><span class="hljs-params">(f32 Number)</span></span>
@@ -1040,11 +1040,11 @@ Rounding is an operation that brings a real number to its nearest integer. In C,
 
 
 
-This, however, would always bring you to the lower value, even if the decimal value is above 0.5. A quick fix would be to bias the incoming value by 0.5 and <em class="underscore">then</em> truncating it: 
+This, however, would always bring you to the lower value, even if the decimal value is above 0.5. A quick fix would be to bias the incoming value by 0.5 and <em class="underscore">then</em> truncate it: 
 
 </p><p>
 
-By adding 0.5, any number with a decimal above 0.5 would get a +1 integer value, thus the truncation will return correct result.
+By adding 0.5, any number with a decimal above 0.5 would get a +1 integer value. Thus the truncation will return the correct result.
 
 </p><pre class="listing tilde"><code><div class=" edit"><span class="line"><span class="hljs-function">internal s32</span>
 <span class="line"><span class="hljs-title">RoundReal32ToInt32</span><span class="hljs-params">(f32 Number)</span></span>
@@ -1053,20 +1053,20 @@ By adding 0.5, any number with a decimal above 0.5 would get a +1 integer value,
 <p>
 
 
-There's a lot more to rounding than this though, but this naive solution will suffice for now.
+There's much more to rounding than this, but the naive solution will suffice for now.
 
 </p>
 <a class="target" name="testourchanges">&nbsp;</a><a class="target" name="drawrectanglefunction/testourchanges">&nbsp;</a><a class="target" name="toc4.5">&nbsp;</a><h2>Test Our Changes</h2>
 <p>
 
 
-Let's run a quick test to see if things work as we intend them to. At the end of <code>GameUpdateAndRender</code>, we'll add a call to <code>DrawRectangle</code> function: 
+Let's test if things work as we intend. At the end of <code>GameUpdateAndRender</code>, we'll add a call to <code>DrawRectangle</code> function: 
 
 </p><pre class="listing tilde"><code><div class=" add"><span class="line">DrawRectangle(Buffer, <span class="hljs-number">10.0f</span>, <span class="hljs-number">10.0f</span>, <span class="hljs-number">30.0f</span>, <span class="hljs-number">30.f</span>);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;22:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Testing our rectangle.</div></center>
 <p>
 
 
-If we recompile and run our program we should see our happy rectangle in the top-right corner: 
+If we recompile and run our program, we should see our happy rectangle in the top-right corner: 
 
 </p><p>
 
@@ -1074,14 +1074,14 @@ If we recompile and run our program we should see our happy rectangle in the top
 
 </p><p>
 
-Feel free to play around with it to see if it clips as we intend it to.
+Feel free to play around with it!
 
 </p>
 <a class="target" name="passthecolor">&nbsp;</a><a class="target" name="drawrectanglefunction/passthecolor">&nbsp;</a><a class="target" name="toc4.6">&nbsp;</a><h2>Pass the Color</h2>
 <p>
 
 
-We will see how to pass and pack the RGB color next time. For now, let's pass directly a 32-bit color. If you're familiar with HEX colors, this is exactly what we will pass.
+We will see how to pass and pack the RGB color next time. For now, let's pass directly to a 32-bit color. If you're familiar with HEX colors, we will pass something similar.
 
 </p><pre class="listing tilde"><code><div class="   "><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
 <span class="line"><span class="hljs-title">DrawRectangle</span><span class="hljs-params">(game_offscreen_buffer *Buffer,</span></span></span></div><div class=" edit"><span class="line">              f32 RealMinX, f32 RealMinY, f32 RealMaxX, f32 RealMaxY, </span></div><div class=" add"><span class="line">              u32 Color)</span></div><span class="line">{</span>
@@ -1099,7 +1099,7 @@ This allows us to set up a background to clear our screen every frame, and a rec
 <p>
 
 
-Recompiling now will give you a cyan square on pink background: 
+Recompiling now will give you a cyan square on a pink background: 
 
 </p><p>
 
@@ -1109,8 +1109,7 @@ Recompiling now will give you a cyan square on pink background:
 <a class="target" name="recap">&nbsp;</a><a class="target" name="recap">&nbsp;</a><a class="target" name="toc5">&nbsp;</a><h1>Recap</h1>
 <p>
 
-
-Today we touched several things. the approach we will take for architecture of our game, 
+Today, we concluded our first introduction to game architecture theory and started looking ahead to the actual game development. Our game will be inspired by classic games like The Legend of Zelda, with a game world about exploring and making your path. We then cleaned up the old test code and laying down the first bricks for our game's core features, and we're ready to start bringing our big ideas to life!
 
 </p>
 <a class="target" name="programmingnotions">&nbsp;</a><a class="target" name="programmingnotions">&nbsp;</a><a class="target" name="toc6">&nbsp;</a><h1>Programming Notions</h1>
@@ -1138,11 +1137,11 @@ We briefly mentioned <a href="https://caseymuratori.com/blog_0015">Semantic Comp
 
  Finally, the underlying assumption in all of this is, if you compress your code to a nice compact form, it is easy to read, because there’s a minimal amount of it, and the semantics tend to mirror the real “language” of the problem, because like a real language, those things that are expressed most often are given their own names and are used consistently. Well-compressed code is also easy to maintain, because all the places in the code that are doing identical things all go through the same paths, but code that is unique is not needlessly complicated or separated from its use. Finally, well-compressed code is easy to extend, because producing more code that does similar operations is simple, as all the necessary code is there in a nicely recomposable way.</span><span class="author">
       &mdash; Casey Muratori, 2014-05-28</span></blockquote>
-Now, you can look at this definition at the surface and say - this is exactly what DRY (Don't Repeat Yourself) principle does! But there's a very fine line between making code that uses itself, making the maximally overlapping set of functions, that DRY recommends, and setting things up to allow quick &ldquo;blast style&rdquo; optimization. In the latter approach, core operations are broken out so that they can be optimized individually.
+Now, you can look at this definition at the surface and say - this is what DRY (Don't Repeat Yourself) principle does! But there's a fine line between making code that uses itself, making the maximally overlapping set of functions that DRY recommends, and setting things up to allow quick &ldquo;blast style&rdquo; optimization. In the latter approach, the programmer breaks out core operations and optimizes them individually.
 
 </p><p>
 
-With the compression-oriented programming approach, individual operations that are super simple (4-5 lines of code maximum) but not entirely homogenous are usually not collapsed. They are left as is to leave room for eventual rewriting of individual functions in a more efficient way. Instead, we leave the patterns to emerge from the code that we're writing explicitly and with understanding that we get from it.
+With the compression-oriented programming approach, individual operations that are super simple (4-5 lines of code maximum) but not entirely homogenous are usually not collapsed. They are left as is to leave room for eventual rewriting of individual functions more efficiently. Instead, we leave the patterns to emerge from the code we're writing explicitly and with the understanding we get from it.
 
 </p><p>
 
@@ -1155,15 +1154,15 @@ This is but the first glimpse into what compression-oriented programming means. 
 <p>
 
 
-Each pixel coordinates, being fixed on a physical screen, are non-divisible integer numbers. Yet most renderers work with them using decimal numbers. Generally, it's to allow for a more fluid movement of the sprites on screen.
+Each pixel coordinate, fixed on a physical screen, is a non-divisible integer number. Yet most renderers work with them using decimal numbers. Generally, it allows for a more fluid movement of the sprites on screen.
 
 </p><p>
 
-<center><div class="image" style=""><a href="../media/day27/subpixel.gif" target="_blank"><img class="markdeep" src="../media/day27/subpixel.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;16:</b> If the position of a rectangle bleeds to neighbouring rectangles during the movement, it creates an illusion of smoother movement.</span></center></div></center> 
+<center><div class="image" style=""><a href="../media/day27/subpixel.gif" target="_blank"><img class="markdeep" src="../media/day27/subpixel.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;16:</b> If the position of a rectangle bleeds to neighboring rectangles during the movement, it creates an illusion of smoother movement.</span></center></div></center> 
 
 </p><p>
 
-When you work with very specific systems, like renderers, the precise definition of what you want matters.
+When you work with concrete systems, like renderers, the precise definition of what you want matters.
 
 </p><p>
 
@@ -1198,7 +1197,7 @@ Let's imagine a pixel grid:
 
 </p><p>
 
-Filling a single pixel is simple, you just assign a color at given coordinates (let's say, (2, 1)):
+Filling a single pixel is simple; you assign a color at given coordinates (let's say, (2, 1)):
 
 </p><p>
 
@@ -1229,7 +1228,7 @@ Filling a single pixel is simple, you just assign a color at given coordinates (
 
 </p><p>
 
-But when you start talking about filling an <em class="underscore">area</em> of pixels, things might get complicated. For example, do you want your coordinates to be inclusive or exclusive? Let's say, we want to fill an area from (1, 1) to (3, 3):
+But things might get complicated when you fill an <em class="underscore">area</em> of pixels. For example, do you want your coordinates to be inclusive or exclusive? Let's say we want to fill an area from (1, 1) to (3, 3):
 
 </p><p>
 
@@ -1375,7 +1374,7 @@ Things get even more confusing when you allow things to move around sub-pixel on
 
 </p><p>
 
-But what if the sprite moves off-center slightly? For example an enemy moves towards the player.
+But what if the sprite moves off-center slightly? For example, an enemy moves towards the player.
 
 </p><p>
 
@@ -1412,18 +1411,18 @@ But what if the sprite moves off-center slightly? For example an enemy moves tow
 
 </p><p>
 
-We can't just draw it as is, each individual pixel only accepts one color. At this point you need a strong convention for how this sprite influences border pixels with its colors. If we wanted to fill from (2, 1) to (5, 4), we'd only draw a portion of those colors to allow for a smooth transition. 
+We can't just draw it as is; each pixel only accepts one color. It would help if you had a strong convention for how this sprite influences border pixels with its colors. If we wanted to fill from (2, 1) to (5, 4), we'd only draw a portion of those colors for a smooth transition. 
 
 </p><p>
 
-We adopt the excluding bounds specifically because of this. This way, we will get all the bounds for potential rounding, without cropping potential overlaps.
+We adopt the excluding bounds precisely because of this. This way, we will get all the bounds for potential rounding without cropping potential overlaps.
 
 </p>
 <a class="target" name="notes">&nbsp;</a><a class="target" name="notes">&nbsp;</a><a class="target" name="toc8">&nbsp;</a><h1>Notes</h1>
 <p>
 
 
-<div class="endnote"><a class="target" name="endnote-win-32">&nbsp;</a><sup>1</sup> We could say that, to a large extent, we've already been applying this approach in the Win32 layer but in reality we've been cheating a bit. We knew what the end result would be so we could roughly set our waypoints. But that isn't an interesting architectural problem, more like cutting and pasting functions from your brain. We didn't even have the waypoints, we just knew the final destination and wrote it. 
+<div class="endnote"><a class="target" name="endnote-win-32">&nbsp;</a><sup>1</sup> We could say that, to a large extent, we've already been applying this approach in the Win32 layer, but in reality, we've been cheating a bit. We knew the result, so we could roughly set our waypoints. But that isn't an interesting architectural problem; it's more like cutting and pasting functions from your brain. We didn't even have the waypoints; we knew the final destination and wrote it. 
 </div>
 </p>
 <a class="target" name="navigation">&nbsp;</a><a class="target" name="navigation">&nbsp;</a><a class="target" name="toc9">&nbsp;</a><h1>Navigation</h1>
@@ -1448,7 +1447,9 @@ Up Next: <a href="../html/day28.html">Day 28. Drawing a Tile Map</a>
 <ul>
 <li class="asterisk">Semantic compression
 </li>
-<li class="asterisk">Compression-oriented programming</li></ul>
+<li class="asterisk">Compression-oriented programming
+</li>
+<li class="asterisk">Delta Time</li></ul>
 
 </p>
 <div class="nonumberh1">Resources</div>

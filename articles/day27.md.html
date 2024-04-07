@@ -247,7 +247,7 @@ Among the things in which this game was different from its many successors was a
 
 Similarly to the old _Zelda_ games, we want to make a tile-based world grid with tiles like Water, Grass, Land, Shop, and others. Our game would have the same _feel_ as the old classics but not their tile-map graphics. While the latter might have been a necessary tool for its time, and nowadays, we can supersede it, there are real benefits to having a tile-map _design_. For instance, if a tile is blocked, the player would get a clear message that you can't go through. We want to preserve this to clarify the _game_ rules to the player.
 
-Therefore, what we want to have is a game that has tiles but does not render them as a tile map. This would avoid repeating the same asset on a rigid grid if we, for example, want to draw several forest tiles in a row.
+Therefore, what we want to have is a game that has tiles but does not render them as a tile map. This approach would avoid repeating the same asset on a rigid grid if we, for example, want to draw several forest tiles in a row.
 
 We will also allow certain things to float outside the rigid grid structure. For example, the player in _The Legend of Zelda__ wasn't bound to a tile grid and could move freely, the same as some enemies.
 
@@ -271,7 +271,7 @@ Combinatorics is not easy to implement, and we will spend a long time dealing wi
 
 ## Into the Unknown
 
-So, this is where we stand in terms of the game design. We start this journey together and don't know where it will lead us. The final code is unknown to us since, until now, we never really attempted a _Legend of Zelda_ **clone**, let alone a completely new thing that takes it in entirely new directions. So, we have a ton of unknown stuff, and we don't have a plan for how to write it. We don't even know how to approach the tilemap! We could brainstorm and imagine a few ways to implement something like this. Still, we don't have direct experience writing a tilemap in dozens of games or anything that would give us direct knowledge on how to do things specifically.
+So, this is where we stand in terms of game design. We start this journey together and don't know where it will lead us. The final code is unknown to us since, until now, we never really attempted a _Legend of Zelda_ **clone**, let alone a completely new thing that takes it in entirely new directions. So, we have a ton of unknown stuff, and we don't have a plan for how to write it. We don't even know how to approach the tilemap! We could brainstorm and imagine a few ways to implement something like this. Still, we don't have direct experience writing a tilemap in dozens of games or anything that would give us direct knowledge on how to do things specifically.
 
 So here we are, on Day 0 of our project, without knowledge of the road ahead and what it looks like, and we're going to walk this road precisely like we said. Explore our space by looking at what it takes to implement the basic version. How do I get a rectangle moving around on a tile map? How do I make a tile? We'll try an approach, see how the game reacts to it, and let the architecture work itself up from there. If it feels like it's working well, we will say OK and move on.
 
@@ -281,7 +281,7 @@ It's been one and a half days since we last coded. Let's get back to it!
 
 ## Get Target Seconds Per Frame
 
-First, we forgot to add was how much time we will have for each frame. In `win32_handmade.cpp` we already define our `TargetSecondsPerFrame`, so it's only a matter of passing this value to the game. Of course, it's a bit early to actually use that still, but let's add it right away as a part of our `game_input` struct. In the industry this value is known as DeltaTime, but let's be more explicit here and call it `SecondsToAdvanceOverUpdate`. We will store it as a real32.
+First, we forgot to provide the game with the information on how much time we would have for each frame. In `win32_handmade.cpp`, we have already defined our `TargetSecondsPerFrame`, so it's only a matter of passing this value to the game. Of course, it's still a bit early to use that, but let's add it immediately as part of our `game_input` struct. This value is also known as _Delta Time_, but let's be more explicit here: `SecondsToAdvanceOverUpdate`. We will store it as a real32.
 
 ~~~~~~~ C++
 struct game_input
@@ -296,7 +296,7 @@ struct game_input
 ~~~~~~~ 
 [Listing [x]: <file>[handmade.h]</file> Introduce `game_input.SecondsToAdvanceOverUpdate`.]
 
-For now, we will not be doing precise calculations and just pass the `TargetSecondsPerFrame` inside the main loop, assuming that we will hit this value: 
+For now, we will not be doing precise calculations and pass the `TargetSecondsPerFrame` inside the main loop, assuming that we will hit this value: 
 
 ~~~~~~~ C++
 int MonitorRefreshHz = 60;
@@ -314,17 +314,17 @@ while (GlobalRunning)
 ~~~~~~~ 
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Setting `SecondsToAdvanceOverUpdate`.]
 
-If you compile, run the debugger, and inspect your `Input` somewher in the `handmade.cpp -> GameUpdateAndRender` function, you should see its value to be around `0.0333333` to confirm that everything is in order.
+If you compile, run the debugger, and inspect your `Input` somewhere in the `handmade.`cpp -> GameUpdateAndRender` function, you should see its value around `0.0333333` to confirm everything is in order.
 
 ![Figure [x]: Inspecting `Input->SecondsToAdvanceOverUpdate` in the debugger.](../media/day27/debug_1.jpg) 
 
 ## Remove Test Code
 
-We wrote plenty of test code back in `handmade.cpp` to make sure that our platform layer was working as intended. It's time for it to go, it's day 0 for us so we need a blank slate. Since we set up hot dll reload, we can even have the game running while we're processing these changes.
+We wrote plenty of test code back in `handmade.cpp` to ensure our platform layer worked as intended. It's time to go; it's day 0 for us, so we need a blank slate. Since we set up a hot dll reload, we can keep the game running while processing these changes.
 
 ### Remove Test Sound
 
-If you haven't done it already on [Day 23][], you can disable the test sound by simply adding an `#if 0` guard and output instead of the sine wave: 
+If you haven't done it already on [Day 23][], you can turn off the test sound by simply adding an `#if 0` guard and output instead of the sine wave: 
 
 ~~~~~~~ C++ add
 #if 0
@@ -340,7 +340,7 @@ If you haven't done it already on [Day 23][], you can disable the test sound by 
 
 ### Remove the Weird Gradient
 
-The gradient that we're filling our screen with is being drawn in a separate function, so to disable it, we can simply remove the call to it from `GameUpdateAndRender`: 
+The gradient that we're filling our screen with is being drawn in a separate function, so to turn it off, we can remove the call to it from `GameUpdateAndRender`: 
 
 ~~~~~~~ C++ delete
 RenderWeirdGradient(Buffer, GameState->XOffset, GameState->YOffset);
@@ -356,7 +356,7 @@ W:\handmade\code\handmade.cpp(67): error C2220: the following warning is treated
 W:\handmade\code\handmade.cpp(67): warning C4505: 'RenderWeirdGradient': unreferenced local function has been removed
 ~~~~~~~
 
-We don't mind having unused functions in our code, they can always return handy later, so let's add another keyword to our `build.bat` to ignore these warnings: 
+We don't mind having unused functions in our code; they can always return handy later. So let's add another keyword to our `build.bat` to ignore these warnings: 
 
 ~~~~~~~ batch
 set compiler=%compiler%     -wd4189                &:: Local variable not referenced
@@ -365,18 +365,18 @@ set compiler=%compiler%     -wd4505                &:: Unreferenced local functi
 ~~~~~~~
 [Listing [x]: <file>[build.bat]</file> Ignore warning C4505.]
 
-Coming to think of it, we _could_ actually delete the `RenderWeirdGradient` function, or at least move it to the end of the file. 
+Of course, we _could_ delete the `RenderWeirdGradient` function or move it to the end of the file. 
 
-If your game was running during this time, you will notice that the gradient is still there, altough it's getting progressively "dirtier" as you move the mouse around. This is because the gradient was actually performing double duty: 
+If your game was running during this time, you will notice that the gradient is still there, although it's getting progressively "dirtier" as you move the mouse cursor around. This effect is due to the gradient performing double duty: 
 
 * It was drawing the gradient
-* It was clearing whatever was in the buffer the previous frame (by overwriting its data)
+* It was clearing whatever was in the buffer in the previous frame (by overwriting its data)
 
-We need to take a mental note of it and return to clearing our window later.
+We need to mentally note it and return to clearing our window later.
 
-### Remove RenderPlayer calls
+### Remove `RenderPlayer` calls
 
-We were also rendering the indications that the mouse buttons were pressed, the mouse position, and the player that we were controlling with our controller input. All of these were using the same function, `RenderPlayer`, and this code can go, too: 
+We drew small rectangles whenever we pressed mouse buttons; another rectangle represented the mouse position; finally, a rectangle represented the player we moved with our controller input. All of these were using the same function, `RenderPlayer`, and this code can go, too: 
 
 ~~~~~~~ C++ delete
 RenderPlayer(Buffer, GameState->PlayerX, GameState->PlayerY);
@@ -397,7 +397,7 @@ RenderPlayer(Buffer, Input->MouseX, Input->MouseY);
 
 ### Remove File Calls
 
-To test `DEBUGPlatformReadEntireFile`, we'd also load and read outputs of a test file. We don't need it anymore: 
+To test `DEBUGPlatformReadEntireFile`, we'd also load and read the outputs of a test file. We don't need it anymore: 
 
 ~~~~~~~ C++
 if(!Memory->IsInitialized)
@@ -469,7 +469,7 @@ for (int ControllerIndex = 0;
 
 ### Clean Up the Game State
 
-Our `game_state` contained a few values that we wrote for storing some test information. They are no longer necessary, so we can get rid of their initialization code: 
+Our `game_state` contained a few values we wrote to store some test information. They are no longer necessary, so we can get rid of their initialization code: 
 
 ~~~~~~~ C++
 if(!Memory->IsInitialized)
@@ -487,7 +487,7 @@ if(!Memory->IsInitialized)
 ~~~~~~~ 
 [Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Remove references to test game state fields.]
 
-Same comes to definition. In fact, we can get rid of all the contents of our `game_state` entirely, leaving the struct empty for the time being: 
+Same comes to definition. We can get rid of all the contents of our `game_state` entirely, leaving the struct empty for the time being: 
 
 ~~~~~~~ C++
 struct game_state
@@ -505,7 +505,7 @@ struct game_state
 ~~~~~~~ C++
 };
 ~~~~~~~ 
-[Listing [x]: <file>[handmade.h]</file> Remove definitions of the test game state fields.]
+[Listing [x]: <file>[handmade.h]</file> Removing definitions of the test game state fields.]
 
 Trying to compile the game now leads us to `#if 0` another piece of `GameOutputSound` function (you can also delete it if you prefer so):
 
@@ -533,7 +533,7 @@ Trying to compile the game now leads us to `#if 0` another piece of `GameOutputS
 ~~~~~~~ 
 [Listing [x]: <file>[handmade.cpp > GameOutputSound]</file> Remove definitions of the test game state fields.]
 
-And, instead of passing `GameState->ToneHz`, we could pass a hard number to `GameOutputSound` for the time being: 
+And, instead of passing `GameState->ToneHz`, we could directly pass a number to `GameOutputSound` for the time being: 
 
 ~~~~~~~ C++
 GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
@@ -550,22 +550,22 @@ And that's it! We're now back to something that does _absolutely nothing_. We're
 
 ## Decide on the Game Resolution
 
-Let's make a Decision! Those are always fun. This one involves our game resolution. In fact, it's an important decision for a 2D game like ours.
+Let's make a Decision! Those are always fun. This one involves our game resolution. It's an important decision for a 2D game like ours.
 
-In a 3D game, everything is always resampled. You map the polygons to draw, textures to these polygons. The final output can be rendered to any target resolution, and you don't really need to think about it, aside from maybe how dense the textures should be and how closely would they be seen. It's not the case for a 2D game. If the artist wants to be very specific about how things should look like, we should be able to draw them in a resolution and aspect ratio allowing to not lose any detail or create distortions.
+In a 3D game, everything is always resampled. You map the polygons to draw and the textures of these polygons. The engine can render the final output to any target resolution, and you don't need to think about it, aside from maybe how dense the textures should be and how closely the players would see them. It's not the case for a 2D game. If the artist wants to be very specific about how things should look, we should be able to draw them in a resolution and aspect ratio, allowing us not to lose any detail or create distortions.
 
-These days, we see an emergence of 4K and 1440p monitors, as well as ultrawide monitors of different size. But the de-facto baseline resolution remains 1920x1080, "Full HD" resolution. 
+These days, we see an emergence of 4K and 1440p monitors and ultrawide monitors of different sizes. However, the de-facto baseline remains 1920x1080, a "Full HD" resolution. 
 
-Another consideration is that we want to make is that we will write our first version of the renderer (the _software renderer_) to run on the CPU; we will eventually transition to the much faster _hardware renderer_ running on the GPU. 
+Another consideration we want to make is that we will write our first version of the renderer (the _software renderer_) to run on the CPU; we will eventually transition to the much faster _hardware renderer_ running on the GPU. 
 
 So let's decide the following: 
 
 * Target 1920x1080 at 60Hz for the _hardware renderer_.
-* Half all these values for our _software renderer_: 960x540 at 30Hz. 
+* Halve these values for our _software renderer_ to 960x540 at 30Hz. 
 
-If we half all three values, we'd get $1/2 * 1/2 * 1/2 = 1/8$ low need of calculations, so hopefully this will be small enough for us to handle.
+If we halve all three values, we will get $1/2 * 1/2 * 1/2 = 1/8$ lower need of calculations, so hopefully, this will be small enough for us to handle.
 
-In `win32_handmade.cpp`, we're already defining the size of our DIB section, so let's create two dimensions for us to switch between. We'll disable one we don't need, of course.
+In `win32_handmade.cpp`, we're already defining the size of our DIB section, so let's create two dimensions to switch between. We'll disable one we don't need, of course.
 
 ~~~~~~~ C++
 Win32LoadXInput();
@@ -580,11 +580,11 @@ WNDCLASS WindowClass = {0};
 ~~~~~~~ 
 [Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Define our two target dimensions.]
 
-For the target framerate, we're already using the monitor's refresh rate and then halving it. This gives us 30Hz on 60Hz monitors which is fine for now.
+We're already using the monitor's refresh rate for the target framerate and then halving it. This gives us 30Hz on 60Hz monitors, which is fine for now.
 
 # Draw Rectangle Function
 
-In our test code, there is one function that we can reuse: `RenderPlayer`. It's a simple function that draws a small 10x10 rectangle at a given position. We can convert this function to officially draw a rectangle of arbitrary size and, in the future, color (and, who knows, maybe even texture!). 
+In our test code, there is one function that we can reuse: `RenderPlayer`. It's a simple function that draws a small 10x10 rectangle at a given position. We can convert this function to draw a rectangle of arbitrary size and, in the future, color (and, who knows, maybe even texture!). 
 
 ## Repurpose `RenderPlayer` into `DrawRectangle`
 
@@ -602,7 +602,7 @@ DrawRectangle(game_offscreen_buffer *Buffer, int PlayerX, int PlayerY)
 ~~~~~~~ 
 [Listing [x]: <file>[handmade.cpp]</file> Rename `RenderPlayer`.]
 
-We want this function to accept a position marking the beginning of the rectangle (min X and Y), and another one marking its end (max X and Y). Remember that we're starting our screen coordinates in the top-left corner.
+We want this function to accept a position marking the beginning of the rectangle (min X and Y) and another marking its end (max X and Y). Remember that we're starting our screen coordinates in the top-left corner.
 
 ******************************************************
 *       .------------------------------+-.           *
@@ -628,7 +628,7 @@ We want this function to accept a position marking the beginning of the rectangl
 ******************************************************
 [Figure [x]: DrawRectangle behavior.]
 
-That said, for future expansions we probably want to pass these as real numbers, not integers. The reasons for it might not be immediately obvious, and we touch on some of them in Subsection [Floating-point Coordinates].
+We probably want to pass these as real numbers, not integers, for future expansions. The reasons might not be immediately apparent, but we will discuss some in the Subsection [Floating-point Coordinates].
 
 ~~~~~~~ C++
 internal void
@@ -662,11 +662,11 @@ u8 *EndOfBuffer = (u8 *)Buffer->Memory + Buffer->Pitch * Buffer->Height;
 ~~~~~~~ 
 [Listing [x]: <file>[handmade.cpp > DrawRectangle]</file> Round our real numbers.]
 
-We don't have a rounding function yet, we'll think about it in a second.
+We don't have a rounding function yet; we'll think about it in a second.
 
 ## Clip Boundaries
 
-As we discussed during [Day 4][] (section 4.4, figure 4), our buffer is just a chunk of raw memory that we can write into. Each 32-bit value inside it represents a pixel color. So, now that we have the min and max points, we want to clip them to the these boundaries.
+As discussed during [Day 4][] (section 4.4, figure 4), our buffer is just a chunk of raw memory we can write into. Each 32-bit value inside it represents a pixel color. So, now that we have the minimum and maximum points, we want to clip them to these boundaries.
 
 ******************************************************
 *       .------------------------------+-.           *
@@ -686,9 +686,9 @@ As we discussed during [Day 4][] (section 4.4, figure 4), our buffer is just a c
 ******************************************************
 [Figure [x]: We only want to fill the visible parts of the rectangle.]
 
-(Because of how we laid out the buffer memory, going over the sides would bleed the pixels to the opposite side of the screen, while going above or below would flat out crash the program for trying to access unauthorized memory).
+(Because of how we laid out the buffer memory, going over the sides would bleed the pixels to the opposite side of the screen, while going above or below would flat-out crash the program for trying to access unauthorized memory).
 
-Actual clipping is very simple: 
+Actual clipping is trivial:
 
 ~~~~~~~ C++
 s32 MinX = RoundReal32ToInt32(RealMinX);
@@ -721,11 +721,11 @@ u8 *EndOfBuffer = (u8 *)Buffer->Memory + Buffer->Pitch * Buffer->Height;
 ~~~~~~~ 
 [Listing [x]: <file>[handmade.cpp > DrawRectangle]</file> Clipping the values.]
 
-You might think that we should make sure that Max x/y should be clipped if the value is greater _or equal_ than the buffer width/height, but because we're filling the rectangles _excluding_ Max values we're actually fine.
+You might think that we should clip Max x/y if the value is greater _or equal_ to the buffer width/height, but because we're filling the rectangles _excluding_ Max values, we're fine.
 
 ## Fill the Pixels
 
-We want to change the sequence in which we fill our pixels. Right now we're getting a pixel and then shift it by every row. It's inefficient since usually you want to send continguous memory blocks to the processor. So let's invert the loops we have:
+We want to change the sequence in which we fill our pixels. We're getting a pixel and then shifting it by every row. It's inefficient since you usually want to send contiguous memory blocks to the processor. So, let's invert the loops we have:
 
 ~~~~~~~ C++ delete
 u8 *EndOfBuffer = (u8 *)Buffer->Memory + Buffer->Pitch * Buffer->Height;
@@ -772,9 +772,8 @@ We want to position ourselves at (MinX, MinY) before we enter the loop as follow
 * Since we want to offset one byte at a time for correct positioning, we define the row pointer as an 8-bit value
 * We start at the start of the buffer memory.
 * We then move "horizontally" by `MinX` amount of pixels, multiplied by the size of our pixels. We have saved this size as `BytesPerPixel`.
-* Finally, we move "vertically" by `MinY` amount of pixels, multiplied by the _stride_ or `Pitch` of our row. 
+* Finally, we move "vertically" by `MinY` pixels, multiplied by the _stride_ or `Pitch` of our row. 
 * We then advance our row by pitch until we fill the rectangle we need. 
-
 
 ************************************************************
 *         BytesPerPixel         Pitch                      *
@@ -830,7 +829,7 @@ for (int Y = MinY;
 ~~~~~~~
 [Listing [x]: <file>[handmade.cpp > DrawRectangle]</file> Define the row pointer.]
 
-Similarly to the row pointer, we can define the pixel pointer, with an exception that it can be directly a 32-bit value. Finally, within the loop we can write our color and advance the pixel pointer: 
+Similarly to the row pointer, we can define the pixel pointer, except it can be a 32-bit value. Finally, within the loop, we can write our color and advance the pixel pointer: 
 
 ~~~~~~~ C++ add
 u32 *Pixel = (u32 *)Row;
@@ -846,13 +845,13 @@ for (int X = MinX;
 ~~~~~~~
 [Listing [x]: <file>[handmade.cpp > DrawRectangle]</file> Drawing the color to the pixel.]
 
-This is not how we will approach this problem in the final renderer, just a simple fill to get things going. 
+We will approach this problem differently in the final renderer, but a simple fill to get things going is enough for now.
 
 ## Write the Rounding Function
 
 Our rounding function will be super simple. 
 
-Rounding is an operation that brings a real number to its nearest integer. In C, you could simply truncate (cut off) decimal numbers by casting a `f32` to `(u32)Number`. 
+Rounding is an operation that brings a real number to its nearest integer. You could truncate (cut off) decimal numbers in C by casting a `f32` to `(u32)Number`. 
 
 ~~~~~~~ C++ add
 internal s32
@@ -868,9 +867,9 @@ DrawRectangle //...
 [Listing [x]: <file>[handmade.cpp]</file> Introducing `RoundReal32ToInt32`.]
 
 
-This, however, would always bring you to the lower value, even if the decimal value is above 0.5. A quick fix would be to bias the incoming value by 0.5 and _then_ truncating it: 
+This, however, would always bring you to the lower value, even if the decimal value is above 0.5. A quick fix would be to bias the incoming value by 0.5 and _then_ truncate it: 
 
-By adding 0.5, any number with a decimal above 0.5 would get a +1 integer value, thus the truncation will return correct result.
+By adding 0.5, any number with a decimal above 0.5 would get a +1 integer value. Thus the truncation will return the correct result.
 
 ~~~~~~~ C++ edit
 internal s32
@@ -884,26 +883,26 @@ RoundReal32ToInt32(f32 Number)
 ~~~~~~~
 [Listing [x]: <file>[handmade.cpp]</file> Biasing the number for correct rounding.]
 
-There's a lot more to rounding than this though, but this naive solution will suffice for now.
+There's much more to rounding than this, but the naive solution will suffice for now.
 
 ## Test Our Changes
 
-Let's run a quick test to see if things work as we intend them to. At the end of `GameUpdateAndRender`, we'll add a call to `DrawRectangle` function: 
+Let's test if things work as we intend. At the end of `GameUpdateAndRender`, we'll add a call to `DrawRectangle` function: 
 
 ~~~~~~~ C++ add
 DrawRectangle(Buffer, 10.0f, 10.0f, 30.0f, 30.f);
 ~~~~~~~
 [Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Testing our rectangle.]
 
-If we recompile and run our program we should see our happy rectangle in the top-right corner: 
+If we recompile and run our program, we should see our happy rectangle in the top-right corner: 
 
 ![Figure [x]: Our Rectangle.](../media/day27/rectangle.jpg) 
 
-Feel free to play around with it to see if it clips as we intend it to.
+Feel free to play around with it!
 
 ## Pass the Color
 
-We will see how to pass and pack the RGB color next time. For now, let's pass directly a 32-bit color. If you're familiar with HEX colors, this is exactly what we will pass.
+We will see how to pass and pack the RGB color next time. For now, let's pass directly to a 32-bit color. If you're familiar with HEX colors, we will pass something similar.
 
 ~~~~~~~ C++   
 internal void
@@ -935,13 +934,12 @@ DrawRectangle(Buffer, 10.0f, 10.0f, 30.0f, 30.f, 0x0000FFFF);
 ~~~~~~~
 [Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Testing our rectangle.]
 
-Recompiling now will give you a cyan square on pink background: 
+Recompiling now will give you a cyan square on a pink background: 
 
 ![Figure [x]: Our Rectangle with a background.](../media/day27/rectangle2.jpg) 
 
 # Recap 
-
-Today we concluded our first introduction into the game architecture theory, and started looking ahead towards the actual game development. Our game will be inspired by classic games like The Legend of Zelda, with a game world that's all about exploring and making your own path. We then cleaned up the old test code and laying down the first bricks for our game's core features, and we're ready to start bringing our big ideas to life!
+Today, we concluded our first introduction to game architecture theory and started looking ahead to the actual game development. Our game will be inspired by classic games like The Legend of Zelda, with a game world about exploring and making your path. We then cleaned up the old test code and laying down the first bricks for our game's core features, and we're ready to start bringing our big ideas to life!
 
 # Programming Notions 
 
@@ -961,9 +959,9 @@ We briefly mentioned [Semantic Compression][] at the end of [Day 22][]. The appr
 >
 >      -- Casey Muratori, 2014-05-28
 
-Now, you can look at this definition at the surface and say - this is exactly what DRY (Don't Repeat Yourself) principle does! But there's a very fine line between making code that uses itself, making the maximally overlapping set of functions, that DRY recommends, and setting things up to allow quick "blast style" optimization. In the latter approach, core operations are broken out so that they can be optimized individually.
+Now, you can look at this definition at the surface and say - this is what DRY (Don't Repeat Yourself) principle does! But there's a fine line between making code that uses itself, making the maximally overlapping set of functions that DRY recommends, and setting things up to allow quick "blast style" optimization. In the latter approach, the programmer breaks out core operations and optimizes them individually.
 
-With the compression-oriented programming approach, individual operations that are super simple (4-5 lines of code maximum) but not entirely homogenous are usually not collapsed. They are left as is to leave room for eventual rewriting of individual functions in a more efficient way. Instead, we leave the patterns to emerge from the code that we're writing explicitly and with understanding that we get from it.
+With the compression-oriented programming approach, individual operations that are super simple (4-5 lines of code maximum) but not entirely homogenous are usually not collapsed. They are left as is to leave room for eventual rewriting of individual functions more efficiently. Instead, we leave the patterns to emerge from the code we're writing explicitly and with the understanding we get from it.
 
 This is but the first glimpse into what compression-oriented programming means. It will be the backbone of how we approach code, and you will have ample opportunity to see it in action.
 
@@ -971,11 +969,11 @@ This is but the first glimpse into what compression-oriented programming means. 
 
 ## Floating-point Coordinates
 
-Each pixel coordinates, being fixed on a physical screen, are non-divisible integer numbers. Yet most renderers work with them using decimal numbers. Generally, it's to allow for a more fluid movement of the sprites on screen.
+Each pixel coordinate, fixed on a physical screen, is a non-divisible integer number. Yet most renderers work with them using decimal numbers. Generally, it allows for a more fluid movement of the sprites on screen.
 
-![Figure [x]: If the position of a rectangle bleeds to neighbouring rectangles during the movement, it creates an illusion of smoother movement.](../media/day27/subpixel.gif) 
+![Figure [x]: If the position of a rectangle bleeds to neighboring rectangles during the movement, it creates an illusion of smoother movement.](../media/day27/subpixel.gif) 
 
-When you work with very specific systems, like renderers, the precise definition of what you want matters.
+When you work with concrete systems, like renderers, the precise definition of what you want matters.
 
 Let's imagine a pixel grid:
 
@@ -1005,7 +1003,7 @@ Let's imagine a pixel grid:
 **************************************************
 [Figure [x]: Pixel grid.]
 
-Filling a single pixel is simple, you just assign a color at given coordinates (let's say, (2, 1)):
+Filling a single pixel is simple; you assign a color at given coordinates (let's say, (2, 1)):
 
 **************************************************
 *     0   1   2   3   4   5   6   7   8   9      *
@@ -1033,7 +1031,7 @@ Filling a single pixel is simple, you just assign a color at given coordinates (
 **************************************************
 [Figure [x]: Filling a single pixel.]
 
-But when you start talking about filling an _area_ of pixels, things might get complicated. For example, do you want your coordinates to be inclusive or exclusive? Let's say, we want to fill an area from (1, 1) to (3, 3):
+But things might get complicated when you fill an _area_ of pixels. For example, do you want your coordinates to be inclusive or exclusive? Let's say we want to fill an area from (1, 1) to (3, 3):
 
 **************************************************
 *     0   1   2   3   4   5   6   7   8   9      *
@@ -1062,7 +1060,6 @@ But when you start talking about filling an _area_ of pixels, things might get c
 [Figure [x]: Min and Max points.]
 
 Does this mean that I'm excluding the outer bounds? 
-
 
 **************************************************
 *     0   1   2   3   4   5   6   7   8   9      *
@@ -1148,7 +1145,7 @@ Things get even more confusing when you allow things to move around sub-pixel on
 **************************************************
 [Figure [x]: Sprite on grid.]
 
-But what if the sprite moves off-center slightly? For example an enemy moves towards the player.
+But what if the sprite moves off-center slightly? For example, an enemy moves towards the player.
 
 **************************************************
 *     0   1   2   3   4   5   6   7   8   9      *
@@ -1176,13 +1173,13 @@ But what if the sprite moves off-center slightly? For example an enemy moves tow
 **************************************************
 [Figure [x]: Sprite off grid.]
 
-We can't just draw it as is, each individual pixel only accepts one color. At this point you need a strong convention for how this sprite influences border pixels with its colors. If we wanted to fill from (2, 1) to (5, 4), we'd only draw a portion of those colors to allow for a smooth transition. 
+We can't just draw it as is; each pixel only accepts one color. It would help if you had a strong convention for how this sprite influences border pixels with its colors. If we wanted to fill from (2, 1) to (5, 4), we'd only draw a portion of those colors for a smooth transition. 
 
-We adopt the excluding bounds specifically because of this. This way, we will get all the bounds for potential rounding, without cropping potential overlaps.
+We adopt the excluding bounds precisely because of this. This way, we will get all the bounds for potential rounding without cropping potential overlaps.
 
 # Notes
 
-[^win-32]: We could say that, to a large extent, we've already been applying this approach in the Win32 layer but in reality we've been cheating a bit. We knew what the end result would be so we could roughly set our waypoints. But that isn't an interesting architectural problem, more like cutting and pasting functions from your brain. We didn't even have the waypoints, we just knew the final destination and wrote it. 
+[^win-32]: We could say that, to a large extent, we've already been applying this approach in the Win32 layer, but in reality, we've been cheating a bit. We knew the result, so we could roughly set our waypoints. But that isn't an interesting architectural problem; it's more like cutting and pasting functions from your brain. We didn't even have the waypoints; we knew the final destination and wrote it. 
 
 # Navigation 
 
