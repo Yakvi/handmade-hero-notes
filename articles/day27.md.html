@@ -6,7 +6,7 @@ _Video Length (including Q&A): [1h42](https://hero.handmade.network/episode/code
 
 (insert intro.md.html here) 
 
-We did quite a bit of theory last time; let's get to practice! 
+We did quite a bit of theory last time; let's wrap it up and get to practice! 
 
 # Project State Space
 
@@ -584,42 +584,364 @@ For the target framerate, we're already using the monitor's refresh rate and the
 
 # Draw Rectangle Function
 
-47:50
+In our test code, there is one function that we can reuse: `RenderPlayer`. It's a simple function that draws a small 10x10 rectangle at a given position. We can convert this function to officially draw a rectangle of arbitrary size and, in the future, color (and, who knows, maybe even texture!). 
+
+## Repurpose `RenderPlayer` into `DrawRectangle`
+
+Let's begin by changing the function's name.
+
+~~~~~~~ C++
+internal void
+~~~~~~~ C++ edit
+DrawRectangle(game_offscreen_buffer *Buffer, int PlayerX, int PlayerY)
+~~~~~~~ C++
+{
+    u8 *EndOfBuffer = (u8 *)Buffer->Memory + Buffer->Pitch * Buffer->Height;
+    //... 
+}
+~~~~~~~ 
+[Listing [x]: <file>[handmade.cpp]</file> Rename `RenderPlayer`.]
+
+We want this function to accept a position marking the beginning of the rectangle (min X and Y), and another one marking its end (max X and Y). Remember that we're starting our screen coordinates in the top-left corner.
+
+******************************************************
+*       .------------------------------+-.           *
+*       |Handmade Hero                 |X|           *
+*       +------------------------------+-+           *
+*       |^                               |           *
+*       | \                              |           *
+*       |  \Buffer (0, 0)                |           *
+*       |                                |           *
+*       |           .-- Min (x, y)       |           *
+*       |          /                     |           *
+*       |         v                      |           *
+*       |        *---------.             |           *
+*       |        |▉▉▉▉▉▉▉▉▉|             |           *
+*       |        |▉▉▉▉▉▉▉▉▉|             |           *
+*       |        |▉▉▉▉▉▉▉▉▉|             |           *
+*       |        '---------*             |           *
+*       |                 ^              |           *
+*       |                /               |           *
+*       |  Max (x, y) --'                |           *
+*       |                                |           *
+*       '--------------------------------'           *
+******************************************************
+[Figure [x]: DrawRectangle behavior.]
+
+That said, for future expansions we probably want to pass these as real numbers, not integers. The reasons for it might not be immediately obvious, and we touch on some of them in Subsection [Floating-point Coordinates].
+
+~~~~~~~ C++
+internal void
+~~~~~~~ C++ edit
+DrawRectangle(game_offscreen_buffer *Buffer,
+~~~~~~~ C++ add
+             f32 RealMinX, f32 RealMinY, f32 RealMaxX, f32 RealMaxY)
+~~~~~~~ C++
+{
+    u8 *EndOfBuffer = (u8 *)Buffer->Memory + Buffer->Pitch * Buffer->Height;
+    //... 
+}
+~~~~~~~ 
+[Listing [x]: <file>[handmade.cpp]</file> Change `DrawRectangle` parameters.]
+
+Implementation-wise, let's agree on the following convention:  
+
+* Whatever real Min/Max positions come in, we will round them to an integer
+* We will draw our rectangle from Min(x, y) up to and _excluding_ Max(x, y).
+
+Based on this convention, the first thing we need to do inside the function is to convert the real coordinates into the integer ones.
+
+~~~~~~~ C++ add
+s32 MinX = RoundReal32ToInt32(RealMinX);
+s32 MinY = RoundReal32ToInt32(RealMinY);
+s32 MaxX = RoundReal32ToInt32(RealMaxX);
+s32 MaxY = RoundReal32ToInt32(RealMaxY);
+
+~~~~~~~ C++
+u8 *EndOfBuffer = (u8 *)Buffer->Memory + Buffer->Pitch * Buffer->Height;
+~~~~~~~ 
+[Listing [x]: <file>[handmade.cpp > DrawRectangle]</file> Round our real numbers.]
+
+We don't have a rounding function yet, we'll think about it in a second.
+
+## Clip Boundaries
+
+As we discussed during [Day 4][] (section 4.4, figure 4), our buffer is just a chunk of raw memory that we can write into. Each 32-bit value inside it represents a pixel color. So, now that we have the min and max points, we want to clip them to the these boundaries.
+
+******************************************************
+*       .------------------------------+-.           *
+*       |Handmade Hero                 |X|           *
+*       +------------------------------+-+           *
+*       |^                               |           *
+*       | \                              |           *
+*       |  \ (0, 0)                      |           *
+*       |                                |           *
+*  Min  |             (width, height) \  |           *
+*   *---+-----.                        \ |           *
+*   |xxx|▉▉▉▉▉|                         v|           *
+*   |xxx'-----|--------------------------'           *
+*   |xxxxxxxxx|                                      *
+*   '---------*                                      *
+*            Max                                     *
+******************************************************
+[Figure [x]: We only want to fill the visible parts of the rectangle.]
+
+(Because of how we laid out the buffer memory, going over the sides would bleed the pixels to the opposite side of the screen, while going above or below would flat out crash the program for trying to access unauthorized memory).
+
+Actual clipping is very simple: 
+
+~~~~~~~ C++
+s32 MinX = RoundReal32ToInt32(RealMinX);
+s32 MinY = RoundReal32ToInt32(RealMinY);
+s32 MaxX = RoundReal32ToInt32(RealMaxX);
+s32 MaxY = RoundReal32ToInt32(RealMaxY);
+
+~~~~~~~ C++ add
+if (MinX < 0)
+{
+    MinX = 0;
+}
+
+if (MinY < 0)
+{
+    MinY = 0;
+}
+
+if (MaxX > Buffer->Width)
+{
+    MaxX = Buffer->Width;
+}
+
+if (MaxY > Buffer->Height)
+{
+    MaxY = Buffer->Height;
+}
+~~~~~~~ C++
+u8 *EndOfBuffer = (u8 *)Buffer->Memory + Buffer->Pitch * Buffer->Height;
+~~~~~~~ 
+[Listing [x]: <file>[handmade.cpp > DrawRectangle]</file> Clipping the values.]
+
+You might think that we should make sure that Max x/y should be clipped if the value is greater _or equal_ than the buffer width/height, but because we're filling the rectangles _excluding_ Max values we're actually fine.
+
+## Fill the Pixels
+
+We want to change the sequence in which we fill our pixels. Right now we're getting a pixel and then shift it by every row. It's inefficient since usually you want to send continguous memory blocks to the processor. So let's invert the loops we have:
+
+~~~~~~~ C++ delete
+u8 *EndOfBuffer = (u8 *)Buffer->Memory + Buffer->Pitch * Buffer->Height;
+~~~~~~~ C++
+u32 Color = 0xFFFFFFFF;   
+~~~~~~~ C++ delete
+int Left = PlayerX;
+int Right = PlayerX + 10;
+
+int Top = PlayerY;
+int Bottom = PlayerY + 10;
+~~~~~~~ C++ edit
+for (int Y = MinY;
+     Y < MaxY;
+     ++Y)
+~~~~~~~ C++
+{
+~~~~~~~ C++ delete
+    u8 *Pixel = ((u8 *)Buffer->Memory + 
+                    X * Buffer->BytesPerPixel +
+                    Top * Buffer->Pitch);
+~~~~~~~ C++ edit
+    for (int X = MinX;
+         X < MaxX;
+         ++X)
+~~~~~~~ C++
+    {
+~~~~~~~ C++ delete
+        if ((Pixel >= Buffer->Memory) &&
+            (Pixel < EndOfBuffer))
+        {
+~~~~~~~ C++
+            *(u32 *)Pixel = Color;
+~~~~~~~ C++ delete
+            Pixel += Buffer->Pitch;
+        }
+~~~~~~~ C++
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > DrawRectangle]</file> Inverting the loop order.]
+
+We want to position ourselves at (MinX, MinY) before we enter the loop as follows: 
+* Since we want to offset one byte at a time for correct positioning, we define the row pointer as an 8-bit value
+* We start at the start of the buffer memory.
+* We then move "horizontally" by `MinX` amount of pixels, multiplied by the size of our pixels. We have saved this size as `BytesPerPixel`.
+* Finally, we move "vertically" by `MinY` amount of pixels, multiplied by the _stride_ or `Pitch` of our row. 
+* We then advance our row by pitch until we fill the rectangle we need. 
 
 
-------------------------
-<!-- 
-Useful captions
-Caption under the listing: [Listing [x]: <file>[]</file> .]
-Picture or gif: ![Figure [x]: .](../media/day27/.jpg) 
-Chart: [Figure [x]: .]
--->
-------------------------
+************************************************************
+*         BytesPerPixel         Pitch                      *
+*             .---+---------------------------- . ----.    *
+*             |   |        MinX                       |    *
+*               0   1   2   |   4   5   6   7     Width    *
+* Buffer->    .---+---+---+-+-+---+---+---+---+   +---.    *
+* Memory ------>*---------->* |   |   |   |   |   |   |    *
+*             +---+---+---+-|-+---+---+---+---+ . +---+    *
+*           1 |   |   |   | | |   |   |   |   |   |   |    *
+*             +---+---+---+-|-+---+---+---+---+ . +---+    *
+*           2 |   |   |   | | |   |   |   |   |   |   |    *
+*             +---+---+---+-v-+---+---+---+---+ . +---+    *
+*      MinY --+---+---+---+-* |   |   |   |   |   |   |    *
+*             +---+---+---+---  Min (3, 3) ---+ . +---+    *
+*           4 |   |   |   |   |   |   |   |   |   |   |    *
+*             +---+---+---+---+---+---+---+---+ . +---+    *
+*           5 |   |   |   |   |   |   |   |   |   |   |    *
+*             +---+---+---+---+---+---+---+---+ . +---+    *
+*           6 |   |   |   |   |   |   |   |   |   |   |    *
+*             +---+---+---+---+---+---+---+---+ . +---+    *
+*           7 |   |   |   |   |   |   |   |   |   |   |    *
+*             +---+---+---+---+---+---+---+---+ . +---+    *
+*           8     .   .   .   .   .   .   .   .   .        *
+*                                                          *
+*             +---+---+---+---+---+---+---+---+ . +---+    *
+*      Height |   |   |   |   |   |   |   |   |   |   |    *
+*             '---+---+---+---+---+---+---+---+   +---'    *
+************************************************************
+[Figure [x]: Getting to MinX.]
+
+~~~~~~~ C++
+u32 Color = 0xFFFFFFFF;   
+~~~~~~~ C++ add
+u8 *Row = ((u8 *)Buffer->Memory + 
+           MinX * Buffer->BytesPerPixel + 
+           MinY * Buffer->Pitch);
+~~~~~~~ C++
+for (int Y = MinY;
+     Y < MaxY;
+     ++Y)
+     {
+        for (int X = MinX;
+             X < MaxX;
+             ++X)
+        {
+            // ...
+        }
+~~~~~~~ C++ add
+        Row += Buffer->Pitch;
+~~~~~~~ C++
+     }
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > DrawRectangle]</file> Define the row pointer.]
+
+Similarly to the row pointer, we can define the pixel pointer, with an exception that it can be directly a 32-bit value. Finally, within the loop we can write our color and advance the pixel pointer: 
+
+~~~~~~~ C++ add
+u32 *Pixel = (u32 *)Row;
+~~~~~~~ C++
+for (int X = MinX;
+        X < MaxX;
+        ++X)
+{
+~~~~~~~ C++ edit
+    *Pixel++ = Color;
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > DrawRectangle]</file> Drawing the color to the pixel.]
+
+This is not how we will approach this problem in the final renderer, just a simple fill to get things going. 
+
+## Write the Rounding Function
+
+Our rounding function will be super simple. 
+
+Rounding is an operation that brings a real number to its nearest integer. In C, you could simply truncate (cut off) decimal numbers by casting a `f32` to `(u32)Number`. 
+
+~~~~~~~ C++ add
+internal s32
+RoundReal32ToInt32(f32 Number)
+{
+    s32 Result = (s32)Number;
+    return (Result);
+}
+~~~~~~~ C++
+internal void
+DrawRectangle //...
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Introducing `RoundReal32ToInt32`.]
 
 
+This, however, would always bring you to the lower value, even if the decimal value is above 0.5. A quick fix would be to bias the incoming value by 0.5 and _then_ truncating it: 
 
+By adding 0.5, any number with a decimal above 0.5 would get a +1 integer value, thus the truncation will return correct result.
 
+~~~~~~~ C++ edit
+internal s32
+RoundReal32ToInt32(f32 Number)
+{
+~~~~~~~ C++ add
+    s32 Result = (s32)(Number + 0.5f);
+~~~~~~~ C++
+    return (Result);
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Biasing the number for correct rounding.]
 
+There's a lot more to rounding than this though, but this naive solution will suffice for now.
 
+## Test Our Changes
 
+Let's run a quick test to see if things work as we intend them to. At the end of `GameUpdateAndRender`, we'll add a call to `DrawRectangle` function: 
 
+~~~~~~~ C++ add
+DrawRectangle(Buffer, 10.0f, 10.0f, 30.0f, 30.f);
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Testing our rectangle.]
 
+If we recompile and run our program we should see our happy rectangle in the top-right corner: 
 
+![Figure [x]: Our Rectangle.](../media/day27/rectangle.jpg) 
 
+Feel free to play around with it to see if it clips as we intend it to.
 
+## Pass the Color
 
+We will see how to pass and pack the RGB color next time. For now, let's pass directly a 32-bit color. If you're familiar with HEX colors, this is exactly what we will pass.
 
+~~~~~~~ C++   
+internal void
+DrawRectangle(game_offscreen_buffer *Buffer,
+~~~~~~~ C++ edit
+              f32 RealMinX, f32 RealMinY, f32 RealMaxX, f32 RealMaxY, 
+~~~~~~~ C++ add
+              u32 Color)
+~~~~~~~ C++
+{
+    // ...
+~~~~~~~ C++ delete
+u32 Color = 0xFFFFFFFF;   
+~~~~~~~ C++   
+    u8 *Row = ((u8 *)Buffer->Memory + 
+               MinX * Buffer->BytesPerPixel + 
+               MinY * Buffer->Pitch);
+    // ...
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Passing the Color as a parameter.]
 
+This allows us to set up a background to clear our screen every frame, and a rectangle on top of it: 
 
+~~~~~~~ C++ add
+DrawRectangle(Buffer, 0.0f, 0.0f, (f32)Buffer->Width, (f32)Buffer->Height, 0x00FF00FF);
+~~~~~~~ C++ edit
+DrawRectangle(Buffer, 10.0f, 10.0f, 30.0f, 30.f, 0x0000FFFF);
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Testing our rectangle.]
 
+Recompiling now will give you a cyan square on pink background: 
 
-
-
-
+![Figure [x]: Our Rectangle with a background.](../media/day27/rectangle2.jpg) 
 
 # Recap 
 
-# Exercises 
+Today we concluded our first introduction into the game architecture theory, and started looking ahead towards the actual game development. Our game will be inspired by classic games like The Legend of Zelda, with a game world that's all about exploring and making your own path. We then cleaned up the old test code and laying down the first bricks for our game's core features, and we're ready to start bringing our big ideas to life!
 
 # Programming Notions 
 
@@ -647,13 +969,226 @@ This is but the first glimpse into what compression-oriented programming means. 
 
 # Side Considerations 
 
+## Floating-point Coordinates
+
+Each pixel coordinates, being fixed on a physical screen, are non-divisible integer numbers. Yet most renderers work with them using decimal numbers. Generally, it's to allow for a more fluid movement of the sprites on screen.
+
+![Figure [x]: If the position of a rectangle bleeds to neighbouring rectangles during the movement, it creates an illusion of smoother movement.](../media/day27/subpixel.gif) 
+
+When you work with very specific systems, like renderers, the precise definition of what you want matters.
+
+Let's imagine a pixel grid:
+
+**************************************************
+*     0   1   2   3   4   5   6   7   8   9      *
+*   .---+---+---+---+---+---+---+---+---+---.    *
+* 0 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 1 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 2 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 3 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 4 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 5 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 6 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 7 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 8 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 9 |   |   |   |   |   |   |   |   |   |   |    *
+*   '---+---+---+---+---+---+---+---+---+---'    *
+**************************************************
+[Figure [x]: Pixel grid.]
+
+Filling a single pixel is simple, you just assign a color at given coordinates (let's say, (2, 1)):
+
+**************************************************
+*     0   1   2   3   4   5   6   7   8   9      *
+*   .---+---+---+---+---+---+---+---+---+---.    *
+* 0 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 1 |   |   | ▉ |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 2 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 3 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 4 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 5 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 6 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 7 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 8 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 9 |   |   |   |   |   |   |   |   |   |   |    *
+*   '---+---+---+---+---+---+---+---+---+---'    *
+**************************************************
+[Figure [x]: Filling a single pixel.]
+
+But when you start talking about filling an _area_ of pixels, things might get complicated. For example, do you want your coordinates to be inclusive or exclusive? Let's say, we want to fill an area from (1, 1) to (3, 3):
+
+**************************************************
+*     0   1   2   3   4   5   6   7   8   9      *
+*   .---+---+---+---+---+---+---+---+---+---.    *
+* 0 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 1 |   | x |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 2 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 3 |   |   |   | x |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 4 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 5 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 6 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 7 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 8 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 9 |   |   |   |   |   |   |   |   |   |   |    *
+*   '---+---+---+---+---+---+---+---+---+---'    *
+**************************************************
+[Figure [x]: Min and Max points.]
+
+Does this mean that I'm excluding the outer bounds? 
+
+
+**************************************************
+*     0   1   2   3   4   5   6   7   8   9      *
+*   .---+---+---+---+---+---+---+---+---+---.    *
+* 0 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 1 |   |x.-+-. | | |   |   |   |   |   |   |    *
+*   +---+-+-+-+-+---+---+---+---+---+---+---+    *
+* 2 |   | '-+-' | | |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 3 |   |---|---| x |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 4 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 5 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 6 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 7 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 8 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 9 |   |   |   |   |   |   |   |   |   |   |    *
+*   '---+---+---+---+---+---+---+---+---+---'    *
+**************************************************
+[Figure [x]: Excluding bounds.]
+
+Or am I including them? 
+
+**************************************************
+*     0   1   2   3   4   5   6   7   8   9      *
+*   .---+---+---+---+---+---+---+---+---+---.    *
+* 0 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 1 |   |x.-+---+-. |   |   |   |   |   |   |    *
+*   +---+-+-+---+-+-+---+---+---+---+---+---+    *
+* 2 |   | | |   | | |   |   |   |   |   |   |    *
+*   +---+-+-+---+-+-+---+---+---+---+---+---+    *
+* 3 |   | '-+---+-'x|   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 4 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 5 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 6 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 7 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 8 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 9 |   |   |   |   |   |   |   |   |   |   |    *
+*   '---+---+---+---+---+---+---+---+---+---'    *
+**************************************************
+[Figure [x]: Including bounds.]
+
+We can't just take whatever approach and agree on it. There are specific reasons to go for one or the other approach, and we'll see more of them in the future when we get deep into the renderer implementation.
+
+Things get even more confusing when you allow things to move around sub-pixel on the grid. Let's say we have a 3x3 sprite. It's obvious how we draw it's lined up exactly to a grid: 
+
+**************************************************
+*     0   1   2   3   4   5   6   7   8   9      *
+*   .---+---+---+---+---+---+---+---+---+---.    *
+* 0 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 1 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---┏━━━━━━━━━━━┓---+---+---+---+    *
+* 2 |   |   |   ┃           ┃   |   |   |   |    *
+*   +---+---+---┃           ┃---+---+---+---+    *
+* 3 |   |   |   ┃           ┃   |   |   |   |    *
+*   +---+---+---┃           ┃---+---+---+---+    *
+* 4 |   |   |   ┃           ┃   |   |   |   |    *
+*   +---+---+---┗━━━━━━━━━━━┛---+---+---+---+    *
+* 5 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 6 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 7 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 8 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 9 |   |   |   |   |   |   |   |   |   |   |    *
+*   '---+---+---+---+---+---+---+---+---+---'    *
+**************************************************
+[Figure [x]: Sprite on grid.]
+
+But what if the sprite moves off-center slightly? For example an enemy moves towards the player.
+
+**************************************************
+*     0   1   2   3   4   5   6   7   8   9      *
+*   .---+---+---+---+---+---+---+---+---+---.    *
+* 0 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 1 |   |   | ┏━━━━━━━━━━━┓ |   |   |   |   |    *
+*   +---+---+-┃           ┃-+---+---+---+---+    *
+* 2 |   |   | ┃           ┃ |   |   |   |   |    *
+*   +---+---+-┃           ┃-+---+---+---+---+    *
+* 3 |   |   | ┃           ┃ |   |   |   |   |    *
+*   +---+---+-┃           ┃-+---+---+---+---+    *
+* 4 |   |   | ┗━━━━━━━━━━━┛ |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 5 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 6 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 7 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 8 |   |   |   |   |   |   |   |   |   |   |    *
+*   +---+---+---+---+---+---+---+---+---+---+    *
+* 9 |   |   |   |   |   |   |   |   |   |   |    *
+*   '---+---+---+---+---+---+---+---+---+---'    *
+**************************************************
+[Figure [x]: Sprite off grid.]
+
+We can't just draw it as is, each individual pixel only accepts one color. At this point you need a strong convention for how this sprite influences border pixels with its colors. If we wanted to fill from (2, 1) to (5, 4), we'd only draw a portion of those colors to allow for a smooth transition. 
+
+We adopt the excluding bounds specifically because of this. This way, we will get all the bounds for potential rounding, without cropping potential overlaps.
+
+# Notes
+
 [^win-32]: We could say that, to a large extent, we've already been applying this approach in the Win32 layer but in reality we've been cheating a bit. We knew what the end result would be so we could roughly set our waypoints. But that isn't an interesting architectural problem, more like cutting and pasting functions from your brain. We didn't even have the waypoints, we just knew the final destination and wrote it. 
 
 # Navigation 
 
-Previous: [Day 26. ][day 26]
+Previous: [Day 26. Introduction to Game Architecture][day 26]
 
-Up Next: [Day 28. ][day 28]
+Up Next: [Day 28. Drawing a Tile Map][day 28]
 
 [Back to Index](../index.md.html)
 

@@ -3,9 +3,1524 @@
 <meta name="viewport" content="width=600, initial-scale=1">
 <link rel="stylesheet" href="../css/html-style.css">
 <link rel="stylesheet" href="../css/style.css">
+<span class="md"><p><title>Day 27. Exploration-based Architecture</title><div class="title"> Day 27. Exploration-based Architecture </div>
 
+<div class="afterTitles"></div>
+<em class="underscore">Video Length (including Q&A): <a href="https://hero.handmade.network/episode/code/day027/">1h42</a></em> 
+
+</p><p>
+
+Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with no external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
+
+</p><p>
+
+We did quite a bit of theory last time; let's wrap it up and get to practice! 
+
+</p>
 <div class="longTOC"><p align="center">
     <span align="right"><a href="day26.html">Day 26</a></span>
     <a href="../index.html"><img src = "../media/logo.png"></a>
     <span align="left"><a href="day28.html">Day 28</a></span>
 </p><p><a href="#" class="tocTop">(Top)</a><br/>
+<a href="#projectstatespace" class="level1"><span class="tocNumber">1&nbsp; </span>Project State Space</a><br/>
+&nbsp;&nbsp;<a href="#projectstatespace/waypoints" class="level2"><span class="tocNumber">1.1&nbsp; </span>Waypoints</a><br/>
+&nbsp;&nbsp;<a href="#projectstatespace/exploreandlock" class="level2"><span class="tocNumber">1.2&nbsp; </span>Explore and Lock</a><br/>
+<a href="#ourgamedesign" class="level1"><span class="tocNumber">2&nbsp; </span>Our Game Design</a><br/>
+&nbsp;&nbsp;<a href="#ourgamedesign/inspiration" class="level2"><span class="tocNumber">2.1&nbsp; </span>Inspiration</a><br/>
+&nbsp;&nbsp;<a href="#ourgamedesign/thetilemap" class="level2"><span class="tocNumber">2.2&nbsp; </span>The Tile Map</a><br/>
+&nbsp;&nbsp;<a href="#ourgamedesign/thegameworld" class="level2"><span class="tocNumber">2.3&nbsp; </span>The Game World</a><br/>
+&nbsp;&nbsp;<a href="#ourgamedesign/combinatorics" class="level2"><span class="tocNumber">2.4&nbsp; </span>Combinatorics</a><br/>
+&nbsp;&nbsp;<a href="#ourgamedesign/intotheunknown" class="level2"><span class="tocNumber">2.5&nbsp; </span>Into the Unknown</a><br/>
+<a href="#backtocode" class="level1"><span class="tocNumber">3&nbsp; </span>Back to Code</a><br/>
+&nbsp;&nbsp;<a href="#backtocode/gettargetsecondsperframe" class="level2"><span class="tocNumber">3.1&nbsp; </span>Get Target Seconds Per Frame</a><br/>
+&nbsp;&nbsp;<a href="#backtocode/removetestcode" class="level2"><span class="tocNumber">3.2&nbsp; </span>Remove Test Code</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#backtocode/removetestcode/removetestsound" class="level3"><span class="tocNumber">3.2.1&nbsp; </span>Remove Test Sound</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#backtocode/removetestcode/removetheweirdgradient" class="level3"><span class="tocNumber">3.2.2&nbsp; </span>Remove the Weird Gradient</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#backtocode/removetestcode/removerenderplayercalls" class="level3"><span class="tocNumber">3.2.3&nbsp; </span>Remove RenderPlayer calls</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#backtocode/removetestcode/removefilecalls" class="level3"><span class="tocNumber">3.2.4&nbsp; </span>Remove File Calls</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#backtocode/removetestcode/cleanupthegamestate" class="level3"><span class="tocNumber">3.2.5&nbsp; </span>Clean Up the Game State</a><br/>
+&nbsp;&nbsp;<a href="#backtocode/decideonthegameresolution" class="level2"><span class="tocNumber">3.3&nbsp; </span>Decide on the Game Resolution</a><br/>
+<a href="#drawrectanglefunction" class="level1"><span class="tocNumber">4&nbsp; </span>Draw Rectangle Function</a><br/>
+&nbsp;&nbsp;<a href="#drawrectanglefunction/repurposerenderplayerintodrawrectangle" class="level2"><span class="tocNumber">4.1&nbsp; </span>Repurpose <code>RenderPlayer</code> into <code>DrawRectangle</code></a><br/>
+&nbsp;&nbsp;<a href="#drawrectanglefunction/clipboundaries" class="level2"><span class="tocNumber">4.2&nbsp; </span>Clip Boundaries</a><br/>
+&nbsp;&nbsp;<a href="#drawrectanglefunction/fillthepixels" class="level2"><span class="tocNumber">4.3&nbsp; </span>Fill the Pixels</a><br/>
+&nbsp;&nbsp;<a href="#drawrectanglefunction/writetheroundingfunction" class="level2"><span class="tocNumber">4.4&nbsp; </span>Write the Rounding Function</a><br/>
+&nbsp;&nbsp;<a href="#drawrectanglefunction/testourchanges" class="level2"><span class="tocNumber">4.5&nbsp; </span>Test Our Changes</a><br/>
+&nbsp;&nbsp;<a href="#drawrectanglefunction/passthecolor" class="level2"><span class="tocNumber">4.6&nbsp; </span>Pass the Color</a><br/>
+<a href="#recap" class="level1"><span class="tocNumber">5&nbsp; </span>Recap</a><br/>
+<a href="#programmingnotions" class="level1"><span class="tocNumber">6&nbsp; </span>Programming Notions</a><br/>
+&nbsp;&nbsp;<a href="#programmingnotions/compression-orientedprogramming" class="level2"><span class="tocNumber">6.1&nbsp; </span>Compression-oriented programming</a><br/>
+<a href="#sideconsiderations" class="level1"><span class="tocNumber">7&nbsp; </span>Side Considerations</a><br/>
+&nbsp;&nbsp;<a href="#sideconsiderations/floating-pointcoordinates" class="level2"><span class="tocNumber">7.1&nbsp; </span>Floating-point Coordinates</a><br/>
+<a href="#notes" class="level1"><span class="tocNumber">8&nbsp; </span>Notes</a><br/>
+<a href="#navigation" class="level1"><span class="tocNumber">9&nbsp; </span>Navigation</a><br/>
+</p></div><a class="target" name="projectstatespace">&nbsp;</a><a class="target" name="projectstatespace">&nbsp;</a><a class="target" name="toc1">&nbsp;</a><h1>Project State Space</h1>
+<p>
+
+
+If we put on our fantasy hats and head into the fantasy land of unicorns, magic, and trolls called Project State Space, we will find a map showing our progress on the project. In our case, we're essentially at Day 0 of the project (if you exclude the excruciating need of having to talk to Windows), and our map looks quite empty: 
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="288" width="424" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 134,204 L 160,256 " style="fill:none;"/>
+<polygon points="142,204 130,198.4 130,209.6 "  style="stroke:none" transform="rotate(243.43494882292202,134,204 )"/>
+<circle cx="128" cy="192" r="6" class="closeddot"/><g transform="translate(0,0)"><text text-anchor="middle" x="168" y="260">Y</text><text text-anchor="middle" x="176" y="260">o</text><text text-anchor="middle" x="184" y="260">u</text><text text-anchor="middle" x="200" y="260">a</text><text text-anchor="middle" x="208" y="260">r</text><text text-anchor="middle" x="216" y="260">e</text><text text-anchor="middle" x="232" y="260">h</text><text text-anchor="middle" x="240" y="260">e</text><text text-anchor="middle" x="248" y="260">r</text><text text-anchor="middle" x="256" y="260">e</text><text text-anchor="middle" x="264" y="260">.</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;1:</b> You are here.</div></center>
+
+</p><p>
+
+There's also a point at which we will ship our project. We start somewhere, and that somewhere is the finish: 
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="224" width="424" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 168,0 L 208,0 " style="fill:none;"/>
+<polygon points="176,0 164,-5.6 164,5.6 "  style="stroke:none" transform="rotate(180,168,0 )"/>
+<circle cx="144" cy="192" r="6" class="closeddot"/><circle cx="152" cy="0" r="6" class="closeddot"/><g transform="translate(0,0)"><text text-anchor="middle" x="80" y="4">D</text><text text-anchor="middle" x="88" y="4">a</text><text text-anchor="middle" x="96" y="4">y</text><text text-anchor="middle" x="112" y="4">7</text><text text-anchor="middle" x="120" y="4">0</text><text text-anchor="middle" x="128" y="4">0</text><text text-anchor="middle" x="136" y="4">?</text><text text-anchor="middle" x="224" y="4">S</text><text text-anchor="middle" x="232" y="4">h</text><text text-anchor="middle" x="240" y="4">i</text><text text-anchor="middle" x="248" y="4">p</text><text text-anchor="middle" x="96" y="196">D</text><text text-anchor="middle" x="104" y="196">a</text><text text-anchor="middle" x="112" y="196">y</text><text text-anchor="middle" x="128" y="196">0</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;2:</b> You are still down there.</div></center>
+
+</p><p>
+
+Of course, if you worked on any project, you know that the path from start to finish is <em class="underscore">never</em> straight. It's even more the case in the wonderful world of software development. This path to victory is often arduous, full of deviations and even setbacks: 
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="224" width="424" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 144,176 L 144,192 " style="fill:none;"/>
+<path d="M 152,16 L 152,32 " style="fill:none;"/>
+<path d="M 232,96 L 232,112 " style="fill:none;"/>
+<path d="M 288,32 L 288,48 " style="fill:none;"/>
+<path d="M 256,16 L 272,16 " style="fill:none;"/>
+<path d="M 168,48 L 224,48 " style="fill:none;"/>
+<path d="M 80,64 L 272,64 " style="fill:none;"/>
+<path d="M 152,80 L 216,80 " style="fill:none;"/>
+<path d="M 72,128 L 128,128 " style="fill:none;"/>
+<path d="M 168,128 L 216,128 " style="fill:none;"/>
+<path d="M 56,112 L 80,64 " style="fill:none;"/>
+<path d="M 128,128 L 152,80 " style="fill:none;"/>
+<path d="M 144,176 L 168,128 " style="fill:none;"/>
+<path d="M 256,16 C 239.2,16 240,32 240,32 " style="fill:none;"/>
+<path d="M 272,16 C 288.8,16 288,32 288,32 " style="fill:none;"/>
+<path d="M 168,48 C 151.2,48 152,32 152,32 " style="fill:none;"/>
+<path d="M 224,48 C 240.8,48 240,32 240,32 " style="fill:none;"/>
+<path d="M 272,64 C 288.8,64 288,48 288,48 " style="fill:none;"/>
+<path d="M 216,80 C 232.8,80 232,96 232,96 " style="fill:none;"/>
+<path d="M 72,128 C 55.2,128 56,112 56,112 " style="fill:none;"/>
+<path d="M 216,128 C 232.8,128 232,112 232,112 " style="fill:none;"/>
+<polygon points="160,16 148,10.4 148,21.6 "  style="stroke:none" transform="rotate(270,152,16 )"/>
+<circle cx="144" cy="192" r="6" class="closeddot"/><circle cx="152" cy="0" r="6" class="closeddot"/><g transform="translate(0,0)"><text text-anchor="middle" x="88" y="4">D</text><text text-anchor="middle" x="96" y="4">a</text><text text-anchor="middle" x="104" y="4">y</text><text text-anchor="middle" x="120" y="4">7</text><text text-anchor="middle" x="128" y="4">0</text><text text-anchor="middle" x="136" y="4">0</text><text text-anchor="middle" x="96" y="196">D</text><text text-anchor="middle" x="104" y="196">a</text><text text-anchor="middle" x="112" y="196">y</text><text text-anchor="middle" x="128" y="196">0</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;3:</b> This is a map of a good project. It gets to ship.</div></center>
+
+</p><p>
+
+Often, you don't even know how the final product will look! You only have a vague idea, but unless it's anything more complex than a &ldquo;hello world&rdquo; project, any additional details will be revealed as the project grows stronger. It's not necessarily a &ldquo;point&rdquo; you're trying to reach but more of a nebulous blob of possibilities that slowly condenses into the final product.
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="272" width="424" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 104,0 L 112,0 " style="fill:none;"/>
+<path d="M 192,0 L 216,0 " style="fill:none;"/>
+<path d="M 64,32 L 72,32 " style="fill:none;"/>
+<path d="M 144,32 L 160,32 " style="fill:none;"/>
+<path d="M 64,64 L 80,64 " style="fill:none;"/>
+<path d="M 208,64 L 248,64 " style="fill:none;"/>
+<path d="M 112,96 L 176,96 " style="fill:none;"/>
+<path d="M 104,0 C 87.2,0 88,16 88,16 " style="fill:none;"/>
+<path d="M 112,0 C 128.8,0 128,16 128,16 " style="fill:none;"/>
+<path d="M 192,0 C 175.2,0 176,16 176,16 " style="fill:none;"/>
+<path d="M 216,0 C 232.8,0 232,16 232,16 " style="fill:none;"/>
+<path d="M 64,32 C 47.2,32 48,48 48,48 " style="fill:none;"/>
+<path d="M 72,32 C 88.8,32 88,16 88,16 " style="fill:none;"/>
+<path d="M 144,32 C 127.2,32 128,16 128,16 " style="fill:none;"/>
+<path d="M 160,32 C 176.8,32 176,16 176,16 " style="fill:none;"/>
+<path d="M 248,32 C 231.2,32 232,16 232,16 " style="fill:none;"/>
+<path d="M 248,32 C 264.8,32 264,48 264,48 " style="fill:none;"/>
+<path d="M 64,64 C 47.2,64 48,48 48,48 " style="fill:none;"/>
+<path d="M 80,64 C 96.8,64 96,80 96,80 " style="fill:none;"/>
+<path d="M 208,64 C 191.2,64 192,80 192,80 " style="fill:none;"/>
+<path d="M 248,64 C 264.8,64 264,48 264,48 " style="fill:none;"/>
+<path d="M 112,96 C 95.2,96 96,80 96,80 " style="fill:none;"/>
+<path d="M 176,96 C 192.8,96 192,80 192,80 " style="fill:none;"/>
+<circle cx="144" cy="240" r="6" class="closeddot"/><g transform="translate(0,0)"><text text-anchor="middle" x="104" y="52">D</text><text text-anchor="middle" x="112" y="52">a</text><text text-anchor="middle" x="120" y="52">y</text><text text-anchor="middle" x="136" y="52">7</text><text text-anchor="middle" x="144" y="52">0</text><text text-anchor="middle" x="152" y="52">0</text><text text-anchor="middle" x="160" y="52">?</text><text text-anchor="middle" x="184" y="52">S</text><text text-anchor="middle" x="192" y="52">h</text><text text-anchor="middle" x="200" y="52">i</text><text text-anchor="middle" x="208" y="52">p</text><text text-anchor="middle" x="96" y="244">D</text><text text-anchor="middle" x="104" y="244">a</text><text text-anchor="middle" x="112" y="244">y</text><text text-anchor="middle" x="128" y="244">0</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;4:</b> The shipping point is more of a shipping nebula when you're starting.</div></center>
+
+</p><p>
+
+Because of this, you might initially set towards a specific point in the &ldquo;shipping nebula&rdquo; and even progress there for a while before realizing that the actual thing you're trying to reach is further away. Eventually, the nebula will condense into a point, and you will ship your project.
+
+</p>
+<a class="target" name="waypoints">&nbsp;</a><a class="target" name="projectstatespace/waypoints">&nbsp;</a><a class="target" name="toc1.1">&nbsp;</a><h2>Waypoints</h2>
+<p>
+
+
+So how should one approach this voyage, sitting down for the new day and hoping it will bring the project (or even individual pieces of code) closer to the finish? 
+
+</p><p>
+
+At any given point in your project journey, be it day 0, day 100, etc., you would set yourself an objective for the day. Maybe it's upgrading the object system because it doesn't handle the number of objects we're trying to draw or optimizing something. Who knows? By doing this, you're effectively picking a new point on your Project State Space and advancing yourself towards that point. Thus, day by day, you'd choose new points from wherever you left the day before. The better you're at dead reckoning, the fewer switchbacks and backtraces there are, the faster you ship your project.
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="384" width="424" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 144,304 L 144,352 " style="fill:none;"/>
+<path d="M 168,256 L 168,288 " style="fill:none;"/>
+<path d="M 216,224 L 216,256 " style="fill:none;"/>
+<path d="M 104,0 L 112,0 " style="fill:none;"/>
+<path d="M 192,0 L 216,0 " style="fill:none;"/>
+<path d="M 64,32 L 72,32 " style="fill:none;"/>
+<path d="M 144,32 L 160,32 " style="fill:none;"/>
+<path d="M 64,64 L 80,64 " style="fill:none;"/>
+<path d="M 208,64 L 248,64 " style="fill:none;"/>
+<path d="M 112,96 L 176,96 " style="fill:none;"/>
+<path d="M 168,208 L 192,208 " style="fill:none;"/>
+<path d="M 184,256 L 208,256 " style="fill:none;"/>
+<path d="M 152,336 L 176,336 " style="fill:none;"/>
+<path d="M 126,300 L 144,336 " style="fill:none;"/>
+<path d="M 152,256 L 168,288 " style="fill:none;"/>
+<path d="M 192,208 L 216,256 " style="fill:none;"/>
+<path d="M 144,336 L 184,256 " style="fill:none;"/>
+<path d="M 216,256 L 232,224 " style="fill:none;"/>
+<path d="M 104,0 C 87.2,0 88,16 88,16 " style="fill:none;"/>
+<path d="M 112,0 C 128.8,0 128,16 128,16 " style="fill:none;"/>
+<path d="M 192,0 C 175.2,0 176,16 176,16 " style="fill:none;"/>
+<path d="M 216,0 C 232.8,0 232,16 232,16 " style="fill:none;"/>
+<path d="M 64,32 C 47.2,32 48,48 48,48 " style="fill:none;"/>
+<path d="M 72,32 C 88.8,32 88,16 88,16 " style="fill:none;"/>
+<path d="M 144,32 C 127.2,32 128,16 128,16 " style="fill:none;"/>
+<path d="M 160,32 C 176.8,32 176,16 176,16 " style="fill:none;"/>
+<path d="M 248,32 C 231.2,32 232,16 232,16 " style="fill:none;"/>
+<path d="M 248,32 C 264.8,32 264,48 264,48 " style="fill:none;"/>
+<path d="M 64,64 C 47.2,64 48,48 48,48 " style="fill:none;"/>
+<path d="M 80,64 C 96.8,64 96,80 96,80 " style="fill:none;"/>
+<path d="M 208,64 C 191.2,64 192,80 192,80 " style="fill:none;"/>
+<path d="M 248,64 C 264.8,64 264,48 264,48 " style="fill:none;"/>
+<path d="M 112,96 C 95.2,96 96,80 96,80 " style="fill:none;"/>
+<path d="M 176,96 C 192.8,96 192,80 192,80 " style="fill:none;"/>
+<polygon points="240,224 228,218.4 228,229.6 "  style="stroke:none" transform="rotate(296.565051177078,232,224 )"/>
+<polygon points="224,224 212,218.4 212,229.6 "  style="stroke:none" transform="rotate(270,216,224 )"/>
+<polygon points="212,256 200,250.4 200,261.6 "  style="stroke:none" transform="rotate(0,204,256 )"/>
+<polygon points="184,336 172,330.4 172,341.6 "  style="stroke:none" transform="rotate(0,176,336 )"/>
+<polygon points="176,256 164,250.4 164,261.6 "  style="stroke:none" transform="rotate(270,168,256 )"/>
+<polygon points="180,208 168,202.4 168,213.6 "  style="stroke:none" transform="rotate(180,172,208 )"/>
+<polygon points="160,256 148,250.4 148,261.6 "  style="stroke:none" transform="rotate(243.43494882292202,152,256 )"/>
+<polygon points="152,304 140,298.4 140,309.6 "  style="stroke:none" transform="rotate(270,144,304 )"/>
+<polygon points="134,300 122,294.4 122,305.6 "  style="stroke:none" transform="rotate(243.43494882292202,126,300 )"/>
+<circle cx="120" cy="288" r="6" class="opendot"/><circle cx="144" cy="288" r="6" class="opendot"/><circle cx="144" cy="336" r="6" class="closeddot"/><circle cx="152" cy="240" r="6" class="opendot"/><circle cx="160" cy="208" r="6" class="closeddot"/><circle cx="168" cy="240" r="6" class="opendot"/><circle cx="168" cy="288" r="6" class="closeddot"/><circle cx="192" cy="336" r="6" class="opendot"/><circle cx="216" cy="208" r="6" class="opendot"/><circle cx="216" cy="256" r="6" class="closeddot"/><circle cx="232" cy="208" r="6" class="opendot"/><g transform="translate(0,0)"><text text-anchor="middle" x="104" y="52">D</text><text text-anchor="middle" x="112" y="52">a</text><text text-anchor="middle" x="120" y="52">y</text><text text-anchor="middle" x="136" y="52">7</text><text text-anchor="middle" x="144" y="52">0</text><text text-anchor="middle" x="152" y="52">0</text><text text-anchor="middle" x="160" y="52">?</text><text text-anchor="middle" x="184" y="52">S</text><text text-anchor="middle" x="192" y="52">h</text><text text-anchor="middle" x="200" y="52">i</text><text text-anchor="middle" x="208" y="52">p</text><text text-anchor="middle" x="96" y="212">D</text><text text-anchor="middle" x="104" y="212">a</text><text text-anchor="middle" x="112" y="212">y</text><text text-anchor="middle" x="128" y="212">1</text><text text-anchor="middle" x="136" y="212">0</text><text text-anchor="middle" x="144" y="212">3</text><text text-anchor="middle" x="232" y="260">D</text><text text-anchor="middle" x="240" y="260">a</text><text text-anchor="middle" x="248" y="260">y</text><text text-anchor="middle" x="264" y="260">1</text><text text-anchor="middle" x="272" y="260">0</text><text text-anchor="middle" x="280" y="260">2</text><text text-anchor="middle" x="184" y="292">D</text><text text-anchor="middle" x="192" y="292">a</text><text text-anchor="middle" x="200" y="292">y</text><text text-anchor="middle" x="216" y="292">1</text><text text-anchor="middle" x="224" y="292">0</text><text text-anchor="middle" x="232" y="292">1</text><text text-anchor="middle" x="80" y="340">D</text><text text-anchor="middle" x="88" y="340">a</text><text text-anchor="middle" x="96" y="340">y</text><text text-anchor="middle" x="112" y="340">1</text><text text-anchor="middle" x="120" y="340">0</text><text text-anchor="middle" x="128" y="340">0</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;5:</b> Day after day, you build your way towards your goal.</div></center>
+
+</p><p>
+
+This is where <strong class="underscore">compression-oriented programming</strong> comes into play. It allows us to write code, see how it works at the low level, and eventually elevate it into more significant designs as we go without needing a lot of pre-planning.
+
+</p><p>
+
+For more information about compression-oriented programming, see Subsection  <a href="#toc6.1">6.1</a> for a broader definition. 
+
+</p><p>
+
+The main issue with pre-planning is that it assumes that you know what the final code would look like. If you have to do the pre-plan, you set your final point in advance and create the &ldquo;waypoints&rdquo; through which the project should go. 
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="336" width="424" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 104,0 L 112,0 " style="fill:none;"/>
+<path d="M 192,0 L 216,0 " style="fill:none;"/>
+<path d="M 64,32 L 72,32 " style="fill:none;"/>
+<path d="M 144,32 L 160,32 " style="fill:none;"/>
+<path d="M 64,64 L 80,64 " style="fill:none;"/>
+<path d="M 208,64 L 248,64 " style="fill:none;"/>
+<path d="M 112,96 L 176,96 " style="fill:none;"/>
+<path d="M 104,0 C 87.2,0 88,16 88,16 " style="fill:none;"/>
+<path d="M 112,0 C 128.8,0 128,16 128,16 " style="fill:none;"/>
+<path d="M 192,0 C 175.2,0 176,16 176,16 " style="fill:none;"/>
+<path d="M 216,0 C 232.8,0 232,16 232,16 " style="fill:none;"/>
+<path d="M 64,32 C 47.2,32 48,48 48,48 " style="fill:none;"/>
+<path d="M 72,32 C 88.8,32 88,16 88,16 " style="fill:none;"/>
+<path d="M 144,32 C 127.2,32 128,16 128,16 " style="fill:none;"/>
+<path d="M 160,32 C 176.8,32 176,16 176,16 " style="fill:none;"/>
+<path d="M 248,32 C 231.2,32 232,16 232,16 " style="fill:none;"/>
+<path d="M 248,32 C 264.8,32 264,48 264,48 " style="fill:none;"/>
+<path d="M 64,64 C 47.2,64 48,48 48,48 " style="fill:none;"/>
+<path d="M 80,64 C 96.8,64 96,80 96,80 " style="fill:none;"/>
+<path d="M 208,64 C 191.2,64 192,80 192,80 " style="fill:none;"/>
+<path d="M 248,64 C 264.8,64 264,48 264,48 " style="fill:none;"/>
+<path d="M 112,96 C 95.2,96 96,80 96,80 " style="fill:none;"/>
+<path d="M 176,96 C 192.8,96 192,80 192,80 " style="fill:none;"/>
+<circle cx="152" cy="48" r="6" class="closeddot"/><circle cx="152" cy="304" r="6" class="closeddot"/><g transform="translate(0,0)"><text text-anchor="middle" x="88" y="52">D</text><text text-anchor="middle" x="96" y="52">a</text><text text-anchor="middle" x="104" y="52">y</text><text text-anchor="middle" x="120" y="52">7</text><text text-anchor="middle" x="128" y="52">0</text><text text-anchor="middle" x="136" y="52">0</text><text text-anchor="middle" x="184" y="52">S</text><text text-anchor="middle" x="192" y="52">h</text><text text-anchor="middle" x="200" y="52">i</text><text text-anchor="middle" x="208" y="52">p</text><text text-anchor="middle" x="152" y="84">X</text><text text-anchor="middle" x="152" y="132">X</text><text text-anchor="middle" x="152" y="180">X</text><text text-anchor="middle" x="152" y="228">X</text><text text-anchor="middle" x="152" y="276">X</text><text text-anchor="middle" x="104" y="308">D</text><text text-anchor="middle" x="112" y="308">a</text><text text-anchor="middle" x="120" y="308">y</text><text text-anchor="middle" x="136" y="308">0</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;6:</b> Expectation: an ideal plan everyone tries to achieve.</div></center>
+
+</p><p>
+
+But if you don't know the final point, there's no way to do the waypoints. In reality, the final point is often set way off course.
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="272" width="424" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 104,16 L 112,16 " style="fill:none;"/>
+<path d="M 192,16 L 216,16 " style="fill:none;"/>
+<path d="M 64,48 L 72,48 " style="fill:none;"/>
+<path d="M 144,48 L 160,48 " style="fill:none;"/>
+<path d="M 64,80 L 80,80 " style="fill:none;"/>
+<path d="M 208,80 L 248,80 " style="fill:none;"/>
+<path d="M 112,112 L 176,112 " style="fill:none;"/>
+<path d="M 104,16 C 87.2,16 88,32 88,32 " style="fill:none;"/>
+<path d="M 112,16 C 128.8,16 128,32 128,32 " style="fill:none;"/>
+<path d="M 192,16 C 175.2,16 176,32 176,32 " style="fill:none;"/>
+<path d="M 216,16 C 232.8,16 232,32 232,32 " style="fill:none;"/>
+<path d="M 64,48 C 47.2,48 48,64 48,64 " style="fill:none;"/>
+<path d="M 72,48 C 88.8,48 88,32 88,32 " style="fill:none;"/>
+<path d="M 144,48 C 127.2,48 128,32 128,32 " style="fill:none;"/>
+<path d="M 160,48 C 176.8,48 176,32 176,32 " style="fill:none;"/>
+<path d="M 248,48 C 231.2,48 232,32 232,32 " style="fill:none;"/>
+<path d="M 248,48 C 264.8,48 264,64 264,64 " style="fill:none;"/>
+<path d="M 64,80 C 47.2,80 48,64 48,64 " style="fill:none;"/>
+<path d="M 80,80 C 96.8,80 96,96 96,96 " style="fill:none;"/>
+<path d="M 208,80 C 191.2,80 192,96 192,96 " style="fill:none;"/>
+<path d="M 248,80 C 264.8,80 264,64 264,64 " style="fill:none;"/>
+<path d="M 112,112 C 95.2,112 96,96 96,96 " style="fill:none;"/>
+<path d="M 176,112 C 192.8,112 192,96 192,96 " style="fill:none;"/>
+<circle cx="32" cy="0" r="6" class="closeddot"/><circle cx="128" cy="64" r="6" class="opendot"/><circle cx="152" cy="240" r="6" class="closeddot"/><g transform="translate(0,0)"><text text-anchor="middle" x="48" y="4">W</text><text text-anchor="middle" x="56" y="4">h</text><text text-anchor="middle" x="64" y="4">a</text><text text-anchor="middle" x="72" y="4">t</text><text text-anchor="middle" x="88" y="4">w</text><text text-anchor="middle" x="96" y="4">e</text><text text-anchor="middle" x="112" y="4">p</text><text text-anchor="middle" x="120" y="4">l</text><text text-anchor="middle" x="128" y="4">a</text><text text-anchor="middle" x="136" y="4">n</text><text text-anchor="middle" x="152" y="4">t</text><text text-anchor="middle" x="160" y="4">o</text><text text-anchor="middle" x="176" y="4">s</text><text text-anchor="middle" x="184" y="4">h</text><text text-anchor="middle" x="192" y="4">i</text><text text-anchor="middle" x="200" y="4">p</text><text text-anchor="middle" x="72" y="68">X</text><text text-anchor="middle" x="144" y="68">W</text><text text-anchor="middle" x="152" y="68">h</text><text text-anchor="middle" x="160" y="68">a</text><text text-anchor="middle" x="168" y="68">t</text><text text-anchor="middle" x="184" y="68">w</text><text text-anchor="middle" x="192" y="68">e</text><text text-anchor="middle" x="208" y="68">w</text><text text-anchor="middle" x="216" y="68">a</text><text text-anchor="middle" x="224" y="68">n</text><text text-anchor="middle" x="232" y="68">t</text><text text-anchor="middle" x="104" y="132">X</text><text text-anchor="middle" x="136" y="196">X</text><text text-anchor="middle" x="104" y="244">D</text><text text-anchor="middle" x="112" y="244">a</text><text text-anchor="middle" x="120" y="244">y</text><text text-anchor="middle" x="136" y="244">0</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;7:</b> Reality.</div></center>
+
+</p><p>
+
+So when someone tries to follow that plan, things get progressively janky, and by the time you get to a certain point and realize it's a disaster, it's usually way too late to change things. The code is awful; we're fighting the architecture the whole way, and you either ship something sub-optimal or try to course-correct toward the actual goal. 
+
+</p>
+<a class="target" name="exploreandlock">&nbsp;</a><a class="target" name="projectstatespace/exploreandlock">&nbsp;</a><a class="target" name="toc1.2">&nbsp;</a><h2>Explore and Lock</h2>
+<p>
+
+
+Thus, upfront design is about putting some waypoints on this map without knowing your destination. We showed that it doesn't work, and you should avoid looking too far ahead. What we want to encourage instead and how we'll approach everything<sup><a href="#endnote-win-32">1</a></sup> will be focused on unknown (to us) problems. Hopefully, by the end of this course, you'll develop skills to approach these problems. That's the tricky thing, one that makes you a code architect. 
+
+</p><p>
+
+We'll take an &ldquo;Explore and Lock&rdquo; approach to achieve that. Our approach will be the opposite of these waypoints. We'll explore and see what we find around us at each point we're at. When we find something that we <em class="underscore">feel</em> is along the path that gets us to shipping the product, we will lock it in and make it our new starting location. 
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="368" width="424" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 104,0 L 112,0 " style="fill:none;"/>
+<path d="M 192,0 L 216,0 " style="fill:none;"/>
+<path d="M 64,32 L 72,32 " style="fill:none;"/>
+<path d="M 144,32 L 160,32 " style="fill:none;"/>
+<path d="M 64,64 L 80,64 " style="fill:none;"/>
+<path d="M 208,64 L 248,64 " style="fill:none;"/>
+<path d="M 112,96 L 176,96 " style="fill:none;"/>
+<path d="M 232,208 L 272,208 " style="fill:none;"/>
+<path d="M 184,240 L 232,240 " style="fill:none;"/>
+<path d="M 208,256 L 232,256 " style="fill:none;"/>
+<path d="M 248,256 L 280,256 " style="fill:none;"/>
+<path d="M 136,288 L 152,288 " style="fill:none;"/>
+<path d="M 168,288 L 184,288 " style="fill:none;"/>
+<path d="M 224,288 L 248,288 " style="fill:none;"/>
+<path d="M 264,288 L 280,288 " style="fill:none;"/>
+<path d="M 120,320 L 168,320 " style="fill:none;"/>
+<path d="M 184,320 L 200,320 " style="fill:none;"/>
+<path d="M 184,336 L 232,336 " style="fill:none;"/>
+<path d="M 160,288 L 184,336 " style="fill:none;"/>
+<path d="M 192,256 L 208,288 " style="fill:none;"/>
+<path d="M 232,240 L 256,288 " style="fill:none;"/>
+<path d="M 120,320 L 136,288 " style="fill:none;"/>
+<path d="M 160,288 L 184,240 " style="fill:none;"/>
+<path d="M 192,256 L 216,208 " style="fill:none;"/>
+<path d="M 232,336 L 256,288 " style="fill:none;"/>
+<path d="M 104,0 C 87.2,0 88,16 88,16 " style="fill:none;"/>
+<path d="M 112,0 C 128.8,0 128,16 128,16 " style="fill:none;"/>
+<path d="M 192,0 C 175.2,0 176,16 176,16 " style="fill:none;"/>
+<path d="M 216,0 C 232.8,0 232,16 232,16 " style="fill:none;"/>
+<path d="M 64,32 C 47.2,32 48,48 48,48 " style="fill:none;"/>
+<path d="M 72,32 C 88.8,32 88,16 88,16 " style="fill:none;"/>
+<path d="M 144,32 C 127.2,32 128,16 128,16 " style="fill:none;"/>
+<path d="M 160,32 C 176.8,32 176,16 176,16 " style="fill:none;"/>
+<path d="M 248,32 C 231.2,32 232,16 232,16 " style="fill:none;"/>
+<path d="M 248,32 C 264.8,32 264,48 264,48 " style="fill:none;"/>
+<path d="M 64,64 C 47.2,64 48,48 48,48 " style="fill:none;"/>
+<path d="M 80,64 C 96.8,64 96,80 96,80 " style="fill:none;"/>
+<path d="M 208,64 C 191.2,64 192,80 192,80 " style="fill:none;"/>
+<path d="M 248,64 C 264.8,64 264,48 264,48 " style="fill:none;"/>
+<path d="M 112,96 C 95.2,96 96,80 96,80 " style="fill:none;"/>
+<path d="M 176,96 C 192.8,96 192,80 192,80 " style="fill:none;"/>
+<polygon points="240,208 228,202.4 228,213.6 "  style="stroke:none" transform="rotate(180,232,208 )"/>
+<polygon points="232,288 220,282.4 220,293.6 "  style="stroke:none" transform="rotate(180,224,288 )"/>
+<polygon points="216,256 204,250.4 204,261.6 "  style="stroke:none" transform="rotate(180,208,256 )"/>
+<polygon points="204,320 192,314.4 192,325.6 "  style="stroke:none" transform="rotate(0,196,320 )"/>
+<polygon points="188,288 176,282.4 176,293.6 "  style="stroke:none" transform="rotate(0,180,288 )"/>
+<circle cx="128" cy="48" r="6" class="opendot"/><circle cx="176" cy="272" r="6" class="opendot"/><circle cx="176" cy="304" r="6" class="opendot"/><circle cx="192" cy="256" r="6" class="closeddot"/><circle cx="192" cy="288" r="6" class="opendot"/><circle cx="208" cy="288" r="6" class="closeddot"/><circle cx="208" cy="320" r="6" class="opendot"/><circle cx="216" cy="208" r="6" class="closeddot"/><circle cx="232" cy="272" r="6" class="opendot"/><circle cx="232" cy="304" r="6" class="opendot"/><g transform="translate(0,0)"><text text-anchor="middle" x="144" y="52">S</text><text text-anchor="middle" x="152" y="52">h</text><text text-anchor="middle" x="160" y="52">i</text><text text-anchor="middle" x="168" y="52">p</text><text text-anchor="middle" x="192" y="164">.</text><text text-anchor="middle" x="200" y="180">.</text><text text-anchor="middle" x="208" y="196">.</text><text text-anchor="middle" x="288" y="212">R</text><text text-anchor="middle" x="296" y="212">i</text><text text-anchor="middle" x="304" y="212">n</text><text text-anchor="middle" x="312" y="212">s</text><text text-anchor="middle" x="320" y="212">e</text><text text-anchor="middle" x="336" y="212">a</text><text text-anchor="middle" x="344" y="212">n</text><text text-anchor="middle" x="352" y="212">d</text><text text-anchor="middle" x="368" y="212">r</text><text text-anchor="middle" x="376" y="212">e</text><text text-anchor="middle" x="384" y="212">p</text><text text-anchor="middle" x="392" y="212">e</text><text text-anchor="middle" x="400" y="212">a</text><text text-anchor="middle" x="408" y="212">t</text><text text-anchor="middle" x="296" y="260">L</text><text text-anchor="middle" x="304" y="260">o</text><text text-anchor="middle" x="312" y="260">c</text><text text-anchor="middle" x="320" y="260">k</text><text text-anchor="middle" x="336" y="260">t</text><text text-anchor="middle" x="344" y="260">h</text><text text-anchor="middle" x="352" y="260">i</text><text text-anchor="middle" x="360" y="260">s</text><text text-anchor="middle" x="376" y="260">p</text><text text-anchor="middle" x="384" y="260">o</text><text text-anchor="middle" x="392" y="260">i</text><text text-anchor="middle" x="400" y="260">n</text><text text-anchor="middle" x="408" y="260">t</text><text text-anchor="middle" x="296" y="292">S</text><text text-anchor="middle" x="304" y="292">t</text><text text-anchor="middle" x="312" y="292">a</text><text text-anchor="middle" x="320" y="292">r</text><text text-anchor="middle" x="328" y="292">t</text><text text-anchor="middle" x="344" y="292">h</text><text text-anchor="middle" x="352" y="292">e</text><text text-anchor="middle" x="360" y="292">r</text><text text-anchor="middle" x="368" y="292">e</text><text text-anchor="middle" x="8" y="324">E</text><text text-anchor="middle" x="16" y="324">x</text><text text-anchor="middle" x="24" y="324">p</text><text text-anchor="middle" x="32" y="324">l</text><text text-anchor="middle" x="40" y="324">o</text><text text-anchor="middle" x="48" y="324">r</text><text text-anchor="middle" x="56" y="324">e</text><text text-anchor="middle" x="72" y="324">a</text><text text-anchor="middle" x="80" y="324">r</text><text text-anchor="middle" x="88" y="324">o</text><text text-anchor="middle" x="96" y="324">u</text><text text-anchor="middle" x="104" y="324">n</text><text text-anchor="middle" x="112" y="324">d</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;8:</b> Explore and Lock.</div></center>
+
+</p><p>
+
+In doing so, you would hopefully develop a feel for a <em class="underscore">gradient</em> along the path to shipping. This way, you'll also learn when architecture is good or bad, making you more at ease when faced with a new architecture and staying on the right track.
+
+</p>
+<a class="target" name="ourgamedesign">&nbsp;</a><a class="target" name="ourgamedesign">&nbsp;</a><a class="target" name="toc2">&nbsp;</a><h1>Our Game Design</h1>
+<p>
+
+
+With this theory out of the way, let's briefly discuss the game we want to make. Specifically, we'll touch upon how our game looks and plays to see what engine we build to support it. 
+
+</p><p>
+
+It's important to note that this course doesn't focus on game design, and we're trying to make the most straightforward design possible while maintaining a complex programming challenge.
+
+</p><p>
+
+We'll take significant inspiration from the classic games like <em class="underscore">The Legend of Zelda</em>, and these are the main points we'd like to focus on: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">Tile-based map
+</li>
+<li class="asterisk">Things that move on the map
+</li>
+<li class="asterisk">Fancy renderer/compositor - a complete departure from NES/SNES-era games.
+</li>
+<li class="asterisk">Separation between the overworld and dungeons
+</li>
+<li class="asterisk">Consistent space
+</li>
+<li class="asterisk">Procedurally generated
+</li>
+<li class="asterisk">No dimension limits
+</li>
+<li class="asterisk">Combinatorics</li></ul>
+
+</p><p>
+
+All of these should be simple enough so that we can finish them but complex enough so that we can learn advanced programming techniques.
+
+</p>
+<a class="target" name="inspiration">&nbsp;</a><a class="target" name="ourgamedesign/inspiration">&nbsp;</a><a class="target" name="toc2.1">&nbsp;</a><h2>Inspiration</h2>
+<p>
+
+
+The original <em class="underscore">Legend _of Zelda</em> was released to NES and other platforms in 1986 and became an instant hit. Even today, decades after its release, it's often considered one of the greatest games of all time and, even less questionably so, one of the most influential. 
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day27/zelda.png" target="_blank"><img class="markdeep" src="../media/day27/zelda.png" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;9:</b> The Legend of Zelda.</span></center></div></center> 
+
+</p><p>
+
+Among the things in which this game was different from its many successors was an extremely open-ended experience. The game would drop you into a rich and exciting world and allow you to explore it. There were no constraints or limitations about what you could do; no fairy told you where to go, etc. In <em class="underscore">Handmade Hero</em>, we will try to capture this feeling of exploration when you don't know what's coming next. Additionally, <em class="underscore">Zelda</em>, being a game limited by the technology of its time, would be a good model for us, where we would take its different system and try to modernize them.
+
+</p>
+<a class="target" name="thetilemap">&nbsp;</a><a class="target" name="ourgamedesign/thetilemap">&nbsp;</a><a class="target" name="toc2.2">&nbsp;</a><h2>The Tile Map</h2>
+<p>
+
+
+Similarly to the old <em class="underscore">Zelda</em> games, we want to make a tile-based world grid with tiles like Water, Grass, Land, Shop, and others. Our game would have the same <em class="underscore">feel</em> as the old classics but not their tile-map graphics. While the latter might have been a necessary tool for its time, and nowadays, we can supersede it, there are real benefits to having a tile-map <em class="underscore">design</em>. For instance, if a tile is blocked, the player would get a clear message that you can't go through. We want to preserve this to clarify the <em class="underscore">game</em> rules to the player.
+
+</p><p>
+
+Therefore, what we want to have is a game that has tiles but does not render them as a tile map. This would avoid repeating the same asset on a rigid grid if we, for example, want to draw several forest tiles in a row.
+
+</p><p>
+
+We will also allow certain things to float outside the rigid grid structure. For example, the player in <em class="underscore">The Legend of Zelda</em>_ wasn't bound to a tile grid and could move freely, the same as some enemies.
+
+</p>
+<a class="target" name="thegameworld">&nbsp;</a><a class="target" name="ourgamedesign/thegameworld">&nbsp;</a><a class="target" name="toc2.3">&nbsp;</a><h2>The Game World</h2>
+<p>
+
+
+When we talk about the game world, once again, we're thinking about <em class="underscore">The Legend of Zelda</em>. In it, the player would traverse the overworld, talk to NPCs, and find entrances to the dungeons. The player would discover enemies, traps, and treasures in the dungeons. We want to recreate some of that with one notable sidenote: consistent space. 
+
+</p><p>
+
+What do we mean by that? When you enter the dungeon, you will effectively go under the world map, and should you find another exit from it, it will bring you to another point on the map consistent with the space you traversed underground. The only departure from this would be some magical context where it would be clear that it's supposed to be this way: a teleport, a portal, and similar.
+
+</p><p>
+
+Our game would generate every new world from scratch, and nothing we do will be hardcoded, aside from a few selected rooms (start screen, end screen, maybe a few others). That said, we probably won't be able to support a fixed random seed to generate the world around like many other games do; it will have to be more involved.
+
+</p><p>
+
+We want to avoid rigid boundaries on the map. You can quickly learn a 256&times;256&times;256 world, and it could get boring. We'd be much happier with an <em class="underscore">impractical</em> world limit (like 4,000,000,000 &times; 4,000,000,000 &times; 4,000,000,000) that would make it infinite for the player.
+
+</p>
+<a class="target" name="combinatorics">&nbsp;</a><a class="target" name="ourgamedesign/combinatorics">&nbsp;</a><a class="target" name="toc2.4">&nbsp;</a><h2>Combinatorics</h2>
+<p>
+
+
+Ultimately, our game engine would support an enormous amount of possible combinations. We call these &ldquo;combinatorics&rdquo; - any property you can think of can invariably deal with other properties. 
+
+</p><p>
+
+For instance, if our game has a monster that can walk around, and we have a property called &ldquo;fear,&rdquo; we should be able to hit it with something that could inflict fear on that monster. Additionally, there would be a logical way to transmit these effects: I might have a wand that I could imbue with gems, and if one of these gems happens to be a fear gem, I can cast it to a tile, and if the monster goes through that tile it becomes fearful, and if it combines with another trait the monster might run away...
+
+</p><p>
+
+Combinatorics is not easy to implement, and we will spend a long time dealing with them in the course. That said, it's not something we'll get to anytime soon. We want to create a world where we can move around, which can drive our renderer design first. Once we get that up and running, though, we will dedicate most of our time to this.
+
+</p>
+<a class="target" name="intotheunknown">&nbsp;</a><a class="target" name="ourgamedesign/intotheunknown">&nbsp;</a><a class="target" name="toc2.5">&nbsp;</a><h2>Into the Unknown</h2>
+<p>
+
+
+So, this is where we stand in terms of the game design. We start this journey together and don't know where it will lead us. The final code is unknown to us since, until now, we never really attempted a <em class="underscore">Legend of Zelda</em> <strong class="asterisk">clone</strong>, let alone a completely new thing that takes it in entirely new directions. So, we have a ton of unknown stuff, and we don't have a plan for how to write it. We don't even know how to approach the tilemap! We could brainstorm and imagine a few ways to implement something like this. Still, we don't have direct experience writing a tilemap in dozens of games or anything that would give us direct knowledge on how to do things specifically.
+
+</p><p>
+
+So here we are, on Day 0 of our project, without knowledge of the road ahead and what it looks like, and we're going to walk this road precisely like we said. Explore our space by looking at what it takes to implement the basic version. How do I get a rectangle moving around on a tile map? How do I make a tile? We'll try an approach, see how the game reacts to it, and let the architecture work itself up from there. If it feels like it's working well, we will say OK and move on.
+
+</p>
+<a class="target" name="backtocode">&nbsp;</a><a class="target" name="backtocode">&nbsp;</a><a class="target" name="toc3">&nbsp;</a><h1>Back to Code</h1>
+<p>
+
+
+It's been one and a half days since we last coded. Let's get back to it! 
+
+</p>
+<a class="target" name="gettargetsecondsperframe">&nbsp;</a><a class="target" name="backtocode/gettargetsecondsperframe">&nbsp;</a><a class="target" name="toc3.1">&nbsp;</a><h2>Get Target Seconds Per Frame</h2>
+<p>
+
+
+First, we forgot to add was how much time we will have for each frame. In <code>win32_handmade.cpp</code> we already define our <code>TargetSecondsPerFrame</code>, so it's only a matter of passing this value to the game. Of course, it's a bit early to actually use that still, but let's add it right away as a part of our <code>game_input</code> struct. In the industry this value is known as DeltaTime, but let's be more explicit here and call it <code>SecondsToAdvanceOverUpdate</code>. We will store it as a real32.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_input</span></span>
+<span class="line">{</span></span>
+<span class="line">    game_button_state MouseButtons[<span class="hljs-number">5</span>];</span>
+<span class="line">    s32 MouseX, MouseY, MouseZ;</span><div class=" add"><span class="line">    r32 SecondsToAdvanceOverUpdate;</span></div><span class="line">    game_controller_input Controllers[<span class="hljs-number">5</span>];</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;1:</b> <file>[handmade.h]</file> Introduce <code>game_input.SecondsToAdvanceOverUpdate</code>.</div></center>
+<p>
+
+
+For now, we will not be doing precise calculations and just pass the <code>TargetSecondsPerFrame</code> inside the main loop, assuming that we will hit this value: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">int</span> MonitorRefreshHz = <span class="hljs-number">60</span>;</span>
+<span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line">f32 GameUpdateHz = (MonitorRefreshHz / <span class="hljs-number">2.0f</span>)</span>
+<span class="line">f32 TargetSecondsPerFrame = <span class="hljs-number">1.0f</span> / (f32)GameUpdateHz;</span>
+<span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line"><span class="hljs-keyword">while</span> (GlobalRunning)</span>
+<span class="line">{</span><div class=" add"><span class="line">    NewInput-&gt;SecondsToAdvanceOverUpdate = TargetSecondsPerFrame;</span></div><span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;2:</b> <file>[win32_handmade.cpp > WinMain]</file> Setting <code>SecondsToAdvanceOverUpdate</code>.</div></center>
+<p>
+
+
+If you compile, run the debugger, and inspect your <code>Input</code> somewher in the <code>handmade.cpp -&gt; GameUpdateAndRender</code> function, you should see its value to be around <code>0.0333333</code> to confirm that everything is in order.
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day27/debug_1.jpg" target="_blank"><img class="markdeep" src="../media/day27/debug_1.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;10:</b> Inspecting <code>Input-&gt;SecondsToAdvanceOverUpdate</code> in the debugger.</span></center></div></center> 
+
+</p>
+<a class="target" name="removetestcode">&nbsp;</a><a class="target" name="backtocode/removetestcode">&nbsp;</a><a class="target" name="toc3.2">&nbsp;</a><h2>Remove Test Code</h2>
+<p>
+
+
+We wrote plenty of test code back in <code>handmade.cpp</code> to make sure that our platform layer was working as intended. It's time for it to go, it's day 0 for us so we need a blank slate. Since we set up hot dll reload, we can even have the game running while we're processing these changes.
+
+</p>
+<a class="target" name="removetestsound">&nbsp;</a><a class="target" name="backtocode/removetestcode/removetestsound">&nbsp;</a><a class="target" name="toc3.2.1">&nbsp;</a><h3>Remove Test Sound</h3>
+<p>
+
+
+If you haven't done it already on <a href="../html/day23.html">Day 23</a>, you can disable the test sound by simply adding an <code>#if 0</code> guard and output instead of the sine wave: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> 0</span></span></div><span class="line">        f32 SineValue = sinf(GameState-&gt;tSine);</span>
+<span class="line">        s16 SampleValue = (s16)(SineValue * ToneVolume);</span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span></span>
+<span class="line">        s16 SampleValue = <span class="hljs-number">0</span>;</span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;3:</b> <file>[handmade.cpp > GameOutputSound]</file> Disabling the sine wave.</div></center>
+
+<a class="target" name="removetheweirdgradient">&nbsp;</a><a class="target" name="backtocode/removetestcode/removetheweirdgradient">&nbsp;</a><a class="target" name="toc3.2.2">&nbsp;</a><h3>Remove the Weird Gradient</h3>
+<p>
+
+
+The gradient that we're filling our screen with is being drawn in a separate function, so to disable it, we can simply remove the call to it from <code>GameUpdateAndRender</code>: 
+
+</p><pre class="listing tilde"><code><div class=" delete"><span class="line">RenderWeirdGradient(Buffer, GameState-&gt;XOffset, GameState-&gt;YOffset);</span></div><span class="line">RenderPlayer(Buffer, GameState-&gt;PlayerX, GameState-&gt;PlayerY);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;4:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Remove <code>RenderWeirdGradient</code> call.</div></center>
+<p>
+
+
+However, you will notice that you now cannot compile due to a warning C4505: 
+
+</p><pre class="listing tilde"><code><span class="line">W:\handmade\code\handmade.cpp(67): error C2220: the following warning is treated as an error</span>
+<span class="line">W:\handmade\code\handmade.cpp(67): warning C4505: &#x27;RenderWeirdGradient&#x27;: unreferenced local function has been removed</span></code></pre><p>
+
+We don't mind having unused functions in our code, they can always return handy later, so let's add another keyword to our <code>build.bat</code> to ignore these warnings: 
+
+</p><pre class="listing tilde"><code><span class="line">set compiler=%compiler%     -wd4189                &amp;:: Local variable not referenced</span><div class=" add"><span class="line">set compiler=%compiler%     -wd4505                &amp;:: Unreferenced local function has been removed</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;5:</b> <file>[build.bat]</file> Ignore warning C4505.</div></center>
+<p>
+
+
+Coming to think of it, we <em class="underscore">could</em> actually delete the <code>RenderWeirdGradient</code> function, or at least move it to the end of the file. 
+
+</p><p>
+
+If your game was running during this time, you will notice that the gradient is still there, altough it's getting progressively &ldquo;dirtier&rdquo; as you move the mouse around. This is because the gradient was actually performing double duty: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">It was drawing the gradient
+</li>
+<li class="asterisk">It was clearing whatever was in the buffer the previous frame (by overwriting its data)</li></ul>
+
+</p><p>
+
+We need to take a mental note of it and return to clearing our window later.
+
+</p>
+<a class="target" name="removerenderplayercalls">&nbsp;</a><a class="target" name="backtocode/removetestcode/removerenderplayercalls">&nbsp;</a><a class="target" name="toc3.2.3">&nbsp;</a><h3>Remove RenderPlayer calls</h3>
+<p>
+
+
+We were also rendering the indications that the mouse buttons were pressed, the mouse position, and the player that we were controlling with our controller input. All of these were using the same function, <code>RenderPlayer</code>, and this code can go, too: 
+
+</p><pre class="listing tilde"><code><div class=" delete"><span class="line">RenderPlayer(Buffer, GameState-&gt;PlayerX, GameState-&gt;PlayerY);</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> ButtonIndex = <span class="hljs-number">0</span>;</span>
+<span class="line">        ButtonIndex &lt; ArrayCount(Input-&gt;MouseButtons);</span>
+<span class="line">        ++ButtonIndex)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">if</span> (Input-&gt;MouseButtons[ButtonIndex].EndedDown)</span>
+<span class="line">    {</span>
+<span class="line">        RenderPlayer(Buffer, <span class="hljs-number">10</span> + <span class="hljs-number">20</span> * ButtonIndex, <span class="hljs-number">10</span>);</span>
+<span class="line">    }</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line">RenderPlayer(Buffer, Input-&gt;MouseX, Input-&gt;MouseY);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;6:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Remove <code>RenderPlayer</code> calls.</div></center>
+
+<a class="target" name="removefilecalls">&nbsp;</a><a class="target" name="backtocode/removetestcode/removefilecalls">&nbsp;</a><a class="target" name="toc3.2.4">&nbsp;</a><h3>Remove File Calls</h3>
+<p>
+
+
+To test <code>DEBUGPlatformReadEntireFile</code>, we'd also load and read outputs of a test file. We don't need it anymore: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span>(!Memory-&gt;IsInitialized)</span>
+<span class="line">{</span><div class=" delete"><span class="line">    debug_read_file_result FileData = Memory-&gt;DEBUGPlatformReadEntireFile(Thread, __FILE__);</span>
+<span class="line">    <span class="hljs-keyword">if</span> (FileData.Contents)</span>
+<span class="line">    {</span>
+<span class="line">        Memory-&gt;DEBUGPlatformWriteEntireFile(Thread, <span class="hljs-string">&quot;test.out&quot;</span>, FileData.ContentsSize, FileData.Contents);</span>
+<span class="line">        Memory-&gt;DEBUGPlatformFreeFileMemory(Thread, FileData.Contents);</span>
+<span class="line">    }</span></div><span class="line">    GameState-&gt;XOffset = <span class="hljs-number">0</span>;</span>
+<span class="line">    GameState-&gt;YOffset = <span class="hljs-number">0</span>;</span>
+<span class="line">    GameState-&gt;ToneHz = <span class="hljs-number">256</span>;</span>
+<span class="line">    </span>
+<span class="line">    GameState-&gt;PlayerX = <span class="hljs-number">100</span>;</span>
+<span class="line">    GameState-&gt;PlayerY = <span class="hljs-number">100</span>;</span>
+<span class="line">    </span>
+<span class="line">    Memory-&gt;IsInitialized = <span class="hljs-literal">true</span>;</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> ControllerIndex = <span class="hljs-number">0</span>;</span>
+<span class="line">     ControllerIndex &lt; ArrayCount(Input-&gt;Controllers);</span>
+<span class="line">     ++ControllerIndex)</span>
+<span class="line">{</span>
+<span class="line">    </span>
+<span class="line">    game_controller_input *Controller = GetController(Input, ControllerIndex);</span>
+<span class="line">    <span class="hljs-keyword">if</span> (Controller-&gt;IsAnalog)</span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-comment">// NOTE(casey): Use analog movement tuning</span></span><div class=" delete"><span class="line">        GameState-&gt;XOffset += (<span class="hljs-keyword">int</span>)(<span class="hljs-number">4.0f</span> * Controller-&gt;StickAverageX);</span>
+<span class="line">        GameState-&gt;ToneHz = <span class="hljs-number">256</span> + (<span class="hljs-keyword">int</span>)(<span class="hljs-number">128.0f</span> * (Controller-&gt;StickAverageY));</span></div><span class="line">    }</span>
+<span class="line">    <span class="hljs-keyword">else</span></span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-comment">// NOTE(casey): Use digital movement tuning</span></span><div class=" delete"><span class="line">        <span class="hljs-keyword">if</span> (Controller-&gt;MoveLeft.EndedDown)</span>
+<span class="line">        {</span>
+<span class="line">            GameState-&gt;XOffset -= <span class="hljs-number">1</span>;</span>
+<span class="line">        }</span>
+<span class="line">        </span>
+<span class="line">        <span class="hljs-keyword">if</span> (Controller-&gt;MoveRight.EndedDown)</span>
+<span class="line">        {</span>
+<span class="line">            GameState-&gt;XOffset += <span class="hljs-number">1</span>;</span>
+<span class="line">        }</span></div><span class="line">    }</span>
+<span class="line">    </span><div class=" delete"><span class="line">    GameState-&gt;PlayerX += (<span class="hljs-keyword">int</span>)(<span class="hljs-number">4.0f</span> * Controller-&gt;StickAverageX);</span>
+<span class="line">    GameState-&gt;PlayerY -= (<span class="hljs-keyword">int</span>)(<span class="hljs-number">4.0f</span> * Controller-&gt;StickAverageY);</span>
+<span class="line">    <span class="hljs-keyword">if</span> (GameState-&gt;tJump &gt; <span class="hljs-number">0</span>)</span>
+<span class="line">    {</span>
+<span class="line">        GameState-&gt;PlayerY += (<span class="hljs-keyword">int</span>)(<span class="hljs-number">10.0f</span> * sinf(<span class="hljs-number">2.0f</span> * Pi32 * GameState-&gt;tJump));</span>
+<span class="line">    }</span>
+<span class="line">    <span class="hljs-keyword">if</span>(Controller-&gt;ActionDown.EndedDown)</span>
+<span class="line">    {</span>
+<span class="line">        GameState-&gt;tJump = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">    }</span>
+<span class="line">    GameState-&gt;tJump -= <span class="hljs-number">0.033f</span>;</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;7:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Remove test file reading and writing.</div></center>
+
+<a class="target" name="cleanupthegamestate">&nbsp;</a><a class="target" name="backtocode/removetestcode/cleanupthegamestate">&nbsp;</a><a class="target" name="toc3.2.5">&nbsp;</a><h3>Clean Up the Game State</h3>
+<p>
+
+
+Our <code>game_state</code> contained a few values that we wrote for storing some test information. They are no longer necessary, so we can get rid of their initialization code: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span>(!Memory-&gt;IsInitialized)</span>
+<span class="line">{</span><div class=" delete"><span class="line">    GameState-&gt;XOffset = <span class="hljs-number">0</span>;</span>
+<span class="line">    GameState-&gt;YOffset = <span class="hljs-number">0</span>;</span>
+<span class="line">    GameState-&gt;ToneHz = <span class="hljs-number">256</span>;</span>
+<span class="line">    </span>
+<span class="line">    GameState-&gt;PlayerX = <span class="hljs-number">100</span>;</span>
+<span class="line">    GameState-&gt;PlayerY = <span class="hljs-number">100</span>;</span></div><span class="line">    Memory-&gt;IsInitialized = <span class="hljs-literal">true</span>;</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;8:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Remove references to test game state fields.</div></center>
+<p>
+
+
+Same comes to definition. In fact, we can get rid of all the contents of our <code>game_state</code> entirely, leaving the struct empty for the time being: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_state</span></span>
+<span class="line">{</span></span><div class=" delete"><span class="line">    <span class="hljs-keyword">int</span> ToneHz;</span>
+<span class="line">    <span class="hljs-keyword">int</span> XOffset;</span>
+<span class="line">    <span class="hljs-keyword">int</span> YOffset;</span>
+<span class="line">    </span>
+<span class="line">    f32 tSine;</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">int</span> PlayerX;</span>
+<span class="line">    <span class="hljs-keyword">int</span> PlayerY;</span>
+<span class="line">    f32 tJump;</span></div><span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;9:</b> <file>[handmade.h]</file> Remove definitions of the test game state fields.</div></center>
+<p>
+
+
+Trying to compile the game now leads us to <code>#if 0</code> another piece of <code>GameOutputSound</code> function (you can also delete it if you prefer so):
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> 0</span></span>
+<span class="line">        f32 SineValue = sinf(GameState-&gt;tSine);</span>
+<span class="line">        s16 SampleValue = (s16)(SineValue * ToneVolume);</span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span></span>
+<span class="line">        s16 SampleValue = <span class="hljs-number">0</span>;</span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span>
+<span class="line">        </span>
+<span class="line">        *SampleOut++ = SampleValue;</span>
+<span class="line">        *SampleOut++ = SampleValue;</span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> 0</span></span></div><span class="line">        GameState-&gt;tSine += <span class="hljs-number">2.0f</span> * Pi32 * <span class="hljs-number">1.0f</span> / (f32)WavePeriod;</span>
+<span class="line">        </span>
+<span class="line">        <span class="hljs-keyword">if</span> (GameState-&gt;tSine &gt; <span class="hljs-number">2.0f</span> * Pi32)</span>
+<span class="line">        {</span>
+<span class="line">            GameState-&gt;tSine -= <span class="hljs-number">2.0f</span> * Pi32;</span>
+<span class="line">        }</span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;10:</b> <file>[handmade.cpp > GameOutputSound]</file> Remove definitions of the test game state fields.</div></center>
+<p>
+
+
+And, instead of passing <code>GameState-&gt;ToneHz</code>, we could pass a hard number to <code>GameOutputSound</code> for the time being: 
+
+</p><pre class="listing tilde"><code><span class="line">GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)</span>
+<span class="line">{</span>
+<span class="line">    game_state *GameState = (game_state*)Memory-&gt;PermanentStorage;</span><div class=" edit"><span class="line">    GameOutputSound(GameState, SoundBuffer, <span class="hljs-number">400</span>);</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;11:</b> <file>[handmade.cpp]</file> Remove yet another reference to <code>ToneHz</code>.</div></center>
+<p>
+
+
+And that's it! We're now back to something that does <em class="underscore">absolutely nothing</em>. We're back at square one.
+
+</p>
+<a class="target" name="decideonthegameresolution">&nbsp;</a><a class="target" name="backtocode/decideonthegameresolution">&nbsp;</a><a class="target" name="toc3.3">&nbsp;</a><h2>Decide on the Game Resolution</h2>
+<p>
+
+
+Let's make a Decision! Those are always fun. This one involves our game resolution. In fact, it's an important decision for a 2D game like ours.
+
+</p><p>
+
+In a 3D game, everything is always resampled. You map the polygons to draw, textures to these polygons. The final output can be rendered to any target resolution, and you don't really need to think about it, aside from maybe how dense the textures should be and how closely would they be seen. It's not the case for a 2D game. If the artist wants to be very specific about how things should look like, we should be able to draw them in a resolution and aspect ratio allowing to not lose any detail or create distortions.
+
+</p><p>
+
+These days, we see an emergence of 4K and 1440p monitors, as well as ultrawide monitors of different size. But the de-facto baseline resolution remains 1920&times;1080, &ldquo;Full HD&rdquo; resolution. 
+
+</p><p>
+
+Another consideration is that we want to make is that we will write our first version of the renderer (the <em class="underscore">software renderer</em>) to run on the CPU; we will eventually transition to the much faster <em class="underscore">hardware renderer</em> running on the GPU. 
+
+</p><p>
+
+So let's decide the following: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">Target 1920&times;1080 at 60Hz for the <em class="underscore">hardware renderer</em>.
+</li>
+<li class="asterisk">Half all these values for our <em class="underscore">software renderer</em>: 960&times;540 at 30Hz.</li></ul>
+
+</p><p>
+
+If we half all three values, we'd get \(1/2 * 1/2 * 1/2 = 1/8\) low need of calculations, so hopefully this will be small enough for us to handle.
+
+</p><p>
+
+In <code>win32_handmade.cpp</code>, we're already defining the size of our DIB section, so let's create two dimensions for us to switch between. We'll disable one we don't need, of course.
+
+</p><pre class="listing tilde"><code><span class="line">Win32LoadXInput();</span>
+<span class="line"></span><div class=" delete"><span class="line">Win32ResizeDIBSection(&amp;GlobalBackbuffer, <span class="hljs-number">1280</span>, <span class="hljs-number">720</span>);</span></div><div class=" add"><span class="line"><span class="hljs-comment">// Win32ResizeDIBSection(&amp;GlobalBackbuffer, 1920, 1080);</span></span>
+<span class="line">Win32ResizeDIBSection(&amp;GlobalBackbuffer, <span class="hljs-number">960</span>, <span class="hljs-number">540</span>);</span></div><span class="line">WNDCLASS WindowClass = {<span class="hljs-number">0</span>};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;12:</b> <file>[win32_handmade.cpp > WinMain]</file> Define our two target dimensions.</div></center>
+<p>
+
+
+For the target framerate, we're already using the monitor's refresh rate and then halving it. This gives us 30Hz on 60Hz monitors which is fine for now.
+
+</p>
+<a class="target" name="drawrectanglefunction">&nbsp;</a><a class="target" name="drawrectanglefunction">&nbsp;</a><a class="target" name="toc4">&nbsp;</a><h1>Draw Rectangle Function</h1>
+<p>
+
+
+In our test code, there is one function that we can reuse: <code>RenderPlayer</code>. It's a simple function that draws a small 10&times;10 rectangle at a given position. We can convert this function to officially draw a rectangle of arbitrary size and, in the future, color (and, who knows, maybe even texture!). 
+
+</p>
+<a class="target" name="repurposerenderplayerintodrawrectangle">&nbsp;</a><a class="target" name="drawrectanglefunction/repurposerenderplayerintodrawrectangle">&nbsp;</a><a class="target" name="toc4.1">&nbsp;</a><h2>Repurpose <code>RenderPlayer</code> into <code>DrawRectangle</code></h2>
+<p>
+
+
+Let's begin by changing the function's name.
+
+</p><pre class="listing tilde"><code><span class="line">internal <span class="hljs-keyword">void</span></span><div class=" edit"><span class="line">DrawRectangle(game_offscreen_buffer *Buffer, <span class="hljs-keyword">int</span> PlayerX, <span class="hljs-keyword">int</span> PlayerY)</span></div><span class="line">{</span>
+<span class="line">    u8 *EndOfBuffer = (u8 *)Buffer-&gt;Memory + Buffer-&gt;Pitch * Buffer-&gt;Height;</span>
+<span class="line">    <span class="hljs-comment">//... </span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;13:</b> <file>[handmade.cpp]</file> Rename <code>RenderPlayer</code>.</div></center>
+<p>
+
+
+We want this function to accept a position marking the beginning of the rectangle (min X and Y), and another one marking its end (max X and Y). Remember that we're starting our screen coordinates in the top-left corner.
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="336" width="424" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 56,0 L 56,304 " style="fill:none;"/>
+<path d="M 128,160 L 128,224 " style="fill:none;"/>
+<path d="M 208,160 L 208,224 " style="fill:none;"/>
+<path d="M 304,0 L 304,32 " style="fill:none;"/>
+<path d="M 320,0 L 320,304 " style="fill:none;"/>
+<path d="M 56,0 L 320,0 " style="fill:none;"/>
+<path d="M 56,32 L 320,32 " style="fill:none;"/>
+<path d="M 152,112 L 168,112 " style="fill:none;"/>
+<path d="M 136,160 L 208,160 " style="fill:none;"/>
+<path d="M 128,224 L 200,224 " style="fill:none;"/>
+<path d="M 168,272 L 184,272 " style="fill:none;"/>
+<path d="M 56,304 L 320,304 " style="fill:none;"/>
+<path d="M 60,40 L 80,80 " style="fill:none;"/>
+<path d="M 134,148 L 152,112 " style="fill:none;"/>
+<path d="M 184,272 L 202,236 " style="fill:none;"/>
+<polygon points="210,236 198,230.4 198,241.6 "  style="stroke:none" transform="rotate(296.565051177078,202,236 )"/>
+<polygon points="142,148 130,142.4 130,153.6 "  style="stroke:none" transform="rotate(116.56505117707799,134,148 )"/>
+<polygon points="68,40 56,34.4 56,45.6 "  style="stroke:none" transform="rotate(243.43494882292202,60,40 )"/>
+<circle cx="128" cy="160" r="6" class="closeddot"/><circle cx="208" cy="224" r="6" class="closeddot"/><g transform="translate(0,0)"><text text-anchor="middle" x="64" y="20">H</text><text text-anchor="middle" x="72" y="20">a</text><text text-anchor="middle" x="80" y="20">n</text><text text-anchor="middle" x="88" y="20">d</text><text text-anchor="middle" x="96" y="20">m</text><text text-anchor="middle" x="104" y="20">a</text><text text-anchor="middle" x="112" y="20">d</text><text text-anchor="middle" x="120" y="20">e</text><text text-anchor="middle" x="136" y="20">H</text><text text-anchor="middle" x="144" y="20">e</text><text text-anchor="middle" x="152" y="20">r</text><text text-anchor="middle" x="160" y="20">o</text><text text-anchor="middle" x="312" y="20">X</text><text text-anchor="middle" x="88" y="84">B</text><text text-anchor="middle" x="96" y="84">u</text><text text-anchor="middle" x="104" y="84">f</text><text text-anchor="middle" x="112" y="84">f</text><text text-anchor="middle" x="120" y="84">e</text><text text-anchor="middle" x="128" y="84">r</text><text text-anchor="middle" x="144" y="84">(</text><text text-anchor="middle" x="152" y="84">0</text><text text-anchor="middle" x="160" y="84">,</text><text text-anchor="middle" x="176" y="84">0</text><text text-anchor="middle" x="184" y="84">)</text><text text-anchor="middle" x="184" y="116">M</text><text text-anchor="middle" x="192" y="116">i</text><text text-anchor="middle" x="200" y="116">n</text><text text-anchor="middle" x="216" y="116">(</text><text text-anchor="middle" x="224" y="116">x</text><text text-anchor="middle" x="232" y="116">,</text><text text-anchor="middle" x="248" y="116">y</text><text text-anchor="middle" x="256" y="116">)</text><text text-anchor="middle" x="136" y="180">▉</text><text text-anchor="middle" x="144" y="180">▉</text><text text-anchor="middle" x="152" y="180">▉</text><text text-anchor="middle" x="160" y="180">▉</text><text text-anchor="middle" x="168" y="180">▉</text><text text-anchor="middle" x="176" y="180">▉</text><text text-anchor="middle" x="184" y="180">▉</text><text text-anchor="middle" x="192" y="180">▉</text><text text-anchor="middle" x="200" y="180">▉</text><text text-anchor="middle" x="136" y="196">▉</text><text text-anchor="middle" x="144" y="196">▉</text><text text-anchor="middle" x="152" y="196">▉</text><text text-anchor="middle" x="160" y="196">▉</text><text text-anchor="middle" x="168" y="196">▉</text><text text-anchor="middle" x="176" y="196">▉</text><text text-anchor="middle" x="184" y="196">▉</text><text text-anchor="middle" x="192" y="196">▉</text><text text-anchor="middle" x="200" y="196">▉</text><text text-anchor="middle" x="136" y="212">▉</text><text text-anchor="middle" x="144" y="212">▉</text><text text-anchor="middle" x="152" y="212">▉</text><text text-anchor="middle" x="160" y="212">▉</text><text text-anchor="middle" x="168" y="212">▉</text><text text-anchor="middle" x="176" y="212">▉</text><text text-anchor="middle" x="184" y="212">▉</text><text text-anchor="middle" x="192" y="212">▉</text><text text-anchor="middle" x="200" y="212">▉</text><text text-anchor="middle" x="80" y="276">M</text><text text-anchor="middle" x="88" y="276">a</text><text text-anchor="middle" x="96" y="276">x</text><text text-anchor="middle" x="112" y="276">(</text><text text-anchor="middle" x="120" y="276">x</text><text text-anchor="middle" x="128" y="276">,</text><text text-anchor="middle" x="144" y="276">y</text><text text-anchor="middle" x="152" y="276">)</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;11:</b> DrawRectangle behavior.</div></center>
+
+</p><p>
+
+That said, for future expansions we probably want to pass these as real numbers, not integers. The reasons for it might not be immediately obvious, and we touch on some of them in Subsection  <a href="#toc7.1">7.1</a>.
+
+</p><pre class="listing tilde"><code><span class="line">internal <span class="hljs-keyword">void</span></span><div class=" edit"><span class="line">DrawRectangle(game_offscreen_buffer *Buffer,</span></div><div class=" add"><span class="line">             f32 RealMinX, f32 RealMinY, f32 RealMaxX, f32 RealMaxY)</span></div><span class="line">{</span>
+<span class="line">    u8 *EndOfBuffer = (u8 *)Buffer-&gt;Memory + Buffer-&gt;Pitch * Buffer-&gt;Height;</span>
+<span class="line">    <span class="hljs-comment">//... </span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;14:</b> <file>[handmade.cpp]</file> Change <code>DrawRectangle</code> parameters.</div></center>
+<p>
+
+
+Implementation-wise, let's agree on the following convention:  
+
+</p><p>
+
+<ul>
+<li class="asterisk">Whatever real Min/Max positions come in, we will round them to an integer
+</li>
+<li class="asterisk">We will draw our rectangle from Min(x, y) up to and <em class="underscore">excluding</em> Max(x, y).</li></ul>
+
+</p><p>
+
+Based on this convention, the first thing we need to do inside the function is to convert the real coordinates into the integer ones.
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">s32 MinX = RoundReal32ToInt32(RealMinX);</span>
+<span class="line">s32 MinY = RoundReal32ToInt32(RealMinY);</span>
+<span class="line">s32 MaxX = RoundReal32ToInt32(RealMaxX);</span>
+<span class="line">s32 MaxY = RoundReal32ToInt32(RealMaxY);</span>
+<span class="line"></span></div><span class="line">u8 *EndOfBuffer = (u8 *)Buffer-&gt;Memory + Buffer-&gt;Pitch * Buffer-&gt;Height;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;15:</b> <file>[handmade.cpp > DrawRectangle]</file> Round our real numbers.</div></center>
+<p>
+
+
+We don't have a rounding function yet, we'll think about it in a second.
+
+</p>
+<a class="target" name="clipboundaries">&nbsp;</a><a class="target" name="drawrectanglefunction/clipboundaries">&nbsp;</a><a class="target" name="toc4.2">&nbsp;</a><h2>Clip Boundaries</h2>
+<p>
+
+
+As we discussed during <a href="../html/day4.html">Day 4</a> (section 4.4, figure 4), our buffer is just a chunk of raw memory that we can write into. Each 32-bit value inside it represents a pixel color. So, now that we have the min and max points, we want to clip them to the these boundaries.
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="240" width="424" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 24,128 L 24,192 " style="fill:none;"/>
+<path d="M 56,0 L 56,160 " style="fill:none;"/>
+<path d="M 104,128 L 104,192 " style="fill:none;"/>
+<path d="M 304,0 L 304,32 " style="fill:none;"/>
+<path d="M 320,0 L 320,160 " style="fill:none;"/>
+<path d="M 56,0 L 320,0 " style="fill:none;"/>
+<path d="M 56,32 L 320,32 " style="fill:none;"/>
+<path d="M 32,128 L 104,128 " style="fill:none;"/>
+<path d="M 56,160 L 96,160 " style="fill:none;"/>
+<path d="M 112,160 L 320,160 " style="fill:none;"/>
+<path d="M 24,192 L 96,192 " style="fill:none;"/>
+<path d="M 60,40 L 80,80 " style="fill:none;"/>
+<path d="M 296,112 L 312,144 " style="fill:none;"/>
+<polygon points="320,144 308,138.4 308,149.6 "  style="stroke:none" transform="rotate(63.43494882292201,312,144 )"/>
+<polygon points="68,40 56,34.4 56,45.6 "  style="stroke:none" transform="rotate(243.43494882292202,60,40 )"/>
+<circle cx="24" cy="128" r="6" class="closeddot"/><circle cx="104" cy="192" r="6" class="closeddot"/><g transform="translate(0,0)"><text text-anchor="middle" x="64" y="20">H</text><text text-anchor="middle" x="72" y="20">a</text><text text-anchor="middle" x="80" y="20">n</text><text text-anchor="middle" x="88" y="20">d</text><text text-anchor="middle" x="96" y="20">m</text><text text-anchor="middle" x="104" y="20">a</text><text text-anchor="middle" x="112" y="20">d</text><text text-anchor="middle" x="120" y="20">e</text><text text-anchor="middle" x="136" y="20">H</text><text text-anchor="middle" x="144" y="20">e</text><text text-anchor="middle" x="152" y="20">r</text><text text-anchor="middle" x="160" y="20">o</text><text text-anchor="middle" x="312" y="20">X</text><text text-anchor="middle" x="96" y="84">(</text><text text-anchor="middle" x="104" y="84">0</text><text text-anchor="middle" x="112" y="84">,</text><text text-anchor="middle" x="128" y="84">0</text><text text-anchor="middle" x="136" y="84">)</text><text text-anchor="middle" x="16" y="116">M</text><text text-anchor="middle" x="24" y="116">i</text><text text-anchor="middle" x="32" y="116">n</text><text text-anchor="middle" x="168" y="116">(</text><text text-anchor="middle" x="176" y="116">w</text><text text-anchor="middle" x="184" y="116">i</text><text text-anchor="middle" x="192" y="116">d</text><text text-anchor="middle" x="200" y="116">t</text><text text-anchor="middle" x="208" y="116">h</text><text text-anchor="middle" x="216" y="116">,</text><text text-anchor="middle" x="232" y="116">h</text><text text-anchor="middle" x="240" y="116">e</text><text text-anchor="middle" x="248" y="116">i</text><text text-anchor="middle" x="256" y="116">g</text><text text-anchor="middle" x="264" y="116">h</text><text text-anchor="middle" x="272" y="116">t</text><text text-anchor="middle" x="280" y="116">)</text><text text-anchor="middle" x="32" y="148">x</text><text text-anchor="middle" x="40" y="148">x</text><text text-anchor="middle" x="48" y="148">x</text><text text-anchor="middle" x="64" y="148">▉</text><text text-anchor="middle" x="72" y="148">▉</text><text text-anchor="middle" x="80" y="148">▉</text><text text-anchor="middle" x="88" y="148">▉</text><text text-anchor="middle" x="96" y="148">▉</text><text text-anchor="middle" x="32" y="164">x</text><text text-anchor="middle" x="40" y="164">x</text><text text-anchor="middle" x="48" y="164">x</text><text text-anchor="middle" x="32" y="180">x</text><text text-anchor="middle" x="40" y="180">x</text><text text-anchor="middle" x="48" y="180">x</text><text text-anchor="middle" x="56" y="180">x</text><text text-anchor="middle" x="64" y="180">x</text><text text-anchor="middle" x="72" y="180">x</text><text text-anchor="middle" x="80" y="180">x</text><text text-anchor="middle" x="88" y="180">x</text><text text-anchor="middle" x="96" y="180">x</text><text text-anchor="middle" x="96" y="212">M</text><text text-anchor="middle" x="104" y="212">a</text><text text-anchor="middle" x="112" y="212">x</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;12:</b> We only want to fill the visible parts of the rectangle.</div></center>
+
+</p><p>
+
+(Because of how we laid out the buffer memory, going over the sides would bleed the pixels to the opposite side of the screen, while going above or below would flat out crash the program for trying to access unauthorized memory).
+
+</p><p>
+
+Actual clipping is very simple: 
+
+</p><pre class="listing tilde"><code><span class="line">s32 MinX = RoundReal32ToInt32(RealMinX);</span>
+<span class="line">s32 MinY = RoundReal32ToInt32(RealMinY);</span>
+<span class="line">s32 MaxX = RoundReal32ToInt32(RealMaxX);</span>
+<span class="line">s32 MaxY = RoundReal32ToInt32(RealMaxY);</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-keyword">if</span> (MinX &lt; <span class="hljs-number">0</span>)</span>
+<span class="line">{</span>
+<span class="line">    MinX = <span class="hljs-number">0</span>;</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">if</span> (MinY &lt; <span class="hljs-number">0</span>)</span>
+<span class="line">{</span>
+<span class="line">    MinY = <span class="hljs-number">0</span>;</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">if</span> (MaxX &gt; Buffer-&gt;Width)</span>
+<span class="line">{</span>
+<span class="line">    MaxX = Buffer-&gt;Width;</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">if</span> (MaxY &gt; Buffer-&gt;Height)</span>
+<span class="line">{</span>
+<span class="line">    MaxY = Buffer-&gt;Height;</span>
+<span class="line">}</span></div><span class="line">u8 *EndOfBuffer = (u8 *)Buffer-&gt;Memory + Buffer-&gt;Pitch * Buffer-&gt;Height;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;16:</b> <file>[handmade.cpp > DrawRectangle]</file> Clipping the values.</div></center>
+<p>
+
+
+You might think that we should make sure that Max x/y should be clipped if the value is greater <em class="underscore">or equal</em> than the buffer width/height, but because we're filling the rectangles <em class="underscore">excluding</em> Max values we're actually fine.
+
+</p>
+<a class="target" name="fillthepixels">&nbsp;</a><a class="target" name="drawrectanglefunction/fillthepixels">&nbsp;</a><a class="target" name="toc4.3">&nbsp;</a><h2>Fill the Pixels</h2>
+<p>
+
+
+We want to change the sequence in which we fill our pixels. Right now we're getting a pixel and then shift it by every row. It's inefficient since usually you want to send continguous memory blocks to the processor. So let's invert the loops we have:
+
+</p><pre class="listing tilde"><code><div class=" delete"><span class="line">u8 *EndOfBuffer = (u8 *)Buffer-&gt;Memory + Buffer-&gt;Pitch * Buffer-&gt;Height;</span></div><span class="line">u32 Color = <span class="hljs-number">0xFFFFFFFF</span>;   </span><div class=" delete"><span class="line"><span class="hljs-keyword">int</span> Left = PlayerX;</span>
+<span class="line"><span class="hljs-keyword">int</span> Right = PlayerX + <span class="hljs-number">10</span>;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">int</span> Top = PlayerY;</span>
+<span class="line"><span class="hljs-keyword">int</span> Bottom = PlayerY + <span class="hljs-number">10</span>;</span></div><div class=" edit"><span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> Y = MinY;</span>
+<span class="line">     Y &lt; MaxY;</span>
+<span class="line">     ++Y)</span></div><span class="line">{</span><div class=" delete"><span class="line">    u8 *Pixel = ((u8 *)Buffer-&gt;Memory + </span>
+<span class="line">                    X * Buffer-&gt;BytesPerPixel +</span>
+<span class="line">                    Top * Buffer-&gt;Pitch);</span></div><div class=" edit"><span class="line">    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> X = MinX;</span>
+<span class="line">         X &lt; MaxX;</span>
+<span class="line">         ++X)</span></div><span class="line">    {</span><div class=" delete"><span class="line">        <span class="hljs-keyword">if</span> ((Pixel &gt;= Buffer-&gt;Memory) &amp;&amp;</span>
+<span class="line">            (Pixel &lt; EndOfBuffer))</span>
+<span class="line">        {</span></div><span class="line">            *(u32 *)Pixel = Color;</span><div class=" delete"><span class="line">            Pixel += Buffer-&gt;Pitch;</span>
+<span class="line">        }</span></div><span class="line">    }</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;17:</b> <file>[handmade.cpp > DrawRectangle]</file> Inverting the loop order.</div></center>
+<p>
+
+
+We want to position ourselves at (MinX, MinY) before we enter the loop as follows: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">Since we want to offset one byte at a time for correct positioning, we define the row pointer as an 8-bit value
+</li>
+<li class="asterisk">We start at the start of the buffer memory.
+</li>
+<li class="asterisk">We then move &ldquo;horizontally&rdquo; by <code>MinX</code> amount of pixels, multiplied by the size of our pixels. We have saved this size as <code>BytesPerPixel</code>.
+</li>
+<li class="asterisk">Finally, we move &ldquo;vertically&rdquo; by <code>MinY</code> amount of pixels, multiplied by the <em class="underscore">stride</em> or <code>Pitch</code> of our row. 
+</li>
+<li class="asterisk">We then advance our row by pitch until we fill the rectangle we need.</li></ul>
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="432" width="472" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 104,16 L 104,32 " style="fill:none;"/>
+<path d="M 104,96 L 104,320 " style="fill:none;"/>
+<path d="M 104,368 L 104,400 " style="fill:none;"/>
+<path d="M 136,16 L 136,32 " style="fill:none;"/>
+<path d="M 136,96 L 136,320 " style="fill:none;"/>
+<path d="M 136,368 L 136,400 " style="fill:none;"/>
+<path d="M 168,96 L 168,320 " style="fill:none;"/>
+<path d="M 168,368 L 168,400 " style="fill:none;"/>
+<path d="M 200,96 L 200,320 " style="fill:none;"/>
+<path d="M 200,368 L 200,400 " style="fill:none;"/>
+<path d="M 216,48 L 216,160 " style="fill:none;"/>
+<path d="M 232,64 L 232,176 " style="fill:none;"/>
+<path d="M 232,208 L 232,320 " style="fill:none;"/>
+<path d="M 232,368 L 232,400 " style="fill:none;"/>
+<path d="M 264,64 L 264,176 " style="fill:none;"/>
+<path d="M 264,208 L 264,320 " style="fill:none;"/>
+<path d="M 264,368 L 264,400 " style="fill:none;"/>
+<path d="M 296,64 L 296,176 " style="fill:none;"/>
+<path d="M 296,208 L 296,320 " style="fill:none;"/>
+<path d="M 296,368 L 296,400 " style="fill:none;"/>
+<path d="M 328,64 L 328,176 " style="fill:none;"/>
+<path d="M 328,208 L 328,320 " style="fill:none;"/>
+<path d="M 328,368 L 328,400 " style="fill:none;"/>
+<path d="M 360,64 L 360,320 " style="fill:none;"/>
+<path d="M 360,368 L 360,400 " style="fill:none;"/>
+<path d="M 392,64 L 392,320 " style="fill:none;"/>
+<path d="M 392,368 L 392,400 " style="fill:none;"/>
+<path d="M 424,16 L 424,32 " style="fill:none;"/>
+<path d="M 424,64 L 424,320 " style="fill:none;"/>
+<path d="M 424,368 L 424,400 " style="fill:none;"/>
+<path d="M 104,16 L 360,16 " style="fill:none;"/>
+<path d="M 392,16 L 424,16 " style="fill:none;"/>
+<path d="M 104,64 L 360,64 " style="fill:none;"/>
+<path d="M 392,64 L 424,64 " style="fill:none;"/>
+<path d="M 64,80 L 112,80 " style="fill:none;"/>
+<path d="M 128,80 L 208,80 " style="fill:none;"/>
+<path d="M 104,96 L 208,96 " style="fill:none;"/>
+<path d="M 224,96 L 360,96 " style="fill:none;"/>
+<path d="M 392,96 L 424,96 " style="fill:none;"/>
+<path d="M 104,128 L 208,128 " style="fill:none;"/>
+<path d="M 224,128 L 360,128 " style="fill:none;"/>
+<path d="M 392,128 L 424,128 " style="fill:none;"/>
+<path d="M 104,160 L 208,160 " style="fill:none;"/>
+<path d="M 224,160 L 360,160 " style="fill:none;"/>
+<path d="M 392,160 L 424,160 " style="fill:none;"/>
+<path d="M 88,176 L 208,176 " style="fill:none;"/>
+<path d="M 104,192 L 224,192 " style="fill:none;"/>
+<path d="M 336,192 L 360,192 " style="fill:none;"/>
+<path d="M 392,192 L 424,192 " style="fill:none;"/>
+<path d="M 104,224 L 360,224 " style="fill:none;"/>
+<path d="M 392,224 L 424,224 " style="fill:none;"/>
+<path d="M 104,256 L 360,256 " style="fill:none;"/>
+<path d="M 392,256 L 424,256 " style="fill:none;"/>
+<path d="M 104,288 L 360,288 " style="fill:none;"/>
+<path d="M 392,288 L 424,288 " style="fill:none;"/>
+<path d="M 104,320 L 360,320 " style="fill:none;"/>
+<path d="M 392,320 L 424,320 " style="fill:none;"/>
+<path d="M 104,368 L 360,368 " style="fill:none;"/>
+<path d="M 392,368 L 424,368 " style="fill:none;"/>
+<path d="M 104,400 L 360,400 " style="fill:none;"/>
+<path d="M 392,400 L 424,400 " style="fill:none;"/>
+<polygon points="224,160 212,154.4 212,165.6 "  style="stroke:none" transform="rotate(90,216,160 )"/>
+<polygon points="212,80 200,74.4 200,85.6 "  style="stroke:none" transform="rotate(0,204,80 )"/>
+<polygon points="116,80 104,74.4 104,85.6 "  style="stroke:none" transform="rotate(0,108,80 )"/>
+<circle cx="120" cy="80" r="6" class="closeddot"/><circle cx="216" cy="80" r="6" class="closeddot"/><circle cx="216" cy="176" r="6" class="closeddot"/><g transform="translate(0,0)"><text text-anchor="middle" x="72" y="4">B</text><text text-anchor="middle" x="80" y="4">y</text><text text-anchor="middle" x="88" y="4">t</text><text text-anchor="middle" x="96" y="4">e</text><text text-anchor="middle" x="104" y="4">s</text><text text-anchor="middle" x="112" y="4">P</text><text text-anchor="middle" x="120" y="4">e</text><text text-anchor="middle" x="128" y="4">r</text><text text-anchor="middle" x="136" y="4">P</text><text text-anchor="middle" x="144" y="4">i</text><text text-anchor="middle" x="152" y="4">x</text><text text-anchor="middle" x="160" y="4">e</text><text text-anchor="middle" x="168" y="4">l</text><text text-anchor="middle" x="248" y="4">P</text><text text-anchor="middle" x="256" y="4">i</text><text text-anchor="middle" x="264" y="4">t</text><text text-anchor="middle" x="272" y="4">c</text><text text-anchor="middle" x="280" y="4">h</text><text text-anchor="middle" x="376" y="20">.</text><text text-anchor="middle" x="208" y="36">M</text><text text-anchor="middle" x="216" y="36">i</text><text text-anchor="middle" x="224" y="36">n</text><text text-anchor="middle" x="232" y="36">X</text><text text-anchor="middle" x="120" y="52">0</text><text text-anchor="middle" x="152" y="52">1</text><text text-anchor="middle" x="184" y="52">2</text><text text-anchor="middle" x="248" y="52">4</text><text text-anchor="middle" x="280" y="52">5</text><text text-anchor="middle" x="312" y="52">6</text><text text-anchor="middle" x="344" y="52">7</text><text text-anchor="middle" x="392" y="52">W</text><text text-anchor="middle" x="400" y="52">i</text><text text-anchor="middle" x="408" y="52">d</text><text text-anchor="middle" x="416" y="52">t</text><text text-anchor="middle" x="424" y="52">h</text><text text-anchor="middle" x="8" y="68">B</text><text text-anchor="middle" x="16" y="68">u</text><text text-anchor="middle" x="24" y="68">f</text><text text-anchor="middle" x="32" y="68">f</text><text text-anchor="middle" x="40" y="68">e</text><text text-anchor="middle" x="48" y="68">r</text><text text-anchor="middle" x="56" y="68">-</text><text text-anchor="middle" x="64" y="68">&gt;</text><text text-anchor="middle" x="8" y="84">M</text><text text-anchor="middle" x="16" y="84">e</text><text text-anchor="middle" x="24" y="84">m</text><text text-anchor="middle" x="32" y="84">o</text><text text-anchor="middle" x="40" y="84">r</text><text text-anchor="middle" x="48" y="84">y</text><text text-anchor="middle" x="376" y="100">.</text><text text-anchor="middle" x="88" y="116">1</text><text text-anchor="middle" x="376" y="132">.</text><text text-anchor="middle" x="88" y="148">2</text><text text-anchor="middle" x="376" y="164">.</text><text text-anchor="middle" x="48" y="180">M</text><text text-anchor="middle" x="56" y="180">i</text><text text-anchor="middle" x="64" y="180">n</text><text text-anchor="middle" x="72" y="180">Y</text><text text-anchor="middle" x="248" y="196">M</text><text text-anchor="middle" x="256" y="196">i</text><text text-anchor="middle" x="264" y="196">n</text><text text-anchor="middle" x="280" y="196">(</text><text text-anchor="middle" x="288" y="196">3</text><text text-anchor="middle" x="296" y="196">,</text><text text-anchor="middle" x="312" y="196">3</text><text text-anchor="middle" x="320" y="196">)</text><text text-anchor="middle" x="376" y="196">.</text><text text-anchor="middle" x="88" y="212">4</text><text text-anchor="middle" x="376" y="228">.</text><text text-anchor="middle" x="88" y="244">5</text><text text-anchor="middle" x="376" y="260">.</text><text text-anchor="middle" x="88" y="276">6</text><text text-anchor="middle" x="376" y="292">.</text><text text-anchor="middle" x="88" y="308">7</text><text text-anchor="middle" x="376" y="324">.</text><text text-anchor="middle" x="88" y="340">8</text><text text-anchor="middle" x="136" y="340">.</text><text text-anchor="middle" x="168" y="340">.</text><text text-anchor="middle" x="200" y="340">.</text><text text-anchor="middle" x="232" y="340">.</text><text text-anchor="middle" x="264" y="340">.</text><text text-anchor="middle" x="296" y="340">.</text><text text-anchor="middle" x="328" y="340">.</text><text text-anchor="middle" x="360" y="340">.</text><text text-anchor="middle" x="392" y="340">.</text><text text-anchor="middle" x="376" y="372">.</text><text text-anchor="middle" x="48" y="388">H</text><text text-anchor="middle" x="56" y="388">e</text><text text-anchor="middle" x="64" y="388">i</text><text text-anchor="middle" x="72" y="388">g</text><text text-anchor="middle" x="80" y="388">h</text><text text-anchor="middle" x="88" y="388">t</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;13:</b> Getting to MinX.</div></center>
+
+</p><pre class="listing tilde"><code><span class="line">u32 Color = <span class="hljs-number">0xFFFFFFFF</span>;   </span><div class=" add"><span class="line">u8 *Row = ((u8 *)Buffer-&gt;Memory + </span>
+<span class="line">           MinX * Buffer-&gt;BytesPerPixel + </span>
+<span class="line">           MinY * Buffer-&gt;Pitch);</span></div><span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> Y = MinY;</span>
+<span class="line">     Y &lt; MaxY;</span>
+<span class="line">     ++Y)</span>
+<span class="line">     {</span>
+<span class="line">        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> X = MinX;</span>
+<span class="line">             X &lt; MaxX;</span>
+<span class="line">             ++X)</span>
+<span class="line">        {</span>
+<span class="line">            <span class="hljs-comment">// ...</span></span>
+<span class="line">        }</span><div class=" add"><span class="line">        Row += Buffer-&gt;Pitch;</span></div><span class="line">     }</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;18:</b> <file>[handmade.cpp > DrawRectangle]</file> Define the row pointer.</div></center>
+<p>
+
+
+Similarly to the row pointer, we can define the pixel pointer, with an exception that it can be directly a 32-bit value. Finally, within the loop we can write our color and advance the pixel pointer: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">u32 *Pixel = (u32 *)Row;</span></div><span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> X = MinX;</span>
+<span class="line">        X &lt; MaxX;</span>
+<span class="line">        ++X)</span>
+<span class="line">{</span><div class=" edit"><span class="line">    *Pixel++ = Color;</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;19:</b> <file>[handmade.cpp > DrawRectangle]</file> Drawing the color to the pixel.</div></center>
+<p>
+
+
+This is not how we will approach this problem in the final renderer, just a simple fill to get things going. 
+
+</p>
+<a class="target" name="writetheroundingfunction">&nbsp;</a><a class="target" name="drawrectanglefunction/writetheroundingfunction">&nbsp;</a><a class="target" name="toc4.4">&nbsp;</a><h2>Write the Rounding Function</h2>
+<p>
+
+
+Our rounding function will be super simple. 
+
+</p><p>
+
+Rounding is an operation that brings a real number to its nearest integer. In C, you could simply truncate (cut off) decimal numbers by casting a <code>f32</code> to <code>(u32)Number</code>. 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-function">internal s32</span>
+<span class="line"><span class="hljs-title">RoundReal32ToInt32</span><span class="hljs-params">(f32 Number)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    s32 Result = (s32)Number;</span>
+<span class="line">    <span class="hljs-keyword">return</span> (Result);</span>
+<span class="line">}</span></div><span class="line">internal <span class="hljs-keyword">void</span></span>
+<span class="line">DrawRectangle <span class="hljs-comment">//...</span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;20:</b> <file>[handmade.cpp]</file> Introducing <code>RoundReal32ToInt32</code>.</div></center>
+<p>
+
+
+
+This, however, would always bring you to the lower value, even if the decimal value is above 0.5. A quick fix would be to bias the incoming value by 0.5 and <em class="underscore">then</em> truncating it: 
+
+</p><p>
+
+By adding 0.5, any number with a decimal above 0.5 would get a +1 integer value, thus the truncation will return correct result.
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line"><span class="hljs-function">internal s32</span>
+<span class="line"><span class="hljs-title">RoundReal32ToInt32</span><span class="hljs-params">(f32 Number)</span></span>
+<span class="line"></span>{</span></div><div class=" add"><span class="line">    s32 Result = (s32)(Number + <span class="hljs-number">0.5f</span>);</span></div><span class="line">    <span class="hljs-keyword">return</span> (Result);</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;21:</b> <file>[handmade.cpp]</file> Biasing the number for correct rounding.</div></center>
+<p>
+
+
+There's a lot more to rounding than this though, but this naive solution will suffice for now.
+
+</p>
+<a class="target" name="testourchanges">&nbsp;</a><a class="target" name="drawrectanglefunction/testourchanges">&nbsp;</a><a class="target" name="toc4.5">&nbsp;</a><h2>Test Our Changes</h2>
+<p>
+
+
+Let's run a quick test to see if things work as we intend them to. At the end of <code>GameUpdateAndRender</code>, we'll add a call to <code>DrawRectangle</code> function: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">DrawRectangle(Buffer, <span class="hljs-number">10.0f</span>, <span class="hljs-number">10.0f</span>, <span class="hljs-number">30.0f</span>, <span class="hljs-number">30.f</span>);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;22:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Testing our rectangle.</div></center>
+<p>
+
+
+If we recompile and run our program we should see our happy rectangle in the top-right corner: 
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day27/rectangle.jpg" target="_blank"><img class="markdeep" src="../media/day27/rectangle.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;14:</b> Our Rectangle.</span></center></div></center> 
+
+</p><p>
+
+Feel free to play around with it to see if it clips as we intend it to.
+
+</p>
+<a class="target" name="passthecolor">&nbsp;</a><a class="target" name="drawrectanglefunction/passthecolor">&nbsp;</a><a class="target" name="toc4.6">&nbsp;</a><h2>Pass the Color</h2>
+<p>
+
+
+We will see how to pass and pack the RGB color next time. For now, let's pass directly a 32-bit color. If you're familiar with HEX colors, this is exactly what we will pass.
+
+</p><pre class="listing tilde"><code><div class="   "><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">DrawRectangle</span><span class="hljs-params">(game_offscreen_buffer *Buffer,</span></span></span></div><div class=" edit"><span class="line">              f32 RealMinX, f32 RealMinY, f32 RealMaxX, f32 RealMaxY, </span></div><div class=" add"><span class="line">              u32 Color)</span></div><span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span><div class=" delete"><span class="line">u32 Color = <span class="hljs-number">0xFFFFFFFF</span>;   </span></div><div class="   "><span class="line">    u8 *Row = ((u8 *)Buffer-&gt;Memory + </span>
+<span class="line">               MinX * Buffer-&gt;BytesPerPixel + </span>
+<span class="line">               MinY * Buffer-&gt;Pitch);</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;23:</b> <file>[handmade.cpp]</file> Passing the Color as a parameter.</div></center>
+<p>
+
+
+This allows us to set up a background to clear our screen every frame, and a rectangle on top of it: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">DrawRectangle(Buffer, <span class="hljs-number">0.0f</span>, <span class="hljs-number">0.0f</span>, (f32)Buffer-&gt;Width, (f32)Buffer-&gt;Height, <span class="hljs-number">0x00FF00FF</span>);</span></div><div class=" edit"><span class="line">DrawRectangle(Buffer, <span class="hljs-number">10.0f</span>, <span class="hljs-number">10.0f</span>, <span class="hljs-number">30.0f</span>, <span class="hljs-number">30.f</span>, <span class="hljs-number">0x0000FFFF</span>);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;24:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Testing our rectangle.</div></center>
+<p>
+
+
+Recompiling now will give you a cyan square on pink background: 
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day27/rectangle2.jpg" target="_blank"><img class="markdeep" src="../media/day27/rectangle2.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;15:</b> Our Rectangle with a background.</span></center></div></center> 
+
+</p>
+<a class="target" name="recap">&nbsp;</a><a class="target" name="recap">&nbsp;</a><a class="target" name="toc5">&nbsp;</a><h1>Recap</h1>
+<p>
+
+
+Today we touched several things. the approach we will take for architecture of our game, 
+
+</p>
+<a class="target" name="programmingnotions">&nbsp;</a><a class="target" name="programmingnotions">&nbsp;</a><a class="target" name="toc6">&nbsp;</a><h1>Programming Notions</h1>
+
+<a class="target" name="compression-orientedprogramming">&nbsp;</a><a class="target" name="programmingnotions/compression-orientedprogramming">&nbsp;</a><a class="target" name="toc6.1">&nbsp;</a><h2>Compression-oriented programming</h2>
+<p>
+
+
+We briefly mentioned <a href="https://caseymuratori.com/blog_0015">Semantic Compression</a> at the end of <a href="../html/day22.html">Day 22</a>. The approach that we can coin as &ldquo;Compression-oriented programming&rdquo;, and we define it as follows: 
+<blockquote class="fancyquote"><span class="fancyquote">Like a good compressor, I don’t reuse anything until I have at least two instances of it occurring. Many programmers don’t understand how important this is, and try to write “reusable” code right off the bat, but that is probably one of the biggest mistakes you can make. My mantra is, “make your code usable before you try to make it reusable”.
+
+</p><p>
+
+ I always begin by just typing out exactly what I want to happen in each specific case, without any regard to “correctness” or “abstraction” or any other buzzword, and I get that working. Then, when I find myself doing the same thing a second time somewhere else, that is when I pull out the reusable portion and share it, effectively “compressing” the code. I like “compress” better as an analogy, because it means something useful, as opposed to the often-used “abstracting”, which doesn’t really imply anything useful. Who cares if code is abstract?
+
+</p><p>
+
+ Waiting until there are (at least) two examples of a piece of code means I not only save time thinking about how to reuse it until I know I really need to, but it also means I always have at least two different real examples of what the code has to do before I try to make it reusable. This is crucial for efficiency, because if you only have one example, or worse, no examples (in the case of code written preemptively), then you are very likely to make mistakes in the way you write it and end up with code that isn’t conveniently reusable. This leads to even more wasted time once you go to use it, because either it will be cumbersome, or you will have to redo it to make it work the way you need it to. So I try very hard to never make code “prematurely reusable”, to evoke Knuth.
+
+</p><p>
+
+ Similarly, like a magical globally optimizing compressor [...], when you are presented with new places where a previously reused piece of code could be reused again, you make a decision: if the reusable code is already suitable, you just use it, but if it’s not, you decide whether or not you should modify how it works, or whether you should introduce a new layer on top of or underneath it. [...]
+
+</p><p>
+
+ Finally, the underlying assumption in all of this is, if you compress your code to a nice compact form, it is easy to read, because there’s a minimal amount of it, and the semantics tend to mirror the real “language” of the problem, because like a real language, those things that are expressed most often are given their own names and are used consistently. Well-compressed code is also easy to maintain, because all the places in the code that are doing identical things all go through the same paths, but code that is unique is not needlessly complicated or separated from its use. Finally, well-compressed code is easy to extend, because producing more code that does similar operations is simple, as all the necessary code is there in a nicely recomposable way.</span><span class="author">
+      &mdash; Casey Muratori, 2014-05-28</span></blockquote>
+Now, you can look at this definition at the surface and say - this is exactly what DRY (Don't Repeat Yourself) principle does! But there's a very fine line between making code that uses itself, making the maximally overlapping set of functions, that DRY recommends, and setting things up to allow quick &ldquo;blast style&rdquo; optimization. In the latter approach, core operations are broken out so that they can be optimized individually.
+
+</p><p>
+
+With the compression-oriented programming approach, individual operations that are super simple (4-5 lines of code maximum) but not entirely homogenous are usually not collapsed. They are left as is to leave room for eventual rewriting of individual functions in a more efficient way. Instead, we leave the patterns to emerge from the code that we're writing explicitly and with understanding that we get from it.
+
+</p><p>
+
+This is but the first glimpse into what compression-oriented programming means. It will be the backbone of how we approach code, and you will have ample opportunity to see it in action.
+
+</p>
+<a class="target" name="sideconsiderations">&nbsp;</a><a class="target" name="sideconsiderations">&nbsp;</a><a class="target" name="toc7">&nbsp;</a><h1>Side Considerations</h1>
+
+<a class="target" name="floating-pointcoordinates">&nbsp;</a><a class="target" name="sideconsiderations/floating-pointcoordinates">&nbsp;</a><a class="target" name="toc7.1">&nbsp;</a><h2>Floating-point Coordinates</h2>
+<p>
+
+
+Each pixel coordinates, being fixed on a physical screen, are non-divisible integer numbers. Yet most renderers work with them using decimal numbers. Generally, it's to allow for a more fluid movement of the sprites on screen.
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day27/subpixel.gif" target="_blank"><img class="markdeep" src="../media/day27/subpixel.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;16:</b> If the position of a rectangle bleeds to neighbouring rectangles during the movement, it creates an illusion of smoother movement.</span></center></div></center> 
+
+</p><p>
+
+When you work with very specific systems, like renderers, the precise definition of what you want matters.
+
+</p><p>
+
+Let's imagine a pixel grid:
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="368" width="392" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 24,16 L 24,336 " style="fill:none;"/>
+<path d="M 56,16 L 56,336 " style="fill:none;"/>
+<path d="M 88,16 L 88,336 " style="fill:none;"/>
+<path d="M 120,16 L 120,336 " style="fill:none;"/>
+<path d="M 152,16 L 152,336 " style="fill:none;"/>
+<path d="M 184,16 L 184,336 " style="fill:none;"/>
+<path d="M 216,16 L 216,336 " style="fill:none;"/>
+<path d="M 248,16 L 248,336 " style="fill:none;"/>
+<path d="M 280,16 L 280,336 " style="fill:none;"/>
+<path d="M 312,16 L 312,336 " style="fill:none;"/>
+<path d="M 344,16 L 344,336 " style="fill:none;"/>
+<path d="M 24,16 L 344,16 " style="fill:none;"/>
+<path d="M 24,48 L 344,48 " style="fill:none;"/>
+<path d="M 24,80 L 344,80 " style="fill:none;"/>
+<path d="M 24,112 L 344,112 " style="fill:none;"/>
+<path d="M 24,144 L 344,144 " style="fill:none;"/>
+<path d="M 24,176 L 344,176 " style="fill:none;"/>
+<path d="M 24,208 L 344,208 " style="fill:none;"/>
+<path d="M 24,240 L 344,240 " style="fill:none;"/>
+<path d="M 24,272 L 344,272 " style="fill:none;"/>
+<path d="M 24,304 L 344,304 " style="fill:none;"/>
+<path d="M 24,336 L 344,336 " style="fill:none;"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="40" y="4">0</text><text text-anchor="middle" x="72" y="4">1</text><text text-anchor="middle" x="104" y="4">2</text><text text-anchor="middle" x="136" y="4">3</text><text text-anchor="middle" x="168" y="4">4</text><text text-anchor="middle" x="200" y="4">5</text><text text-anchor="middle" x="232" y="4">6</text><text text-anchor="middle" x="264" y="4">7</text><text text-anchor="middle" x="296" y="4">8</text><text text-anchor="middle" x="328" y="4">9</text><text text-anchor="middle" x="8" y="36">0</text><text text-anchor="middle" x="8" y="68">1</text><text text-anchor="middle" x="8" y="100">2</text><text text-anchor="middle" x="8" y="132">3</text><text text-anchor="middle" x="8" y="164">4</text><text text-anchor="middle" x="8" y="196">5</text><text text-anchor="middle" x="8" y="228">6</text><text text-anchor="middle" x="8" y="260">7</text><text text-anchor="middle" x="8" y="292">8</text><text text-anchor="middle" x="8" y="324">9</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;17:</b> Pixel grid.</div></center>
+
+</p><p>
+
+Filling a single pixel is simple, you just assign a color at given coordinates (let's say, (2, 1)):
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="368" width="392" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 24,16 L 24,336 " style="fill:none;"/>
+<path d="M 56,16 L 56,336 " style="fill:none;"/>
+<path d="M 88,16 L 88,336 " style="fill:none;"/>
+<path d="M 120,16 L 120,336 " style="fill:none;"/>
+<path d="M 152,16 L 152,336 " style="fill:none;"/>
+<path d="M 184,16 L 184,336 " style="fill:none;"/>
+<path d="M 216,16 L 216,336 " style="fill:none;"/>
+<path d="M 248,16 L 248,336 " style="fill:none;"/>
+<path d="M 280,16 L 280,336 " style="fill:none;"/>
+<path d="M 312,16 L 312,336 " style="fill:none;"/>
+<path d="M 344,16 L 344,336 " style="fill:none;"/>
+<path d="M 24,16 L 344,16 " style="fill:none;"/>
+<path d="M 24,48 L 344,48 " style="fill:none;"/>
+<path d="M 24,80 L 344,80 " style="fill:none;"/>
+<path d="M 24,112 L 344,112 " style="fill:none;"/>
+<path d="M 24,144 L 344,144 " style="fill:none;"/>
+<path d="M 24,176 L 344,176 " style="fill:none;"/>
+<path d="M 24,208 L 344,208 " style="fill:none;"/>
+<path d="M 24,240 L 344,240 " style="fill:none;"/>
+<path d="M 24,272 L 344,272 " style="fill:none;"/>
+<path d="M 24,304 L 344,304 " style="fill:none;"/>
+<path d="M 24,336 L 344,336 " style="fill:none;"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="40" y="4">0</text><text text-anchor="middle" x="72" y="4">1</text><text text-anchor="middle" x="104" y="4">2</text><text text-anchor="middle" x="136" y="4">3</text><text text-anchor="middle" x="168" y="4">4</text><text text-anchor="middle" x="200" y="4">5</text><text text-anchor="middle" x="232" y="4">6</text><text text-anchor="middle" x="264" y="4">7</text><text text-anchor="middle" x="296" y="4">8</text><text text-anchor="middle" x="328" y="4">9</text><text text-anchor="middle" x="8" y="36">0</text><text text-anchor="middle" x="8" y="68">1</text><text text-anchor="middle" x="104" y="68">▉</text><text text-anchor="middle" x="8" y="100">2</text><text text-anchor="middle" x="8" y="132">3</text><text text-anchor="middle" x="8" y="164">4</text><text text-anchor="middle" x="8" y="196">5</text><text text-anchor="middle" x="8" y="228">6</text><text text-anchor="middle" x="8" y="260">7</text><text text-anchor="middle" x="8" y="292">8</text><text text-anchor="middle" x="8" y="324">9</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;18:</b> Filling a single pixel.</div></center>
+
+</p><p>
+
+But when you start talking about filling an <em class="underscore">area</em> of pixels, things might get complicated. For example, do you want your coordinates to be inclusive or exclusive? Let's say, we want to fill an area from (1, 1) to (3, 3):
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="368" width="392" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 24,16 L 24,336 " style="fill:none;"/>
+<path d="M 56,16 L 56,336 " style="fill:none;"/>
+<path d="M 88,16 L 88,336 " style="fill:none;"/>
+<path d="M 120,16 L 120,336 " style="fill:none;"/>
+<path d="M 152,16 L 152,336 " style="fill:none;"/>
+<path d="M 184,16 L 184,336 " style="fill:none;"/>
+<path d="M 216,16 L 216,336 " style="fill:none;"/>
+<path d="M 248,16 L 248,336 " style="fill:none;"/>
+<path d="M 280,16 L 280,336 " style="fill:none;"/>
+<path d="M 312,16 L 312,336 " style="fill:none;"/>
+<path d="M 344,16 L 344,336 " style="fill:none;"/>
+<path d="M 24,16 L 344,16 " style="fill:none;"/>
+<path d="M 24,48 L 344,48 " style="fill:none;"/>
+<path d="M 24,80 L 344,80 " style="fill:none;"/>
+<path d="M 24,112 L 344,112 " style="fill:none;"/>
+<path d="M 24,144 L 344,144 " style="fill:none;"/>
+<path d="M 24,176 L 344,176 " style="fill:none;"/>
+<path d="M 24,208 L 344,208 " style="fill:none;"/>
+<path d="M 24,240 L 344,240 " style="fill:none;"/>
+<path d="M 24,272 L 344,272 " style="fill:none;"/>
+<path d="M 24,304 L 344,304 " style="fill:none;"/>
+<path d="M 24,336 L 344,336 " style="fill:none;"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="40" y="4">0</text><text text-anchor="middle" x="72" y="4">1</text><text text-anchor="middle" x="104" y="4">2</text><text text-anchor="middle" x="136" y="4">3</text><text text-anchor="middle" x="168" y="4">4</text><text text-anchor="middle" x="200" y="4">5</text><text text-anchor="middle" x="232" y="4">6</text><text text-anchor="middle" x="264" y="4">7</text><text text-anchor="middle" x="296" y="4">8</text><text text-anchor="middle" x="328" y="4">9</text><text text-anchor="middle" x="8" y="36">0</text><text text-anchor="middle" x="8" y="68">1</text><text text-anchor="middle" x="72" y="68">x</text><text text-anchor="middle" x="8" y="100">2</text><text text-anchor="middle" x="8" y="132">3</text><text text-anchor="middle" x="136" y="132">x</text><text text-anchor="middle" x="8" y="164">4</text><text text-anchor="middle" x="8" y="196">5</text><text text-anchor="middle" x="8" y="228">6</text><text text-anchor="middle" x="8" y="260">7</text><text text-anchor="middle" x="8" y="292">8</text><text text-anchor="middle" x="8" y="324">9</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;19:</b> Min and Max points.</div></center>
+
+</p><p>
+
+Does this mean that I'm excluding the outer bounds? 
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="368" width="392" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 24,16 L 24,336 " style="fill:none;"/>
+<path d="M 56,16 L 56,336 " style="fill:none;"/>
+<path d="M 72,64 L 72,96 " style="fill:none;"/>
+<path d="M 88,16 L 88,336 " style="fill:none;"/>
+<path d="M 104,64 L 104,96 " style="fill:none;"/>
+<path d="M 120,16 L 120,336 " style="fill:none;"/>
+<path d="M 152,16 L 152,336 " style="fill:none;"/>
+<path d="M 184,16 L 184,336 " style="fill:none;"/>
+<path d="M 216,16 L 216,336 " style="fill:none;"/>
+<path d="M 248,16 L 248,336 " style="fill:none;"/>
+<path d="M 280,16 L 280,336 " style="fill:none;"/>
+<path d="M 312,16 L 312,336 " style="fill:none;"/>
+<path d="M 344,16 L 344,336 " style="fill:none;"/>
+<path d="M 24,16 L 344,16 " style="fill:none;"/>
+<path d="M 24,48 L 344,48 " style="fill:none;"/>
+<path d="M 72,64 L 104,64 " style="fill:none;"/>
+<path d="M 24,80 L 344,80 " style="fill:none;"/>
+<path d="M 72,96 L 104,96 " style="fill:none;"/>
+<path d="M 24,112 L 344,112 " style="fill:none;"/>
+<path d="M 64,128 L 80,128 " style="fill:none;"/>
+<path d="M 96,128 L 112,128 " style="fill:none;"/>
+<path d="M 24,144 L 344,144 " style="fill:none;"/>
+<path d="M 24,176 L 344,176 " style="fill:none;"/>
+<path d="M 24,208 L 344,208 " style="fill:none;"/>
+<path d="M 24,240 L 344,240 " style="fill:none;"/>
+<path d="M 24,272 L 344,272 " style="fill:none;"/>
+<path d="M 24,304 L 344,304 " style="fill:none;"/>
+<path d="M 24,336 L 344,336 " style="fill:none;"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="40" y="4">0</text><text text-anchor="middle" x="72" y="4">1</text><text text-anchor="middle" x="104" y="4">2</text><text text-anchor="middle" x="136" y="4">3</text><text text-anchor="middle" x="168" y="4">4</text><text text-anchor="middle" x="200" y="4">5</text><text text-anchor="middle" x="232" y="4">6</text><text text-anchor="middle" x="264" y="4">7</text><text text-anchor="middle" x="296" y="4">8</text><text text-anchor="middle" x="328" y="4">9</text><text text-anchor="middle" x="8" y="36">0</text><text text-anchor="middle" x="8" y="68">1</text><text text-anchor="middle" x="64" y="68">x</text><text text-anchor="middle" x="136" y="68">|</text><text text-anchor="middle" x="8" y="100">2</text><text text-anchor="middle" x="136" y="100">|</text><text text-anchor="middle" x="8" y="132">3</text><text text-anchor="middle" x="136" y="132">x</text><text text-anchor="middle" x="8" y="164">4</text><text text-anchor="middle" x="8" y="196">5</text><text text-anchor="middle" x="8" y="228">6</text><text text-anchor="middle" x="8" y="260">7</text><text text-anchor="middle" x="8" y="292">8</text><text text-anchor="middle" x="8" y="324">9</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;20:</b> Excluding bounds.</div></center>
+
+</p><p>
+
+Or am I including them? 
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="368" width="392" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 24,16 L 24,336 " style="fill:none;"/>
+<path d="M 56,16 L 56,336 " style="fill:none;"/>
+<path d="M 72,64 L 72,128 " style="fill:none;"/>
+<path d="M 88,16 L 88,336 " style="fill:none;"/>
+<path d="M 120,16 L 120,336 " style="fill:none;"/>
+<path d="M 136,64 L 136,128 " style="fill:none;"/>
+<path d="M 152,16 L 152,336 " style="fill:none;"/>
+<path d="M 184,16 L 184,336 " style="fill:none;"/>
+<path d="M 216,16 L 216,336 " style="fill:none;"/>
+<path d="M 248,16 L 248,336 " style="fill:none;"/>
+<path d="M 280,16 L 280,336 " style="fill:none;"/>
+<path d="M 312,16 L 312,336 " style="fill:none;"/>
+<path d="M 344,16 L 344,336 " style="fill:none;"/>
+<path d="M 24,16 L 344,16 " style="fill:none;"/>
+<path d="M 24,48 L 344,48 " style="fill:none;"/>
+<path d="M 72,64 L 136,64 " style="fill:none;"/>
+<path d="M 24,80 L 344,80 " style="fill:none;"/>
+<path d="M 24,112 L 344,112 " style="fill:none;"/>
+<path d="M 72,128 L 136,128 " style="fill:none;"/>
+<path d="M 24,144 L 344,144 " style="fill:none;"/>
+<path d="M 24,176 L 344,176 " style="fill:none;"/>
+<path d="M 24,208 L 344,208 " style="fill:none;"/>
+<path d="M 24,240 L 344,240 " style="fill:none;"/>
+<path d="M 24,272 L 344,272 " style="fill:none;"/>
+<path d="M 24,304 L 344,304 " style="fill:none;"/>
+<path d="M 24,336 L 344,336 " style="fill:none;"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="40" y="4">0</text><text text-anchor="middle" x="72" y="4">1</text><text text-anchor="middle" x="104" y="4">2</text><text text-anchor="middle" x="136" y="4">3</text><text text-anchor="middle" x="168" y="4">4</text><text text-anchor="middle" x="200" y="4">5</text><text text-anchor="middle" x="232" y="4">6</text><text text-anchor="middle" x="264" y="4">7</text><text text-anchor="middle" x="296" y="4">8</text><text text-anchor="middle" x="328" y="4">9</text><text text-anchor="middle" x="8" y="36">0</text><text text-anchor="middle" x="8" y="68">1</text><text text-anchor="middle" x="64" y="68">x</text><text text-anchor="middle" x="8" y="100">2</text><text text-anchor="middle" x="8" y="132">3</text><text text-anchor="middle" x="144" y="132">x</text><text text-anchor="middle" x="8" y="164">4</text><text text-anchor="middle" x="8" y="196">5</text><text text-anchor="middle" x="8" y="228">6</text><text text-anchor="middle" x="8" y="260">7</text><text text-anchor="middle" x="8" y="292">8</text><text text-anchor="middle" x="8" y="324">9</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;21:</b> Including bounds.</div></center>
+
+</p><p>
+
+We can't just take whatever approach and agree on it. There are specific reasons to go for one or the other approach, and we'll see more of them in the future when we get deep into the renderer implementation.
+
+</p><p>
+
+Things get even more confusing when you allow things to move around sub-pixel on the grid. Let's say we have a 3&times;3 sprite. It's obvious how we draw it's lined up exactly to a grid: 
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="368" width="392" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 24,16 L 24,336 " style="fill:none;"/>
+<path d="M 56,16 L 56,336 " style="fill:none;"/>
+<path d="M 88,16 L 88,336 " style="fill:none;"/>
+<path d="M 120,16 L 120,64 " style="fill:none;"/>
+<path d="M 120,192 L 120,336 " style="fill:none;"/>
+<path d="M 152,16 L 152,64 " style="fill:none;"/>
+<path d="M 152,192 L 152,336 " style="fill:none;"/>
+<path d="M 184,16 L 184,64 " style="fill:none;"/>
+<path d="M 184,192 L 184,336 " style="fill:none;"/>
+<path d="M 216,16 L 216,64 " style="fill:none;"/>
+<path d="M 216,192 L 216,336 " style="fill:none;"/>
+<path d="M 248,16 L 248,336 " style="fill:none;"/>
+<path d="M 280,16 L 280,336 " style="fill:none;"/>
+<path d="M 312,16 L 312,336 " style="fill:none;"/>
+<path d="M 344,16 L 344,336 " style="fill:none;"/>
+<path d="M 24,16 L 344,16 " style="fill:none;"/>
+<path d="M 24,48 L 344,48 " style="fill:none;"/>
+<path d="M 24,80 L 112,80 " style="fill:none;"/>
+<path d="M 224,80 L 344,80 " style="fill:none;"/>
+<path d="M 24,112 L 112,112 " style="fill:none;"/>
+<path d="M 224,112 L 344,112 " style="fill:none;"/>
+<path d="M 24,144 L 112,144 " style="fill:none;"/>
+<path d="M 224,144 L 344,144 " style="fill:none;"/>
+<path d="M 24,176 L 112,176 " style="fill:none;"/>
+<path d="M 224,176 L 344,176 " style="fill:none;"/>
+<path d="M 24,208 L 344,208 " style="fill:none;"/>
+<path d="M 24,240 L 344,240 " style="fill:none;"/>
+<path d="M 24,272 L 344,272 " style="fill:none;"/>
+<path d="M 24,304 L 344,304 " style="fill:none;"/>
+<path d="M 24,336 L 344,336 " style="fill:none;"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="40" y="4">0</text><text text-anchor="middle" x="72" y="4">1</text><text text-anchor="middle" x="104" y="4">2</text><text text-anchor="middle" x="136" y="4">3</text><text text-anchor="middle" x="168" y="4">4</text><text text-anchor="middle" x="200" y="4">5</text><text text-anchor="middle" x="232" y="4">6</text><text text-anchor="middle" x="264" y="4">7</text><text text-anchor="middle" x="296" y="4">8</text><text text-anchor="middle" x="328" y="4">9</text><text text-anchor="middle" x="8" y="36">0</text><text text-anchor="middle" x="8" y="68">1</text><text text-anchor="middle" x="120" y="84">┏</text><text text-anchor="middle" x="128" y="84">━</text><text text-anchor="middle" x="136" y="84">━</text><text text-anchor="middle" x="144" y="84">━</text><text text-anchor="middle" x="152" y="84">━</text><text text-anchor="middle" x="160" y="84">━</text><text text-anchor="middle" x="168" y="84">━</text><text text-anchor="middle" x="176" y="84">━</text><text text-anchor="middle" x="184" y="84">━</text><text text-anchor="middle" x="192" y="84">━</text><text text-anchor="middle" x="200" y="84">━</text><text text-anchor="middle" x="208" y="84">━</text><text text-anchor="middle" x="216" y="84">┓</text><text text-anchor="middle" x="8" y="100">2</text><text text-anchor="middle" x="120" y="100">┃</text><text text-anchor="middle" x="216" y="100">┃</text><text text-anchor="middle" x="120" y="116">┃</text><text text-anchor="middle" x="216" y="116">┃</text><text text-anchor="middle" x="8" y="132">3</text><text text-anchor="middle" x="120" y="132">┃</text><text text-anchor="middle" x="216" y="132">┃</text><text text-anchor="middle" x="120" y="148">┃</text><text text-anchor="middle" x="216" y="148">┃</text><text text-anchor="middle" x="8" y="164">4</text><text text-anchor="middle" x="120" y="164">┃</text><text text-anchor="middle" x="216" y="164">┃</text><text text-anchor="middle" x="120" y="180">┗</text><text text-anchor="middle" x="128" y="180">━</text><text text-anchor="middle" x="136" y="180">━</text><text text-anchor="middle" x="144" y="180">━</text><text text-anchor="middle" x="152" y="180">━</text><text text-anchor="middle" x="160" y="180">━</text><text text-anchor="middle" x="168" y="180">━</text><text text-anchor="middle" x="176" y="180">━</text><text text-anchor="middle" x="184" y="180">━</text><text text-anchor="middle" x="192" y="180">━</text><text text-anchor="middle" x="200" y="180">━</text><text text-anchor="middle" x="208" y="180">━</text><text text-anchor="middle" x="216" y="180">┛</text><text text-anchor="middle" x="8" y="196">5</text><text text-anchor="middle" x="8" y="228">6</text><text text-anchor="middle" x="8" y="260">7</text><text text-anchor="middle" x="8" y="292">8</text><text text-anchor="middle" x="8" y="324">9</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;22:</b> Sprite on grid.</div></center>
+
+</p><p>
+
+But what if the sprite moves off-center slightly? For example an enemy moves towards the player.
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="368" width="392" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 24,16 L 24,336 " style="fill:none;"/>
+<path d="M 56,16 L 56,336 " style="fill:none;"/>
+<path d="M 88,16 L 88,336 " style="fill:none;"/>
+<path d="M 120,16 L 120,48 " style="fill:none;"/>
+<path d="M 120,176 L 120,336 " style="fill:none;"/>
+<path d="M 152,16 L 152,48 " style="fill:none;"/>
+<path d="M 152,176 L 152,336 " style="fill:none;"/>
+<path d="M 184,16 L 184,48 " style="fill:none;"/>
+<path d="M 184,176 L 184,336 " style="fill:none;"/>
+<path d="M 216,16 L 216,336 " style="fill:none;"/>
+<path d="M 248,16 L 248,336 " style="fill:none;"/>
+<path d="M 280,16 L 280,336 " style="fill:none;"/>
+<path d="M 312,16 L 312,336 " style="fill:none;"/>
+<path d="M 344,16 L 344,336 " style="fill:none;"/>
+<path d="M 24,16 L 344,16 " style="fill:none;"/>
+<path d="M 24,48 L 344,48 " style="fill:none;"/>
+<path d="M 24,80 L 96,80 " style="fill:none;"/>
+<path d="M 208,80 L 344,80 " style="fill:none;"/>
+<path d="M 24,112 L 96,112 " style="fill:none;"/>
+<path d="M 208,112 L 344,112 " style="fill:none;"/>
+<path d="M 24,144 L 96,144 " style="fill:none;"/>
+<path d="M 208,144 L 344,144 " style="fill:none;"/>
+<path d="M 24,176 L 344,176 " style="fill:none;"/>
+<path d="M 24,208 L 344,208 " style="fill:none;"/>
+<path d="M 24,240 L 344,240 " style="fill:none;"/>
+<path d="M 24,272 L 344,272 " style="fill:none;"/>
+<path d="M 24,304 L 344,304 " style="fill:none;"/>
+<path d="M 24,336 L 344,336 " style="fill:none;"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="40" y="4">0</text><text text-anchor="middle" x="72" y="4">1</text><text text-anchor="middle" x="104" y="4">2</text><text text-anchor="middle" x="136" y="4">3</text><text text-anchor="middle" x="168" y="4">4</text><text text-anchor="middle" x="200" y="4">5</text><text text-anchor="middle" x="232" y="4">6</text><text text-anchor="middle" x="264" y="4">7</text><text text-anchor="middle" x="296" y="4">8</text><text text-anchor="middle" x="328" y="4">9</text><text text-anchor="middle" x="8" y="36">0</text><text text-anchor="middle" x="8" y="68">1</text><text text-anchor="middle" x="104" y="68">┏</text><text text-anchor="middle" x="112" y="68">━</text><text text-anchor="middle" x="120" y="68">━</text><text text-anchor="middle" x="128" y="68">━</text><text text-anchor="middle" x="136" y="68">━</text><text text-anchor="middle" x="144" y="68">━</text><text text-anchor="middle" x="152" y="68">━</text><text text-anchor="middle" x="160" y="68">━</text><text text-anchor="middle" x="168" y="68">━</text><text text-anchor="middle" x="176" y="68">━</text><text text-anchor="middle" x="184" y="68">━</text><text text-anchor="middle" x="192" y="68">━</text><text text-anchor="middle" x="200" y="68">┓</text><text text-anchor="middle" x="104" y="84">┃</text><text text-anchor="middle" x="200" y="84">┃</text><text text-anchor="middle" x="8" y="100">2</text><text text-anchor="middle" x="104" y="100">┃</text><text text-anchor="middle" x="200" y="100">┃</text><text text-anchor="middle" x="104" y="116">┃</text><text text-anchor="middle" x="200" y="116">┃</text><text text-anchor="middle" x="8" y="132">3</text><text text-anchor="middle" x="104" y="132">┃</text><text text-anchor="middle" x="200" y="132">┃</text><text text-anchor="middle" x="104" y="148">┃</text><text text-anchor="middle" x="200" y="148">┃</text><text text-anchor="middle" x="8" y="164">4</text><text text-anchor="middle" x="104" y="164">┗</text><text text-anchor="middle" x="112" y="164">━</text><text text-anchor="middle" x="120" y="164">━</text><text text-anchor="middle" x="128" y="164">━</text><text text-anchor="middle" x="136" y="164">━</text><text text-anchor="middle" x="144" y="164">━</text><text text-anchor="middle" x="152" y="164">━</text><text text-anchor="middle" x="160" y="164">━</text><text text-anchor="middle" x="168" y="164">━</text><text text-anchor="middle" x="176" y="164">━</text><text text-anchor="middle" x="184" y="164">━</text><text text-anchor="middle" x="192" y="164">━</text><text text-anchor="middle" x="200" y="164">┛</text><text text-anchor="middle" x="8" y="196">5</text><text text-anchor="middle" x="8" y="228">6</text><text text-anchor="middle" x="8" y="260">7</text><text text-anchor="middle" x="8" y="292">8</text><text text-anchor="middle" x="8" y="324">9</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;23:</b> Sprite off grid.</div></center>
+
+</p><p>
+
+We can't just draw it as is, each individual pixel only accepts one color. At this point you need a strong convention for how this sprite influences border pixels with its colors. If we wanted to fill from (2, 1) to (5, 4), we'd only draw a portion of those colors to allow for a smooth transition. 
+
+</p><p>
+
+We adopt the excluding bounds specifically because of this. This way, we will get all the bounds for potential rounding, without cropping potential overlaps.
+
+</p>
+<a class="target" name="notes">&nbsp;</a><a class="target" name="notes">&nbsp;</a><a class="target" name="toc8">&nbsp;</a><h1>Notes</h1>
+<p>
+
+
+<div class="endnote"><a class="target" name="endnote-win-32">&nbsp;</a><sup>1</sup> We could say that, to a large extent, we've already been applying this approach in the Win32 layer but in reality we've been cheating a bit. We knew what the end result would be so we could roughly set our waypoints. But that isn't an interesting architectural problem, more like cutting and pasting functions from your brain. We didn't even have the waypoints, we just knew the final destination and wrote it. 
+</div>
+</p>
+<a class="target" name="navigation">&nbsp;</a><a class="target" name="navigation">&nbsp;</a><a class="target" name="toc9">&nbsp;</a><h1>Navigation</h1>
+<p>
+
+
+Previous: <a href="../html/day26.html">Day 26. Introduction to Game Architecture</a>
+
+</p><p>
+
+Up Next: <a href="../html/day28.html">Day 28. Drawing a Tile Map</a>
+
+</p><p>
+
+<a href="../index.md.html">Back to Index</a>
+
+</p>
+<div class="nonumberh1">Glossary </div>
+<p>
+
+
+<ul>
+<li class="asterisk">Semantic compression
+</li>
+<li class="asterisk">Compression-oriented programming</li></ul>
+
+</p>
+<div class="nonumberh1">Resources</div>
+<p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<style class="fallback">
+  body {
+    visibility: hidden;
+    font-family: sans-serif;
+  }
+</style>
+
+</p><p>
+
+<script>
+  markdeepOptions = { tocStyle: 'long' };
+  window.alreadyProcessedMarkdeep ||
+    (document.body.style.visibility = 'visible');
+</script>
+
+</p><p>
+
+</p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.13&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.6/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
