@@ -6,9 +6,178 @@ _Video Length (including Q&A): [1h36](https://hero.handmade.network/episode/code
 
 (insert intro.md.html here) 
 
+We are in the middle of our game architecture phase, where we are starting to think about how we want this game's code to be structured and how we want it to work. 
+
+One of the big things we emphasized in the previous two days when talking about architecture and how you should think about it is that you don't want to do a lot of pre-planning. With pre-planning, you usually don't have the information you need to make those good decisions; you'll make mistakes that will cost you a lot of time. Usually, it is better to explore first, learn, and then go back and say, "Okay, now that I've learned what this code should look like structurally, I can say definitively, this is the architecture and move forward." We're taking this approach precisely and will continue with it today.
+
+We won't go deep into the weeds yet; we're saving the hardcore rendering notions for when we write the renderer. However, if we need to cover something while putting it on the screen, we'll briefly discuss it. We're trying to make a first pass of the initial game code so we can start to look at how it looks and think about how it will develop from there.
+
+Today, we'll start laying out a basic tile map and a character to navigate it.
+
+------------------------
+
+# Floating Point Color
+
+## Floating-Point vs Integer Colors
+
+Let's get started! We're right here at the beginning of the game. It's a giant open field in front of us! If you run the game, you will notice that this field is very pink; it's not very exciting. You might even get a temptation to clear the screen to black or white instead, but having an intense magenta as a base background has its uses. When we make a little tile map with its little squares and color the squares in, we'll be able to see anywhere we are not filling: the pink will show through.
+
+We also wrote a little function to draw a rectangle on the screen, ensuring it wouldn't crash our game and passing a simple hexadecimal color to it. 
+
+![Figure [x]: Our lone rectangle.](../media/day28/screen-1.gif) 
+
+As discussed during [Day 4][], our bit pattern is `0x AA RR GG BB` (with alpha channel unused). If you're from the web programming world, you should be familiar with this layout, which is `#RRGGBB`. However, you may want to do some operations with these colors. For example, blend one color into another or make it darker or lighter. Because modern processors have much bigger floating-point units than integer units, this sort of math would be faster if done on a floating-point number. 
+
+So, even at these early stages, we want to _think generally_ about colors in a floating-point format (one `float` per Red, Green, and Blue channels) and only "pack" the 32-bit floats into a single 32-bit int for concrete operations: storage, output into the buffer, etc.
+
+!!! Note Why red-green-blue?
+    You may wonder why we even have Red, Green, and Blue as our basis for colors. In summary, it has to do with how the human eye functions, and we briefly touch on this in the Subsection [A Bit of Color Theory].
+
+Now, when outputting red color, we can say that since our monitor has a particular maximum brightness, we can encode the darkest red (where no red is output at all) and the brightest red as a range from 0 to 1. The same applies to green and blue values. Adopting this convention makes our math with colors more manageable and effectively converts whatever underlying real value into a _percentage_, making it a dimension-free value we can easily convert afterward.
+
+## Convert `DrawRectangle` to Accept Floating-Point Colors
+
+Having said that, we now want to change our `DrawRectangle` to accept floating-point colors. 
+
+~~~~~~~ C++
+internal void
+DrawRectangle(game_offscreen_buffer *Buffer,
+              f32 RealMinX, f32 RealMinY, f32 RealMaxX, f32 RealMaxY, 
+~~~~~~~ C++ delete
+              u32 Color)
+~~~~~~~ C++ add
+              f32 R, f32 G, f32 B)
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Changing the signature of `DrawRectangle`.]
+
+We must rebuild our `Color` value inside `DrawRectangle`. To do that, we need to find a way to _pack_ a 32-bit floating-point color value into an 8-bit unsigned int. 
+
+An 8-bit number has 256 possible values, so our 0-1 floating-point number should translate to the 0-255 range. The simplest way would be to write `(u8)R * 255.0f`, but let's make the same rounding we did [last time][day 27], to allow our number to round to max value if it's close enough.
+
+~~~~~~~ C++
+if (MaxY > Buffer->Height)
+{
+    MaxY = Buffer->Height;
+}
+
+~~~~~~~ C++ add
+u32 Color = (u32)(RoundReal32ToInt32(R * 255.0f)
+                  RoundReal32ToInt32(G * 255.0f)
+                  RoundReal32ToInt32(B * 255.0f));
+~~~~~~~ C++
+u8 *Row = // ... 
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > DrawRectangle]</file> Converting numbers from floating point to integers.]
+
+Now, we need to think about how we will pack the numbers. Similarly to what we did on [Day 4][], we need to do some _bit shifting_ (`<<`) and _bitwise OR_ (`|`) operations to put three 8-bit values into one 32-bit value.
+
+* The bits 24-32 are unused, so we don't need to do anything with them.
+* We shift __Red__'s 8 bits by 16 to occupy bits from 16 to 24.
+* We shift __Green__'s 8 bits by 8 to occupy bits 8 to 16.
+* We don't shift __Blue__'s 8 bits (or, if you prefer, move them by 0) to occupy bits 0 to 8.
+
+************************************
+*          32   24   16    8    0  *
+*           .----+----+----+----.  *
+*           |    |        << 16 |  *
+*      Red: |    |  <------- RR |  *
+*           |    | RR |    |    |  *
+*           '----+----+----+----'  *
+*                                  *
+*           .----+----+----+----.  *
+*           |    |    |    << 8 |  *
+*    Green: |    |    |  <-- GG |  *
+*           |    | RR | GG |    |  *
+*           '----+----+----+----'  *
+*                                  *
+*           .----+----+----+----.  *
+*           |    |    |    << 0 |  *
+*     Blue: |    |    |    | BB |  *
+*           |    | RR | GG | BB |  *
+*           '----+----+----+----'  *
+*                                  *
+*           .----+----+----+----.  *
+* Combined: | xx | RR | GG | BB |  *
+*           '----+----+----+----'  *
+************************************
+[Figure [x]: Pixel bits shifted in the register.]
+
+Here is how it looks in the code: 
+
+~~~~~~~ C++
+if (MaxY > Buffer->Height)
+{
+    MaxY = Buffer->Height;
+}
+
+~~~~~~~ C++ edit
+u32 Color = (u32)((RoundReal32ToInt32(R * 255.0f) << 16) | 
+                  (RoundReal32ToInt32(G * 255.0f) << 8)  |
+                  (RoundReal32ToInt32(B * 255.0f) << 0));
+~~~~~~~ C++
+u8 *Row = // ... 
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > DrawRectangle]</file> Packing the RGB values. We don't need to write `<< 0`, doing it here to be explicit.]
+
+This should be it; let's replace the values we're using to call the function:
+
+~~~~~~~ C++ edit
+DrawRectangle(Buffer, 0.0f, 0.0f, (f32)Buffer->Width, (f32)Buffer->Height, 1.0f, 0.0f, 1.0f);
+DrawRectangle(Buffer, 10.0f, 10.0f, 30.0f, 30.f, 0.0f, 1.0f, 1.0f);
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Using the updated `DrawRectangle`.]
+
+We should see no changes after recompiling, indicating that we refactored everything correctly. So now we can easily modify the red, green, and blue values within the 0-1 range, and our rectangles will change colors accordingly. 
+
+## Introduce `RoundReal32ToUInt32`
+
+We could also get more precise with our rounding operation: instead of getting a signed 32-bit value, we can round to an unsigned value instead: 
+
+~~~~~~~ C++
+internal s32
+RoundReal32ToInt32(f32 Number)
+{
+    s32 Result = (s32)(Number + 0.5f);
+    return (Result);
+}
+
+~~~~~~~ C++ add
+internal u32
+RoundReal32ToUInt32(f32 Number)
+{
+    u32 Result = (u32)(Number + 0.5f);
+    return (Result);
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Introducing `RoundReal32ToUInt32`.]
+
+While we might not necessarily need this distinction right now, it might come in handy in the future. In the meantime, let's use it in our `DrawRectangle` function: 
+
+~~~~~~~ C++ edit
+u32 Color = ((RoundReal32ToUInt32(R * 255.0f) << 16) | 
+             (RoundReal32ToUInt32(G * 255.0f) << 8)  |
+             (RoundReal32ToUInt32(B * 255.0f) << 0));
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > DrawRectangle]</file> Using `RoundReal32ToUInt32`.]
+
+23:32
+
+0:54 - overview
+3:30 - floating point color discussion
+16:50 - doing the color in floating point
+23:40 - Showing possible structs we want to pull out
+25:03 - Starting a basic tile map
+28:10 - Looping through the tilemap to draw
+37:32 - Getting a player to the screen
+46:26 - Basic character movement
+48:00 - Debugging slow player movement
+
+
+
 ------------------------
 <!-- 
 Useful captions
+Subsection [name of the section]
 Caption under the listing: [Listing [x]: <file>[]</file> .]
 Picture or gif: ![Figure [x]: .](../media/dayXXX/.jpg) 
 Chart: [Figure [x]: .]
@@ -43,6 +212,40 @@ Chart: [Figure [x]: .]
 # Programming Notions 
 
 # Side Considerations 
+
+## A Bit of Color Theory
+
+Light is a type of radiation visible to a human eye. Any electromagnetic radiation consists of waves oscillating at varying speeds, and the _cone cells_ in our eyes can capture three separate ranges that roughly correspond to red, green, and blue light. (The ranges vary by person and age, so providing an exact definition is impossible.) Because these ranges overlap, our eyes can perceive various colors by combining these three "primary" colors.
+
+![Figure [x]: Average spectra of human cone cells.](../media/day28/eye-spectrum.svg) 
+
+Similarly, you can take any three colors or properties of a color and create a _[Color space][]_. You can thus arrive at the _[color models][]_ describing a color in three or four values, such as: 
+
+* __RGB__: describes how much Red, Green, and Blue light needs to be _emitted_ to produce a given color. Adding all three at maximum produces white.
+
+![Figure [x]: RGB Color model.](../media/day28/rgb-additive.gif) 
+
+* __CMY__ (or __CMYK__): used in paint or print to indicate how much Cyan, Magenta, and Yellow produce colors on a white sheet or canvas. Adding all three at maximum produces black.
+
+* __HSL__: Describes the color in terms of Hue, Saturation, and Lightness, where lightness goes from black to white, with base color in the middle.
+
+![Figure [x]: HSL Color model, represented on a cylinder.](../media/day28/hsl-cylinder.png) 
+
+* __HSV__: Similar to HSL, it describes the color in terms of Hue and Saturation but replaces Lightness with Value (black to maximum chromaticity).
+
+![Figure [x]: HSV Color model.](../media/day28/hsv-cylinder.png) 
+
+If you go a bit deeper and describe that color space mathematically, you can arrive at specific color _[gamut][]s_. These are then used as standards for hardware production or general usage. If you pick the colors closer to the primary human eye colors, you get a broader range of the colors that a device can output (printer or display) or perceive (camera or scanner).
+
+![Figure [x]: sRGB Color Gamut provided specifications for the displays in the late 90s and is the current web colorspace.](../media/day28/srgb-gamut.png) 
+
+Modern consumer screens use arrays of LEDs that emit different strengths of red, green, and blue light to mix the colors. When these arrays are dense enough, we can't tell the difference and accept the mixed colors they produce.
+
+![Figure [x]: Modern LED screen under a microscope.](../media/day28/amoled-screen.jpg) 
+
+As programmers, we _generally_ don't need to represent the colors in any "better" way than RGB. There are exceptions to this when we do our computations; if we go for high photorealism, it may be necessary to simulate the actual wavelength of the light as opposed to its RGB value. But it's always true regarding the output of the actual pixels on a physical screen, i.e., when we want to render a computed image. We can produce any colors in the respective gamut by adjusting the intensity of red, green, and blue pixel components.
+
+_(Back to Subsection [Floating-Point vs Integer Colors])_
 
 # Navigation 
 
