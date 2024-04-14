@@ -160,17 +160,349 @@ u32 Color = ((RoundReal32ToUInt32(R * 255.0f) << 16) |
 ~~~~~~~
 [Listing [x]: <file>[handmade.cpp > DrawRectangle]</file> Using `RoundReal32ToUInt32`.]
 
-23:32
+## Noting New Emerging Structures
 
-0:54 - overview
-3:30 - floating point color discussion
-16:50 - doing the color in floating point
-23:40 - Showing possible structs we want to pull out
-25:03 - Starting a basic tile map
-28:10 - Looping through the tilemap to draw
-37:32 - Getting a player to the screen
-46:26 - Basic character movement
-48:00 - Debugging slow player movement
+You might have noticed already that some structures are starting to emerge here. For instance, we're probably not often going to pass a red value by itself. It's going to always come with a green and a blue.
+
+And so, game architecture-wise, you can start to see what we'll eventually do here: make a _struct_ that will capture the concept of Color so that we don't have to keep passing our Rs, Gs, and Bs around. We won't do it yet because, so far, we have only used it in one function. We don't have enough information on what such a structure should and should not contain. 
+
+You should start paying attention to these things, feeling this itch in the back of your head. For example, you might note some operations happening on a color in the future. Maybe someone will try to represent them as `u32`; others will work with the `f32` representation. So we'll be passing a bunch of things together. There are many things to find once you know what to look for. 
+
+Similarly, a rectangle might be another structure you might want to pay attention to. These structures are starting to emerge already, and we haven't even done anything yet! 
+
+# Start the Tile Map
+
+!!! Warning Reminder About Bugs
+    This series is not about presenting the finished product in a neat tutorial. Bugs will find their way into your code; learning to find and fix them is an important skill to learn. If you find a bug quickly and want to fix it immediately, go ahead! We'll be doing more and more debugging as the series progresses.
+
+Let's make the most straightforward tile map you can imagine! We'll take a 32-bit value and spread it around a bit. 
+
+## Define the Grid
+
+We want to start with a grid 16 tiles across and 9 down, the same as the HD aspect ratio.
+
+~~~~~~~ C++ add
+u32 TileMap[16][9];
+~~~~~~~ C++
+
+DrawRectangle(Buffer, 0.0f, 0.0f, (f32)Buffer->Width, (f32)Buffer->Height, 1.0f, 0.0f, 1.0f);
+DrawRectangle(Buffer, 10.0f, 10.0f, 30.0f, 30.f, 0.0f, 1.0f, 1.0f);
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Introducing the tile map.]
+
+Maybe it's too big for now, but we can adjust it in the future. 
+
+`TileMap` is an array of arrays of `u32`s, also known as a 2D array or double array. In fact, similarly to what we did [last time][day 27], we want to invert X and Y positions because we want the X values to be packed together. 16 will go sequentially, and 9 will be like row offsets.
+
+~~~~~~~ C++ edit
+u32 TileMap[9][16];
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Putting Y count to be in front of X counts.]
+
+Now, we want to define the values for our simple map right there:
+
+~~~~~~~ C++ edit
+u32 TileMap[9][16] = 
+~~~~~~~ C++ add
+{
+    {0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+    {0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+    {0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+    {0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+    
+    {0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+    {0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+    {0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+    {0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+    
+    {0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0}
+};
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Defining the values for our tiles.]
+
+Now, let's set some values to the tiles to make sure we're drawing what we want: 
+
+~~~~~~~ C++
+u32 TileMap[9][16] = 
+~~~~~~~ C++ edit
+{
+    {0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0},
+    {0, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0},
+    {0, 1, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0},
+    {0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 1},
+    
+    {0, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0},
+    {0, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0},
+    {0, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0},
+    {0, 1, 1, 1,  1, 0, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0},
+    
+    {0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0}
+};
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Drawing some patterns.]
+
+This way, we expect the final result will look something like this: 
+
+******************************************************
+*       .------------------------------+-.           *
+*       |Handmade Hero                 |X|           *
+*       +------------------------------+-+           *
+*       |                ▉▉      ▉▉      |           *
+*       |  ▉▉      ▉▉    ▉▉        ▉▉    |           *
+*       |  ▉▉            ▉▉          ▉▉  |           *
+*       |                ▉▉            ▉▉|           *
+*       |  ▉▉      ▉▉    ▉▉          ▉▉  |           *
+*       |  ▉▉      ▉▉    ▉▉        ▉▉    |           *
+*       |          ▉▉    ▉▉      ▉▉      |           *
+*       |  ▉▉▉▉▉▉▉▉      ▉▉        ▉▉    |           *
+*       |                ▉▉           ▉▉ |           *
+*       '--------------------------------'           *
+******************************************************
+[Figure [x]: Our expected output.]
+
+## Render rectangles
+
+Every number here will represent a type of tile. Eventually, it may be land, water, rock, or whatever. For now, though, we will have colored rectangles depending on the tile type. Let's throw a quick `for` loop after we clear our screen. We can also get rid of our small cyan rectangle.
+
+~~~~~~~ C++
+DrawRectangle(Buffer, 0.0f, 0.0f, (f32)Buffer->Width, (f32)Buffer->Height, 1.0f, 0.0f, 1.0f);
+~~~~~~~ C++ add
+
+for(int Row = 0;
+        Row < 9;
+        ++Row)
+{
+    for(int Column = 0;
+            Column < 16;
+            ++Column)
+    {
+        
+    }
+}
+
+~~~~~~~ C++ delete
+DrawRectangle(Buffer, 10.0f, 10.0f, 30.0f, 30.f, 0.0f, 1.0f, 1.0f);
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Iterating over the tiles.]
+
+Inside the double `for` loop, we want to access the tile ID. In the future, the ID might access a sprite or a color. We'll assign shades of gray depending on the ID because we don't have any of that yet.
+
+~~~~~~~ C++
+for(int Row = 0; /*...*/)
+{
+    for(int Column = 0; /*...*/)
+    {
+~~~~~~~ C++ add
+        u32 TileID = TileMap[Row][Column];
+        f32 Gray = 0.5f;
+        if (TileID == 1)
+        {
+            Gray = 1.0f;
+        }
+~~~~~~~ C++
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Differentiating different tiles.]
+
+Then, when we draw the rectangle, we will need some other info: 
+
+* `MinX`: We'll get to it in a second.
+* `MinY`: Same; let's leave it aside for a moment.
+* `MaxX`: If we know the `MinX`, `MaxX` is the same + tile width
+* `MaxY`: If we know the `MinY`, `MaxY` is the same + tile height
+
+We can then pass all of this over to our `DrawRectangle` function. We'll pass our `Gray` value for Red, Green, and Blue.
+
+~~~~~~~ C++
+for(int Row = 0; /*...*/)
+{
+    for(int Column = 0; /*...*/)
+    {
+        u32 TileID = TileMap[Row][Column];
+        f32 Gray = 0.5f;
+        if (TileID == 1)
+        {
+            Gray = 1.0f;
+        }
+        
+~~~~~~~ C++ add
+        f32 MinX = ;
+        f32 MinY = ;
+        f32 MaxX = MinX + TileWidth;
+        f32 MaxY = MinY + TileHeight;
+        
+        DrawRectangle(Buffer, MinX, MinY, MaxX, MaxY, Gray, Gray, Gray);
+~~~~~~~ C++
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Defining things we need to draw the rectangle.]
+
+Now, how do we calculate `MinX` and `MinY`? Well, we've got a row value and a column value, so for each row, we're going down by one tile height each time it increments. Which we already know is going to be some value we'll define in a moment. The same logic will apply to `MinX`.
+
+That said, `Row` is an integer, whereas we want a float. So, we need to convert that to a floating point value. Unlike rounding to int, conversion to float is automatic in C, but we still want to be explicit about what's happening in the code. This precaution allows us to avoid weird mistakes and avoid having the compiler not do what we expect it to.
+
+Let's also say we want some base offset that we'll call `UpperLeftX` and `UpperLeftY`:
+
+~~~~~~~ C++
+for(int Row = 0; /*...*/)
+{
+    for(int Column = 0; /*...*/)
+    {
+        u32 TileID = TileMap[Row][Column];
+        f32 Gray = 0.5f;
+        if (TileID == 1)
+        {
+            Gray = 1.0f;
+        }
+        
+~~~~~~~ C++ edit
+        f32 MinX = UpperLeftX + ((f32)Column) * TileWidth;
+        f32 MinY = UpperLeftY + ((f32)Row) * TileHeight;
+~~~~~~~ C++
+        f32 MaxX = MinX + TileWidth;
+        f32 MaxY = MinY + TileHeight;
+        
+        DrawRectangle(Buffer, MinX, MinY, MaxX, MaxY, Gray, Gray, Gray);
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Defining `MinX` and `MinY`.]
+
+What's left is to define `UpperLeftX`, `UpperLeftY`, `TileWidth`, and `TileHeight`. We'll do it outside the `for` loop and give them some random numbers, to begin with:
+
+~~~~~~~ C++ add
+f32 UpperLeftX = 10;
+f32 UpperLeftY = 10;
+f32 TileWidth = 100;
+f32 TileHeight = 100;
+
+~~~~~~~ C++
+for(int Row = 0;
+    Row < 9;
+    ++Row)
+{
+    for(int Column = 0;
+        Column < 16;
+        ++Column)
+    {
+        u32 TileID = TileMap[Row][Column];
+        f32 Gray = 0.5f;
+        if (TileID == 1)
+        {
+            Gray = 1.0f;
+        }
+        
+        f32 MinX = UpperLeftX + ((f32)Column) * TileWidth;
+        f32 MinY = UpperLeftY + ((f32)Row) * TileHeight;
+        f32 MaxX = MinX + TileWidth;
+        f32 MaxY = MinY + TileHeight;
+        
+        DrawRectangle(Buffer, MinX, MinY, MaxX, MaxY, Gray, Gray, Gray);
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Ready to compile.]
+
+We are ready to compile! Let's see how it looks: 
+
+![Figure [x]: Our first tile map.](../media/day28/screen-2.gif) 
+
+We need to adjust our values if we want the tile map to fit on the screen: 
+
+~~~~~~~ C++ edit
+f32 UpperLeftX = 0;
+f32 UpperLeftY = 0;
+f32 TileWidth = 60;
+f32 TileHeight = 60;
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Adjusting the tilemap size and position.]
+
+![Figure [x]: Looks good.](../media/day28/screen-3.gif) 
+
+## Tweaking
+
+There we go! Now, we can modify the tile map values as we want. Let's say we want to create a classic dungeon with walls all around, some obstacles, maybe with the doors in the middle.
+
+~~~~~~~ C++
+u32 TileMap[9][16] = 
+{
+~~~~~~~ C++ edit
+    {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1},
+    {1, 1, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0,  0, 1, 0, 1},
+    {1, 1, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 1},
+    {0, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0},
+    {1, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 1},
+    {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  1, 0, 0, 1},
+    {1, 1, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 1},
+    {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1}
+~~~~~~~ C++
+};
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Modifying the map layout.]
+
+![Figure [x]: Your classic Zelda dungeon.](../media/day28/screen-4.gif) 
+
+But now we have a big problem! The doors are not centered. Fortunately, it's easy to fix: we will make the grid width odd. It will require us to make some changes though: 
+
+~~~~~~~ C++ edit
+u32 TileMap[9][17] = 
+{
+    {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1},
+    {1, 1, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  1},
+    {1, 1, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1},
+    {0, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  0},
+    {1, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0,  1},
+    {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0,  1},
+    {1, 1, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  1},
+    {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1}
+};
+~~~~~~~ C++
+DrawRectangle(Buffer, 0.0f, 0.0f, (f32)Buffer->Width, (f32)Buffer->Height, 1.0f, 0.0f, 1.0f);
+
+~~~~~~~ C++ edit
+f32 UpperLeftX = -30;
+~~~~~~~ C++
+f32 UpperLeftY = 0;
+f32 TileWidth = 60;
+f32 TileHeight = 60;
+
+for(int Row = 0;
+    Row < 9;
+    ++Row)
+{
+    for(int Column = 0;
+~~~~~~~ C++ edit
+        Column < 17;
+~~~~~~~ C++
+        ++Column)
+    {
+        // ...
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Modifying the map layout more.]
+
+![Figure [x]: Nice and centered.](../media/day28/screen-5.gif) 
+
+You will notice we had to modify `UpperLeftX` to ensure the right wall is visible again. That said, if we wanted to have this "half wall" effect for our rows as well, we'd have to make the row count even (which would bring the vertical doors off-center) or change the tile height (which would stretch the tiles to become rectangles instead of squares).
+
+These questions are why we do exploration; we want to think about all these things up front before making decisions about our tile map size, etc. To solve them, we might study old games; maybe they did different dimensions because the standard aspect ratio was 4:3 before HD TVs became commonplace. It's a good moment to put on your thinking cap and consider all this.
+
+
+
+* 0:54 - overview
+* 3:30 - floating point color discussion
+* 16:50 - doing the color in floating point
+* 23:40 - Showing possible structs we want to pull out
+* 25:03 - Starting a basic tile map
+* 28:10 - Looping through the tilemap to draw
+* 37:32 - Getting a player to the screen
+* 46:26 - Basic character movement
+* 48:00 - Debugging slow player movement
 
 
 
@@ -206,6 +538,8 @@ Chart: [Figure [x]: .]
 
 
 # Recap 
+
+All we've written so far is just exploratory code. At this point, anything goes. Ignore the code quality, errors, performance, or anything else! The goal of exploration is to see what you would type in if you just had to do the thing fast, in our case, draw a tile map on the screen. That is the only thing that you should be worrying about. At this point, you should never give even a moment's thought to anything you see in those books, like writing clean code or effective C++. We should shut off all of this because we want to know what the CPU should do to achieve what we want, at least some notion of the final code. The next step will be to review what we wrote and figure out the clean way to make it. 
 
 # Exercises 
 
