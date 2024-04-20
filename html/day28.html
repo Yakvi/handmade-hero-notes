@@ -4,8 +4,927 @@
 <link rel="stylesheet" href="../css/html-style.css">
 <link rel="stylesheet" href="../css/style.css">
 
+
+<object style="display: none; visibility: hidden;" class="eusw@iit.com.ua"></object><span class="md"><p><title>Day 28. Drawing a Tile Map</title><div class="title"> Day 28. Drawing a Tile Map </div>
+
+<div class="afterTitles"></div>
+<em class="underscore">Video Length (including Q&A): <a href="https://hero.handmade.network/episode/code/day028/">1h36</a></em> 
+
+</p><p>
+
+Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with no external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
+
+</p><p>
+
+We are in the middle of our game architecture phase, where we are starting to think about how we want this game's code to be structured and how we want it to work. 
+
+</p><p>
+
+One of the big things we emphasized in the previous two days when talking about architecture and how you should think about it is that you don't want to do a lot of pre-planning. With pre-planning, you usually don't have the information you need to make those good decisions; you'll make mistakes that will cost you a lot of time. Usually, it is better to explore first, learn, and then go back and say, &ldquo;Okay, now that I've learned what this code should look like structurally, I can say definitively, this is the architecture and move forward.&rdquo; We're taking this approach precisely and will continue with it today.
+
+</p><p>
+
+We won't go deep into the weeds yet; we're saving the hardcore rendering notions for when we write the renderer. However, if we need to cover something while putting it on the screen, we'll briefly discuss it. We're trying to make a first pass of the initial game code so we can start to look at how it looks and think about how it will develop from there.
+
+</p><p>
+
+Today, we'll start laying out a basic tile map and a character to navigate it.
+
+</p><p>
+
+<hr/>
+
+</p>
 <div class="longTOC"><p align="center">
     <span align="right"><a href="day27.html">Day 27</a></span>
     <a href="../index.html"><img src = "../media/logo.png"></a>
     <span align="left"><a href="day28.html">Day 28</a></span>
 </p><p><a href="#" class="tocTop">(Top)</a><br/>
+<a href="#floatingpointcolor" class="level1"><span class="tocNumber">1&nbsp; </span>Floating Point Color</a><br/>
+&nbsp;&nbsp;<a href="#floatingpointcolor/floating-pointvsintegercolors" class="level2"><span class="tocNumber">1.1&nbsp; </span>Floating-Point vs Integer Colors</a><br/>
+&nbsp;&nbsp;<a href="#floatingpointcolor/convertdrawrectangletoacceptfloating-pointcolors" class="level2"><span class="tocNumber">1.2&nbsp; </span>Convert <code>DrawRectangle</code> to Accept Floating-Point Colors</a><br/>
+&nbsp;&nbsp;<a href="#floatingpointcolor/introduceroundreal32touint32" class="level2"><span class="tocNumber">1.3&nbsp; </span>Introduce <code>RoundReal32ToUInt32</code></a><br/>
+&nbsp;&nbsp;<a href="#floatingpointcolor/notingnewemergingstructures" class="level2"><span class="tocNumber">1.4&nbsp; </span>Noting New Emerging Structures</a><br/>
+<a href="#startthetilemap" class="level1"><span class="tocNumber">2&nbsp; </span>Start the Tile Map</a><br/>
+&nbsp;&nbsp;<a href="#startthetilemap/definethegrid" class="level2"><span class="tocNumber">2.1&nbsp; </span>Define the Grid</a><br/>
+&nbsp;&nbsp;<a href="#startthetilemap/renderrectangles" class="level2"><span class="tocNumber">2.2&nbsp; </span>Render rectangles</a><br/>
+&nbsp;&nbsp;<a href="#startthetilemap/tweaking" class="level2"><span class="tocNumber">2.3&nbsp; </span>Tweaking</a><br/>
+<a href="#gettingaplayeronthescreen" class="level1"><span class="tocNumber">3&nbsp; </span>Getting a Player on the Screen</a><br/>
+&nbsp;&nbsp;<a href="#gettingaplayeronthescreen/gamephysicsandplayerposition" class="level2"><span class="tocNumber">3.1&nbsp; </span>Game Physics and Player Position</a><br/>
+&nbsp;&nbsp;<a href="#gettingaplayeronthescreen/drawingtheplayer" class="level2"><span class="tocNumber">3.2&nbsp; </span>Drawing the Player</a><br/>
+&nbsp;&nbsp;<a href="#gettingaplayeronthescreen/playermovement" class="level2"><span class="tocNumber">3.3&nbsp; </span>Player Movement</a><br/>
+&nbsp;&nbsp;<a href="#gettingaplayeronthescreen/frame-independentcharactermovement" class="level2"><span class="tocNumber">3.4&nbsp; </span>Frame-independent Character Movement</a><br/>
+<a href="#recap" class="level1"><span class="tocNumber">4&nbsp; </span>Recap</a><br/>
+<a href="#sideconsiderations" class="level1"><span class="tocNumber">5&nbsp; </span>Side Considerations</a><br/>
+&nbsp;&nbsp;<a href="#sideconsiderations/abitofcolortheory" class="level2"><span class="tocNumber">5.1&nbsp; </span>A Bit of Color Theory</a><br/>
+<a href="#navigation" class="level1"><span class="tocNumber">6&nbsp; </span>Navigation</a><br/>
+</p></div><a class="target" name="floatingpointcolor">&nbsp;</a><a class="target" name="floatingpointcolor">&nbsp;</a><a class="target" name="toc1">&nbsp;</a><h1>Floating Point Color</h1>
+
+<a class="target" name="floating-pointvsintegercolors">&nbsp;</a><a class="target" name="floatingpointcolor/floating-pointvsintegercolors">&nbsp;</a><a class="target" name="toc1.1">&nbsp;</a><h2>Floating-Point vs Integer Colors</h2>
+<p>
+
+
+Let's get started! We're right here at the beginning of the game. It's a giant open field in front of us! If you run the game, you will notice that this field is very pink; it's not very exciting. You might even get a temptation to clear the screen to black or white instead, but having an intense magenta as a base background has its uses. When we make a little tile map with its little squares and color the squares in, we'll be able to see anywhere we are not filling: the pink will show through.
+
+</p><p>
+
+We also wrote a little function to draw a rectangle on the screen, ensuring it wouldn't crash our game and passing a simple hexadecimal color to it. 
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day28/screen-1.gif" target="_blank"><img class="markdeep" src="../media/day28/screen-1.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;1:</b> Our lone rectangle.</span></center></div></center> 
+
+</p><p>
+
+As discussed during <a href="../html/day4.html">Day 4</a>, our bit pattern is <code>0x AA RR GG BB</code> (with alpha channel unused). If you're from the web programming world, you should be familiar with this layout, which is <code>#RRGGBB</code>. However, you may want to do some operations with these colors. For example, blend one color into another or make it darker or lighter. Because modern processors have much bigger floating-point units than integer units, this sort of math would be faster if done on a floating-point number. 
+
+</p><p>
+
+So, even at these early stages, we want to <em class="underscore">think generally</em> about colors in a floating-point format (one <code>float</code> per Red, Green, and Blue channels) and only &ldquo;pack&rdquo; the 32-bit floats into a single 32-bit int for concrete operations: storage, output into the buffer, etc.
+
+</p><p>
+
+<div class="admonition note"><div class="admonition-title"> Why red-green-blue?</div>
+
+</p><p>
+
+    You may wonder why we even have Red, Green, and Blue as our basis for colors. In summary, it has to do with how the human eye functions, and we briefly touch on this in the Subsection  <a href="#toc5.1">5.1</a>.</div>
+
+</p><p>
+
+Now, when outputting red color, we can say that since our monitor has a particular maximum brightness, we can encode the darkest red (where no red is output at all) and the brightest red as a range from 0 to 1. The same applies to green and blue values. Adopting this convention makes our math with colors more manageable and effectively converts whatever underlying real value into a <em class="underscore">percentage</em>, making it a dimension-free value we can easily convert afterward.
+
+</p>
+<a class="target" name="convertdrawrectangletoacceptfloating-pointcolors">&nbsp;</a><a class="target" name="floatingpointcolor/convertdrawrectangletoacceptfloating-pointcolors">&nbsp;</a><a class="target" name="toc1.2">&nbsp;</a><h2>Convert <code>DrawRectangle</code> to Accept Floating-Point Colors</h2>
+<p>
+
+
+Having said that, we now want to change our <code>DrawRectangle</code> to accept floating-point colors. 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">DrawRectangle</span><span class="hljs-params">(game_offscreen_buffer *Buffer,</span>
+<span class="line">              f32 RealMinX, f32 RealMinY, f32 RealMaxX, f32 RealMaxY, </span></span></span><div class=" delete"><span class="line">              u32 Color)</span></div><div class=" add"><span class="line">              f32 R, f32 G, f32 B)</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;1:</b> <file>[handmade.cpp]</file> Changing the signature of <code>DrawRectangle</code>.</div></center>
+<p>
+
+
+We must rebuild our <code>Color</code> value inside <code>DrawRectangle</code>. To do that, we need to find a way to <em class="underscore">pack</em> a 32-bit floating-point color value into an 8-bit unsigned int. 
+
+</p><p>
+
+An 8-bit number has 256 possible values, so our 0-1 floating-point number should translate to the 0-255 range. The simplest way would be to write <code>(u8)R * 255.0f</code>, but let's make the same rounding we did <a href="../html/day27.html">last time</a>, to allow our number to round to max value if it's close enough.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span> (MaxY &gt; Buffer-&gt;Height)</span>
+<span class="line">{</span>
+<span class="line">    MaxY = Buffer-&gt;Height;</span>
+<span class="line">}</span>
+<span class="line"></span><div class=" add"><span class="line">u32 Color = (u32)(RoundReal32ToInt32(R * <span class="hljs-number">255.0f</span>)</span>
+<span class="line">                  RoundReal32ToInt32(G * <span class="hljs-number">255.0f</span>)</span>
+<span class="line">                  RoundReal32ToInt32(B * <span class="hljs-number">255.0f</span>));</span></div><span class="line">u8 *Row = <span class="hljs-comment">// ... </span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;2:</b> <file>[handmade.cpp > DrawRectangle]</file> Converting numbers from floating point to integers.</div></center>
+<p>
+
+
+Now, we need to think about how we will pack the numbers. Similarly to what we did on <a href="../html/day4.html">Day 4</a>, we need to do some <em class="underscore">bit shifting</em> (<code>&lt;&lt;</code>) and <em class="underscore">bitwise OR</em> (<code>|</code>) operations to put three 8-bit values into one 32-bit value.
+
+</p><p>
+
+<ul>
+<li class="asterisk">The bits 24-32 are unused, so we don't need to do anything with them.
+</li>
+<li class="asterisk">We shift <strong class="underscore">Red</strong>'s 8 bits by 16 to occupy bits from 16 to 24.
+</li>
+<li class="asterisk">We shift <strong class="underscore">Green</strong>'s 8 bits by 8 to occupy bits 8 to 16.
+</li>
+<li class="asterisk">We don't shift <strong class="underscore">Blue</strong>'s 8 bits (or, if you prefer, move them by 0) to occupy bits 0 to 8.</li></ul>
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="368" width="280" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 88,16 L 88,80 " style="fill:none;"/>
+<path d="M 88,112 L 88,176 " style="fill:none;"/>
+<path d="M 88,208 L 88,272 " style="fill:none;"/>
+<path d="M 88,304 L 88,336 " style="fill:none;"/>
+<path d="M 128,16 L 128,80 " style="fill:none;"/>
+<path d="M 128,112 L 128,176 " style="fill:none;"/>
+<path d="M 128,208 L 128,272 " style="fill:none;"/>
+<path d="M 128,304 L 128,336 " style="fill:none;"/>
+<path d="M 168,56 L 168,80 " style="fill:none;"/>
+<path d="M 168,112 L 168,176 " style="fill:none;"/>
+<path d="M 168,208 L 168,272 " style="fill:none;"/>
+<path d="M 168,304 L 168,336 " style="fill:none;"/>
+<path d="M 208,56 L 208,80 " style="fill:none;"/>
+<path d="M 208,152 L 208,176 " style="fill:none;"/>
+<path d="M 208,240 L 208,272 " style="fill:none;"/>
+<path d="M 208,304 L 208,336 " style="fill:none;"/>
+<path d="M 248,16 L 248,80 " style="fill:none;"/>
+<path d="M 248,112 L 248,176 " style="fill:none;"/>
+<path d="M 248,208 L 248,272 " style="fill:none;"/>
+<path d="M 248,304 L 248,336 " style="fill:none;"/>
+<path d="M 88,16 L 248,16 " style="fill:none;"/>
+<path d="M 152,48 L 208,48 " style="fill:none;"/>
+<path d="M 88,80 L 248,80 " style="fill:none;"/>
+<path d="M 88,112 L 248,112 " style="fill:none;"/>
+<path d="M 192,144 L 208,144 " style="fill:none;"/>
+<path d="M 88,176 L 248,176 " style="fill:none;"/>
+<path d="M 88,208 L 248,208 " style="fill:none;"/>
+<path d="M 88,272 L 248,272 " style="fill:none;"/>
+<path d="M 88,304 L 248,304 " style="fill:none;"/>
+<path d="M 88,336 L 248,336 " style="fill:none;"/>
+<polygon points="200,144 188,138.4 188,149.6 "  style="stroke:none" transform="rotate(180,192,144 )"/>
+<polygon points="160,48 148,42.4 148,53.6 "  style="stroke:none" transform="rotate(180,152,48 )"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="80" y="4">3</text><text text-anchor="middle" x="88" y="4">2</text><text text-anchor="middle" x="120" y="4">2</text><text text-anchor="middle" x="128" y="4">4</text><text text-anchor="middle" x="160" y="4">1</text><text text-anchor="middle" x="168" y="4">6</text><text text-anchor="middle" x="208" y="4">8</text><text text-anchor="middle" x="248" y="4">0</text><text text-anchor="middle" x="200" y="36">&lt;</text><text text-anchor="middle" x="208" y="36">&lt;</text><text text-anchor="middle" x="224" y="36">1</text><text text-anchor="middle" x="232" y="36">6</text><text text-anchor="middle" x="48" y="52">R</text><text text-anchor="middle" x="56" y="52">e</text><text text-anchor="middle" x="64" y="52">d</text><text text-anchor="middle" x="72" y="52">:</text><text text-anchor="middle" x="224" y="52">R</text><text text-anchor="middle" x="232" y="52">R</text><text text-anchor="middle" x="144" y="68">R</text><text text-anchor="middle" x="152" y="68">R</text><text text-anchor="middle" x="208" y="132">&lt;</text><text text-anchor="middle" x="216" y="132">&lt;</text><text text-anchor="middle" x="232" y="132">8</text><text text-anchor="middle" x="32" y="148">G</text><text text-anchor="middle" x="40" y="148">r</text><text text-anchor="middle" x="48" y="148">e</text><text text-anchor="middle" x="56" y="148">e</text><text text-anchor="middle" x="64" y="148">n</text><text text-anchor="middle" x="72" y="148">:</text><text text-anchor="middle" x="224" y="148">G</text><text text-anchor="middle" x="232" y="148">G</text><text text-anchor="middle" x="144" y="164">R</text><text text-anchor="middle" x="152" y="164">R</text><text text-anchor="middle" x="184" y="164">G</text><text text-anchor="middle" x="192" y="164">G</text><text text-anchor="middle" x="208" y="228">&lt;</text><text text-anchor="middle" x="216" y="228">&lt;</text><text text-anchor="middle" x="232" y="228">0</text><text text-anchor="middle" x="40" y="244">B</text><text text-anchor="middle" x="48" y="244">l</text><text text-anchor="middle" x="56" y="244">u</text><text text-anchor="middle" x="64" y="244">e</text><text text-anchor="middle" x="72" y="244">:</text><text text-anchor="middle" x="224" y="244">B</text><text text-anchor="middle" x="232" y="244">B</text><text text-anchor="middle" x="144" y="260">R</text><text text-anchor="middle" x="152" y="260">R</text><text text-anchor="middle" x="184" y="260">G</text><text text-anchor="middle" x="192" y="260">G</text><text text-anchor="middle" x="224" y="260">B</text><text text-anchor="middle" x="232" y="260">B</text><text text-anchor="middle" x="8" y="324">C</text><text text-anchor="middle" x="16" y="324">o</text><text text-anchor="middle" x="24" y="324">m</text><text text-anchor="middle" x="32" y="324">b</text><text text-anchor="middle" x="40" y="324">i</text><text text-anchor="middle" x="48" y="324">n</text><text text-anchor="middle" x="56" y="324">e</text><text text-anchor="middle" x="64" y="324">d</text><text text-anchor="middle" x="72" y="324">:</text><text text-anchor="middle" x="104" y="324">x</text><text text-anchor="middle" x="112" y="324">x</text><text text-anchor="middle" x="144" y="324">R</text><text text-anchor="middle" x="152" y="324">R</text><text text-anchor="middle" x="184" y="324">G</text><text text-anchor="middle" x="192" y="324">G</text><text text-anchor="middle" x="224" y="324">B</text><text text-anchor="middle" x="232" y="324">B</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;2:</b> Pixel bits shifted in the register.</div></center>
+
+</p><p>
+
+Here is how it looks in the code: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span> (MaxY &gt; Buffer-&gt;Height)</span>
+<span class="line">{</span>
+<span class="line">    MaxY = Buffer-&gt;Height;</span>
+<span class="line">}</span>
+<span class="line"></span><div class=" edit"><span class="line">u32 Color = (u32)((RoundReal32ToInt32(R * <span class="hljs-number">255.0f</span>) &lt;&lt; <span class="hljs-number">16</span>) | </span>
+<span class="line">                  (RoundReal32ToInt32(G * <span class="hljs-number">255.0f</span>) &lt;&lt; <span class="hljs-number">8</span>)  |</span>
+<span class="line">                  (RoundReal32ToInt32(B * <span class="hljs-number">255.0f</span>) &lt;&lt; <span class="hljs-number">0</span>));</span></div><span class="line">u8 *Row = <span class="hljs-comment">// ... </span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;3:</b> <file>[handmade.cpp > DrawRectangle]</file> Packing the RGB values. We don't need to write <code>&lt;&lt; 0</code>, doing it here to be explicit.</div></center>
+<p>
+
+
+This should be it; let's replace the values we're using to call the function:
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">DrawRectangle(Buffer, <span class="hljs-number">0.0f</span>, <span class="hljs-number">0.0f</span>, (f32)Buffer-&gt;Width, (f32)Buffer-&gt;Height, <span class="hljs-number">1.0f</span>, <span class="hljs-number">0.0f</span>, <span class="hljs-number">1.0f</span>);</span>
+<span class="line">DrawRectangle(Buffer, <span class="hljs-number">10.0f</span>, <span class="hljs-number">10.0f</span>, <span class="hljs-number">30.0f</span>, <span class="hljs-number">30.f</span>, <span class="hljs-number">0.0f</span>, <span class="hljs-number">1.0f</span>, <span class="hljs-number">1.0f</span>);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;4:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Using the updated <code>DrawRectangle</code>.</div></center>
+<p>
+
+
+We should see no changes after recompiling, indicating that we refactored everything correctly. So now we can easily modify the red, green, and blue values within the 0-1 range, and our rectangles will change colors accordingly. 
+
+</p>
+<a class="target" name="introduceroundreal32touint32">&nbsp;</a><a class="target" name="floatingpointcolor/introduceroundreal32touint32">&nbsp;</a><a class="target" name="toc1.3">&nbsp;</a><h2>Introduce <code>RoundReal32ToUInt32</code></h2>
+<p>
+
+
+We could also get more precise with our rounding operation: instead of getting a signed 32-bit value, we can round to an unsigned value instead: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal s32</span>
+<span class="line"><span class="hljs-title">RoundReal32ToInt32</span><span class="hljs-params">(f32 Number)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    s32 Result = (s32)(Number + <span class="hljs-number">0.5f</span>);</span>
+<span class="line">    <span class="hljs-keyword">return</span> (Result);</span>
+<span class="line">}</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-function">internal u32</span>
+<span class="line"><span class="hljs-title">RoundReal32ToUInt32</span><span class="hljs-params">(f32 Number)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    u32 Result = (u32)(Number + <span class="hljs-number">0.5f</span>);</span>
+<span class="line">    <span class="hljs-keyword">return</span> (Result);</span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;5:</b> <file>[handmade.cpp]</file> Introducing <code>RoundReal32ToUInt32</code>.</div></center>
+<p>
+
+
+While we might not necessarily need this distinction right now, it might come in handy in the future. In the meantime, let's use it in our <code>DrawRectangle</code> function: 
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">u32 Color = ((RoundReal32ToUInt32(R * <span class="hljs-number">255.0f</span>) &lt;&lt; <span class="hljs-number">16</span>) | </span>
+<span class="line">             (RoundReal32ToUInt32(G * <span class="hljs-number">255.0f</span>) &lt;&lt; <span class="hljs-number">8</span>)  |</span>
+<span class="line">             (RoundReal32ToUInt32(B * <span class="hljs-number">255.0f</span>) &lt;&lt; <span class="hljs-number">0</span>));</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;6:</b> <file>[handmade.cpp > DrawRectangle]</file> Using <code>RoundReal32ToUInt32</code>.</div></center>
+
+<a class="target" name="notingnewemergingstructures">&nbsp;</a><a class="target" name="floatingpointcolor/notingnewemergingstructures">&nbsp;</a><a class="target" name="toc1.4">&nbsp;</a><h2>Noting New Emerging Structures</h2>
+<p>
+
+
+You might have noticed already that some structures are starting to emerge here. For instance, we're probably not often going to pass a red value by itself. It's going to always come with a green and a blue.
+
+</p><p>
+
+And so, game architecture-wise, you can start to see what we'll eventually do here: make a <em class="underscore">struct</em> that will capture the concept of Color so that we don't have to keep passing our Rs, Gs, and Bs around. We won't do it yet because, so far, we have only used it in one function. We don't have enough information on what such a structure should and should not contain. 
+
+</p><p>
+
+You should start paying attention to these things, feeling this itch in the back of your head. For example, you might note some operations happening on a color in the future. Maybe someone will try to represent them as <code>u32</code>; others will work with the <code>f32</code> representation. So we'll be passing a bunch of things together. There are many things to find once you know what to look for. 
+
+</p><p>
+
+Similarly, a rectangle might be another structure you might want to pay attention to. These structures are starting to emerge already, and we haven't even done anything yet! 
+
+</p>
+<a class="target" name="startthetilemap">&nbsp;</a><a class="target" name="startthetilemap">&nbsp;</a><a class="target" name="toc2">&nbsp;</a><h1>Start the Tile Map</h1>
+<p>
+
+
+Let's make the most straightforward tile map you can imagine! We'll take a 32-bit value and spread it around a bit. 
+
+</p>
+<a class="target" name="definethegrid">&nbsp;</a><a class="target" name="startthetilemap/definethegrid">&nbsp;</a><a class="target" name="toc2.1">&nbsp;</a><h2>Define the Grid</h2>
+<p>
+
+
+We want to start with a grid 16 tiles across and 9 down, the same as the HD aspect ratio.
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">u32 TileMap[<span class="hljs-number">16</span>][<span class="hljs-number">9</span>];</span></div><span class="line"></span>
+<span class="line">DrawRectangle(Buffer, <span class="hljs-number">0.0f</span>, <span class="hljs-number">0.0f</span>, (f32)Buffer-&gt;Width, (f32)Buffer-&gt;Height, <span class="hljs-number">1.0f</span>, <span class="hljs-number">0.0f</span>, <span class="hljs-number">1.0f</span>);</span>
+<span class="line">DrawRectangle(Buffer, <span class="hljs-number">10.0f</span>, <span class="hljs-number">10.0f</span>, <span class="hljs-number">30.0f</span>, <span class="hljs-number">30.f</span>, <span class="hljs-number">0.0f</span>, <span class="hljs-number">1.0f</span>, <span class="hljs-number">1.0f</span>);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;7:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Introducing the tile map.</div></center>
+<p>
+
+
+Maybe it's too big for now, but we can adjust it in the future. 
+
+</p><p>
+
+<code>TileMap</code> is an array of arrays of <code>u32</code>s, also known as a 2D array or double array. In fact, similarly to what we did <a href="../html/day27.html">last time</a>, we want to invert X and Y positions because we want the X values to be packed together. 16 will go sequentially, and 9 will be like row offsets.
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">u32 TileMap[<span class="hljs-number">9</span>][<span class="hljs-number">16</span>];</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;8:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Putting Y count to be in front of X counts.</div></center>
+<p>
+
+
+Now, we want to define the values for our simple map right there:
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">u32 TileMap[<span class="hljs-number">9</span>][<span class="hljs-number">16</span>] = </span></div><div class=" add"><span class="line">{</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>},</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>},</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>},</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>},</span>
+<span class="line">    </span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>},</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>},</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>},</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>},</span>
+<span class="line">    </span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>}</span>
+<span class="line">};</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;9:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Defining the values for our tiles.</div></center>
+<p>
+
+
+Now, let's set some values to the tiles to make sure we're drawing what we want: 
+
+</p><pre class="listing tilde"><code><span class="line">u32 TileMap[<span class="hljs-number">9</span>][<span class="hljs-number">16</span>] = </span><div class=" edit"><span class="line">{</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>},</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>},</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>},</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    </span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>},</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>},</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>},</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>},</span>
+<span class="line">    </span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>}</span>
+<span class="line">};</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;10:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Drawing some patterns.</div></center>
+<p>
+
+
+This way, we expect the final result will look something like this: 
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="224" width="424" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 56,0 L 56,192 " style="fill:none;"/>
+<path d="M 304,0 L 304,32 " style="fill:none;"/>
+<path d="M 320,0 L 320,192 " style="fill:none;"/>
+<path d="M 56,0 L 320,0 " style="fill:none;"/>
+<path d="M 56,32 L 320,32 " style="fill:none;"/>
+<path d="M 56,192 L 320,192 " style="fill:none;"/>
+<g transform="translate(0,0)"><text text-anchor="middle" x="64" y="20">H</text><text text-anchor="middle" x="72" y="20">a</text><text text-anchor="middle" x="80" y="20">n</text><text text-anchor="middle" x="88" y="20">d</text><text text-anchor="middle" x="96" y="20">m</text><text text-anchor="middle" x="104" y="20">a</text><text text-anchor="middle" x="112" y="20">d</text><text text-anchor="middle" x="120" y="20">e</text><text text-anchor="middle" x="136" y="20">H</text><text text-anchor="middle" x="144" y="20">e</text><text text-anchor="middle" x="152" y="20">r</text><text text-anchor="middle" x="160" y="20">o</text><text text-anchor="middle" x="312" y="20">X</text><text text-anchor="middle" x="192" y="52">▉</text><text text-anchor="middle" x="200" y="52">▉</text><text text-anchor="middle" x="256" y="52">▉</text><text text-anchor="middle" x="264" y="52">▉</text><text text-anchor="middle" x="80" y="68">▉</text><text text-anchor="middle" x="88" y="68">▉</text><text text-anchor="middle" x="144" y="68">▉</text><text text-anchor="middle" x="152" y="68">▉</text><text text-anchor="middle" x="192" y="68">▉</text><text text-anchor="middle" x="200" y="68">▉</text><text text-anchor="middle" x="272" y="68">▉</text><text text-anchor="middle" x="280" y="68">▉</text><text text-anchor="middle" x="80" y="84">▉</text><text text-anchor="middle" x="88" y="84">▉</text><text text-anchor="middle" x="192" y="84">▉</text><text text-anchor="middle" x="200" y="84">▉</text><text text-anchor="middle" x="288" y="84">▉</text><text text-anchor="middle" x="296" y="84">▉</text><text text-anchor="middle" x="192" y="100">▉</text><text text-anchor="middle" x="200" y="100">▉</text><text text-anchor="middle" x="304" y="100">▉</text><text text-anchor="middle" x="312" y="100">▉</text><text text-anchor="middle" x="80" y="116">▉</text><text text-anchor="middle" x="88" y="116">▉</text><text text-anchor="middle" x="144" y="116">▉</text><text text-anchor="middle" x="152" y="116">▉</text><text text-anchor="middle" x="192" y="116">▉</text><text text-anchor="middle" x="200" y="116">▉</text><text text-anchor="middle" x="288" y="116">▉</text><text text-anchor="middle" x="296" y="116">▉</text><text text-anchor="middle" x="80" y="132">▉</text><text text-anchor="middle" x="88" y="132">▉</text><text text-anchor="middle" x="144" y="132">▉</text><text text-anchor="middle" x="152" y="132">▉</text><text text-anchor="middle" x="192" y="132">▉</text><text text-anchor="middle" x="200" y="132">▉</text><text text-anchor="middle" x="272" y="132">▉</text><text text-anchor="middle" x="280" y="132">▉</text><text text-anchor="middle" x="144" y="148">▉</text><text text-anchor="middle" x="152" y="148">▉</text><text text-anchor="middle" x="192" y="148">▉</text><text text-anchor="middle" x="200" y="148">▉</text><text text-anchor="middle" x="256" y="148">▉</text><text text-anchor="middle" x="264" y="148">▉</text><text text-anchor="middle" x="80" y="164">▉</text><text text-anchor="middle" x="88" y="164">▉</text><text text-anchor="middle" x="96" y="164">▉</text><text text-anchor="middle" x="104" y="164">▉</text><text text-anchor="middle" x="112" y="164">▉</text><text text-anchor="middle" x="120" y="164">▉</text><text text-anchor="middle" x="128" y="164">▉</text><text text-anchor="middle" x="136" y="164">▉</text><text text-anchor="middle" x="192" y="164">▉</text><text text-anchor="middle" x="200" y="164">▉</text><text text-anchor="middle" x="272" y="164">▉</text><text text-anchor="middle" x="280" y="164">▉</text><text text-anchor="middle" x="192" y="180">▉</text><text text-anchor="middle" x="200" y="180">▉</text><text text-anchor="middle" x="296" y="180">▉</text><text text-anchor="middle" x="304" y="180">▉</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;3:</b> Our expected output.</div></center>
+
+</p>
+<a class="target" name="renderrectangles">&nbsp;</a><a class="target" name="startthetilemap/renderrectangles">&nbsp;</a><a class="target" name="toc2.2">&nbsp;</a><h2>Render rectangles</h2>
+<p>
+
+
+Every number here will represent a type of tile. Eventually, it may be land, water, rock, or whatever. For now, though, we will have colored rectangles depending on the tile type. Let's throw a quick <code>for</code> loop after we clear our screen. We can also get rid of our small cyan rectangle.
+
+</p><pre class="listing tilde"><code><span class="line">DrawRectangle(Buffer, <span class="hljs-number">0.0f</span>, <span class="hljs-number">0.0f</span>, (f32)Buffer-&gt;Width, (f32)Buffer-&gt;Height, <span class="hljs-number">1.0f</span>, <span class="hljs-number">0.0f</span>, <span class="hljs-number">1.0f</span>);</span><div class=" add"><span class="line"></span>
+<span class="line"><span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Row = <span class="hljs-number">0</span>;</span>
+<span class="line">        Row &lt; <span class="hljs-number">9</span>;</span>
+<span class="line">        ++Row)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Column = <span class="hljs-number">0</span>;</span>
+<span class="line">            Column &lt; <span class="hljs-number">16</span>;</span>
+<span class="line">            ++Column)</span>
+<span class="line">    {</span>
+<span class="line">        </span>
+<span class="line">    }</span>
+<span class="line">}</span>
+<span class="line"></span></div><div class=" delete"><span class="line">DrawRectangle(Buffer, <span class="hljs-number">10.0f</span>, <span class="hljs-number">10.0f</span>, <span class="hljs-number">30.0f</span>, <span class="hljs-number">30.f</span>, <span class="hljs-number">0.0f</span>, <span class="hljs-number">1.0f</span>, <span class="hljs-number">1.0f</span>);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;11:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Iterating over the tiles.</div></center>
+<p>
+
+
+Inside the double <code>for</code> loop, we want to access the tile ID. In the future, the ID might access a sprite or a color. We'll assign shades of gray depending on the ID because we don't have any of that yet.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Row = <span class="hljs-number">0</span>; <span class="hljs-comment">/*...*/</span>)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Column = <span class="hljs-number">0</span>; <span class="hljs-comment">/*...*/</span>)</span>
+<span class="line">    {</span><div class=" add"><span class="line">        u32 TileID = TileMap[Row][Column];</span>
+<span class="line">        f32 Gray = <span class="hljs-number">0.5f</span>;</span>
+<span class="line">        <span class="hljs-keyword">if</span> (TileID == <span class="hljs-number">1</span>)</span>
+<span class="line">        {</span>
+<span class="line">            Gray = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">        }</span></div><span class="line">    }</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;12:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Differentiating different tiles.</div></center>
+<p>
+
+
+Then, when we draw the rectangle, we will need some other info: 
+
+</p><p>
+
+<ul>
+<li class="asterisk"><code>MinX</code>: We'll get to it in a second.
+</li>
+<li class="asterisk"><code>MinY</code>: Same; let's leave it aside for a moment.
+</li>
+<li class="asterisk"><code>MaxX</code>: If we know the <code>MinX</code>, <code>MaxX</code> is the same + tile width
+</li>
+<li class="asterisk"><code>MaxY</code>: If we know the <code>MinY</code>, <code>MaxY</code> is the same + tile height</li></ul>
+
+</p><p>
+
+We can then pass all of this over to our <code>DrawRectangle</code> function. We'll pass our <code>Gray</code> value for Red, Green, and Blue.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Row = <span class="hljs-number">0</span>; <span class="hljs-comment">/*...*/</span>)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Column = <span class="hljs-number">0</span>; <span class="hljs-comment">/*...*/</span>)</span>
+<span class="line">    {</span>
+<span class="line">        u32 TileID = TileMap[Row][Column];</span>
+<span class="line">        f32 Gray = <span class="hljs-number">0.5f</span>;</span>
+<span class="line">        <span class="hljs-keyword">if</span> (TileID == <span class="hljs-number">1</span>)</span>
+<span class="line">        {</span>
+<span class="line">            Gray = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">        }</span>
+<span class="line">        </span><div class=" add"><span class="line">        f32 MinX = ;</span>
+<span class="line">        f32 MinY = ;</span>
+<span class="line">        f32 MaxX = MinX + TileWidth;</span>
+<span class="line">        f32 MaxY = MinY + TileHeight;</span>
+<span class="line">        </span>
+<span class="line">        DrawRectangle(Buffer, MinX, MinY, MaxX, MaxY, Gray, Gray, Gray);</span></div><span class="line">    }</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;13:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Defining things we need to draw the rectangle.</div></center>
+<p>
+
+
+Now, how do we calculate <code>MinX</code> and <code>MinY</code>? Well, we've got a row value and a column value, so for each row, we're going down by one tile height each time it increments. Which we already know is going to be some value we'll define in a moment. The same logic will apply to <code>MinX</code>.
+
+</p><p>
+
+That said, <code>Row</code> is an integer, whereas we want a float. So, we need to convert that to a floating point value. Unlike rounding to int, conversion to float is automatic in C, but we still want to be explicit about what's happening in the code. This precaution allows us to avoid weird mistakes and avoid having the compiler not do what we expect it to.
+
+</p><p>
+
+Let's also say we want some base offset that we'll call <code>UpperLeftX</code> and <code>UpperLeftY</code>:
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Row = <span class="hljs-number">0</span>; <span class="hljs-comment">/*...*/</span>)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Column = <span class="hljs-number">0</span>; <span class="hljs-comment">/*...*/</span>)</span>
+<span class="line">    {</span>
+<span class="line">        u32 TileID = TileMap[Row][Column];</span>
+<span class="line">        f32 Gray = <span class="hljs-number">0.5f</span>;</span>
+<span class="line">        <span class="hljs-keyword">if</span> (TileID == <span class="hljs-number">1</span>)</span>
+<span class="line">        {</span>
+<span class="line">            Gray = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">        }</span>
+<span class="line">        </span><div class=" edit"><span class="line">        f32 MinX = UpperLeftX + ((f32)Column) * TileWidth;</span>
+<span class="line">        f32 MinY = UpperLeftY + ((f32)Row) * TileHeight;</span></div><span class="line">        f32 MaxX = MinX + TileWidth;</span>
+<span class="line">        f32 MaxY = MinY + TileHeight;</span>
+<span class="line">        </span>
+<span class="line">        DrawRectangle(Buffer, MinX, MinY, MaxX, MaxY, Gray, Gray, Gray);</span>
+<span class="line">    }</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;14:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Defining <code>MinX</code> and <code>MinY</code>.</div></center>
+<p>
+
+
+What's left is to define <code>UpperLeftX</code>, <code>UpperLeftY</code>, <code>TileWidth</code>, and <code>TileHeight</code>. We'll do it outside the <code>for</code> loop and give them some random numbers, to begin with:
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">f32 UpperLeftX = <span class="hljs-number">10</span>;</span>
+<span class="line">f32 UpperLeftY = <span class="hljs-number">10</span>;</span>
+<span class="line">f32 TileWidth = <span class="hljs-number">100</span>;</span>
+<span class="line">f32 TileHeight = <span class="hljs-number">100</span>;</span>
+<span class="line"></span></div><span class="line"><span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Row = <span class="hljs-number">0</span>;</span>
+<span class="line">    Row &lt; <span class="hljs-number">9</span>;</span>
+<span class="line">    ++Row)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Column = <span class="hljs-number">0</span>;</span>
+<span class="line">        Column &lt; <span class="hljs-number">16</span>;</span>
+<span class="line">        ++Column)</span>
+<span class="line">    {</span>
+<span class="line">        u32 TileID = TileMap[Row][Column];</span>
+<span class="line">        f32 Gray = <span class="hljs-number">0.5f</span>;</span>
+<span class="line">        <span class="hljs-keyword">if</span> (TileID == <span class="hljs-number">1</span>)</span>
+<span class="line">        {</span>
+<span class="line">            Gray = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">        }</span>
+<span class="line">        </span>
+<span class="line">        f32 MinX = UpperLeftX + ((f32)Column) * TileWidth;</span>
+<span class="line">        f32 MinY = UpperLeftY + ((f32)Row) * TileHeight;</span>
+<span class="line">        f32 MaxX = MinX + TileWidth;</span>
+<span class="line">        f32 MaxY = MinY + TileHeight;</span>
+<span class="line">        </span>
+<span class="line">        DrawRectangle(Buffer, MinX, MinY, MaxX, MaxY, Gray, Gray, Gray);</span>
+<span class="line">    }</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;15:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Ready to compile.</div></center>
+<p>
+
+
+We are ready to compile! Let's see how it looks: 
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day28/screen-2.gif" target="_blank"><img class="markdeep" src="../media/day28/screen-2.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;4:</b> Our first tile map.</span></center></div></center> 
+
+</p><p>
+
+We need to adjust our values if we want the tile map to fit on the screen: 
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">f32 UpperLeftX = <span class="hljs-number">0</span>;</span>
+<span class="line">f32 UpperLeftY = <span class="hljs-number">0</span>;</span>
+<span class="line">f32 TileWidth = <span class="hljs-number">60</span>;</span>
+<span class="line">f32 TileHeight = <span class="hljs-number">60</span>;</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;16:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Adjusting the tilemap size and position.</div></center>
+<p>
+
+
+<center><div class="image" style=""><a href="../media/day28/screen-3.gif" target="_blank"><img class="markdeep" src="../media/day28/screen-3.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;5:</b> Looks good.</span></center></div></center> 
+
+</p>
+<a class="target" name="tweaking">&nbsp;</a><a class="target" name="startthetilemap/tweaking">&nbsp;</a><a class="target" name="toc2.3">&nbsp;</a><h2>Tweaking</h2>
+<p>
+
+
+There we go! Now, we can modify the tile map values as we want. Let's say we want to create a classic dungeon with walls all around, some obstacles, maybe with the doors in the middle.
+
+</p><pre class="listing tilde"><code><span class="line">u32 TileMap[<span class="hljs-number">9</span>][<span class="hljs-number">16</span>] = </span>
+<span class="line">{</span><div class=" edit"><span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>}</span></div><span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;17:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Modifying the map layout.</div></center>
+<p>
+
+
+<center><div class="image" style=""><a href="../media/day28/screen-4.gif" target="_blank"><img class="markdeep" src="../media/day28/screen-4.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;6:</b> Your classic Zelda dungeon.</span></center></div></center> 
+
+</p><p>
+
+But now we have a big problem! The doors are not centered. Fortunately, it's easy to fix: we will make the grid width odd. It will require us to make some changes though: 
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">u32 TileMap[<span class="hljs-number">9</span>][<span class="hljs-number">17</span>] = </span>
+<span class="line">{</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>}</span>
+<span class="line">};</span></div><span class="line">DrawRectangle(Buffer, <span class="hljs-number">0.0f</span>, <span class="hljs-number">0.0f</span>, (f32)Buffer-&gt;Width, (f32)Buffer-&gt;Height, <span class="hljs-number">1.0f</span>, <span class="hljs-number">0.0f</span>, <span class="hljs-number">1.0f</span>);</span>
+<span class="line"></span><div class=" edit"><span class="line">f32 UpperLeftX = <span class="hljs-number">-30</span>;</span></div><span class="line">f32 UpperLeftY = <span class="hljs-number">0</span>;</span>
+<span class="line">f32 TileWidth = <span class="hljs-number">60</span>;</span>
+<span class="line">f32 TileHeight = <span class="hljs-number">60</span>;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Row = <span class="hljs-number">0</span>;</span>
+<span class="line">    Row &lt; <span class="hljs-number">9</span>;</span>
+<span class="line">    ++Row)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Column = <span class="hljs-number">0</span>;</span><div class=" edit"><span class="line">        Column &lt; <span class="hljs-number">17</span>;</span></div><span class="line">        ++Column)</span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-comment">// ...</span></span>
+<span class="line">    }</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;18:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Modifying the map layout more.</div></center>
+<p>
+
+
+<center><div class="image" style=""><a href="../media/day28/screen-5.gif" target="_blank"><img class="markdeep" src="../media/day28/screen-5.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;7:</b> Nice and centered.</span></center></div></center> 
+
+</p><p>
+
+You will notice we had to modify <code>UpperLeftX</code> to ensure the right wall is visible again. That said, if we wanted to have this &ldquo;half wall&rdquo; effect for our rows as well, we'd have to make the row count even (which would bring the vertical doors off-center) or change the tile height (which would stretch the tiles to become rectangles instead of squares).
+
+</p><p>
+
+These questions are why we do exploration; we want to think about all these things up front before making decisions about our tile map size, etc. To solve them, we might study old games; maybe they did different dimensions because the standard aspect ratio was 4:3 before HD TVs became commonplace. It's a good moment to put on your thinking cap and consider all this.
+
+</p>
+<a class="target" name="gettingaplayeronthescreen">&nbsp;</a><a class="target" name="gettingaplayeronthescreen">&nbsp;</a><a class="target" name="toc3">&nbsp;</a><h1>Getting a Player on the Screen</h1>
+<p>
+
+
+Given that we have a tile map on the screen, it seems the next logical thing to do is make a little player move around. So, similarly to what we did with our debug code back in the day, we want to add some simple values inside the <code>GameState</code> structure. We usually shouldn't be able to modify structures while we're hot-loading, but in this case, it should work. It's a unique case due to our empty <code>GameState</code> structure; if you recall, we store <code>GameState</code> at the beginning of our memory block, with gigabytes of available memory that follow. 
+
+</p><p>
+
+So, for our player, let's say we'll need to capture the player's X and Y positions in the world:
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_state</span></span>
+<span class="line">{</span></span><div class=" add"><span class="line">    f32 PlayerX;</span>
+<span class="line">    f32 PlayerY;</span></div><span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;19:</b> <file>[handmade.h]</file> Storing player positions.</div></center>
+
+<a class="target" name="gamephysicsandplayerposition">&nbsp;</a><a class="target" name="gettingaplayeronthescreen/gamephysicsandplayerposition">&nbsp;</a><a class="target" name="toc3.1">&nbsp;</a><h2>Game Physics and Player Position</h2>
+<p>
+
+
+We'll use our <code>DrawRectangle</code> function to draw the player. That said, we'll probably need to do some calculations to properly position our rectangle respectfully to the player's position. 
+
+</p><p>
+
+When we say &ldquo;a player touches a wall&rdquo; in a 2D world, we usually don't mean the top of their head sprite. Usually, they eclipse the wall a bit, so their actual location is typically more about where their center of gravity projects on the floor.
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="112" width="256" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<g transform="translate(0,0)"><text text-anchor="middle" x="40" y="4">▉</text><text text-anchor="middle" x="48" y="4">▉</text><text text-anchor="middle" x="56" y="4">▉</text><text text-anchor="middle" x="64" y="4">▉</text><text text-anchor="middle" x="40" y="20">▉</text><text text-anchor="middle" x="48" y="20">▉</text><text text-anchor="middle" x="56" y="20">🙂</text><text text-anchor="middle" x="72" y="20">▉</text><text text-anchor="middle" x="40" y="36">▉</text><text text-anchor="middle" x="48" y="36">▉</text><text text-anchor="middle" x="40" y="52">▉</text><text text-anchor="middle" x="48" y="52">▉</text><text text-anchor="middle" x="40" y="68">▉</text><text text-anchor="middle" x="48" y="68">▉</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;8:</b> Player in the corner.</div></center>
+
+</p><p>
+
+So, when we want to calculate the position of the player's sprite (rectangle for now), we need to position it so that the player's position is at its bottom center. We achieve that by offsetting our <code>PlayerTop</code> by half the player's width and <code>PlayerLeft</code> by its full height. 
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="240" width="424" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 104,32 L 104,160 " style="fill:none;"/>
+<path d="M 176,40 L 176,144 " style="fill:none;"/>
+<path d="M 248,32 L 248,160 " style="fill:none;"/>
+<path d="M 104,16 L 176,16 " style="fill:none;"/>
+<path d="M 112,32 L 248,32 " style="fill:none;"/>
+<path d="M 104,160 L 168,160 " style="fill:none;"/>
+<path d="M 184,160 L 240,160 " style="fill:none;"/>
+<path d="M 200,208 L 216,208 " style="fill:none;"/>
+<path d="M 184,176 L 200,208 " style="fill:none;"/>
+<polygon points="192,176 180,170.4 180,181.6 "  style="stroke:none" transform="rotate(243.43494882292202,184,176 )"/>
+<polygon points="184,40 172,34.4 172,45.6 "  style="stroke:none" transform="rotate(270,176,40 )"/>
+<polygon points="112,16 100,10.4 100,21.6 "  style="stroke:none" transform="rotate(180,104,16 )"/>
+<circle cx="104" cy="32" r="6" class="closeddot"/><circle cx="248" cy="160" r="6" class="closeddot"/><g transform="translate(0,0)"><text text-anchor="middle" x="120" y="4">w</text><text text-anchor="middle" x="136" y="4">/</text><text text-anchor="middle" x="152" y="4">2</text><text text-anchor="middle" x="0" y="20">(</text><text text-anchor="middle" x="8" y="20">P</text><text text-anchor="middle" x="16" y="20">l</text><text text-anchor="middle" x="24" y="20">a</text><text text-anchor="middle" x="32" y="20">y</text><text text-anchor="middle" x="40" y="20">e</text><text text-anchor="middle" x="48" y="20">r</text><text text-anchor="middle" x="56" y="20">L</text><text text-anchor="middle" x="64" y="20">e</text><text text-anchor="middle" x="72" y="20">f</text><text text-anchor="middle" x="80" y="20">t</text><text text-anchor="middle" x="88" y="20">,</text><text text-anchor="middle" x="8" y="36">P</text><text text-anchor="middle" x="16" y="36">l</text><text text-anchor="middle" x="24" y="36">a</text><text text-anchor="middle" x="32" y="36">y</text><text text-anchor="middle" x="40" y="36">e</text><text text-anchor="middle" x="48" y="36">r</text><text text-anchor="middle" x="56" y="36">T</text><text text-anchor="middle" x="64" y="36">o</text><text text-anchor="middle" x="72" y="36">p</text><text text-anchor="middle" x="80" y="36">)</text><text text-anchor="middle" x="192" y="100">h</text><text text-anchor="middle" x="176" y="164">x</text><text text-anchor="middle" x="264" y="164">(</text><text text-anchor="middle" x="272" y="164">w</text><text text-anchor="middle" x="280" y="164">,</text><text text-anchor="middle" x="296" y="164">h</text><text text-anchor="middle" x="304" y="164">)</text><text text-anchor="middle" x="232" y="212">P</text><text text-anchor="middle" x="240" y="212">l</text><text text-anchor="middle" x="248" y="212">a</text><text text-anchor="middle" x="256" y="212">y</text><text text-anchor="middle" x="264" y="212">e</text><text text-anchor="middle" x="272" y="212">r</text><text text-anchor="middle" x="288" y="212">(</text><text text-anchor="middle" x="296" y="212">x</text><text text-anchor="middle" x="304" y="212">,</text><text text-anchor="middle" x="320" y="212">y</text><text text-anchor="middle" x="328" y="212">)</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;9:</b> Drawing player rectangle.</div></center>
+
+</p><p>
+
+It will eventually become second nature to you, but if you've never done anything with graphics before, you want to think it through like this a few times. 
+
+</p>
+<a class="target" name="drawingtheplayer">&nbsp;</a><a class="target" name="gettingaplayeronthescreen/drawingtheplayer">&nbsp;</a><a class="target" name="toc3.2">&nbsp;</a><h2>Drawing the Player</h2>
+<p>
+
+
+Let's start typing those values in. We will draw the player after we draw our tilemap on the screen. For <code>MinX</code> and <code>MinY</code>, we'll calculate <code>PlayerLeft</code> and <code>PlayerTop</code>. We'll offset these by player width and height to achieve <code>MaxX</code> and <code>MaxY</code>.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Row = <span class="hljs-number">0</span>; <span class="hljs-comment">/*...*/</span>)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Column = <span class="hljs-number">0</span>; <span class="hljs-comment">/*...*/</span>)</span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-comment">// ...</span></span>
+<span class="line">    }</span>
+<span class="line">}</span>
+<span class="line"></span><div class=" add"><span class="line">DrawRectangle(Buffer, PlayerLeft, PlayerTop, </span>
+<span class="line">              PlayerLeft + PlayerWidth, </span>
+<span class="line">              PlayerTop + PlayerHeight, </span>
+<span class="line">              PlayerR, PlayerG, PlayerB);</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;20:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Drawing player rectangle.</div></center>
+<p>
+
+
+We will need the red, green, and blue values for our color; let's make it a lovely yellow: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">f32 PlayerR = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">f32 PlayerG = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">f32 PlayerB = <span class="hljs-number">0.0f</span>;</span></div><span class="line"></span>
+<span class="line">DrawRectangle(Buffer, PlayerLeft, PlayerTop, </span>
+<span class="line">              PlayerLeft + PlayerWidth, </span>
+<span class="line">              PlayerTop + PlayerHeight, </span>
+<span class="line">              PlayerR, PlayerG, PlayerB);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;21:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Defining player color.</div></center>
+<p>
+
+
+The tile width and height will determine the player's width and height. Maybe we'll make the width slightly smaller to pass through doors more easily:
+
+</p><pre class="listing tilde"><code><span class="line">f32 PlayerR = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">f32 PlayerG = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">f32 PlayerB = <span class="hljs-number">0.0f</span>;</span><div class=" add"><span class="line">f32 PlayerWidth = <span class="hljs-number">0.75f</span> * TileWidth;</span>
+<span class="line">f32 PlayerHeight = TileHeight;</span></div><span class="line"></span>
+<span class="line">DrawRectangle(Buffer, PlayerLeft, PlayerTop, </span>
+<span class="line">              PlayerLeft + PlayerWidth, </span>
+<span class="line">              PlayerTop + PlayerHeight, </span>
+<span class="line">              PlayerR, PlayerG, PlayerB);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;22:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Setting player width and height.</div></center>
+<p>
+
+
+Finally, to calculate <code>PlayerLeft</code>, we take <code>PlayerX</code> and remove half of <code>PlayerWidth</code>, as we said. Instead of dividing by <code>2</code>, we'll multiply by <code>0.5f</code> as it's more efficient. For <code>PlayerTop</code>, we'll take <code>PlayerY</code> and subtract the entire <code>PlayerHeight</code>:
+
+</p><pre class="listing tilde"><code><span class="line">f32 PlayerR = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">f32 PlayerG = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">f32 PlayerB = <span class="hljs-number">0.0f</span>;</span>
+<span class="line">f32 PlayerWidth = <span class="hljs-number">0.75f</span> * TileWidth;</span>
+<span class="line">f32 PlayerHeight = TileHeight;</span><div class=" add"><span class="line">f32 PlayerLeft = GameState-&gt;PlayerX - (<span class="hljs-number">0.5f</span> * PlayerWidth);</span>
+<span class="line">f32 PlayerTop = GameState-&gt;PlayerY + PlayerHeight;</span></div><span class="line"></span>
+<span class="line">DrawRectangle(Buffer, PlayerLeft, PlayerTop, </span>
+<span class="line">              PlayerLeft + PlayerWidth, </span>
+<span class="line">              PlayerTop + PlayerHeight, </span>
+<span class="line">              PlayerR, PlayerG, PlayerB);</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;23:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Setting player width and height.</div></center>
+
+<a class="target" name="playermovement">&nbsp;</a><a class="target" name="gettingaplayeronthescreen/playermovement">&nbsp;</a><a class="target" name="toc3.3">&nbsp;</a><h2>Player Movement</h2>
+<p>
+
+
+We can now compile, but we won't see any changes: since both <code>PlayerX</code> and <code>PlayerY</code> are zero, we draw the whole player rectangle outside the top-left corner of our screen. Let's add some simple code to control player movement (keyboard-only, for the time being).
+
+</p><p>
+
+The logic is straightforward: we define delta values for X and Y and then add them to the player's X and Y. 
+
+</p><pre class="listing tilde"><code><span class="line">game_controller_input *Controller = GetController(Input, ControllerIndex);</span>
+<span class="line"><span class="hljs-keyword">if</span> (Controller-&gt;IsAnalog)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// NOTE(casey): Use analog movement tuning</span></span>
+<span class="line">}</span>
+<span class="line"><span class="hljs-keyword">else</span></span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// NOTE(casey): Use digital movement tuning</span></span><div class=" add"><span class="line">    f32 dPlayerX = <span class="hljs-number">0.0f</span>;</span>
+<span class="line">    f32 dPlayerY = <span class="hljs-number">0.0f</span>;</span>
+<span class="line">    </span>
+<span class="line">    GameState-&gt;PlayerX += dPlayerX;</span>
+<span class="line">    GameState-&gt;PlayerY += dPlayerY;</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;24:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Setting up player input.</div></center>
+<p>
+
+
+These delta values change if we press the corresponding keys.
+
+</p><pre class="listing tilde"><code><span class="line">    f32 dPlayerX = <span class="hljs-number">0.0f</span>;</span>
+<span class="line">    f32 dPlayerY = <span class="hljs-number">0.0f</span>;</span><div class=" add"><span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">if</span>(Controller-&gt;MoveRight.EndedDown)</span>
+<span class="line">    {</span>
+<span class="line">        dPlayerX = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">    }</span>
+<span class="line">    <span class="hljs-keyword">if</span>(Controller-&gt;MoveLeft.EndedDown)</span>
+<span class="line">    {</span>
+<span class="line">        dPlayerX = <span class="hljs-number">-1.0f</span>;</span>
+<span class="line">    }</span>
+<span class="line">    <span class="hljs-keyword">if</span>(Controller-&gt;MoveDown.EndedDown)</span>
+<span class="line">    {</span>
+<span class="line">        dPlayerY = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">    }</span>
+<span class="line">    <span class="hljs-keyword">if</span>(Controller-&gt;MoveUp.EndedDown)</span>
+<span class="line">    {</span>
+<span class="line">        dPlayerY = <span class="hljs-number">-1.0f</span>;</span>
+<span class="line">    }</span>
+<span class="line">    </span></div><span class="line">    GameState-&gt;PlayerX += dPlayerX;</span>
+<span class="line">    GameState-&gt;PlayerY += dPlayerY;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;25:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Processing player input.</div></center>
+<p>
+
+
+We have our dude, and he's moving around now! He moves around pretty slowly, and that's fine; we're not in a rush. Let's see, however, what's causing it and how we can change that.
+
+</p>
+<a class="target" name="frame-independentcharactermovement">&nbsp;</a><a class="target" name="gettingaplayeronthescreen/frame-independentcharactermovement">&nbsp;</a><a class="target" name="toc3.4">&nbsp;</a><h2>Frame-independent Character Movement</h2>
+<p>
+
+
+What we wrote above is quite simple, but what does it mean? Every frame we press a button, say the <code>D</code> key, our player moves by 1 pixel to the right. In other words, we move our player by one pixel for every game frame. 
+
+</p><p>
+
+There are many reasons why this is not ideal. If our framerate is faster, the player will move faster; if it's slower, the player will move slower. Some games did it in the past, and on modern hardware, it's almost impossible to experience them as they run dozens, if not hundreds, of frames per second faster than they were designed for. 
+
+</p><p>
+
+Instead, let's apply the frame time we got last time, stored in <code>SecondsToAdvanceOverUpdate</code>. In fact, this is a bulky name, let's rename it to something like <code>dtForFrame</code>:
+
+</p><pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_input</span></span>
+<span class="line">{</span></span>
+<span class="line">    game_button_state MouseButtons[<span class="hljs-number">5</span>];</span>
+<span class="line">    s32 MouseX, MouseY, MouseZ;</span>
+<span class="line">    </span></div><div class=" edit"><span class="line">    f32 dtForFrame;</span></div><div class=" C++ "><span class="line">    game_controller_input Controllers[5];</span>
+<span class="line">};</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;26:</b> <file>[handmade.h]</file></div></center>
+<pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-keyword">while</span> (GlobalRunning)</span>
+<span class="line">{</span></div><div class=" edit"><span class="line">    NewInput-&gt;dtForFrame = TargetSecondsPerFrame;</span></div><div class=" C++ "><span class="line">    // ... </span>
+<span class="line">};</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;27:</b> <file>[win32_handmade.cpp > WinMain]</file> Renaming <code>SecondsToAdvanceOverUpdate</code> to <code>dtForFrame</code>.</div></center>
+<p>
+
+
+We can use <code>dtForFrame</code> by multiplying it with our <code>dPlayerX</code> and <code>dPlayerY</code>:
+
+</p><pre class="listing tilde"><code><span class="line">    <span class="hljs-keyword">if</span>(Controller-&gt;MoveUp.EndedDown)</span>
+<span class="line">    {</span>
+<span class="line">        dPlayerY = <span class="hljs-number">-1.0f</span>;</span>
+<span class="line">    }</span>
+<span class="line">    </span><div class=" edit"><span class="line">    GameState-&gt;PlayerX += Input-&gt;dtForFrame * dPlayerX;</span>
+<span class="line">    GameState-&gt;PlayerY += Input-&gt;dtForFrame * dPlayerY;</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;28:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Using real frame time.</div></center>
+<p>
+
+
+This solution works, but you'll notice that the player is now moving at a glacial pace. let's speed things up a bit by adding another multiplier:
+
+</p><pre class="listing tilde"><code><span class="line">    <span class="hljs-keyword">if</span>(Controller-&gt;MoveUp.EndedDown)</span>
+<span class="line">    {</span>
+<span class="line">        dPlayerY = <span class="hljs-number">-1.0f</span>;</span>
+<span class="line">    }</span>
+<span class="line">    </span><div class=" add"><span class="line">    dPlayerX *= <span class="hljs-number">64.0f</span>;</span>
+<span class="line">    dPlayerY *= <span class="hljs-number">64.0f</span>;</span></div><div class=" edit"><span class="line"></span>
+<span class="line">    GameState-&gt;PlayerX += Input-&gt;dtForFrame * dPlayerX;</span>
+<span class="line">    GameState-&gt;PlayerY += Input-&gt;dtForFrame * dPlayerY;</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;29:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Using real frame time.</div></center>
+<p>
+
+
+<center><div class="image" style=""><a href="../media/day28/moving-player.gif" target="_blank"><img class="markdeep" src="../media/day28/moving-player.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;10:</b> Our little player square.</span></center></div></center> 
+
+</p>
+<a class="target" name="recap">&nbsp;</a><a class="target" name="recap">&nbsp;</a><a class="target" name="toc4">&nbsp;</a><h1>Recap</h1>
+<p>
+
+
+All we've written so far is just exploratory code. At this point, anything goes. Ignore the code quality, errors, performance, or anything else! The goal of exploration is to see what you would type in if you just had to do the thing fast, in our case, draw a tile map on the screen. That is the only thing that you should be worrying about. At this point, you should never give even a moment's thought to anything you see in those books, like writing clean code or effective C++. We should shut off all of this because we want to know what the CPU should do to achieve what we want, at least some notion of the final code. The next step will be to review what we wrote and figure out the clean way to make it. 
+
+</p><p>
+
+We're going to start having an actual game here. We have so much stuff to discuss, from renderer to coordinate systems (because we don't want to be in pixels as we progress). We have tons of stuff to do, explain, and investigate in detail. The game won't be up and running anytime soon, yet it's so fun to have a little thing moving around on a tile map. Pretty soon, our game will be kind of playable: a little rectangle dude running around between tile maps and fighting little rectangle monsters! 
+
+</p><p>
+
+Anyone gets excited about a bunch of beautiful sprites flying around on the screen and doing stuff that's not hard to get excited about. It's when you're excited about the little things it says something about where your inclinations lie.
+
+</p>
+<a class="target" name="sideconsiderations">&nbsp;</a><a class="target" name="sideconsiderations">&nbsp;</a><a class="target" name="toc5">&nbsp;</a><h1>Side Considerations</h1>
+
+<a class="target" name="abitofcolortheory">&nbsp;</a><a class="target" name="sideconsiderations/abitofcolortheory">&nbsp;</a><a class="target" name="toc5.1">&nbsp;</a><h2>A Bit of Color Theory</h2>
+<p>
+
+
+Light is a type of radiation visible to a human eye. Any electromagnetic radiation consists of waves oscillating at varying speeds, and the <em class="underscore">cone cells</em> in our eyes can capture three separate ranges that roughly correspond to red, green, and blue light. (The ranges vary by person and age, so providing an exact definition is impossible.) Because these ranges overlap, our eyes can perceive various colors by combining these three &ldquo;primary&rdquo; colors.
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day28/eye-spectrum.svg" target="_blank"><img class="markdeep" src="../media/day28/eye-spectrum.svg" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;11:</b> Average spectra of human cone cells.</span></center></div></center> 
+
+</p><p>
+
+Similarly, you can take any three colors or properties of a color and create a <em class="underscore"><a href="https://en.wikipedia.org/wiki/Color_space">Color space</a></em>. You can thus arrive at the <em class="underscore"><a href="https://en.wikipedia.org/wiki/Color_model">color models</a></em> describing a color in three or four values, such as: 
+
+</p><p>
+
+<ul>
+<li class="asterisk"><strong class="underscore">RGB</strong>: describes how much Red, Green, and Blue light needs to be <em class="underscore">emitted</em> to produce a given color. Adding all three at maximum produces white.</li></ul>
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day28/rgb-additive.gif" target="_blank"><img class="markdeep" src="../media/day28/rgb-additive.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;12:</b> RGB Color model.</span></center></div></center> 
+
+</p><p>
+
+<ul>
+<li class="asterisk"><strong class="underscore">CMY</strong> (or <strong class="underscore">CMYK</strong>): used in paint or print to indicate how much Cyan, Magenta, and Yellow produce colors on a white sheet or canvas. Adding all three at maximum produces black.
+
+</p><p>
+
+</li>
+<li class="asterisk"><strong class="underscore">HSL</strong>: Describes the color in terms of Hue, Saturation, and Lightness, where lightness goes from black to white, with base color in the middle.</li></ul>
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day28/hsl-cylinder.png" target="_blank"><img class="markdeep" src="../media/day28/hsl-cylinder.png" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;13:</b> HSL Color model, represented on a cylinder.</span></center></div></center> 
+
+</p><p>
+
+<ul>
+<li class="asterisk"><strong class="underscore">HSV</strong>: Similar to HSL, it describes the color in terms of Hue and Saturation but replaces Lightness with Value (black to maximum chromaticity).</li></ul>
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day28/hsv-cylinder.png" target="_blank"><img class="markdeep" src="../media/day28/hsv-cylinder.png" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;14:</b> HSV Color model.</span></center></div></center> 
+
+</p><p>
+
+If you go a bit deeper and describe that color space mathematically, you can arrive at specific color <em class="underscore"><a href="https://en.wikipedia.org/wiki/Gamut">gamut</a>s</em>. These are then used as standards for hardware production or general usage. If you pick the colors closer to the primary human eye colors, you get a broader range of the colors that a device can output (printer or display) or perceive (camera or scanner).
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day28/srgb-gamut.png" target="_blank"><img class="markdeep" src="../media/day28/srgb-gamut.png" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;15:</b> sRGB Color Gamut provided specifications for the displays in the late 90s and is the current web colorspace.</span></center></div></center> 
+
+</p><p>
+
+Modern consumer screens use arrays of LEDs that emit different strengths of red, green, and blue light to mix the colors. When these arrays are dense enough, we can't tell the difference and accept the mixed colors they produce.
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day28/amoled-screen.jpg" target="_blank"><img class="markdeep" src="../media/day28/amoled-screen.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;16:</b> Modern LED screen under a microscope.</span></center></div></center> 
+
+</p><p>
+
+As programmers, we <em class="underscore">generally</em> don't need to represent the colors in any &ldquo;better&rdquo; way than RGB. There are exceptions to this when we do our computations; if we go for high photorealism, it may be necessary to simulate the actual wavelength of the light as opposed to its RGB value. But it's always true regarding the output of the actual pixels on a physical screen, i.e., when we want to render a computed image. We can produce any colors in the respective gamut by adjusting the intensity of red, green, and blue pixel components.
+
+</p><p>
+
+<em class="underscore">(Back to Subsection  <a href="#toc1.1">1.1</a>)</em>
+
+</p>
+<a class="target" name="navigation">&nbsp;</a><a class="target" name="navigation">&nbsp;</a><a class="target" name="toc6">&nbsp;</a><h1>Navigation</h1>
+<p>
+
+
+Previous: <a href="../html/day27.html">Day 27. Exploration-based Architecture</a>
+
+</p><p>
+
+Up Next: <a href="../html/day29.html">Day 29. Basic Tile Map Collision Checking</a>
+
+</p><p>
+
+<a href="../index.md.html">Back to Index</a>
+
+</p>
+<div class="nonumberh1">Glossary </div>
+<p>
+
+
+<ul>
+<li class="asterisk">Gamut
+</li>
+<li class="asterisk">Spectrum</li></ul>
+
+</p>
+<div class="nonumberh1">Color Theory</div>
+<p>
+
+
+<a href="https://en.wikipedia.org/wiki/Color_model">Color Models</a>
+
+</p><p>
+
+<a href="https://en.wikipedia.org/wiki/Color_space">Color Space</a>
+
+</p><p>
+
+<a href="https://en.wikipedia.org/wiki/Color_theory">Color Theory</a>
+
+</p><p>
+
+<a href="https://en.wikipedia.org/wiki/Cone_cell">Cone cell</a>
+
+</p><p>
+
+<a href="https://en.wikipedia.org/wiki/Gamut">Gamut</a>
+
+</p><p>
+
+<a href="https://en.wikipedia.org/wiki/Light">Light</a>
+
+</p><p>
+
+<a href="https://en.wikipedia.org/wiki/Primary_color">Primary color</a>
+
+</p><p>
+
+<a href="https://imagine.gsfc.nasa.gov/science/toolbox/spectra1.html">Spectra and What They Can Tell Us</a>
+
+</p><p>
+
+<style class="fallback">
+  body {
+    visibility: hidden;
+    font-family: sans-serif;
+  }
+</style>
+
+</p><p>
+
+<script>
+  markdeepOptions = { tocStyle: 'long' };
+  window.alreadyProcessedMarkdeep ||
+    (document.body.style.visibility = 'visible');
+</script>
+
+</p><p>
+
+</p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.13&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div>
