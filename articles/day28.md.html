@@ -172,9 +172,6 @@ Similarly, a rectangle might be another structure you might want to pay attentio
 
 # Start the Tile Map
 
-!!! Warning Reminder About Bugs
-    This series is not about presenting the finished product in a neat tutorial. Bugs will find their way into your code; learning to find and fix them is an important skill to learn. If you find a bug quickly and want to fix it immediately, go ahead! We'll be doing more and more debugging as the series progresses.
-
 Let's make the most straightforward tile map you can imagine! We'll take a 32-bit value and spread it around a bit. 
 
 ## Define the Grid
@@ -492,48 +489,259 @@ You will notice we had to modify `UpperLeftX` to ensure the right wall is visibl
 
 These questions are why we do exploration; we want to think about all these things up front before making decisions about our tile map size, etc. To solve them, we might study old games; maybe they did different dimensions because the standard aspect ratio was 4:3 before HD TVs became commonplace. It's a good moment to put on your thinking cap and consider all this.
 
+# Getting a Player on the Screen
 
+Given that we have a tile map on the screen, it seems the next logical thing to do is make a little player move around. So, similarly to what we did with our debug code back in the day, we want to add some simple values inside the `GameState` structure. We usually shouldn't be able to modify structures while we're hot-loading, but in this case, it should work. It's a unique case due to our empty `GameState` structure; if you recall, we store `GameState` at the beginning of our memory block, with gigabytes of available memory that follow. 
 
-* 0:54 - overview
-* 3:30 - floating point color discussion
-* 16:50 - doing the color in floating point
-* 23:40 - Showing possible structs we want to pull out
-* 25:03 - Starting a basic tile map
-* 28:10 - Looping through the tilemap to draw
-* 37:32 - Getting a player to the screen
-* 46:26 - Basic character movement
-* 48:00 - Debugging slow player movement
+So, for our player, let's say we'll need to capture the player's X and Y positions in the world:
 
+~~~~~~~ C++
+struct game_state
+{
+~~~~~~~ C++ add
+    f32 PlayerX;
+    f32 PlayerY;
+~~~~~~~ C++
+};
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> Storing player positions.]
 
+## Game Physics and Player Position
 
-------------------------
-<!-- 
-Useful captions
-Subsection [name of the section]
-Caption under the listing: [Listing [x]: <file>[]</file> .]
-Picture or gif: ![Figure [x]: .](../media/dayXXX/.jpg) 
-Chart: [Figure [x]: .]
--->
-------------------------
+We'll use our `DrawRectangle` function to draw the player. That said, we'll probably need to do some calculations to properly position our rectangle respectfully to the player's position. 
 
+When we say "a player touches a wall" in a 2D world, we usually don't mean the top of their head sprite. Usually, they eclipse the wall a bit, so their actual location is typically more about where their center of gravity projects on the floor.
 
+*********************************
+*     ▉▉▉▉                      *
+*     ▉▉🙂 ▉                     *
+*     ▉▉                        *
+*     ▉▉                        *
+*     ▉▉                        *
+*                               *
+*********************************
+[Figure [x]: Player in the corner.]
 
+So, when we want to calculate the position of the player's sprite (rectangle for now), we need to position it so that the player's position is at its bottom center. We achieve that by offsetting our `PlayerTop` by half the player's width and `PlayerLeft` by its full height. 
 
+******************************************************
+*               w / 2                                *
+*(PlayerLeft, <---------                             *
+* PlayerTop)  *-----------------.                    *
+*             |        ^        |                    *
+*             |        |        |                    *
+*             |        |        |                    *
+*             |        | h      |                    *
+*             |        |        |                    *
+*             |        |        |                    *
+*             |        |        |                    *
+*             '--------x--------* (w, h)             *
+*                       ^                            *
+*                        \                           *
+*                         '-- Player (x, y)          *
+******************************************************
+[Figure [x]: Drawing player rectangle.]
 
+It will eventually become second nature to you, but if you've never done anything with graphics before, you want to think it through like this a few times. 
 
+## Drawing the Player
 
+Let's start typing those values in. We will draw the player after we draw our tilemap on the screen. For `MinX` and `MinY`, we'll calculate `PlayerLeft` and `PlayerTop`. We'll offset these by player width and height to achieve `MaxX` and `MaxY`.
 
+~~~~~~~ C++
+for(int Row = 0; /*...*/)
+{
+    for(int Column = 0; /*...*/)
+    {
+        // ...
+    }
+}
 
+~~~~~~~ C++ add
+DrawRectangle(Buffer, PlayerLeft, PlayerTop, 
+              PlayerLeft + PlayerWidth, 
+              PlayerTop + PlayerHeight, 
+              PlayerR, PlayerG, PlayerB);
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Drawing player rectangle.]
 
+We will need the red, green, and blue values for our color; let's make it a lovely yellow: 
 
+~~~~~~~ C++ add
+f32 PlayerR = 1.0f;
+f32 PlayerG = 1.0f;
+f32 PlayerB = 0.0f;
+~~~~~~~ C++
 
+DrawRectangle(Buffer, PlayerLeft, PlayerTop, 
+              PlayerLeft + PlayerWidth, 
+              PlayerTop + PlayerHeight, 
+              PlayerR, PlayerG, PlayerB);
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Defining player color.]
 
+The tile width and height will determine the player's width and height. Maybe we'll make the width slightly smaller to pass through doors more easily:
 
+~~~~~~~ C++
+f32 PlayerR = 1.0f;
+f32 PlayerG = 1.0f;
+f32 PlayerB = 0.0f;
+~~~~~~~ C++ add
+f32 PlayerWidth = 0.75f * TileWidth;
+f32 PlayerHeight = TileHeight;
+~~~~~~~ C++
 
+DrawRectangle(Buffer, PlayerLeft, PlayerTop, 
+              PlayerLeft + PlayerWidth, 
+              PlayerTop + PlayerHeight, 
+              PlayerR, PlayerG, PlayerB);
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Setting player width and height.]
 
+Finally, to calculate `PlayerLeft`, we take `PlayerX` and remove half of `PlayerWidth`, as we said. Instead of dividing by `2`, we'll multiply by `0.5f` as it's more efficient. For `PlayerTop`, we'll take `PlayerY` and subtract the entire `PlayerHeight`:
 
+~~~~~~~ C++
+f32 PlayerR = 1.0f;
+f32 PlayerG = 1.0f;
+f32 PlayerB = 0.0f;
+f32 PlayerWidth = 0.75f * TileWidth;
+f32 PlayerHeight = TileHeight;
+~~~~~~~ C++ add
+f32 PlayerLeft = GameState->PlayerX - (0.5f * PlayerWidth);
+f32 PlayerTop = GameState->PlayerY + PlayerHeight;
+~~~~~~~ C++
 
+DrawRectangle(Buffer, PlayerLeft, PlayerTop, 
+              PlayerLeft + PlayerWidth, 
+              PlayerTop + PlayerHeight, 
+              PlayerR, PlayerG, PlayerB);
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Setting player width and height.]
 
+## Player Movement
+
+We can now compile, but we won't see any changes: since both `PlayerX` and `PlayerY` are zero, we draw the whole player rectangle outside the top-left corner of our screen. Let's add some simple code to control player movement (keyboard-only, for the time being).
+
+The logic is straightforward: we define delta values for X and Y and then add them to the player's X and Y. 
+
+~~~~~~~ C++
+game_controller_input *Controller = GetController(Input, ControllerIndex);
+if (Controller->IsAnalog)
+{
+    // NOTE(casey): Use analog movement tuning
+}
+else
+{
+    // NOTE(casey): Use digital movement tuning
+~~~~~~~ C++ add
+    f32 dPlayerX = 0.0f;
+    f32 dPlayerY = 0.0f;
+    
+    GameState->PlayerX += dPlayerX;
+    GameState->PlayerY += dPlayerY;
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Setting up player input.]
+
+These delta values change if we press the corresponding keys.
+
+~~~~~~~ C++
+    f32 dPlayerX = 0.0f;
+    f32 dPlayerY = 0.0f;
+~~~~~~~ C++ add
+    
+    if(Controller->MoveRight.EndedDown)
+    {
+        dPlayerX = 1.0f;
+    }
+    if(Controller->MoveLeft.EndedDown)
+    {
+        dPlayerX = -1.0f;
+    }
+    if(Controller->MoveDown.EndedDown)
+    {
+        dPlayerY = 1.0f;
+    }
+    if(Controller->MoveUp.EndedDown)
+    {
+        dPlayerY = -1.0f;
+    }
+    
+~~~~~~~ C++
+    GameState->PlayerX += dPlayerX;
+    GameState->PlayerY += dPlayerY;
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Processing player input.]
+
+We have our dude, and he's moving around now! He moves around pretty slowly, and that's fine; we're not in a rush. Let's see, however, what's causing it and how we can change that.
+
+## Frame-independent Character Movement
+
+What we wrote above is quite simple, but what does it mean? Every frame we press a button, say the `D` key, our player moves by 1 pixel to the right. In other words, we move our player by one pixel for every game frame. 
+
+There are many reasons why this is not ideal. If our framerate is faster, the player will move faster; if it's slower, the player will move slower. Some games did it in the past, and on modern hardware, it's almost impossible to experience them as they run dozens, if not hundreds, of frames per second faster than they were designed for. 
+
+Instead, let's apply the frame time we got last time, stored in `SecondsToAdvanceOverUpdate`. In fact, this is a bulky name, let's rename it to something like `dtForFrame`:
+
+~~~~~~~ C++ 
+struct game_input
+{
+    game_button_state MouseButtons[5];
+    s32 MouseX, MouseY, MouseZ;
+    
+~~~~~~~ C++ edit
+    f32 dtForFrame;
+~~~~~~~ C++ 
+    game_controller_input Controllers[5];
+};
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file>]
+
+~~~~~~~ C++ 
+while (GlobalRunning)
+{
+~~~~~~~ C++ edit
+    NewInput->dtForFrame = TargetSecondsPerFrame;
+~~~~~~~ C++ 
+    // ... 
+};
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp > WinMain]</file> Renaming `SecondsToAdvanceOverUpdate` to `dtForFrame`.]
+
+We can use `dtForFrame` by multiplying it with our `dPlayerX` and `dPlayerY`:
+
+~~~~~~~ C++
+    if(Controller->MoveUp.EndedDown)
+    {
+        dPlayerY = -1.0f;
+    }
+    
+~~~~~~~ C++ edit
+    GameState->PlayerX += Input->dtForFrame * dPlayerX;
+    GameState->PlayerY += Input->dtForFrame * dPlayerY;
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Using real frame time.]
+
+This solution works, but you'll notice that the player is now moving at a glacial pace. let's speed things up a bit by adding another multiplier:
+
+~~~~~~~ C++
+    if(Controller->MoveUp.EndedDown)
+    {
+        dPlayerY = -1.0f;
+    }
+    
+~~~~~~~ C++ add
+    dPlayerX *= 64.0f;
+    dPlayerY *= 64.0f;
+~~~~~~~ C++ edit
+
+    GameState->PlayerX += Input->dtForFrame * dPlayerX;
+    GameState->PlayerY += Input->dtForFrame * dPlayerY;
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Using real frame time.]
+
+![Figure [x]: Our little player square.](../media/day28/moving-player.gif) 
 
 
 
@@ -541,9 +749,9 @@ Chart: [Figure [x]: .]
 
 All we've written so far is just exploratory code. At this point, anything goes. Ignore the code quality, errors, performance, or anything else! The goal of exploration is to see what you would type in if you just had to do the thing fast, in our case, draw a tile map on the screen. That is the only thing that you should be worrying about. At this point, you should never give even a moment's thought to anything you see in those books, like writing clean code or effective C++. We should shut off all of this because we want to know what the CPU should do to achieve what we want, at least some notion of the final code. The next step will be to review what we wrote and figure out the clean way to make it. 
 
-# Exercises 
+We're going to start having an actual game here. We have so much stuff to discuss, from renderer to coordinate systems (because we don't want to be in pixels as we progress). We have tons of stuff to do, explain, and investigate in detail. The game won't be up and running anytime soon, yet it's so fun to have a little thing moving around on a tile map. Pretty soon, our game will be kind of playable: a little rectangle dude running around between tile maps and fighting little rectangle monsters! 
 
-# Programming Notions 
+Anyone gets excited about a bunch of beautiful sprites flying around on the screen and doing stuff that's not hard to get excited about. It's when you're excited about the little things it says something about where your inclinations lie.
 
 # Side Considerations 
 
