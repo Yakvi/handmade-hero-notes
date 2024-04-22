@@ -1,0 +1,89 @@
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../css/style.css" />
+
+**Day 29. Basic Tile Map Collision Checking** 
+_Video Length (including Q&A): [1h39](https://hero.handmade.network/episode/code/day029/)_ 
+
+(insert intro.md.html here) 
+
+------------------------
+<!-- 
+
+2:30 Review of what's currently been done
+3:17 Clearing the screen to black and offsetting the drawable area
+6:49 Player collision with the tilemap
+17:23 Moving player initial position inside the map
+20:31 Clearing only the parts of the screen not drawn on
+23:10 Function for checking if a point is occupied and tile_map struct
+27:05 Accessing tilemap data as 1-dimensional array
+35:16 Adding player width to the collision
+37:50 Making player change the map when walking through a door
+43:56 About storing all tilemaps in one big structure
+50:28 Start on storing and accessing multiple tilemaps and the world struct
+1:01:00 Short recap on where we are
+
+1:02:16 Q&A
+1:03:10 John Blow points out we haven't initialised the world struct members
+1:03:43 Question: Why does player sometimes stop a pixel before the wall?
+1:14:36 Question: Are your variables for tilemaps too similar to each other or am I just easily confused?
+1:16:12 Question: Is there an advantage on using bool32 instead of using bool 8-bit?
+1:17:07 Question: Can you go over briefly how to encode the tile data in a single uint32?
+1:17:55 Question: Why does left and right side collision work but not the top and bottom?
+1:20:43 Question: Why save TileWidth and Height if those values never change?
+1:21:02 Question: What are the differences between structs and classes?
+1:23:14 Question: Do you always put int32 or can you use only int?
+1:24:45 Question: So int32 is because you want to make the game for 32bit computers?
+1:26:05 The player moves faster diagonally than it's supposed to. Are you planning on fixing that?
+1:27:10 Question: I'm not familiar with #define, what is it used for?
+1:28:34 Question: When you use int32 does it have a different influence on the code than normal ints?
+1:30:05 Making the platform header C compliant
+
+Useful captions
+Subsection [name-of-the-section]
+Caption under the listing: [Listing [x]: <file>[]</file> .]
+Picture or gif: ![Figure [x]: .](../media/day29/.jpg) 
+Chart: [Figure [x]: .]
+-->
+------------------------
+
+
+# Recap 
+
+# Exercises 
+
+# Programming Notions 
+
+<!-- _(Back to Subsection [name of the section])_ -->
+
+
+# Side Considerations 
+
+# Navigation 
+
+Previous: [Day 28. Drawing a Tile Map][day 28]
+
+Up Next: [Day 30. Tilemap Coordinate Systems][day 30]
+
+[Back to Index](../index.md.html)
+
+(#) Glossary 
+
+(insert glossary/glossary_day29.md.html here)
+
+(insert references/refs_day29.md.html here) 
+
+(insert links.md.html here)
+
+<style class="fallback">
+  body {
+    visibility: hidden;
+    font-family: sans-serif;
+  }
+</style>
+<!-- Markdeep: https://casual-effects.com/markdeep/ -->
+<script>
+  markdeepOptions = { tocStyle: 'long' };
+  window.alreadyProcessedMarkdeep ||
+    (document.body.style.visibility = 'visible');
+</script>
+<script src="../js/markdeep.min.js" charset="utf-8"></script>
