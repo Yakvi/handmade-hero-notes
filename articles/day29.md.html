@@ -6,10 +6,610 @@ _Video Length (including Q&A): [1h39](https://hero.handmade.network/episode/code
 
 (insert intro.md.html here) 
 
+"Always write the usage code first" is our mantra. We don't want to write a game engine until we have the game. While it might sound paradoxical, it simply means using whatever tools we can develop quickly to build the structure up. We're just drawing rectangles on the screen, pretending they will be something beautiful later down the line. But, in doing so, we'll understand how exactly we want our engine to function so that when we build those engine components, we won't be wasting time on things we don't need or that are clunky to use in the context we meant to use them.
+
+# Clean Up
+
+## Introduce `handmade_platform.h`
+
+!!! Note Note
+    Parts of this subsection use the refactoring made on stream during Day 39.
+
+Now that we have started to use `handmade.h` to store actual game code (even if exploratory), we want to extract the platform headers to a separate file. Let's create a new file that we'll call `handmade_platform.h`: 
+
+~~~~~~~ C++ add
+#if !defined(HANDMADE_PLATFORM_H)
+
+
+
+#define HANDMADE_PLATFORM_H
+#endif
+~~~~~~~
+[Listing [x]: <file>[handmade_platform.h]</file> Introducing `handmade_platform.h`.]
+
+First, we will move all the various type definitions and useful macros we use in both the game and the platform layers.
+
+~~~~~~~ C++
+/*
+NOTE(casey):
+
+HANDMADE_INTERNAL:
+0 - Build for public release
+1 - Build for developer only
+
+HANDMADE_SLOW:
+0 - No slow code allowed!
+1 - Slow code welcome.
+*/
+
+~~~~~~~ C++ delete
+// TODO(casey): Implement sine ourselves
+#include <math.h>
+#include <stdint.h>
+
+typedef int8_t s8;
+typedef int16_t s16;
+typedef int32_t s32;
+typedef int64_t s64;
+typedef s32 b32;
+
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+
+typedef float f32;
+typedef double f64;
+
+#define internal static
+#define local_persist static
+#define global_variable static
+    
+#define Pi32 3.14159265359f
+    
+#if HANDMADE_SLOW
+#define Assert(Expression) if (!(Expression)) { *(int *)0 = 0; }
+#else
+#define Assert(Expression)
+#endif
+    
+#define Kilobytes(Value) ((Value) * 1024LL)
+#define Megabytes(Value) (Kilobytes(Value) * 1024LL)
+#define Gigabytes(Value) (Megabytes(Value) * 1024LL)
+#define Terabytes(Value) (Gigabytes(Value) * 1024LL)
+    
+#define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
+    
+inline u32
+SafeTruncateUInt64(u64 Value)
+{
+    Assert(Value <= 0xFFFFFFFF);
+    u32 Result = (u32)Value;
+    return (Result);
+}
+
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file>]
+
+~~~~~~~ C++
+#if !defined(HANDMADE_PLATFORM_H)
+
+~~~~~~~ C++ add
+#include <stdint.h>
+
+typedef int8_t s8;
+typedef int16_t s16;
+typedef int32_t s32;
+typedef int64_t s64;
+typedef s32 b32;
+
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+
+typedef float f32;
+typedef double f64;
+
+#define internal static
+#define local_persist static
+#define global_variable static
+    
+#define Pi32 3.14159265359f
+    
+#if HANDMADE_SLOW
+#define Assert(Expression) if (!(Expression)) { *(int *)0 = 0; }
+#else
+#define Assert(Expression)
+#endif
+    
+#define Kilobytes(Value) ((Value) * 1024LL)
+#define Megabytes(Value) (Kilobytes(Value) * 1024LL)
+#define Gigabytes(Value) (Megabytes(Value) * 1024LL)
+#define Terabytes(Value) (Gigabytes(Value) * 1024LL)
+    
+#define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
+    
+inline u32
+SafeTruncateUInt64(u64 Value)
+{
+    Assert(Value <= 0xFFFFFFFF);
+    u32 Result = (u32)Value;
+    return (Result);
+}
+~~~~~~~ C++
+
+#define HANDMADE_PLATFORM_H
+#endif
+~~~~~~~
+[Listing [x]: <file>[handmade_platform.h]</file> Moving type definitions.]
+
+Next, we'll move the meat of the platform layer: main structures to capture game input, output buffer, and the debug functions we used for reading and writing files.
+
+~~~~~~~ C++ delete
+struct thread_context
+{
+    int Placeholder;
+};
+
+// NOTE(casey): Services that the platform layer provides to the game.
+#if HANDMADE_INTERNAL
+struct debug_read_file_result
+{
+    u32 ContentsSize;
+    void *Contents;
+};
+
+#define DEBUG_PLATFORM_FREE_FILE_MEMORY(name) void name (thread_context *Thread, void *Memory)
+typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory);
+
+#define DEBUG_PLATFORM_READ_ENTIRE_FILE(name) debug_read_file_result name (thread_context *Thread, char *Filename)
+typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platform_read_entire_file);
+
+#define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name) b32 name (thread_context *Thread, char *Filename, u32 MemorySize, void *Memory)
+typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
+#endif
+
+// NOTE(casey): Services that the game provides to the platform layer.
+struct game_offscreen_buffer
+{
+    void *Memory;
+    int Width;
+    int Height;
+    int Pitch;
+    int BytesPerPixel;
+};
+
+struct game_sound_output_buffer
+{
+    int SampleCount;
+    int SamplesPerSecond;
+    s16* Samples;
+};
+
+struct game_button_state
+{
+    s32 HalfTransitionCount;
+    b32 EndedDown;
+};
+
+struct game_controller_input
+{
+    b32 IsConnected;
+    b32 IsAnalog;
+    
+    f32 StickAverageX;
+    f32 StickAverageY;
+    
+    union
+    {
+        game_button_state Buttons[12];
+        struct
+        {
+            game_button_state MoveUp;
+            game_button_state MoveDown;
+            game_button_state MoveLeft;
+            game_button_state MoveRight;
+            
+            game_button_state ActionUp;
+            game_button_state ActionDown;
+            game_button_state ActionLeft;
+            game_button_state ActionRight;
+            
+            game_button_state LeftShoulder;
+            game_button_state RightShoulder;
+            
+            game_button_state Back;
+            game_button_state Start;
+            
+            //
+            
+            game_button_state Terminator;
+        };
+    };
+};
+
+struct game_input
+{
+    game_button_state MouseButtons[5];
+    s32 MouseX, MouseY, MouseZ;
+    
+    f32 dtForFrame;
+    game_controller_input Controllers[5];
+};
+~~~~~~~ C++
+
+inline game_controller_input *GetController(game_input *Input, int ControllerIndex)
+{
+    Assert(ControllerIndex < ArrayCount (Input->Controllers));
+    game_controller_input *Result = &Input->Controllers[ControllerIndex];
+    return (Result);
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file>]
+
+~~~~~~~ C++
+typedef float f32;
+typedef double f64;
+
+~~~~~~~ C++ add
+struct thread_context
+{
+    int Placeholder;
+};
+
+// NOTE(casey): Services that the platform layer provides to the game.
+#if HANDMADE_INTERNAL
+struct debug_read_file_result
+{
+    u32 ContentsSize;
+    void *Contents;
+};
+
+#define DEBUG_PLATFORM_FREE_FILE_MEMORY(name) void name (thread_context *Thread, void *Memory)
+typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory);
+
+#define DEBUG_PLATFORM_READ_ENTIRE_FILE(name) debug_read_file_result name (thread_context *Thread, char *Filename)
+typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platform_read_entire_file);
+
+#define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name) b32 name (thread_context *Thread, char *Filename, u32 MemorySize, void *Memory)
+typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
+#endif
+
+// NOTE(casey): Services that the game provides to the platform layer.
+struct game_offscreen_buffer
+{
+    void *Memory;
+    int Width;
+    int Height;
+    int Pitch;
+    int BytesPerPixel;
+};
+
+struct game_sound_output_buffer
+{
+    int SampleCount;
+    int SamplesPerSecond;
+    s16* Samples;
+};
+
+struct game_button_state
+{
+    s32 HalfTransitionCount;
+    b32 EndedDown;
+};
+
+struct game_controller_input
+{
+    b32 IsConnected;
+    b32 IsAnalog;
+    
+    f32 StickAverageX;
+    f32 StickAverageY;
+    
+    union
+    {
+        game_button_state Buttons[12];
+        struct
+        {
+            game_button_state MoveUp;
+            game_button_state MoveDown;
+            game_button_state MoveLeft;
+            game_button_state MoveRight;
+            
+            game_button_state ActionUp;
+            game_button_state ActionDown;
+            game_button_state ActionLeft;
+            game_button_state ActionRight;
+            
+            game_button_state LeftShoulder;
+            game_button_state RightShoulder;
+            
+            game_button_state Back;
+            game_button_state Start;
+            
+            //
+            
+            game_button_state Terminator;
+        };
+    };
+};
+
+struct game_input
+{
+    game_button_state MouseButtons[5];
+    s32 MouseX, MouseY, MouseZ;
+    
+    f32 dtForFrame;
+    game_controller_input Controllers[5];
+};
+~~~~~~~ C++
+
+#define HANDMADE_PLATFORM_H
+#endif
+~~~~~~~
+[Listing [x]: <file>[handmade_platform.h]</file> Moving the service structures.]
+
+The last piece is to move the remaining functions, structure, and platform functions declarations:
+
+~~~~~~~ C++ delete
+inline game_controller_input *GetController(game_input *Input, int ControllerIndex)
+{
+    Assert(ControllerIndex < ArrayCount (Input->Controllers));
+    game_controller_input *Result = &Input->Controllers[ControllerIndex];
+    return (Result);
+}
+
+struct game_memory
+{
+    u64 PermanentStorageSize;
+    void *PermanentStorage;
+    u64 TransientStorageSize;
+    void *TransientStorage;
+    b32 IsInitialized;
+    
+    debug_platform_free_file_memory *DEBUGPlatformFreeFileMemory;
+    debug_platform_read_entire_file *DEBUGPlatformReadEntireFile;
+    debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;
+};
+
+#define GAME_UPDATE_AND_RENDER(name) void name(thread_context *Thread, game_memory *Memory, game_input *Input, game_offscreen_buffer* Buffer)
+typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
+
+// NOTE(casey): At the moment, this has to be a very fast function, it cannot be
+// more than a millisecond or so.
+// TODO(casey): Reduce the pressure on this function's performance by measuring it
+// or asking about it, etc.
+
+#define GAME_GET_SOUND_SAMPLES(name) void name(thread_context *Thread, game_memory *Memory, game_sound_output_buffer *SoundBuffer)
+typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
+~~~~~~~ C++
+
+//
+//
+//
+
+struct game_state
+{
+    f32 PlayerX;
+    f32 PlayerY;
+};
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file>]
+
+~~~~~~~ C++
+struct game_input
+{
+    game_button_state MouseButtons[5];
+    s32 MouseX, MouseY, MouseZ;
+    
+    f32 dtForFrame;
+    game_controller_input Controllers[5];
+};
+
+~~~~~~~ C++ add
+struct game_memory
+{
+    u64 PermanentStorageSize;
+    void *PermanentStorage;
+    u64 TransientStorageSize;
+    void *TransientStorage;
+    b32 IsInitialized;
+    
+    debug_platform_free_file_memory *DEBUGPlatformFreeFileMemory;
+    debug_platform_read_entire_file *DEBUGPlatformReadEntireFile;
+    debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;
+};
+
+#define GAME_UPDATE_AND_RENDER(name) void name(thread_context *Thread, game_memory *Memory, game_input *Input, game_offscreen_buffer* Buffer)
+typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
+
+// NOTE(casey): At the moment, this has to be a very fast function, it cannot be
+// more than a millisecond or so.
+// TODO(casey): Reduce the pressure on this function's performance by measuring it
+// or asking about it, etc.
+
+#define GAME_GET_SOUND_SAMPLES(name) void name(thread_context *Thread, game_memory *Memory, game_sound_output_buffer *SoundBuffer)
+typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
+
+inline game_controller_input *GetController(game_input *Input, int ControllerIndex)
+{
+    Assert(ControllerIndex < ArrayCount (Input->Controllers));
+    game_controller_input *Result = &Input->Controllers[ControllerIndex];
+    return (Result);
+}
+~~~~~~~ C++
+
+#define HANDMADE_PLATFORM_H
+#endif
+~~~~~~~
+[Listing [x]: <file>[handmade_platform.h]</file> Moving the DLL export function declarations.]
+
+Everything is ready to go, and we can now use our newly-created `handmade_platform.h` file in both the Windows platform and the game layers: 
+
+~~~~~~~ C++ edit
+#include "handmade_platform.h"
+~~~~~~~ C++
+
+#include <windows.h>
+#include <stdio.h>
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file>]
+
+~~~~~~~ C++ 
+/*
+NOTE(casey):
+
+HANDMADE_INTERNAL:
+0 - Build for public release
+1 - Build for developer only
+
+HANDMADE_SLOW:
+0 - No slow code allowed!
+1 - Slow code welcome.
+*/ 
+
+
+~~~~~~~ C++ add
+#include "handmade_platform.h"
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> Adding references to `handmade_platform.h`]
+
+Finally, we want to future-proof our platform header to be compilable in C. This will help if we write the platform layer in a language other than C++.
+
+To do so, we need to do two things: 
+
+* Add complete decoration to the struct definitions. In C, you need to specify `typedef struct struct_name{ /* ... */ } struct_name;` In C++, the compiler adds `typedef` and alias automatically, allowing programmers only to write `struct struct_name { /* ... */ };`.
+* Encapsulate the whole file into an `extern "C"` block so the C++ compiler doesn't _mangle_ the names.
+
+~~~~~~~ C++
+#if !defined(HANDMADE_PLATFORM_H)
+
+~~~~~~~ C++ add
+#ifdef __cplusplus
+extern "C" {
+#endif
+~~~~~~~ C++ 
+
+#include <stdint.h>
+
+// ...
+
+~~~~~~~ C++ edit
+typedef struct thread_context
+~~~~~~~ C++
+{
+    int Placeholder;
+~~~~~~~ C++ edit
+} thread_context;
+~~~~~~~ C++ 
+
+// ...
+
+~~~~~~~ C++ edit
+typedef struct debug_read_file_result
+~~~~~~~ C++
+{
+    u32 ContentsSize;
+    void *Contents;
+~~~~~~~ C++ edit
+} debug_read_file_result;
+~~~~~~~ C++ 
+
+// ...
+
+~~~~~~~ C++ edit
+typedef struct game_offscreen_buffer
+~~~~~~~ C++
+{
+    // ...
+~~~~~~~ C++ edit
+} game_offscreen_buffer;
+~~~~~~~ C++
+
+
+~~~~~~~ C++ edit
+typedef struct game_sound_output_buffer
+~~~~~~~ C++
+{
+    // ...
+~~~~~~~ C++ edit
+} game_sound_output_buffer;
+~~~~~~~ C++
+
+
+~~~~~~~ C++ edit
+typedef struct game_button_state
+~~~~~~~ C++
+{
+    // ...
+~~~~~~~ C++ edit
+} game_button_state;
+~~~~~~~ C++
+
+
+~~~~~~~ C++ edit
+typedef struct game_controller_input
+~~~~~~~ C++
+{
+    // ... 
+~~~~~~~ C++ edit
+} game_controller_input;
+~~~~~~~ C++
+
+
+~~~~~~~ C++ edit
+typedef struct game_input
+~~~~~~~ C++
+{
+    game_button_state MouseButtons[5];
+    s32 MouseX, MouseY, MouseZ;
+    
+    f32 dtForFrame;
+    game_controller_input Controllers[5];
+~~~~~~~ C++ edit
+} game_input;
+~~~~~~~ C++
+
+
+~~~~~~~ C++ edit
+typedef struct game_memory
+~~~~~~~ C++
+{
+    u64 PermanentStorageSize;
+    void *PermanentStorage;
+    u64 TransientStorageSize;
+    void *TransientStorage;
+    b32 IsInitialized;
+    
+    debug_platform_free_file_memory *DEBUGPlatformFreeFileMemory;
+    debug_platform_read_entire_file *DEBUGPlatformReadEntireFile;
+    debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;
+~~~~~~~ C++ edit
+} game_memory;
+~~~~~~~ C++
+
+// ...
+
+~~~~~~~ C++ add
+#ifdef __cplusplus
+}
+#endif
+~~~~~~~ C++
+
+#define HANDMADE_PLATFORM_H
+#endif
+~~~~~~~
+[Listing [x]: <file>[handmade_platform.h]</file> Making the platform headers C-compatible.]
+
+
+##
+
 ------------------------
 <!-- 
 
 2:30 Review of what's currently been done
+1:30:05 Making the platform header C compliant
 3:17 Clearing the screen to black and offsetting the drawable area
 6:49 Player collision with the tilemap
 17:23 Moving player initial position inside the map
@@ -36,7 +636,6 @@ _Video Length (including Q&A): [1h39](https://hero.handmade.network/episode/code
 1:26:05 The player moves faster diagonally than it's supposed to. Are you planning on fixing that?
 1:27:10 Question: I'm not familiar with #define, what is it used for?
 1:28:34 Question: When you use int32 does it have a different influence on the code than normal ints?
-1:30:05 Making the platform header C compliant
 
 Useful captions
 Subsection [name-of-the-section]
