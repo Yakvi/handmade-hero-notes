@@ -603,7 +603,107 @@ typedef struct game_memory
 [Listing [x]: <file>[handmade_platform.h]</file> Making the platform headers C-compatible.]
 
 
-##
+## Platform Layer: Clear the Window
+
+As we stand now, we're using a fixed part of our window, which we pretend to be our screen. Our window can be bigger or smaller than that area. If it's bigger, we don't touch the areas outside of that rectangle in any way. Let's fix that and clear the unused window areas to black. 
+
+Additionally, we can offset the game window from the window border to know what we're drawing without having the operating system's decorations get in our way.
+
+
+The code outputting our buffer in the window is inside `win32_handmade.`cpp`: 
+
+~~~~~~~ C++
+internal void
+Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer,
+                           HDC DeviceContext, int WindowWidth, int WindowHeight)
+{
+    // NOTE(casey): For prototyping purposes, we're going to always blit
+    // 1-to-1 pixels to make sure we don't introduce artifacts with
+    // stretching while we are learning to code the renderer!
+    StretchDIBits(DeviceContext,
+                  0, 0, Buffer->Width, Buffer->Height,
+                  0, 0, Buffer->Width, Buffer->Height,
+                  Buffer->Memory,
+                  &Buffer->Info,
+                  DIB_RGB_COLORS, SRCCOPY);
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> `Win32DisplayBufferInWindow`.]
+
+A naive method of approaching this problem would be to clear the whole window to black first and then render our window. The function responsible for this is [PatBlt][], which we briefly used on [Day 2][] to have our window going. It's a straightforward function that takes the top-left corner, width, and height and performs the operation of choice. In our case, we want to clear the screen to black so we should pick `BLACKNESS`:
+
+~~~~~~~ C++
+internal void
+Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer,
+                           HDC DeviceContext, int WindowWidth, int WindowHeight)
+{
+~~~~~~~ C++ add
+    int OffsetX = 10;
+    int OffsetY = 10;
+
+    PatBlt(DeviceContext, 0, 0, WindowWidth, WindowHeight, BLACKNESS);
+~~~~~~~ C++
+
+
+    // NOTE(casey): For prototyping purposes, we're going to always blit
+    // 1-to-1 pixels to make sure we don't introduce artifacts with
+    // stretching while we are learning to code the renderer!
+    StretchDIBits(DeviceContext,
+~~~~~~~ C++ edit
+                  OffsetX, OffsetY, Buffer->Width, Buffer->Height,
+                  OffsetX, OffsetY, Buffer->Width, Buffer->Height,
+~~~~~~~ C++
+                  Buffer->Memory,
+                  &Buffer->Info,
+                  DIB_RGB_COLORS, SRCCOPY);
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> A naive approach to clear the screen.]
+
+Unfortunately, this method doesn't work, as Windows can [page flip][] between the `PatBlt` and the `StretchDIBits` calls, making the whole screen black for one frame. 
+
+![Figure [x]: Too much Blackness.](../media/day29/screen-1.gif) 
+
+What we want to do instead is, instead of having one big rectangle, have four smaller rectangles surrounding our buffer: 
+
+~~~~~~~ C++
+internal void
+Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer,
+                           HDC DeviceContext, int WindowWidth, int WindowHeight)
+{
+    int OffsetX = 10;
+    int OffsetY = 10;
+
+~~~~~~~ C++ delete
+    PatBlt(DeviceContext, 0, 0, WindowWidth, WindowHeight, BLACKNESS);
+~~~~~~~ C++ add
+    PatBlt(DeviceContext, 0, 0, WindowWidth, OffsetY, BLACKNESS);                             // top
+    PatBlt(DeviceContext, 0, OffsetY + Buffer->Height, WindowWidth, WindowHeight, BLACKNESS); // bottom
+    PatBlt(DeviceContext, 0, 0, OffsetX, WindowHeight, BLACKNESS);                            // left
+    PatBlt(DeviceContext, OffsetX + Buffer->Width, 0, WindowWidth, WindowHeight, BLACKNESS);  // right
+~~~~~~~ C++ 
+
+
+    // NOTE(casey): For prototyping purposes, we're going to always blit
+    // 1-to-1 pixels to make sure we don't introduce artifacts with
+    // stretching while we are learning to code the renderer!
+    StretchDIBits(DeviceContext,
+                  OffsetX, OffsetY, Buffer->Width, Buffer->Height,
+                  OffsetX, OffsetY, Buffer->Width, Buffer->Height,
+                  Buffer->Memory,
+                  &Buffer->Info,
+                  DIB_RGB_COLORS, SRCCOPY);
+}
+~~~~~~~
+[Listing [x]: <file>[win32_handmade.cpp]</file> A better way to clear the screen.]
+
+This gives us nice black edges surrounding our screen. You might notice that we aren't subtracting the buffer width and height when we draw the bottom and right rectangles - that's not really necessary; Windows will do it for us. 
+
+This should be all the clean-up we need today; let's get to the new stuff!
+
+
+# Player Collision with the Tilemap
+
 
 ------------------------
 <!-- 
