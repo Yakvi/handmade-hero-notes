@@ -1432,10 +1432,363 @@ f32 PlayerTop = GameState->PlayerY - PlayerHeight;
 
 Finally, we are colliding as intended! The game feels awful; we're getting stuck once inside walls, but we're getting somewhere! Slow and steady, we're moving towards the design that we want. Concrete baby steps that give you an idea of whether your design moves in a good or wrong direction.
 
+# Multiple Tile Maps
+
+## Create an Array of Tile Maps
+
+We now have a player moving around our tilemap. When the player enters a door, we want them to transition into a new tilemap. Let's think about what has to happen for that to occur.
+
+The first thing we'll need is, obviously, new tilemaps. Luckily, in our latest refactor, we had already set ourselves up for success. We have our `tile_map` structure, so it's simply a matter of filling it out for a new tilemap.
+
+~~~~~~~ C++
+#define TILE_MAP_COUNT_X 17
+#define TILE_MAP_COUNT_Y 9
+~~~~~~~ C++ edit
+u32 Tiles0[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] = 
+~~~~~~~ C++
+{
+~~~~~~~ C++ edit
+    {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1},
+~~~~~~~ C++
+    {1, 1, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  1},
+    {1, 1, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1},
+~~~~~~~ C++ edit
+    {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1},
+~~~~~~~ C++
+    {1, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0,  1},
+    {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0,  1},
+    {1, 1, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  1},
+    {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1}
+};
+
+~~~~~~~ C++ add
+u32 Tiles1[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] = 
+{
+    {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1},
+    {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1}
+};
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> We also want to close all the doors that don't connect to the other tilemap.]
+
+We will create an array of two tile maps to store these tilemaps.
+
+~~~~~~~ C++ add
+tile_map TileMaps[2];
+
+~~~~~~~ C++ edit
+TileMaps[0].CountX = TILE_MAP_COUNT_X;
+TileMaps[0].CountY = TILE_MAP_COUNT_Y;
+
+TileMaps[0].UpperLeftX = -30;
+TileMaps[0].UpperLeftY = 0;
+TileMaps[0].TileWidth = 60;
+TileMaps[0].TileHeight = 60;
+
+TileMaps[0].Tiles = (u32 *)Tiles0;
+
+~~~~~~~ C++ add
+TileMaps[1] = TileMaps[0];
+TileMaps[1].Tiles = (u32 *)Tiles1;
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Note that to create `TileMaps[1]` we largely clone `TileMaps[0].]
+
+Finally, we will create a pointer `TileMap` that the rest of `GameUpdateAndRender` will use.
+
+~~~~~~~ C++
+TileMaps[1] = TileMaps[0];
+TileMaps[1].Tiles = (u32 *)Tiles1;
+
+~~~~~~~ C++ add
+tile_map *TileMap = &TileMaps[0];
+~~~~~~~ C++
+
+~~~~~~~ C++ edit
+f32 PlayerWidth = 0.75f * TileMap->TileWidth;
+f32 PlayerHeight = TileMap->TileHeight;
+~~~~~~~ C++
+
+game_state *GameState = (game_state*)Memory->PermanentStorage;
+// ...
+
+for (int ControllerIndex = 0; /* ... */ )
+{    
+    // ... 
+    f32 NewPlayerX = GameState->PlayerX + Input->dtForFrame * dPlayerX;
+    f32 NewPlayerY = GameState->PlayerY + Input->dtForFrame * dPlayerY;
+    
+~~~~~~~ C++ edit
+    if (IsTileMapPointEmpty(TileMap, NewPlayerX, NewPlayerY) && 
+        IsTileMapPointEmpty(TileMap, NewPlayerX - 0.5f * PlayerWidth, NewPlayerY) && 
+        IsTileMapPointEmpty(TileMap, NewPlayerX + 0.5f * PlayerWidth, NewPlayerY))
+~~~~~~~ C++
+    {
+        GameState->PlayerX = NewPlayerX;
+        GameState->PlayerY = NewPlayerY;
+    }
+}
+
+DrawRectangle(Buffer, 0.0f, 0.0f, (f32)Buffer->Width, (f32)Buffer->Height, 1.0f, 0.0f, 1.0f);
+
+for(int Row = 0; /* ... */ )
+{
+    for(int Column = 0;  /* ... */ )
+    {
+~~~~~~~ C++ edit
+        u32 TileID = GetTileValueUnchecked(TileMap, Column, Row);
+~~~~~~~ C++
+        f32 Gray = 0.5f;
+        if (TileID == 1)
+        {
+            Gray = 1.0f;
+        }
+        
+~~~~~~~ C++ edit
+        f32 MinX = TileMap->UpperLeftX + ((f32)Column) * TileMap->TileWidth;
+        f32 MinY = TileMap->UpperLeftY + ((f32)Row) * TileMap->TileHeight;
+        f32 MaxX = MinX + TileMap->TileWidth;
+        f32 MaxY = MinY + TileMap->TileHeight;
+~~~~~~~ C++
+        
+        DrawRectangle(Buffer, MinX, MinY, MaxX, MaxY, Gray, Gray, Gray);
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Replacing a `tile_map` with a pointer to a `tile_map`.]
+
+## Introduce Worlds
+
+We want to think about the continuity of tile maps in the world. It's almost as if it were one big tilemap. But for different reasons we don't want to make it one big tilemap. For instance, we'd be wasting space if some tilemaps were empty.
+
+Eventually, we want to have the flexibility of having extremely sparse tilemaps. At some point, we might add a third dimension to our world, and we'll be able to layer tilemaps over tilemaps vertically. Maybe some points would have extremely deep or extremely tall stacks. We don't want the whole world to explode in size only because of very few outliers.
+
+So, when we step through a door, we would ask, "Is it OK for the player to move outside? What's out there?". In practice, going off the edge of one tilemap would bring us onto another.
+
+Currently, all functions, like `IsTileMapPointEmpty`, are geared towards thinking of one tilemap at a time. Instead, we want something that can think about more than one tilemap. It would be some higher-level structure that oversees the whole _world's_ tilemaps. Something like this: 
+
+~~~~~~~ C++
+internal b32
+IsTileMapPointEmpty(tile_map *TileMap, f32 TestX, f32 TestY)
+{
+    // ...
+}
+
+~~~~~~~ C++ add
+internal b32
+IsWorldPointEmpty(world *World, f32 TestX, f32 TestY)
+{
+    
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Thinking about worlds.]
+
+In `IsTileMapPointEmpty`, we assume there's nothing beyond the edges of the tilemap. That's why we only evaluate points that _we know_ lie within the tilemap. What if we projected the edges towards the tilemap we _would_ be in and query its world point? 
+
+What we're thinking about is a higher coordinate system. Like tilemaps to pixels, we'd have worlds to tilemaps. 
+
+To play around with this idea better, let's create a 2x2 grid of tilemaps, extending the amount of tilemaps to 4.
+
+~~~~~~~ C++
+#define TILE_MAP_COUNT_X 17
+#define TILE_MAP_COUNT_Y 9
+~~~~~~~ C++ edit
+u32 Tiles00[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =
+~~~~~~~ C++
+{
+    {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1},
+    {1, 1, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0, 1},
+    {1, 1, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0, 1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0, 1},
+~~~~~~~ C++ edit
+    {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0, 0},
+~~~~~~~ C++
+    {1, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0, 1},
+    {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0, 1},
+    {1, 1, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0, 1},
+    {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1},
+};
+
+~~~~~~~ C++ edit
+u32 Tiles01[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =
+~~~~~~~ C++
+{
+    {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+~~~~~~~ C++ edit
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 0},
+~~~~~~~ C++
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+    {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1},
+};
+
+~~~~~~~ C++ add
+u32 Tiles10[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =
+{
+    {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+    {0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+    {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1},
+};
+
+u32 Tiles11[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =
+{
+    {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+    {0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+    {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1},
+};
+~~~~~~~ C++
+
+~~~~~~~ C++ edit
+tile_map TileMaps[2][2];
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Adding two more tile maps and doors to reach them.]
+
+Let's also define the related `tile_map` structures: 
+
+~~~~~~~ C++
+tile_map TileMaps[2][2];
+~~~~~~~ C++ edit
+TileMaps[0][0].CountX = TILE_MAP_COUNT_X;
+TileMaps[0][0].CountY = TILE_MAP_COUNT_Y;
+
+TileMaps[0][0].UpperLeftX = -30;
+TileMaps[0][0].UpperLeftY = 0;
+TileMaps[0][0].TileWidth = 60;
+TileMaps[0][0].TileHeight = 60;
+
+TileMaps[0][0].Tiles = (uint32 *)Tiles00;
+
+TileMaps[0][1] = TileMaps[0][0];
+TileMaps[0][1].Tiles = (uint32 *)Tiles01;
+
+TileMaps[1][0] = TileMaps[0][0];
+TileMaps[1][0].Tiles = (uint32 *)Tiles10;
+
+TileMaps[1][1] = TileMaps[0][0];
+TileMaps[1][1].Tiles = (uint32 *)Tiles11;
+
+tile_map *TileMap = &TileMaps[0][0];
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Using the 2D array of tilemaps.]
+
+Finally, we can imagine the `world` struct to be something that will contain information about the tilemaps. We'll expand on this idea further next time. For the time being, let's simply store the `tile_map` array we just defined, as well as its X and Y size. However, we will want to implement sparseness in the future.
+
+~~~~~~~ C++
+struct tile_map
+{
+    // ... 
+};
+
+~~~~~~~ C++ add
+struct world
+{
+    // TODO(casey): Beginner's sparseness
+    s32 TileMapCountX;
+    s32 TileMapCountY; 
+
+    tile_map *TileMaps;
+};
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> Introducing the `world` struct.]
+
+Let's define it in `GameUpdateAndRender`: 
+
+~~~~~~~ C++
+tile_map TileMaps[2][2];
+// ...
+
+tile_map *TileMap = &TileMaps[0][0];
+
+~~~~~~~ C++ add
+world World;
+World.TileMaps = (tile_map *)TileMaps;
+~~~~~~~ C++
+
+f32 PlayerWidth = 0.75f * TileMap->TileWidth;
+f32 PlayerHeight = TileMap->TileHeight;
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Defining our `world`.]
+
+We should now compile with no changes to the game behavior.
+
+## Connecting the Tile Maps
+
+Let's come back to the function we quickly stubbed before, `IsWorldPointEmpty`. We probably want to get the player's X and Y position in pixels, so we'll additionally need to add another layer to receive the player's X and Y position in tilemaps. From it, we will get a tilemap and, if it's valid, check if the player's X and Y position on that tilemap is valid, either: 
+
+~~~~~~~ C++
+internal b32
+~~~~~~~ C++ edit
+IsWorldPointEmpty(world *World, s32 TileMapX, s32 TileMapY, f32 TestX, f32 TestY)
+~~~~~~~ C++
+{
+~~~~~~~ C++ add
+    b32 Empty = false;
+    
+    tile_map *TileMap = GetTileMap(World, TileMapX, TileMapY);
+    if(TileMap)
+    {
+        Empty = IsTileMapPointEmpty(TileMap, TestX, TestY);
+    }
+    
+    return (Empty);
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Drafting `IsWorldPointEmpty`.]
+
+Here, we can see a need for a `GetTileMap` function similar to `GetTileValueUnchecked`. The only difference is that we will need to check that the tile map exists before attempting to access it:
+
+~~~~~~~ C++ add
+inline tile_map *
+GetTileMap(world *World, s32 TileMapX, s32 TileMapY)
+{
+    tile_map *TileMap = 0;
+    
+    if ((TileMapX >= 0) && (TileMapX < World->TileMapCountX) &&
+        (TileMapY >= 0) && (TileMapY < World->TileMapCountY))
+    {
+        TileMap = &World->TileMaps[TileMapY * World->TileMapCountX + TileMapX];
+    }
+    
+    return (TileMap);
+}
+~~~~~~~ C++
+
+inline u32
+GetTileValueUnchecked(tile_map *TileMap, s32 TileX, s32 TileY)
+{
+    u32 TileMapValue = TileMap->Tiles[TileY * TileMap->CountX + TileX];
+    return (TileMapValue);
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Introducing `GetTileMap`.]
+
+Once again, we're compiling with no visible changes to the game behavior.
 
 ------------------------
 <!-- 
-37:50 Making player change the map when walking through a door
 43:56 About storing all tilemaps in one big structure
 50:28 Start on storing and accessing multiple tilemaps and the world struct
 1:01:00 Short recap on where we are
@@ -1463,17 +1816,11 @@ Chart: [Figure [x]: .]
 -->
 ------------------------
 
-
 # Recap 
 
+We'll wrap up on a bit of a cliffhanger today.
+
 # Exercises 
-
-# Programming Notions 
-
-<!-- _(Back to Subsection [name of the section])_ -->
-
-
-# Side Considerations 
 
 # Navigation 
 
