@@ -608,7 +608,7 @@ f32 PlayerWidth = 0.75f * TileWidth;
 f32 PlayerHeight = TileHeight;
 ~~~~~~~ C++ add
 f32 PlayerLeft = GameState->PlayerX - (0.5f * PlayerWidth);
-f32 PlayerTop = GameState->PlayerY + PlayerHeight;
+f32 PlayerTop = GameState->PlayerY - PlayerHeight;
 ~~~~~~~ C++
 
 DrawRectangle(Buffer, PlayerLeft, PlayerTop, 

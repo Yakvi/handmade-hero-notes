@@ -8,6 +8,8 @@ _Video Length (including Q&A): [1h39](https://hero.handmade.network/episode/code
 
 "Always write the usage code first" is our mantra. We don't want to write a game engine until we have the game. While it might sound paradoxical, it simply means using whatever tools we can develop quickly to build the structure up. We're just drawing rectangles on the screen, pretending they will be something beautiful later down the line. But, in doing so, we'll understand how exactly we want our engine to function so that when we build those engine components, we won't be wasting time on things we don't need or that are clunky to use in the context we meant to use them.
 
+Today, we'll implement basic collision with the walls we're drawing on the tile map. Additionally, we'll make it so that when you exit a room, you enter a new one.
+
 # Clean Up
 
 ## Introduce `handmade_platform.h`
@@ -651,8 +653,8 @@ Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer,
     StretchDIBits(DeviceContext,
 ~~~~~~~ C++ edit
                   OffsetX, OffsetY, Buffer->Width, Buffer->Height,
-                  OffsetX, OffsetY, Buffer->Width, Buffer->Height,
 ~~~~~~~ C++
+                  0, 0, Buffer->Width, Buffer->Height,
                   Buffer->Memory,
                   &Buffer->Info,
                   DIB_RGB_COLORS, SRCCOPY);
@@ -689,7 +691,7 @@ Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer,
     // stretching while we are learning to code the renderer!
     StretchDIBits(DeviceContext,
                   OffsetX, OffsetY, Buffer->Width, Buffer->Height,
-                  OffsetX, OffsetY, Buffer->Width, Buffer->Height,
+                  0, 0, Buffer->Width, Buffer->Height,
                   Buffer->Memory,
                   &Buffer->Info,
                   DIB_RGB_COLORS, SRCCOPY);
@@ -697,26 +699,742 @@ Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer,
 ~~~~~~~
 [Listing [x]: <file>[win32_handmade.cpp]</file> A better way to clear the screen.]
 
-This gives us nice black edges surrounding our screen. You might notice that we aren't subtracting the buffer width and height when we draw the bottom and right rectangles - that's not really necessary; Windows will do it for us. 
+This solution will give us nice black edges surrounding our screen. You might notice that we aren't subtracting the buffer width and height when we draw the bottom and right rectangles - that's not really necessary; Windows will do it for us. 
 
-This should be all the clean-up we need today; let's get to the new stuff!
+## Inline the Rounding Functions
+
+When we introduced `RoundReal32ToInt32` and `RoundReal32ToUInt32`, we moved fast and made the functions static without too much thought. However, these are tiny functions, and there is no value to keep them as such. Instead, we want to _inline_ them. This way, the compiler will expand the function directly on the line where it's called instead of making a separate call to a different chunk of code.
+
+The performance gain in this instance is marginal, but let's not be wasteful where we can avoid it.
+
+~~~~~~~ C++ edit
+inline s32
+~~~~~~~ C++
+RoundReal32ToInt32(f32 Number)
+{
+    s32 Result = (s32)(Number + 0.5f);
+    return (Result);
+}
+
+~~~~~~~ C++ edit
+inline u32
+~~~~~~~ C++
+RoundReal32ToUInt32(f32 Number)
+{
+    u32 Result = (u32)(Number + 0.5f);
+    return (Result);
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Inlining the rounding functions.]
+
+That's about it for the clean-up we need today; let's get to the new stuff!
 
 
 # Player Collision with the Tilemap
 
+## Setup
+
+Our player character moves when we process the user input: 
+
+~~~~~~~ C++
+for (int ControllerIndex = 0;
+     ControllerIndex < ArrayCount(Input->Controllers);
+     ++ControllerIndex)
+{
+    // ...
+    GameState->PlayerX += Input->dtForFrame * dPlayerX;
+    GameState->PlayerY += Input->dtForFrame * dPlayerY;
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Player movement.]
+
+If we want to implement collisions, we want to verify the destination position is valid; if it's not (say, it's a wall tile), we will reject the user's input. It would look something like this: 
+
+~~~~~~~ C++ edit
+f32 NewPlayerX = GameState->PlayerX + Input->dtForFrame * dPlayerX;
+f32 NewPlayerY = GameState->PlayerY + Input->dtForFrame * dPlayerY;
+~~~~~~~ C++ add
+
+b32 IsValid = false;
+
+// Do some checks to make sure the new position is valid
+
+if (IsValid)
+{
+    GameState->PlayerX = NewPlayerX;
+    GameState->PlayerY = NewPlayerY;
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Validating player input before accepting it.]
+
+We will be doing our checks against the tilemap we defined last time, so we need to move that block before the input processing: 
+
+~~~~~~~ C++ add
+f32 UpperLeftX = -30;
+f32 UpperLeftY = 0;
+f32 TileWidth = 60;
+f32 TileHeight = 60;
+
+u32 TileMap[9][17] = 
+{
+    {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1},
+    {1, 1, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  1},
+    {1, 1, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1},
+    {0, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  0},
+    {1, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0,  1},
+    {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0,  1},
+    {1, 1, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  1},
+    {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1}
+};
+~~~~~~~ C++
+
+game_state *GameState = (game_state*)Memory->PermanentStorage;
+if(!Memory->IsInitialized)
+{
+    Memory->IsInitialized = true;
+}
+
+for (int ControllerIndex = 0; //...)
+{
+    // ... 
+        
+    f32 NewPlayerX = GameState->PlayerX + Input->dtForFrame * dPlayerX;
+    f32 NewPlayerY = GameState->PlayerY + Input->dtForFrame * dPlayerY;
+    
+    b32 IsValid = false;
+    
+    if (IsValid)
+    {
+        GameState->PlayerX = NewPlayerX;
+        GameState->PlayerY = NewPlayerY;
+    }
+    
+}
+~~~~~~~ C++ delete
+u32 TileMap[9][17] = 
+{
+    {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1},
+    {1, 1, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  1},
+    {1, 1, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1},
+    {0, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  0},
+    {1, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0,  1},
+    {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0,  1},
+    {1, 1, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  1},
+    {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1}
+};
+~~~~~~~ C++
+
+DrawRectangle(Buffer, 0.0f, 0.0f, (f32)Buffer->Width, (f32)Buffer->Height, 1.0f, 0.0f, 1.0f);
+
+~~~~~~~ C++ delete
+f32 UpperLeftX = -30;
+f32 UpperLeftY = 0;
+f32 TileWidth = 60;
+f32 TileHeight = 60;
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Moving the tile map definition.]
+
+## Calculate Player Position
+
+What exactly do we want to do, though?
+
+Every tile occupies multiple pixels in our window: we set up our tile width and height to be 60 pixels, starting from a specific `UpperLeftX` and Y. Furthermore, we define the player's position in the same pixel space as the tiles. Therefore, we want to calculate the player's tile position first. Then, we look up our tile map, and if the position happens to be the wall, we discard it.
+
+To calculate the _relative_ player's position, we want to get the player's position and subtract the starting X and Y (tile map origin) from it.
+
+******************************************************
+* Tile Map Origin (UpperLeftX, UpperLeftY)           *
+*  \                                                 *
+*   \                                                *
+*    v|  0  |  1  |  2  |  3  |  4  |  5  |          *
+*  ---*-----+-----+-----+--*--+-----+-----+          *
+*     |\    |     |     |  |  |     |     |          *
+*  0  | '----------------->|  |     |     |          *
+*     |     |     |     |  |  |     |     |          *
+*  ---+-----+-----+-----+--|--+-----+-----+          *
+*     |     |     |     |  |  |     |     |          *
+*  1  |     |     |     |  |  |     |     |          *
+*     |     |     |     |  |  |     |     |          *
+*  ---+-----+-----+-----+--|--+-----+-----+          *
+*     |     |     |     |  |  |     |     |          *
+*  2  |     |     |     |  |  |     |     |          *
+*     |     |     |     |  |  .-- Player  |          *
+*  ---+-----+-----+-----+--|-/.-----+-----+          *
+*     |     |     |     |  vv |     |     |          *
+*  3  |     |     |     |  *  |     |     |          *
+*     |     |     |     |     |     |     |          *
+*  ---+-----+-----+-----+-----+-----+-----+          *
+*     |     |     |     |     |     |     |          *
+*  4  |     |     |     |     |     |     |          *
+*     |     |     |     |     |     |     |          *
+*  ---+-----+-----+-----+-----+-----+-----+          *
+******************************************************
+[Figure [x]: Calculating player position on the tile map.]
+
+~~~~~~~ C++
+f32 NewPlayerX = GameState->PlayerX + Input->dtForFrame * dPlayerX;
+f32 NewPlayerY = GameState->PlayerY + Input->dtForFrame * dPlayerY;
+
+~~~~~~~ C++ add
+s32 PlayerTileX = NewPlayerX - UpperLeftX;
+s32 PlayerTileY = NewPlayerY - UpperLeftY;
+~~~~~~~ C++
+
+b32 IsValid = false;
+// ...
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Player tile position.]
+
+We can now calculate which tile the player occupies with a simple divide. We should divide our relative X position by the tile width and our relative Y position by the tile height.
+
+***************************************************************
+*   Relative Player X Position     Tile Width                 *
+*     +--------------------+        +-----+                   *
+*     |                    |        |     |                   *
+*                                                             *
+*     |  0  |  1  |  2  |  3  |  4  |  5  |                   *
+*  ---+-----+-----+-----+-----+-----+-----+ --+--+            *
+*     |     |     |     |     |     |     |   |  |            *
+*  0  |     |     |     |     |     |     |   | Tile          *
+*     |     |     |     |     |     |     |   | Height        *
+*  ---+-----+-----+-----+-----+-----+-----+ --+  |            *
+*     |     |     |     |     |     |     |      |            *
+*  1  |     |     |     |     |     |     |      |            *
+*     |     |     |     |     |     |     |      | Relative   *
+*  ---+-----+-----+-----+-----+-----+-----+      | Player Y   *
+*     |     |     |     |     |     |     |      | Position   *
+*  2  |     |     |     |     |     |     |      |            *
+*     |     |     |     |     .-- Player (3, 3)  |            *
+*  ---+-----+-----+-----+----/.-----+-----+      |            *
+*     |     |     |     |   v |     |     |      |            *
+*  3  |     |     |     |  *  |     |     | -----+            *
+*     |     |     |     |     |     |     |                   *
+*  ---+-----+-----+-----+-----+-----+-----+                   *
+*     |     |     |     |     |     |     |                   *
+*  4  |     |     |     |     |     |     |                   *
+*     |     |     |     |     |     |     |                   *
+*  ---+-----+-----+-----+-----+-----+-----+                   *
+***************************************************************
+[Figure [x]: Calculating player tile index.]
+
+This operation will give us a fractional value, which we should discard to reach the tile index. Rounding won't work here; we only want to round to the lower value. Luckily, that's precisely what C's [casting][] does. 
+
+To be explicit, let's define a new function that does the truncation for us:
+
+~~~~~~~ C++
+inline u32
+RoundReal32ToUInt32(f32 Number)
+{
+    u32 Result = (u32)(Number + 0.5f);
+    return (Result);
+}
+
+~~~~~~~ C++ add
+inline s32
+TruncateReal32ToInt32(f32 Number)
+{
+    s32 Result = (s32)Number;
+    return (Result);
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Introducing `TruncateReal32ToInt32`.]
+
+Let's do the division that we talked about: 
+
+~~~~~~~ C++
+f32 NewPlayerX = GameState->PlayerX + Input->dtForFrame * dPlayerX;
+f32 NewPlayerY = GameState->PlayerY + Input->dtForFrame * dPlayerY;
+
+~~~~~~~ C++ edit
+s32 PlayerTileX = TruncateReal32ToInt32((NewPlayerX - UpperLeftX) / TileWidth);
+s32 PlayerTileY = TruncateReal32ToInt32((NewPlayerY - UpperLeftY) / TileHeight);
+~~~~~~~ C++
+
+b32 IsValid = false;
+// ...
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Player tile index.]
+
+## Validate Player Position
+
+We can now start thinking about validating the player's position. However, before we check whether the player is inside the wall, we should verify they are on the map at all! To do that, we need to confirm that the `TileX` and `TileY` values are larger (or equal) than zero but smaller than the overall tilemap size. 
+
+We don't currently store this size; we pass 9 and 17 directly to the array. We could check against raw (also known as "magic") numbers again, but we'd have to pay attention to changing the values if we decide to make our tilemap bigger or smaller in the future. Unfortunately, we can't simply store the values in a variable like usual. In C/C++, the array size must be known at compile time, so we have three options here: 
+
+* Store the value as a "magic" number (like we do currently)
+* Declare a `const` variable
+* Use a `#define` macro
+
+The latter two have no real difference; it's a style preference. You can use whichever you prefer. In this instance, let's go for a `#define`: 
+
+~~~~~~~ C++ add
+#define TILE_MAP_COUNT_X 17
+#define TILE_MAP_COUNT_Y 9
+~~~~~~~ C++
+f32 UpperLeftX = -30;
+f32 UpperLeftY = 0;
+f32 TileWidth = 60;
+f32 TileHeight = 60;
+
+~~~~~~~ C++ edit
+u32 TileMap[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] = /* ... */ ;
+~~~~~~~ C++
+
+// ... 
+// Tilemap drawing
+DrawRectangle(Buffer, 0.0f, 0.0f, (f32)Buffer->Width, (f32)Buffer->Height, 1.0f, 0.0f, 1.0f);
+    
+for(int Row = 0;
+~~~~~~~ C++ edit
+    Row < TILE_MAP_COUNT_Y;
+~~~~~~~ C++
+    ++Row)
+{
+    for(int Column = 0;
+~~~~~~~ C++ edit
+        Column < TILE_MAP_COUNT_X;
+~~~~~~~ C++
+        ++Column)
+    {
+        // ...
+    }
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Storing the tilemap size.]
+
+We can use these values to verify that the player position is within the tilemap bounds:
+
+~~~~~~~ C++
+s32 PlayerTileX = TruncateReal32ToInt32((NewPlayerX - UpperLeftX) / TileWidth);
+s32 PlayerTileY = TruncateReal32ToInt32((NewPlayerY - UpperLeftY) / TileHeight);
+
+b32 IsValid = false;
+
+~~~~~~~ C++ add
+if ((PlayerTileX >= 0) && (PlayerTileX < TILE_MAP_COUNT_X) && 
+    (PlayerTileY >= 0) && (PlayerTileY < TILE_MAP_COUNT_Y))
+{
+    // Check for IsValid here
+}
+~~~~~~~ C++
+
+if (IsValid)
+{
+    GameState->PlayerX = NewPlayerX;
+    GameState->PlayerY = NewPlayerY;
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Making sure we're within the tilemap bounds.]
+
+Finally, we can see if the tile we want to go to is occupied (in our case, by a wall). We can use the player tile coordinates to access a specific value inside the tile map. Then, we should check if the value we get is 0 since we use 1 to put a wall on the screen.
+
+~~~~~~~ C++
+if ((PlayerTileX >= 0) && (PlayerTileX < TILE_MAP_COUNT_X) && 
+    (PlayerTileY >= 0) && (PlayerTileY < TILE_MAP_COUNT_Y))
+{
+~~~~~~~ C++ add
+    u32 TileMapValue = TileMap[PlayerTileY][PlayerTileX];
+    IsValid = (TileMapValue == 0);
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Validating the tile.]
+
+As usual, this is nowhere near the final code, but this should be enough to get us going.
+
+## Initialize Player Position
+
+Since we don't do any of the initialization ourselves, the game spawns the player at position (0, 0) of our screen buffer. The new collision checks we put in place keep him stuck so he can never move away from its corner. Let's give him a spot on the map during the initialization step:
+
+~~~~~~~ C++
+game_state *GameState = (game_state*)Memory->PermanentStorage;
+if(!Memory->IsInitialized)
+{
+~~~~~~~ C++ add
+    GameState->PlayerX = 150;
+    GameState->PlayerY = 150;
+~~~~~~~ C++
+    
+    Memory->IsInitialized = true;
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Initializing player position.]
+
+# Revise the Tile Map Code
+
+The player can now collide with the walls, but only with its center point. While we're OK with them eclipsing the scenery with its top part, we definitely want to consider player width. 
+
+We'll start from there, but this will lead us to rework our existing code significantly so that everything falls into place.
+
+## Introduce `IsTileMapPointEmpty`
+
+A simple way to do wide collision is to check whether the player's rectangle's bottom right and left points are invading a wall tile, same as we did with the center.
+
+Of course, we could just copy and paste the same code twice, but extracting the code we just wrote in a new function is more straightforward and less error-prone. Let's call this new function `IsTileMapPointEmpty`: 
+
+~~~~~~~ C++ add
+internal b32
+IsTileMapPointEmpty(f32 NewPlayerX, f32 NewPlayerY)
+{
+    b32 IsValid = false;
+
+    s32 PlayerTileX = TruncateReal32ToInt32((NewPlayerX - UpperLeftX) / TileWidth);
+    s32 PlayerTileY = TruncateReal32ToInt32((NewPlayerY - UpperLeftY) / TileHeight);
+    
+    if ((PlayerTileX >= 0) && (PlayerTileX < TILE_MAP_COUNT_X) && 
+        (PlayerTileY >= 0) && (PlayerTileY < TILE_MAP_COUNT_Y))
+    {
+        u32 TileMapValue = TileMap[PlayerTileY][PlayerTileX];
+        IsValid = (TileMapValue == 0);
+    }
+    
+    return (IsValid);
+}
+~~~~~~~ C++
+
+#if defined __cplusplus
+extern "C"
+#endif
+GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
+{
+    // ... 
+
+
+    f32 NewPlayerX = GameState->PlayerX + Input->dtForFrame * dPlayerX;
+    f32 NewPlayerY = GameState->PlayerY + Input->dtForFrame * dPlayerY;
+    
+~~~~~~~ C++ delete
+    s32 PlayerTileX = TruncateReal32ToInt32((NewPlayerX - UpperLeftX) / TileWidth);
+    s32 PlayerTileY = TruncateReal32ToInt32((NewPlayerY - UpperLeftY) / TileHeight);
+    
+    b32 IsValid = false;
+    
+    if ((PlayerTileX >= 0) && (PlayerTileX < TILE_MAP_COUNT_X) && 
+        (PlayerTileY >= 0) && (PlayerTileY < TILE_MAP_COUNT_Y))
+    {
+        u32 TileMapValue = TileMap[PlayerTileY][PlayerTileX];
+        IsValid = (TileMapValue == 0);
+    }
+            
+~~~~~~~ C++ edit
+    if (IsTileMapPointEmpty(NewPlayerX, NewPlayerY))
+~~~~~~~ C++
+    {
+        GameState->PlayerX = NewPlayerX;
+        GameState->PlayerY = NewPlayerY;
+    }
+    // ... 
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Introducing `IsTileMapPointEmpty`.]
+
+Let's look better at `IsTileMapPointEmpty`. First of all, we probably want to rename a few variables to make the function more generic: 
+
+~~~~~~~ C++
+internal b32
+~~~~~~~ C++ edit
+IsTileMapPointEmpty(f32 TestX, f32 TestY)
+~~~~~~~ C++
+{
+~~~~~~~ C++ edit
+    b32 Empty = false;
+~~~~~~~ C++
+    
+~~~~~~~ C++ edit
+    s32 TileX = TruncateReal32ToInt32((TestX - UpperLeftX) / TileWidth);
+    s32 TileY = TruncateReal32ToInt32((TestY - UpperLeftY) / TileHeight);
+~~~~~~~ C++
+    
+~~~~~~~ C++ edit
+    if ((TileX >= 0) && (TileX < TILE_MAP_COUNT_X) && 
+        (TileY >= 0) && (TileY < TILE_MAP_COUNT_Y))
+~~~~~~~ C++
+    {
+~~~~~~~ C++ edit
+        u32 TileMapValue = TileMap[TileY][TileX];
+        Empty = (TileMapValue == 0);
+~~~~~~~ C++
+    }
+    
+~~~~~~~ C++ edit
+    return (Empty);
+~~~~~~~ C++
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Renaming variables.]
+
+## Introduce `tile_map` Structure
+
+If we try to compile, you will notice that we're missing a bunch of additional data: 
+
+~~~~~~~ batch
+'UpperLeftX': undeclared identifier
+'UpperLeftY': undeclared identifier
+'TileWidth': undeclared identifier
+'TileHeight': undeclared identifier
+'TILE_MAP_COUNT_X': undeclared identifier
+'TILE_MAP_COUNT_Y': undeclared identifier
+'TileMap': undeclared identifier
+~~~~~~~
+
+Of course, we could pass all this data to the function directly, but it will get messy quickly. However, it's an indication of things that go together; we can, therefore, start grouping data into a struct that we can pass along instead. 
+
+It's a very convenient practice - let structures emerge from the code instead of thinking about them beforehand. Even if, in this case, you might have guessed what such a structure might contain, it's always easier to let it emerge on its own. 
+
+So, let's introduce a struct with information that allows us to do the math on a tile map: 
+
+~~~~~~~ C++ add
+struct tile_map
+{
+    s32 CountX;
+    s32 CountY;
+    
+    f32 UpperLeftX;
+    f32 UpperLeftY;
+    f32 TileWidth;
+    f32 TileHeight;
+    
+    u32 *Tiles;
+};
+~~~~~~~ C++
+
+struct game_state
+{
+    f32 PlayerX;
+    f32 PlayerY;
+};
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> Introducing `tile_map`.]
+
+The use case inside `IsTileMapPointEmpty` would be something along these lines.
+
+~~~~~~~ C++
+internal b32
+~~~~~~~ C++ edit
+IsTileMapPointEmpty(tile_map *TileMap, f32 TestX, f32 TestY)
+~~~~~~~ C++
+{
+    b32 Empty = false;
+    
+~~~~~~~ C++ edit
+    s32 TileX = TruncateReal32ToInt32((TestX - TileMap->UpperLeftX) / TileMap->TileWidth);
+    s32 TileY = TruncateReal32ToInt32((TestY - TileMap->UpperLeftY) / TileMap->TileHeight);
+~~~~~~~ C++
+    
+~~~~~~~ C++ edit
+    if ((TileX >= 0) && (TileX < TileMap->CountX) && 
+        (TileY >= 0) && (TileY < TileMap->CountY))
+~~~~~~~ C++
+    {
+~~~~~~~ C++ edit
+        u32 TileMapValue = TileMap->Tiles[TileY][TileX];
+~~~~~~~ C++
+        Empty = (TileMapValue == 0);
+    }
+    
+    return (Empty);
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Using `tile_map` in `IsTileMapPointEmpty`.]
+
+## Accessing the Tile Map Cells
+
+We still can't compile, though. This solution highlights an important consideration: in C/C++, you cannot pass or store arrays; they are always converted to pointers once they exit their scope. To solve this, we should change our tile map array from two-dimensional to one-dimensional. For the time being, this doesn't affect the tile map definiton; we can still _define_ it as two-dimensional. We have already arranged the tilemap to store rows first and columns second, setting ourselves up for success.
+
+The approach to accessing the tile would be the same as we did for the pixels in our buffer: Multiply the desired Y by width and add the desired X position. We probably want to write a utility function to retrieve the cells so that we don't have to think about it all the time. We'll call this function `GetTileValueUnchecked` since we'll assume that we already did all the checks to ensure that the X and Y coordinates are within the tilemap bounds.
+
+~~~~~~~ C++ add
+inline u32
+GetTileValueUnchecked(tile_map *TileMap, s32 TileX, s32 TileY)
+{
+    u32 TileMapValue = TileMap->Tiles[TileY * TileMap->CountX + TileX];
+    return (TileMapValue);
+}
+~~~~~~~ C++
+
+internal b32
+IsTileMapPointEmpty(tile_map *TileMap, f32 TestX, f32 TestY)
+{
+    b32 Empty = false;
+    
+    s32 TileX = TruncateReal32ToInt32((TestX - TileMap->UpperLeftX) / TileMap->TileWidth);
+    s32 TileY = TruncateReal32ToInt32((TestY - TileMap->UpperLeftY) / TileMap->TileHeight);
+    
+    if ((TileX >= 0) && (TileX < TileMap->CountX) && 
+        (TileY >= 0) && (TileY < TileMap->CountY))
+    {
+~~~~~~~ C++ edit
+        u32 TileMapValue = GetTileValueUnchecked(TileMap, TileX, TileY);
+~~~~~~~ C++
+        Empty = (TileMapValue == 0);
+    }
+    
+    return (Empty);
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> Introducing `GetTileValueUnchecked`.]
+
+## Redefine our Tile Map
+
+Having done all that, let's go back into `GameUpdateAndRender` to create and pass the tile map in a struct:
+
+~~~~~~~ C++
+#define TILE_MAP_COUNT_X 17
+#define TILE_MAP_COUNT_Y 9
+~~~~~~~ C++ edit
+u32 Tiles[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] = 
+~~~~~~~ C++
+{
+    {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1},
+    {1, 1, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  1},
+    {1, 1, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  1},
+    {1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1},
+    {0, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  0},
+    {1, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0,  1},
+    {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0,  1},
+    {1, 1, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  1},
+    {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1}
+};
+
+~~~~~~~ C++ delete
+f32 UpperLeftX = -30;
+f32 UpperLeftY = 0;
+f32 TileWidth = 60;
+f32 TileHeight = 60;
+~~~~~~~ C++ add
+tile_map TileMap;
+TileMap.CountX = TILE_MAP_COUNT_X;
+TileMap.CountY = TILE_MAP_COUNT_Y;
+
+TileMap.UpperLeftX = -30;
+TileMap.UpperLeftY = 0;
+TileMap.TileWidth = 60;
+TileMap.TileHeight = 60;
+
+TileMap.Tiles = (u32 *)Tiles;
+~~~~~~~ C++
+
+// ... 
+
+for (int ControllerIndex = 0; /* ... */ )
+{
+    // ... 
+        
+    f32 NewPlayerX = GameState->PlayerX + Input->dtForFrame * dPlayerX;
+    f32 NewPlayerY = GameState->PlayerY + Input->dtForFrame * dPlayerY;
+    
+~~~~~~~ C++ edit
+    if (IsTileMapPointEmpty(&TileMap, NewPlayerX, NewPlayerY))
+~~~~~~~ C++
+    {
+        GameState->PlayerX = NewPlayerX;
+        GameState->PlayerY = NewPlayerY;
+    }
+    
+}
+
+for(int Row = 0;
+    Row < TILE_MAP_COUNT_Y;
+    ++Row)
+{
+    for(int Column = 0;
+        Column < TILE_MAP_COUNT_X;
+        ++Column)
+    {
+~~~~~~~ C++ edit
+        u32 TileID = GetTileValueUnchecked(&TileMap, Column, Row);
+~~~~~~~ C++
+        f32 Gray = 0.5f;
+        if (TileID == 1)
+        {
+            Gray = 1.0f;
+        }
+        
+~~~~~~~ C++ edit
+        f32 MinX = TileMap.UpperLeftX + ((f32)Column) * TileMap.TileWidth;
+        f32 MinY = TileMap.UpperLeftY + ((f32)Row) * TileMap.TileHeight;
+        f32 MaxX = MinX + TileMap.TileWidth;
+        f32 MaxY = MinY + TileMap.TileHeight;
+~~~~~~~ C++
+        
+        DrawRectangle(Buffer, MinX, MinY, MaxX, MaxY, Gray, Gray, Gray);
+    }
+}
+
+f32 PlayerR = 1.0f;
+f32 PlayerG = 1.0f;
+f32 PlayerB = 0.0f;
+~~~~~~~ C++ edit
+f32 PlayerWidth = 0.75f * TileMap.TileWidth;
+f32 PlayerHeight = TileMap.TileHeight;
+~~~~~~~ C++
+f32 PlayerLeft = GameState->PlayerX - (0.5f * PlayerWidth);
+f32 PlayerTop = GameState->PlayerY - PlayerHeight;
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Defining the tile map as a struct.]
+
+## Add Player Width to Collision
+
+We're now compiling! We haven't done anything new, though, since our code is doing the same thing it was before. It's easy to fix since we can call `IsTileMapPointEmpty` on multiple points and only accept the user's input if all of them are true: 
+
+~~~~~~~ C++
+f32 NewPlayerX = GameState->PlayerX + Input->dtForFrame * dPlayerX;
+f32 NewPlayerY = GameState->PlayerY + Input->dtForFrame * dPlayerY;
+
+~~~~~~~ C++ edit
+if (IsTileMapPointEmpty(&TileMap, NewPlayerX, NewPlayerY) && 
+~~~~~~~ C++ add
+    IsTileMapPointEmpty(&TileMap, NewPlayerX - 0.5f * PlayerWidth, NewPlayerY) && 
+    IsTileMapPointEmpty(&TileMap, NewPlayerX + 0.5f * PlayerWidth, NewPlayerY))
+~~~~~~~ C++
+{
+    GameState->PlayerX = NewPlayerX;
+    GameState->PlayerY = NewPlayerY;
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Adding two more points to collision check.]
+
+We define the player width and height below, so we should move them towards the beginning. This action, again, should tingle your coding sense to refactor down the line eventually.
+
+~~~~~~~ C++
+tile_map TileMap;
+TileMap.CountX = TILE_MAP_COUNT_X;
+TileMap.CountY = TILE_MAP_COUNT_Y;
+
+TileMap.UpperLeftX = -30;
+TileMap.UpperLeftY = 0;
+TileMap.TileWidth = 60;
+TileMap.TileHeight = 60;
+
+TileMap.Tiles = (u32 *)Tiles;
+
+~~~~~~~ C++ add
+f32 PlayerWidth = 0.75f * TileMap.TileWidth;
+f32 PlayerHeight = TileMap.TileHeight;
+~~~~~~~ C++
+
+game_state *GameState = (game_state*)Memory->PermanentStorage;
+// ... 
+
+f32 PlayerR = 1.0f;
+f32 PlayerG = 1.0f;
+f32 PlayerB = 0.0f;
+~~~~~~~ C++ delete
+f32 PlayerWidth = 0.75f * TileMap.TileWidth;
+f32 PlayerHeight = TileMap.TileHeight;
+~~~~~~~ C++
+f32 PlayerLeft = GameState->PlayerX - (0.5f * PlayerWidth);
+f32 PlayerTop = GameState->PlayerY - PlayerHeight;
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Extracting the player width and height from the drawing code.]
+
+Finally, we are colliding as intended! The game feels awful; we're getting stuck once inside walls, but we're getting somewhere! Slow and steady, we're moving towards the design that we want. Concrete baby steps that give you an idea of whether your design moves in a good or wrong direction.
+
 
 ------------------------
 <!-- 
-
-2:30 Review of what's currently been done
-1:30:05 Making the platform header C compliant
-3:17 Clearing the screen to black and offsetting the drawable area
-6:49 Player collision with the tilemap
-17:23 Moving player initial position inside the map
-20:31 Clearing only the parts of the screen not drawn on
-23:10 Function for checking if a point is occupied and tile_map struct
-27:05 Accessing tilemap data as 1-dimensional array
-35:16 Adding player width to the collision
 37:50 Making player change the map when walking through a door
 43:56 About storing all tilemaps in one big structure
 50:28 Start on storing and accessing multiple tilemaps and the world struct

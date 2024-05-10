@@ -649,7 +649,7 @@ Finally, to calculate <code>PlayerLeft</code>, we take <code>PlayerX</code> and 
 <span class="line">f32 PlayerB = <span class="hljs-number">0.0f</span>;</span>
 <span class="line">f32 PlayerWidth = <span class="hljs-number">0.75f</span> * TileWidth;</span>
 <span class="line">f32 PlayerHeight = TileHeight;</span><div class=" add"><span class="line">f32 PlayerLeft = GameState-&gt;PlayerX - (<span class="hljs-number">0.5f</span> * PlayerWidth);</span>
-<span class="line">f32 PlayerTop = GameState-&gt;PlayerY + PlayerHeight;</span></div><span class="line"></span>
+<span class="line">f32 PlayerTop = GameState-&gt;PlayerY - PlayerHeight;</span></div><span class="line"></span>
 <span class="line">DrawRectangle(Buffer, PlayerLeft, PlayerTop, </span>
 <span class="line">              PlayerLeft + PlayerWidth, </span>
 <span class="line">              PlayerTop + PlayerHeight, </span>
