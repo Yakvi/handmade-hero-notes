@@ -77,6 +77,11 @@ Now, which sound do we want to reproduce? We can't load audio `.wav` files just 
 ***************************************
 [Figure [x]: Square wave.]
 
+!!! Note Why are some numbers negative?
+    We can roughly translate how we encode sound to how the speaker membrane behaves in real life. When the membrane is pushed out, you have a positive number; when it's sucked back, it's a negative number. 
+    
+    Conversely, to turn a stream of samples into real audio, a digital-to-analog converter ([DAC][]) is first used to generate a time-varying analog voltage corresponding to the samples. This analog voltage is applied to the input of a power amplifier that drives the speaker. 
+
 ## Visualize Circular Buffer
 
 Let's review what our buffer actually represents. We said last time that the sound buffer we initialized is a _circular buffer_. if you remember our rendering backbuffer, it was a simple chunk of memory that we agreed was a 2D representation of a bitmap. We would fill the entire buffer, and then pass it to be rendered on screen, again in its entirety. Rinse and repeat. 

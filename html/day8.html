@@ -156,7 +156,18 @@ Now, which sound do we want to reproduce? We can't load audio <code>.wav</code> 
 <path d="M 240,64 L 272,64 " style="fill:none;"/>
 <g transform="translate(0,0)"><text text-anchor="middle" x="0" y="36">-</text><text text-anchor="middle" x="32" y="36">-</text><text text-anchor="middle" x="64" y="36">-</text><text text-anchor="middle" x="96" y="36">-</text><text text-anchor="middle" x="128" y="36">-</text><text text-anchor="middle" x="160" y="36">-</text><text text-anchor="middle" x="192" y="36">-</text><text text-anchor="middle" x="224" y="36">-</text><text text-anchor="middle" x="256" y="36">-</text><text text-anchor="middle" x="288" y="36">-</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;1:</b> Square wave.</div></center>
 
+<div class="admonition note"><div class="admonition-title"> Why are some numbers negative?</div>
+
+</p><p>
+
+    We can roughly translate how we encode sound to how the speaker membrane behaves in real life. When the membrane is pushed out, you have a positive number; when it's sucked back, it's a negative number. 
+
+</p><p>
+
+    Conversely, to turn a stream of samples into real audio, a digital-to-analog converter (<a href="https://en.wikipedia.org/wiki/Digital-to-analog_converter">DAC</a>) is first used to generate a time-varying analog voltage corresponding to the samples. This analog voltage is applied to the input of a power amplifier that drives the speaker.</div>
+
 </p>
+
 <a class="target" name="visualizecircularbuffer">&nbsp;</a><a class="target" name="planthesoundoutput/visualizecircularbuffer">&nbsp;</a><a class="target" name="toc2.2">&nbsp;</a><h2>Visualize Circular Buffer</h2>
 <p>
 
