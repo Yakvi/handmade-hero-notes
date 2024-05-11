@@ -477,7 +477,9 @@ HANDMADE_SLOW:
 ~~~~~~~
 [Listing [x]: <file>[handmade.h]</file> Adding references to `handmade_platform.h`]
 
-Finally, we want to future-proof our platform header to be compilable in C. This will help if we write the platform layer in a language other than C++.
+The game code is now officially disconnected from our platform layer! The only thing linking the two is a small header file.
+
+While we're at it, we want to future-proof our platform header to be compilable in C. It will help when we write the platform layer in a language other than C++.
 
 To do so, we need to do two things: 
 
@@ -1723,13 +1725,15 @@ tile_map *TileMap = &TileMaps[0][0];
 
 ~~~~~~~ C++ add
 world World;
+World.TileMapCountX = 2;
+World.TileMapCountY = 2;
 World.TileMaps = (tile_map *)TileMaps;
 ~~~~~~~ C++
 
 f32 PlayerWidth = 0.75f * TileMap->TileWidth;
 f32 PlayerHeight = TileMap->TileHeight;
 ~~~~~~~
-[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Defining our `world`.]
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Defining our `World`.]
 
 We should now compile with no changes to the game behavior.
 
@@ -1787,46 +1791,15 @@ GetTileValueUnchecked(tile_map *TileMap, s32 TileX, s32 TileY)
 
 Once again, we're compiling with no visible changes to the game behavior.
 
-------------------------
-<!-- 
-43:56 About storing all tilemaps in one big structure
-50:28 Start on storing and accessing multiple tilemaps and the world struct
-1:01:00 Short recap on where we are
-
-1:02:16 Q&A
-1:03:10 John Blow points out we haven't initialised the world struct members
-1:03:43 Question: Why does player sometimes stop a pixel before the wall?
-1:14:36 Question: Are your variables for tilemaps too similar to each other or am I just easily confused?
-1:16:12 Question: Is there an advantage on using bool32 instead of using bool 8-bit?
-1:17:07 Question: Can you go over briefly how to encode the tile data in a single uint32?
-1:17:55 Question: Why does left and right side collision work but not the top and bottom?
-1:20:43 Question: Why save TileWidth and Height if those values never change?
-1:21:02 Question: What are the differences between structs and classes?
-1:23:14 Question: Do you always put int32 or can you use only int?
-1:24:45 Question: So int32 is because you want to make the game for 32bit computers?
-1:26:05 The player moves faster diagonally than it's supposed to. Are you planning on fixing that?
-1:27:10 Question: I'm not familiar with #define, what is it used for?
-1:28:34 Question: When you use int32 does it have a different influence on the code than normal ints?
-
-Useful captions
-Subsection [name-of-the-section]
-Caption under the listing: [Listing [x]: <file>[]</file> .]
-Picture or gif: ![Figure [x]: .](../media/day29/.jpg) 
-Chart: [Figure [x]: .]
--->
-------------------------
-
 # Recap 
 
-We'll wrap up on a bit of a cliffhanger today.
-
-# Exercises 
+We'll wrap up on a bit of a cliffhanger today. Today, we completed our first basic collision system and started our journey toward multiple tilemaps. There are still some things that we keep around inside the `tile_map` struct, like `UpperLeft` coordinates or tile dimensions; it doesn't really make sense, and we'll need to look deeper into it next time.
 
 # Navigation 
 
 Previous: [Day 28. Drawing a Tile Map][day 28]
 
-Up Next: [Day 30. Tilemap Coordinate Systems][day 30]
+Up Next: [Day 30. Moving Between Tile Maps][day 30]
 
 [Back to Index](../index.md.html)
 
