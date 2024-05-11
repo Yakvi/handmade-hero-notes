@@ -4,8 +4,1598 @@
 <link rel="stylesheet" href="../css/html-style.css">
 <link rel="stylesheet" href="../css/style.css">
 
+<object style="display: none; visibility: hidden;" class="eusw@iit.com.ua"></object><span class="md"><p><title>Day 29. Basic Tile Map Collision Checking</title><div class="title"> Day 29. Basic Tile Map Collision Checking </div>
+
+<div class="afterTitles"></div>
+<em class="underscore">Video Length (including Q&A): <a href="https://hero.handmade.network/episode/code/day029/">1h39</a></em> 
+
+</p><p>
+
+Welcome to &ldquo;Handmade Hero Notes&rdquo;, the book where we follow the footsteps of <a href="https://handmadehero.org/">Handmade Hero</a> in making the complete game from scratch, with no external libraries. If you'd like to follow along, preorder the game on <a href="https://handmadehero.org/">handmadehero.org</a>, and you will receive access to the GitHub repository, containing complete source code (tagged day-by-day) as well as a variety of other useful resources.
+
+</p><p>
+
+&ldquo;Always write the usage code first&rdquo; is our mantra. We don't want to write a game engine until we have the game. While it might sound paradoxical, it simply means using whatever tools we can develop quickly to build the structure up. We're just drawing rectangles on the screen, pretending they will be something beautiful later down the line. But, in doing so, we'll understand how exactly we want our engine to function so that when we build those engine components, we won't be wasting time on things we don't need or that are clunky to use in the context we meant to use them.
+
+</p><p>
+
+Today, we'll implement basic collision with the walls we're drawing on the tile map. Additionally, we'll start our work to transition between rooms.
+
+</p>
 <div class="longTOC"><p align="center">
     <span align="right"><a href="day28.html">Day 28</a></span>
     <a href="../index.html"><img src = "../media/logo.png"></a>
     <span align="left"><a href="day30.html">Day 30</a></span>
 </p><p><a href="#" class="tocTop">(Top)</a><br/>
+<a href="#cleanup" class="level1"><span class="tocNumber">1&nbsp; </span>Clean Up</a><br/>
+&nbsp;&nbsp;<a href="#cleanup/introducehandmade_platform.h" class="level2"><span class="tocNumber">1.1&nbsp; </span>Introduce <code>handmade_platform.h</code></a><br/>
+&nbsp;&nbsp;<a href="#cleanup/platformlayer:clearthewindow" class="level2"><span class="tocNumber">1.2&nbsp; </span>Platform Layer: Clear the Window</a><br/>
+&nbsp;&nbsp;<a href="#cleanup/inlinetheroundingfunctions" class="level2"><span class="tocNumber">1.3&nbsp; </span>Inline the Rounding Functions</a><br/>
+<a href="#playercollisionwiththetilemap" class="level1"><span class="tocNumber">2&nbsp; </span>Player Collision with the Tilemap</a><br/>
+&nbsp;&nbsp;<a href="#playercollisionwiththetilemap/setup" class="level2"><span class="tocNumber">2.1&nbsp; </span>Setup</a><br/>
+&nbsp;&nbsp;<a href="#playercollisionwiththetilemap/calculateplayerposition" class="level2"><span class="tocNumber">2.2&nbsp; </span>Calculate Player Position</a><br/>
+&nbsp;&nbsp;<a href="#playercollisionwiththetilemap/validateplayerposition" class="level2"><span class="tocNumber">2.3&nbsp; </span>Validate Player Position</a><br/>
+&nbsp;&nbsp;<a href="#playercollisionwiththetilemap/initializeplayerposition" class="level2"><span class="tocNumber">2.4&nbsp; </span>Initialize Player Position</a><br/>
+<a href="#revisethetilemapcode" class="level1"><span class="tocNumber">3&nbsp; </span>Revise the Tile Map Code</a><br/>
+&nbsp;&nbsp;<a href="#revisethetilemapcode/introduceistilemappointempty" class="level2"><span class="tocNumber">3.1&nbsp; </span>Introduce <code>IsTileMapPointEmpty</code></a><br/>
+&nbsp;&nbsp;<a href="#revisethetilemapcode/introducetile_mapstructure" class="level2"><span class="tocNumber">3.2&nbsp; </span>Introduce <code>tile_map</code> Structure</a><br/>
+&nbsp;&nbsp;<a href="#revisethetilemapcode/accessingthetilemapcells" class="level2"><span class="tocNumber">3.3&nbsp; </span>Accessing the Tile Map Cells</a><br/>
+&nbsp;&nbsp;<a href="#revisethetilemapcode/redefineourtilemap" class="level2"><span class="tocNumber">3.4&nbsp; </span>Redefine our Tile Map</a><br/>
+&nbsp;&nbsp;<a href="#revisethetilemapcode/addplayerwidthtocollision" class="level2"><span class="tocNumber">3.5&nbsp; </span>Add Player Width to Collision</a><br/>
+<a href="#multipletilemaps" class="level1"><span class="tocNumber">4&nbsp; </span>Multiple Tile Maps</a><br/>
+&nbsp;&nbsp;<a href="#multipletilemaps/createanarrayoftilemaps" class="level2"><span class="tocNumber">4.1&nbsp; </span>Create an Array of Tile Maps</a><br/>
+&nbsp;&nbsp;<a href="#multipletilemaps/introduceworlds" class="level2"><span class="tocNumber">4.2&nbsp; </span>Introduce Worlds</a><br/>
+&nbsp;&nbsp;<a href="#multipletilemaps/connectingthetilemaps" class="level2"><span class="tocNumber">4.3&nbsp; </span>Connecting the Tile Maps</a><br/>
+<a href="#recap" class="level1"><span class="tocNumber">5&nbsp; </span>Recap</a><br/>
+<a href="#navigation" class="level1"><span class="tocNumber">6&nbsp; </span>Navigation</a><br/>
+</p></div><a class="target" name="cleanup">&nbsp;</a><a class="target" name="cleanup">&nbsp;</a><a class="target" name="toc1">&nbsp;</a><h1>Clean Up</h1>
+
+<a class="target" name="introducehandmade_platform.h">&nbsp;</a><a class="target" name="cleanup/introducehandmade_platform.h">&nbsp;</a><a class="target" name="toc1.1">&nbsp;</a><h2>Introduce <code>handmade_platform.h</code></h2>
+<p>
+
+
+
+
+<div class="admonition note"><div class="admonition-title"> Note</div>
+
+</p><p>
+
+    Parts of this subsection use the refactoring made on stream during Day 39.</div>
+
+</p><p>
+
+Now that we have started to use <code>handmade.h</code> to store actual game code (even if exploratory), we want to extract the platform headers to a separate file. Let's create a new file that we'll call <code>handmade_platform.h</code>: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> !defined(HANDMADE_PLATFORM_H)</span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> HANDMADE_PLATFORM_H</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;1:</b> <file>[handmade_platform.h]</file> Introducing <code>handmade_platform.h</code>.</div></center>
+<p>
+
+
+First, we will move all the various type definitions and useful macros we use in both the game and the platform layers.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-comment">/*</span>
+<span class="line">NOTE(casey):</span>
+<span class="line"></span>
+<span class="line">HANDMADE_INTERNAL:</span>
+<span class="line">0 - Build for public release</span>
+<span class="line">1 - Build for developer only</span>
+<span class="line"></span>
+<span class="line">HANDMADE_SLOW:</span>
+<span class="line">0 - No slow code allowed!</span>
+<span class="line">1 - Slow code welcome.</span>
+<span class="line">*/</span></span>
+<span class="line"></span><div class=" delete"><span class="line"><span class="hljs-comment">// TODO(casey): Implement sine ourselves</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;math.h&gt;</span></span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;stdint.h&gt;</span></span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">int8_t</span> s8;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">int16_t</span> s16;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">int32_t</span> s32;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">int64_t</span> s64;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> s32 b32;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">uint8_t</span> u8;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">uint16_t</span> u16;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">uint32_t</span> u32;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">uint64_t</span> u64;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">float</span> f32;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">double</span> f64;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> internal static</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> local_persist static</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> global_variable static</span></span>
+<span class="line">    </span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Pi32 3.14159265359f</span></span>
+<span class="line">    </span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> HANDMADE_SLOW</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Assert(Expression) <span class="hljs-meta-keyword">if</span> (!(Expression)) { *(int *)0 = 0; }</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Assert(Expression)</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span>
+<span class="line">    </span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Kilobytes(Value) ((Value) * 1024LL)</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Megabytes(Value) (Kilobytes(Value) * 1024LL)</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Gigabytes(Value) (Megabytes(Value) * 1024LL)</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Terabytes(Value) (Gigabytes(Value) * 1024LL)</span></span>
+<span class="line">    </span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))</span></span>
+<span class="line">    </span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">inline</span> u32</span>
+<span class="line"><span class="hljs-title">SafeTruncateUInt64</span><span class="hljs-params">(u64 Value)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    Assert(Value &lt;= <span class="hljs-number">0xFFFFFFFF</span>);</span>
+<span class="line">    u32 Result = (u32)Value;</span>
+<span class="line">    <span class="hljs-keyword">return</span> (Result);</span>
+<span class="line">}</span>
+<span class="line"></span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;2:</b> <file>[handmade.h]</file></div></center>
+<pre class="listing tilde"><code><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> !defined(HANDMADE_PLATFORM_H)</span></span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;stdint.h&gt;</span></span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">int8_t</span> s8;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">int16_t</span> s16;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">int32_t</span> s32;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">int64_t</span> s64;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> s32 b32;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">uint8_t</span> u8;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">uint16_t</span> u16;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">uint32_t</span> u32;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">uint64_t</span> u64;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">float</span> f32;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">double</span> f64;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> internal static</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> local_persist static</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> global_variable static</span></span>
+<span class="line">    </span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Pi32 3.14159265359f</span></span>
+<span class="line">    </span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> HANDMADE_SLOW</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Assert(Expression) <span class="hljs-meta-keyword">if</span> (!(Expression)) { *(int *)0 = 0; }</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Assert(Expression)</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span>
+<span class="line">    </span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Kilobytes(Value) ((Value) * 1024LL)</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Megabytes(Value) (Kilobytes(Value) * 1024LL)</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Gigabytes(Value) (Megabytes(Value) * 1024LL)</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Terabytes(Value) (Gigabytes(Value) * 1024LL)</span></span>
+<span class="line">    </span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))</span></span>
+<span class="line">    </span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">inline</span> u32</span>
+<span class="line"><span class="hljs-title">SafeTruncateUInt64</span><span class="hljs-params">(u64 Value)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    Assert(Value &lt;= <span class="hljs-number">0xFFFFFFFF</span>);</span>
+<span class="line">    u32 Result = (u32)Value;</span>
+<span class="line">    <span class="hljs-keyword">return</span> (Result);</span>
+<span class="line">}</span></div><span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> HANDMADE_PLATFORM_H</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;3:</b> <file>[handmade_platform.h]</file> Moving type definitions.</div></center>
+<p>
+
+
+Next, we'll move the meat of the platform layer: main structures to capture game input, output buffer, and the debug functions we used for reading and writing files.
+
+</p><pre class="listing tilde"><code><div class=" delete"><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">thread_context</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">int</span> Placeholder;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// NOTE(casey): Services that the platform layer provides to the game.</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> HANDMADE_INTERNAL</span></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">debug_read_file_result</span></span>
+<span class="line">{</span></span>
+<span class="line">    u32 ContentsSize;</span>
+<span class="line">    <span class="hljs-keyword">void</span> *Contents;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> DEBUG_PLATFORM_FREE_FILE_MEMORY(name) void name (thread_context *Thread, void *Memory)</span></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">DEBUG_PLATFORM_FREE_FILE_MEMORY</span><span class="hljs-params">(debug_platform_free_file_memory)</span></span>;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> DEBUG_PLATFORM_READ_ENTIRE_FILE(name) debug_read_file_result name (thread_context *Thread, char *Filename)</span></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">DEBUG_PLATFORM_READ_ENTIRE_FILE</span><span class="hljs-params">(debug_platform_read_entire_file)</span></span>;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name) b32 name (thread_context *Thread, char *Filename, u32 MemorySize, void *Memory)</span></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">DEBUG_PLATFORM_WRITE_ENTIRE_FILE</span><span class="hljs-params">(debug_platform_write_entire_file)</span></span>;</span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// NOTE(casey): Services that the game provides to the platform layer.</span></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_offscreen_buffer</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">void</span> *Memory;</span>
+<span class="line">    <span class="hljs-keyword">int</span> Width;</span>
+<span class="line">    <span class="hljs-keyword">int</span> Height;</span>
+<span class="line">    <span class="hljs-keyword">int</span> Pitch;</span>
+<span class="line">    <span class="hljs-keyword">int</span> BytesPerPixel;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_sound_output_buffer</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">int</span> SampleCount;</span>
+<span class="line">    <span class="hljs-keyword">int</span> SamplesPerSecond;</span>
+<span class="line">    s16* Samples;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_button_state</span></span>
+<span class="line">{</span></span>
+<span class="line">    s32 HalfTransitionCount;</span>
+<span class="line">    b32 EndedDown;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_controller_input</span></span>
+<span class="line">{</span></span>
+<span class="line">    b32 IsConnected;</span>
+<span class="line">    b32 IsAnalog;</span>
+<span class="line">    </span>
+<span class="line">    f32 StickAverageX;</span>
+<span class="line">    f32 StickAverageY;</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-class"><span class="hljs-keyword">union</span></span>
+<span class="line">    {</span></span>
+<span class="line">        game_button_state Buttons[<span class="hljs-number">12</span>];</span>
+<span class="line">        <span class="hljs-class"><span class="hljs-keyword">struct</span></span>
+<span class="line">        {</span></span>
+<span class="line">            game_button_state MoveUp;</span>
+<span class="line">            game_button_state MoveDown;</span>
+<span class="line">            game_button_state MoveLeft;</span>
+<span class="line">            game_button_state MoveRight;</span>
+<span class="line">            </span>
+<span class="line">            game_button_state ActionUp;</span>
+<span class="line">            game_button_state ActionDown;</span>
+<span class="line">            game_button_state ActionLeft;</span>
+<span class="line">            game_button_state ActionRight;</span>
+<span class="line">            </span>
+<span class="line">            game_button_state LeftShoulder;</span>
+<span class="line">            game_button_state RightShoulder;</span>
+<span class="line">            </span>
+<span class="line">            game_button_state Back;</span>
+<span class="line">            game_button_state Start;</span>
+<span class="line">            </span>
+<span class="line">            <span class="hljs-comment">//</span></span>
+<span class="line">            </span>
+<span class="line">            game_button_state Terminator;</span>
+<span class="line">        };</span>
+<span class="line">    };</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_input</span></span>
+<span class="line">{</span></span>
+<span class="line">    game_button_state MouseButtons[<span class="hljs-number">5</span>];</span>
+<span class="line">    s32 MouseX, MouseY, MouseZ;</span>
+<span class="line">    </span>
+<span class="line">    f32 dtForFrame;</span>
+<span class="line">    game_controller_input Controllers[<span class="hljs-number">5</span>];</span>
+<span class="line">};</span></div><span class="line"></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">inline</span> game_controller_input *<span class="hljs-title">GetController</span><span class="hljs-params">(game_input *Input, <span class="hljs-keyword">int</span> ControllerIndex)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    Assert(ControllerIndex &lt; ArrayCount (Input-&gt;Controllers));</span>
+<span class="line">    game_controller_input *Result = &amp;Input-&gt;Controllers[ControllerIndex];</span>
+<span class="line">    <span class="hljs-keyword">return</span> (Result);</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;4:</b> <file>[handmade.h]</file></div></center>
+<pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">float</span> f32;</span>
+<span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">double</span> f64;</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">thread_context</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">int</span> Placeholder;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// NOTE(casey): Services that the platform layer provides to the game.</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> HANDMADE_INTERNAL</span></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">debug_read_file_result</span></span>
+<span class="line">{</span></span>
+<span class="line">    u32 ContentsSize;</span>
+<span class="line">    <span class="hljs-keyword">void</span> *Contents;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> DEBUG_PLATFORM_FREE_FILE_MEMORY(name) void name (thread_context *Thread, void *Memory)</span></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">DEBUG_PLATFORM_FREE_FILE_MEMORY</span><span class="hljs-params">(debug_platform_free_file_memory)</span></span>;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> DEBUG_PLATFORM_READ_ENTIRE_FILE(name) debug_read_file_result name (thread_context *Thread, char *Filename)</span></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">DEBUG_PLATFORM_READ_ENTIRE_FILE</span><span class="hljs-params">(debug_platform_read_entire_file)</span></span>;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name) b32 name (thread_context *Thread, char *Filename, u32 MemorySize, void *Memory)</span></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">DEBUG_PLATFORM_WRITE_ENTIRE_FILE</span><span class="hljs-params">(debug_platform_write_entire_file)</span></span>;</span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// NOTE(casey): Services that the game provides to the platform layer.</span></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_offscreen_buffer</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">void</span> *Memory;</span>
+<span class="line">    <span class="hljs-keyword">int</span> Width;</span>
+<span class="line">    <span class="hljs-keyword">int</span> Height;</span>
+<span class="line">    <span class="hljs-keyword">int</span> Pitch;</span>
+<span class="line">    <span class="hljs-keyword">int</span> BytesPerPixel;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_sound_output_buffer</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-keyword">int</span> SampleCount;</span>
+<span class="line">    <span class="hljs-keyword">int</span> SamplesPerSecond;</span>
+<span class="line">    s16* Samples;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_button_state</span></span>
+<span class="line">{</span></span>
+<span class="line">    s32 HalfTransitionCount;</span>
+<span class="line">    b32 EndedDown;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_controller_input</span></span>
+<span class="line">{</span></span>
+<span class="line">    b32 IsConnected;</span>
+<span class="line">    b32 IsAnalog;</span>
+<span class="line">    </span>
+<span class="line">    f32 StickAverageX;</span>
+<span class="line">    f32 StickAverageY;</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-class"><span class="hljs-keyword">union</span></span>
+<span class="line">    {</span></span>
+<span class="line">        game_button_state Buttons[<span class="hljs-number">12</span>];</span>
+<span class="line">        <span class="hljs-class"><span class="hljs-keyword">struct</span></span>
+<span class="line">        {</span></span>
+<span class="line">            game_button_state MoveUp;</span>
+<span class="line">            game_button_state MoveDown;</span>
+<span class="line">            game_button_state MoveLeft;</span>
+<span class="line">            game_button_state MoveRight;</span>
+<span class="line">            </span>
+<span class="line">            game_button_state ActionUp;</span>
+<span class="line">            game_button_state ActionDown;</span>
+<span class="line">            game_button_state ActionLeft;</span>
+<span class="line">            game_button_state ActionRight;</span>
+<span class="line">            </span>
+<span class="line">            game_button_state LeftShoulder;</span>
+<span class="line">            game_button_state RightShoulder;</span>
+<span class="line">            </span>
+<span class="line">            game_button_state Back;</span>
+<span class="line">            game_button_state Start;</span>
+<span class="line">            </span>
+<span class="line">            <span class="hljs-comment">//</span></span>
+<span class="line">            </span>
+<span class="line">            game_button_state Terminator;</span>
+<span class="line">        };</span>
+<span class="line">    };</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_input</span></span>
+<span class="line">{</span></span>
+<span class="line">    game_button_state MouseButtons[<span class="hljs-number">5</span>];</span>
+<span class="line">    s32 MouseX, MouseY, MouseZ;</span>
+<span class="line">    </span>
+<span class="line">    f32 dtForFrame;</span>
+<span class="line">    game_controller_input Controllers[<span class="hljs-number">5</span>];</span>
+<span class="line">};</span></div><span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> HANDMADE_PLATFORM_H</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;5:</b> <file>[handmade_platform.h]</file> Moving the service structures.</div></center>
+<p>
+
+
+The last piece is to move the remaining functions, structure, and platform functions declarations:
+
+</p><pre class="listing tilde"><code><div class=" delete"><span class="line"><span class="hljs-function"><span class="hljs-keyword">inline</span> game_controller_input *<span class="hljs-title">GetController</span><span class="hljs-params">(game_input *Input, <span class="hljs-keyword">int</span> ControllerIndex)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    Assert(ControllerIndex &lt; ArrayCount (Input-&gt;Controllers));</span>
+<span class="line">    game_controller_input *Result = &amp;Input-&gt;Controllers[ControllerIndex];</span>
+<span class="line">    <span class="hljs-keyword">return</span> (Result);</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_memory</span></span>
+<span class="line">{</span></span>
+<span class="line">    u64 PermanentStorageSize;</span>
+<span class="line">    <span class="hljs-keyword">void</span> *PermanentStorage;</span>
+<span class="line">    u64 TransientStorageSize;</span>
+<span class="line">    <span class="hljs-keyword">void</span> *TransientStorage;</span>
+<span class="line">    b32 IsInitialized;</span>
+<span class="line">    </span>
+<span class="line">    debug_platform_free_file_memory *DEBUGPlatformFreeFileMemory;</span>
+<span class="line">    debug_platform_read_entire_file *DEBUGPlatformReadEntireFile;</span>
+<span class="line">    debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> GAME_UPDATE_AND_RENDER(name) void name(thread_context *Thread, game_memory *Memory, game_input *Input, game_offscreen_buffer* Buffer)</span></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">GAME_UPDATE_AND_RENDER</span><span class="hljs-params">(game_update_and_render)</span></span>;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// NOTE(casey): At the moment, this has to be a very fast function, it cannot be</span></span>
+<span class="line"><span class="hljs-comment">// more than a millisecond or so.</span></span>
+<span class="line"><span class="hljs-comment">// TODO(casey): Reduce the pressure on this function&#x27;s performance by measuring it</span></span>
+<span class="line"><span class="hljs-comment">// or asking about it, etc.</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> GAME_GET_SOUND_SAMPLES(name) void name(thread_context *Thread, game_memory *Memory, game_sound_output_buffer *SoundBuffer)</span></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">GAME_GET_SOUND_SAMPLES</span><span class="hljs-params">(game_get_sound_samples)</span></span>;</span></div><span class="line"></span>
+<span class="line"><span class="hljs-comment">//</span></span>
+<span class="line"><span class="hljs-comment">//</span></span>
+<span class="line"><span class="hljs-comment">//</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_state</span></span>
+<span class="line">{</span></span>
+<span class="line">    f32 PlayerX;</span>
+<span class="line">    f32 PlayerY;</span>
+<span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;6:</b> <file>[handmade.h]</file></div></center>
+<pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_input</span></span>
+<span class="line">{</span></span>
+<span class="line">    game_button_state MouseButtons[<span class="hljs-number">5</span>];</span>
+<span class="line">    s32 MouseX, MouseY, MouseZ;</span>
+<span class="line">    </span>
+<span class="line">    f32 dtForFrame;</span>
+<span class="line">    game_controller_input Controllers[<span class="hljs-number">5</span>];</span>
+<span class="line">};</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_memory</span></span>
+<span class="line">{</span></span>
+<span class="line">    u64 PermanentStorageSize;</span>
+<span class="line">    <span class="hljs-keyword">void</span> *PermanentStorage;</span>
+<span class="line">    u64 TransientStorageSize;</span>
+<span class="line">    <span class="hljs-keyword">void</span> *TransientStorage;</span>
+<span class="line">    b32 IsInitialized;</span>
+<span class="line">    </span>
+<span class="line">    debug_platform_free_file_memory *DEBUGPlatformFreeFileMemory;</span>
+<span class="line">    debug_platform_read_entire_file *DEBUGPlatformReadEntireFile;</span>
+<span class="line">    debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> GAME_UPDATE_AND_RENDER(name) void name(thread_context *Thread, game_memory *Memory, game_input *Input, game_offscreen_buffer* Buffer)</span></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">GAME_UPDATE_AND_RENDER</span><span class="hljs-params">(game_update_and_render)</span></span>;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// NOTE(casey): At the moment, this has to be a very fast function, it cannot be</span></span>
+<span class="line"><span class="hljs-comment">// more than a millisecond or so.</span></span>
+<span class="line"><span class="hljs-comment">// TODO(casey): Reduce the pressure on this function&#x27;s performance by measuring it</span></span>
+<span class="line"><span class="hljs-comment">// or asking about it, etc.</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> GAME_GET_SOUND_SAMPLES(name) void name(thread_context *Thread, game_memory *Memory, game_sound_output_buffer *SoundBuffer)</span></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">typedef</span> <span class="hljs-title">GAME_GET_SOUND_SAMPLES</span><span class="hljs-params">(game_get_sound_samples)</span></span>;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">inline</span> game_controller_input *<span class="hljs-title">GetController</span><span class="hljs-params">(game_input *Input, <span class="hljs-keyword">int</span> ControllerIndex)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    Assert(ControllerIndex &lt; ArrayCount (Input-&gt;Controllers));</span>
+<span class="line">    game_controller_input *Result = &amp;Input-&gt;Controllers[ControllerIndex];</span>
+<span class="line">    <span class="hljs-keyword">return</span> (Result);</span>
+<span class="line">}</span></div><span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> HANDMADE_PLATFORM_H</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;7:</b> <file>[handmade_platform.h]</file> Moving the DLL export function declarations.</div></center>
+<p>
+
+
+Everything is ready to go, and we can now use our newly-created <code>handmade_platform.h</code> file in both the Windows platform and the game layers: 
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&quot;handmade_platform.h&quot;</span></span></span></div><span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;windows.h&gt;</span></span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&lt;stdio.h&gt;</span></span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;8:</b> <file>[win32_handmade.cpp]</file></div></center>
+<pre class="listing tilde"><code><div class=" C++ "><span class="line"><span class="hljs-string">/*</span></span>
+<span class="line"><span class="hljs-string">NOTE(casey):</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-attr">HANDMADE_INTERNAL:</span></span>
+<span class="line"><span class="hljs-number">0</span> <span class="hljs-bullet">-</span> <span class="hljs-string">Build</span> <span class="hljs-string">for</span> <span class="hljs-string">public</span> <span class="hljs-string">release</span></span>
+<span class="line"><span class="hljs-number">1</span> <span class="hljs-bullet">-</span> <span class="hljs-string">Build</span> <span class="hljs-string">for</span> <span class="hljs-string">developer</span> <span class="hljs-string">only</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-attr">HANDMADE_SLOW:</span></span>
+<span class="line"><span class="hljs-number">0</span> <span class="hljs-bullet">-</span> <span class="hljs-literal">No</span> <span class="hljs-string">slow</span> <span class="hljs-string">code</span> <span class="hljs-string">allowed!</span></span>
+<span class="line"><span class="hljs-number">1</span> <span class="hljs-bullet">-</span> <span class="hljs-string">Slow</span> <span class="hljs-string">code</span> <span class="hljs-string">welcome.</span></span>
+<span class="line"><span class="hljs-string">*/</span> </span>
+<span class="line"></span>
+<span class="line"></span></div><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">include</span> <span class="hljs-meta-string">&quot;handmade_platform.h&quot;</span></span></span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;9:</b> <file>[handmade.h]</file> Adding references to <code>handmade_platform.h</code></div></center>
+<p>
+
+
+The game code is now officially disconnected from our platform layer! The only thing linking the two is a small header file.
+
+</p><p>
+
+While we're at it, we want to future-proof our platform header to be compilable in C. It will help when we write the platform layer in a language other than C++.
+
+</p><p>
+
+To do so, we need to do two things: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">Add complete decoration to the struct definitions. In C, you need to specify <code>typedef struct struct_name{ /* ... */ } struct_name;</code> In C++, the compiler adds <code>typedef</code> and alias automatically, allowing programmers only to write <code>struct struct_name { /* ... */ };</code>.
+</li>
+<li class="asterisk">Encapsulate the whole file into an <code>extern &quot;C&quot;</code> block so the C++ compiler doesn't <em class="underscore">mangle</em> the names.</li></ul>
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> !defined(HANDMADE_PLATFORM_H)</span></span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">ifdef</span> __cplusplus</span></span>
+<span class="line"><span class="hljs-keyword">extern</span> <span class="hljs-string">&quot;C&quot;</span> {</span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div><div class=" C++ "><span class="line"></span>
+<span class="line">#include &lt;stdint.h&gt;</span>
+<span class="line"></span>
+<span class="line">// ...</span>
+<span class="line"></span></div><div class=" edit"><span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">thread_context</span></span></span></div><span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">int</span> Placeholder;</span><div class=" edit"><span class="line">} thread_context;</span></div><div class=" C++ "><span class="line"></span>
+<span class="line">// ...</span>
+<span class="line"></span></div><div class=" edit"><span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">debug_read_file_result</span></span></span></div><span class="line">{</span>
+<span class="line">    u32 ContentsSize;</span>
+<span class="line">    <span class="hljs-keyword">void</span> *Contents;</span><div class=" edit"><span class="line">} debug_read_file_result;</span></div><div class=" C++ "><span class="line"></span>
+<span class="line">// ...</span>
+<span class="line"></span></div><div class=" edit"><span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_offscreen_buffer</span></span></span></div><span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span><div class=" edit"><span class="line">} game_offscreen_buffer;</span></div><span class="line"></span>
+<span class="line"></span><div class=" edit"><span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_sound_output_buffer</span></span></span></div><span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span><div class=" edit"><span class="line">} game_sound_output_buffer;</span></div><span class="line"></span>
+<span class="line"></span><div class=" edit"><span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_button_state</span></span></span></div><span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span><div class=" edit"><span class="line">} game_button_state;</span></div><span class="line"></span>
+<span class="line"></span><div class=" edit"><span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_controller_input</span></span></span></div><span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ... </span></span><div class=" edit"><span class="line">} game_controller_input;</span></div><span class="line"></span>
+<span class="line"></span><div class=" edit"><span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_input</span></span></span></div><span class="line">{</span>
+<span class="line">    game_button_state MouseButtons[<span class="hljs-number">5</span>];</span>
+<span class="line">    s32 MouseX, MouseY, MouseZ;</span>
+<span class="line">    </span>
+<span class="line">    f32 dtForFrame;</span>
+<span class="line">    game_controller_input Controllers[<span class="hljs-number">5</span>];</span><div class=" edit"><span class="line">} game_input;</span></div><span class="line"></span>
+<span class="line"></span><div class=" edit"><span class="line"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_memory</span></span></span></div><span class="line">{</span>
+<span class="line">    u64 PermanentStorageSize;</span>
+<span class="line">    <span class="hljs-keyword">void</span> *PermanentStorage;</span>
+<span class="line">    u64 TransientStorageSize;</span>
+<span class="line">    <span class="hljs-keyword">void</span> *TransientStorage;</span>
+<span class="line">    b32 IsInitialized;</span>
+<span class="line">    </span>
+<span class="line">    debug_platform_free_file_memory *DEBUGPlatformFreeFileMemory;</span>
+<span class="line">    debug_platform_read_entire_file *DEBUGPlatformReadEntireFile;</span>
+<span class="line">    debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;</span><div class=" edit"><span class="line">} game_memory;</span></div><span class="line"></span>
+<span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">ifdef</span> __cplusplus</span></span>
+<span class="line">}</span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></div><span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> HANDMADE_PLATFORM_H</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;10:</b> <file>[handmade_platform.h]</file> Making the platform headers C-compatible.</div></center>
+
+<a class="target" name="platformlayer:clearthewindow">&nbsp;</a><a class="target" name="cleanup/platformlayer:clearthewindow">&nbsp;</a><a class="target" name="toc1.2">&nbsp;</a><h2>Platform Layer: Clear the Window</h2>
+<p>
+
+
+As we stand now, we're using a fixed part of our window, which we pretend to be our screen. Our window can be bigger or smaller than that area. If it's bigger, we don't touch the areas outside of that rectangle in any way. Let's fix that and clear the unused window areas to black. 
+
+</p><p>
+
+Additionally, we can offset the game window from the window border to know what we're drawing without having the operating system's decorations get in our way.
+
+</p><p>
+
+The code outputting our buffer in the window is inside <code>win32_handmade.</code>cpp`: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32DisplayBufferInWindow</span><span class="hljs-params">(win32_offscreen_buffer *Buffer,</span>
+<span class="line">                           HDC DeviceContext, <span class="hljs-keyword">int</span> WindowWidth, <span class="hljs-keyword">int</span> WindowHeight)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// NOTE(casey): For prototyping purposes, we&#x27;re going to always blit</span></span>
+<span class="line">    <span class="hljs-comment">// 1-to-1 pixels to make sure we don&#x27;t introduce artifacts with</span></span>
+<span class="line">    <span class="hljs-comment">// stretching while we are learning to code the renderer!</span></span>
+<span class="line">    StretchDIBits(DeviceContext,</span>
+<span class="line">                  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, Buffer-&gt;Width, Buffer-&gt;Height,</span>
+<span class="line">                  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, Buffer-&gt;Width, Buffer-&gt;Height,</span>
+<span class="line">                  Buffer-&gt;Memory,</span>
+<span class="line">                  &amp;Buffer-&gt;Info,</span>
+<span class="line">                  DIB_RGB_COLORS, SRCCOPY);</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;11:</b> <file>[win32_handmade.cpp]</file> <code>Win32DisplayBufferInWindow</code>.</div></center>
+<p>
+
+
+A naive method of approaching this problem would be to clear the whole window to black first and then render our window. The function responsible for this is <a href="https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-patblt">PatBlt</a>, which we briefly used on <a href="../html/day2.html">Day 2</a> to have our window going. It's a straightforward function that takes the top-left corner, width, and height and performs the operation of choice. In our case, we want to clear the screen to black so we should pick <code>BLACKNESS</code>:
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32DisplayBufferInWindow</span><span class="hljs-params">(win32_offscreen_buffer *Buffer,</span>
+<span class="line">                           HDC DeviceContext, <span class="hljs-keyword">int</span> WindowWidth, <span class="hljs-keyword">int</span> WindowHeight)</span></span>
+<span class="line"></span>{</span><div class=" add"><span class="line">    <span class="hljs-keyword">int</span> OffsetX = <span class="hljs-number">10</span>;</span>
+<span class="line">    <span class="hljs-keyword">int</span> OffsetY = <span class="hljs-number">10</span>;</span>
+<span class="line"></span>
+<span class="line">    PatBlt(DeviceContext, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, WindowWidth, WindowHeight, BLACKNESS);</span></div><span class="line"></span>
+<span class="line"></span>
+<span class="line">    <span class="hljs-comment">// NOTE(casey): For prototyping purposes, we&#x27;re going to always blit</span></span>
+<span class="line">    <span class="hljs-comment">// 1-to-1 pixels to make sure we don&#x27;t introduce artifacts with</span></span>
+<span class="line">    <span class="hljs-comment">// stretching while we are learning to code the renderer!</span></span>
+<span class="line">    StretchDIBits(DeviceContext,</span><div class=" edit"><span class="line">                  OffsetX, OffsetY, Buffer-&gt;Width, Buffer-&gt;Height,</span></div><span class="line">                  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, Buffer-&gt;Width, Buffer-&gt;Height,</span>
+<span class="line">                  Buffer-&gt;Memory,</span>
+<span class="line">                  &amp;Buffer-&gt;Info,</span>
+<span class="line">                  DIB_RGB_COLORS, SRCCOPY);</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;12:</b> <file>[win32_handmade.cpp]</file> A naive approach to clear the screen.</div></center>
+<p>
+
+
+Unfortunately, this method doesn't work, as Windows can <a href="https://learn.microsoft.com/en-us/windows-hardware/drivers/display/flipping">page flip</a> between the <code>PatBlt</code> and the <code>StretchDIBits</code> calls, making the whole screen black for one frame. 
+
+</p><p>
+
+<center><div class="image" style=""><a href="../media/day29/screen-1.gif" target="_blank"><img class="markdeep" src="../media/day29/screen-1.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;1:</b> Too much Blackness.</span></center></div></center> 
+
+</p><p>
+
+What we want to do instead is, instead of having one big rectangle, have four smaller rectangles surrounding our buffer: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal <span class="hljs-keyword">void</span></span>
+<span class="line"><span class="hljs-title">Win32DisplayBufferInWindow</span><span class="hljs-params">(win32_offscreen_buffer *Buffer,</span>
+<span class="line">                           HDC DeviceContext, <span class="hljs-keyword">int</span> WindowWidth, <span class="hljs-keyword">int</span> WindowHeight)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-keyword">int</span> OffsetX = <span class="hljs-number">10</span>;</span>
+<span class="line">    <span class="hljs-keyword">int</span> OffsetY = <span class="hljs-number">10</span>;</span>
+<span class="line"></span><div class=" delete"><span class="line">    PatBlt(DeviceContext, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, WindowWidth, WindowHeight, BLACKNESS);</span></div><div class=" add"><span class="line">    PatBlt(DeviceContext, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, WindowWidth, OffsetY, BLACKNESS);                             <span class="hljs-comment">// top</span></span>
+<span class="line">    PatBlt(DeviceContext, <span class="hljs-number">0</span>, OffsetY + Buffer-&gt;Height, WindowWidth, WindowHeight, BLACKNESS); <span class="hljs-comment">// bottom</span></span>
+<span class="line">    PatBlt(DeviceContext, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, OffsetX, WindowHeight, BLACKNESS);                            <span class="hljs-comment">// left</span></span>
+<span class="line">    PatBlt(DeviceContext, OffsetX + Buffer-&gt;Width, <span class="hljs-number">0</span>, WindowWidth, WindowHeight, BLACKNESS);  <span class="hljs-comment">// right</span></span></div><div class=" C++ "><span class="line"></span>
+<span class="line"></span>
+<span class="line">    // NOTE(casey): For prototyping purposes, we&#x27;re going to always blit</span>
+<span class="line">    // 1-to-1 pixels to make sure we don&#x27;t introduce artifacts with</span>
+<span class="line">    // stretching while we are learning to code the renderer!</span>
+<span class="line">    StretchDIBits(DeviceContext,</span>
+<span class="line">                  OffsetX, OffsetY, Buffer-&gt;Width, Buffer-&gt;Height,</span>
+<span class="line">                  0, 0, Buffer-&gt;Width, Buffer-&gt;Height,</span>
+<span class="line">                  Buffer-&gt;Memory,</span>
+<span class="line">                  &amp;Buffer-&gt;Info,</span>
+<span class="line">                  DIB_RGB_COLORS, SRCCOPY);</span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;13:</b> <file>[win32_handmade.cpp]</file> A better way to clear the screen.</div></center>
+<p>
+
+
+This solution will give us nice black edges surrounding our screen. You might notice that we aren't subtracting the buffer width and height when we draw the bottom and right rectangles - that's not really necessary; Windows will do it for us. 
+
+</p>
+<a class="target" name="inlinetheroundingfunctions">&nbsp;</a><a class="target" name="cleanup/inlinetheroundingfunctions">&nbsp;</a><a class="target" name="toc1.3">&nbsp;</a><h2>Inline the Rounding Functions</h2>
+<p>
+
+
+When we introduced <code>RoundReal32ToInt32</code> and <code>RoundReal32ToUInt32</code>, we moved fast and made the functions static without too much thought. However, these are tiny functions, and there is no value to keep them as such. Instead, we want to <em class="underscore">inline</em> them. This way, the compiler will expand the function directly on the line where it's called instead of making a separate call to a different chunk of code.
+
+</p><p>
+
+The performance gain in this instance is marginal, but let's not be wasteful where we can avoid it.
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line"><span class="hljs-keyword">inline</span> s32</span></div><span class="line">RoundReal32ToInt32(f32 Number)</span>
+<span class="line">{</span>
+<span class="line">    s32 Result = (s32)(Number + <span class="hljs-number">0.5f</span>);</span>
+<span class="line">    <span class="hljs-keyword">return</span> (Result);</span>
+<span class="line">}</span>
+<span class="line"></span><div class=" edit"><span class="line"><span class="hljs-keyword">inline</span> u32</span></div><span class="line">RoundReal32ToUInt32(f32 Number)</span>
+<span class="line">{</span>
+<span class="line">    u32 Result = (u32)(Number + <span class="hljs-number">0.5f</span>);</span>
+<span class="line">    <span class="hljs-keyword">return</span> (Result);</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;14:</b> <file>[handmade.cpp]</file> Inlining the rounding functions.</div></center>
+<p>
+
+
+That's about it for the clean-up we need today; let's get to the new stuff!
+
+</p>
+<a class="target" name="playercollisionwiththetilemap">&nbsp;</a><a class="target" name="playercollisionwiththetilemap">&nbsp;</a><a class="target" name="toc2">&nbsp;</a><h1>Player Collision with the Tilemap</h1>
+
+<a class="target" name="setup">&nbsp;</a><a class="target" name="playercollisionwiththetilemap/setup">&nbsp;</a><a class="target" name="toc2.1">&nbsp;</a><h2>Setup</h2>
+<p>
+
+
+Our player character moves when we process the user input: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> ControllerIndex = <span class="hljs-number">0</span>;</span>
+<span class="line">     ControllerIndex &lt; ArrayCount(Input-&gt;Controllers);</span>
+<span class="line">     ++ControllerIndex)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">    GameState-&gt;PlayerX += Input-&gt;dtForFrame * dPlayerX;</span>
+<span class="line">    GameState-&gt;PlayerY += Input-&gt;dtForFrame * dPlayerY;</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;15:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Player movement.</div></center>
+<p>
+
+
+If we want to implement collisions, we want to verify the destination position is valid; if it's not (say, it's a wall tile), we will reject the user's input. It would look something like this: 
+
+</p><pre class="listing tilde"><code><div class=" edit"><span class="line">f32 NewPlayerX = GameState-&gt;PlayerX + Input-&gt;dtForFrame * dPlayerX;</span>
+<span class="line">f32 NewPlayerY = GameState-&gt;PlayerY + Input-&gt;dtForFrame * dPlayerY;</span></div><div class=" add"><span class="line"></span>
+<span class="line">b32 IsValid = <span class="hljs-literal">false</span>;</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// Do some checks to make sure the new position is valid</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">if</span> (IsValid)</span>
+<span class="line">{</span>
+<span class="line">    GameState-&gt;PlayerX = NewPlayerX;</span>
+<span class="line">    GameState-&gt;PlayerY = NewPlayerY;</span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;16:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Validating player input before accepting it.</div></center>
+<p>
+
+
+We will be doing our checks against the tilemap we defined last time, so we need to move that block before the input processing: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">f32 UpperLeftX = <span class="hljs-number">-30</span>;</span>
+<span class="line">f32 UpperLeftY = <span class="hljs-number">0</span>;</span>
+<span class="line">f32 TileWidth = <span class="hljs-number">60</span>;</span>
+<span class="line">f32 TileHeight = <span class="hljs-number">60</span>;</span>
+<span class="line"></span>
+<span class="line">u32 TileMap[<span class="hljs-number">9</span>][<span class="hljs-number">17</span>] = </span>
+<span class="line">{</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>}</span>
+<span class="line">};</span></div><span class="line"></span>
+<span class="line">game_state *GameState = (game_state*)Memory-&gt;PermanentStorage;</span>
+<span class="line"><span class="hljs-keyword">if</span>(!Memory-&gt;IsInitialized)</span>
+<span class="line">{</span>
+<span class="line">    Memory-&gt;IsInitialized = <span class="hljs-literal">true</span>;</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> ControllerIndex = <span class="hljs-number">0</span>; <span class="hljs-comment">//...)</span></span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">        </span>
+<span class="line">    f32 NewPlayerX = GameState-&gt;PlayerX + Input-&gt;dtForFrame * dPlayerX;</span>
+<span class="line">    f32 NewPlayerY = GameState-&gt;PlayerY + Input-&gt;dtForFrame * dPlayerY;</span>
+<span class="line">    </span>
+<span class="line">    b32 IsValid = <span class="hljs-literal">false</span>;</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">if</span> (IsValid)</span>
+<span class="line">    {</span>
+<span class="line">        GameState-&gt;PlayerX = NewPlayerX;</span>
+<span class="line">        GameState-&gt;PlayerY = NewPlayerY;</span>
+<span class="line">    }</span>
+<span class="line">    </span>
+<span class="line">}</span><div class=" delete"><span class="line">u32 TileMap[<span class="hljs-number">9</span>][<span class="hljs-number">17</span>] = </span>
+<span class="line">{</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>}</span>
+<span class="line">};</span></div><span class="line"></span>
+<span class="line">DrawRectangle(Buffer, <span class="hljs-number">0.0f</span>, <span class="hljs-number">0.0f</span>, (f32)Buffer-&gt;Width, (f32)Buffer-&gt;Height, <span class="hljs-number">1.0f</span>, <span class="hljs-number">0.0f</span>, <span class="hljs-number">1.0f</span>);</span>
+<span class="line"></span><div class=" delete"><span class="line">f32 UpperLeftX = <span class="hljs-number">-30</span>;</span>
+<span class="line">f32 UpperLeftY = <span class="hljs-number">0</span>;</span>
+<span class="line">f32 TileWidth = <span class="hljs-number">60</span>;</span>
+<span class="line">f32 TileHeight = <span class="hljs-number">60</span>;</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;17:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Moving the tile map definition.</div></center>
+
+<a class="target" name="calculateplayerposition">&nbsp;</a><a class="target" name="playercollisionwiththetilemap/calculateplayerposition">&nbsp;</a><a class="target" name="toc2.2">&nbsp;</a><h2>Calculate Player Position</h2>
+<p>
+
+
+What exactly do we want to do, though?
+
+</p><p>
+
+Every tile occupies multiple pixels in our window: we set up our tile width and height to be 60 pixels, starting from a specific <code>UpperLeftX</code> and Y. Furthermore, we define the player's position in the same pixel space as the tiles. Therefore, we want to calculate the player's tile position first. Then, we look up our tile map, and if the position happens to be the wall, we discard it.
+
+</p><p>
+
+To calculate the <em class="underscore">relative</em> player's position, we want to get the player's position and subtract the starting X and Y (tile map origin) from it.
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="416" width="424" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 40,48 L 40,384 " style="fill:none;"/>
+<path d="M 88,48 L 88,88 " style="fill:none;"/>
+<path d="M 88,104 L 88,384 " style="fill:none;"/>
+<path d="M 136,48 L 136,88 " style="fill:none;"/>
+<path d="M 136,104 L 136,384 " style="fill:none;"/>
+<path d="M 184,48 L 184,88 " style="fill:none;"/>
+<path d="M 184,104 L 184,384 " style="fill:none;"/>
+<path d="M 208,64 L 208,272 " style="fill:none;"/>
+<path d="M 232,48 L 232,232 " style="fill:none;"/>
+<path d="M 232,256 L 232,384 " style="fill:none;"/>
+<path d="M 280,48 L 280,224 " style="fill:none;"/>
+<path d="M 280,256 L 280,384 " style="fill:none;"/>
+<path d="M 328,48 L 328,384 " style="fill:none;"/>
+<path d="M 16,64 L 32,64 " style="fill:none;"/>
+<path d="M 48,64 L 200,64 " style="fill:none;"/>
+<path d="M 216,64 L 328,64 " style="fill:none;"/>
+<path d="M 56,96 L 200,96 " style="fill:none;"/>
+<path d="M 16,128 L 200,128 " style="fill:none;"/>
+<path d="M 216,128 L 328,128 " style="fill:none;"/>
+<path d="M 16,192 L 200,192 " style="fill:none;"/>
+<path d="M 216,192 L 328,192 " style="fill:none;"/>
+<path d="M 232,240 L 248,240 " style="fill:none;"/>
+<path d="M 16,256 L 200,256 " style="fill:none;"/>
+<path d="M 232,256 L 328,256 " style="fill:none;"/>
+<path d="M 16,320 L 328,320 " style="fill:none;"/>
+<path d="M 16,384 L 328,384 " style="fill:none;"/>
+<path d="M 16,16 L 56,96 " style="fill:none;"/>
+<path d="M 214,276 L 232,240 " style="fill:none;"/>
+<polygon points="222,276 210,270.4 210,281.6 "  style="stroke:none" transform="rotate(116.56505117707799,214,276 )"/>
+<polygon points="216,272 204,266.4 204,277.6 "  style="stroke:none" transform="rotate(90,208,272 )"/>
+<polygon points="208,96 196,90.4 196,101.6 "  style="stroke:none" transform="rotate(0,200,96 )"/>
+<circle cx="40" cy="64" r="6" class="closeddot"/><circle cx="208" cy="64" r="6" class="closeddot"/><circle cx="208" cy="288" r="6" class="closeddot"/><g transform="translate(0,0)"><text text-anchor="middle" x="8" y="4">T</text><text text-anchor="middle" x="16" y="4">i</text><text text-anchor="middle" x="24" y="4">l</text><text text-anchor="middle" x="32" y="4">e</text><text text-anchor="middle" x="48" y="4">M</text><text text-anchor="middle" x="56" y="4">a</text><text text-anchor="middle" x="64" y="4">p</text><text text-anchor="middle" x="80" y="4">O</text><text text-anchor="middle" x="88" y="4">r</text><text text-anchor="middle" x="96" y="4">i</text><text text-anchor="middle" x="104" y="4">g</text><text text-anchor="middle" x="112" y="4">i</text><text text-anchor="middle" x="120" y="4">n</text><text text-anchor="middle" x="136" y="4">(</text><text text-anchor="middle" x="144" y="4">U</text><text text-anchor="middle" x="152" y="4">p</text><text text-anchor="middle" x="160" y="4">p</text><text text-anchor="middle" x="168" y="4">e</text><text text-anchor="middle" x="176" y="4">r</text><text text-anchor="middle" x="184" y="4">L</text><text text-anchor="middle" x="192" y="4">e</text><text text-anchor="middle" x="200" y="4">f</text><text text-anchor="middle" x="208" y="4">t</text><text text-anchor="middle" x="216" y="4">X</text><text text-anchor="middle" x="224" y="4">,</text><text text-anchor="middle" x="240" y="4">U</text><text text-anchor="middle" x="248" y="4">p</text><text text-anchor="middle" x="256" y="4">p</text><text text-anchor="middle" x="264" y="4">e</text><text text-anchor="middle" x="272" y="4">r</text><text text-anchor="middle" x="280" y="4">L</text><text text-anchor="middle" x="288" y="4">e</text><text text-anchor="middle" x="296" y="4">f</text><text text-anchor="middle" x="304" y="4">t</text><text text-anchor="middle" x="312" y="4">Y</text><text text-anchor="middle" x="320" y="4">)</text><text text-anchor="middle" x="64" y="52">0</text><text text-anchor="middle" x="112" y="52">1</text><text text-anchor="middle" x="160" y="52">2</text><text text-anchor="middle" x="208" y="52">3</text><text text-anchor="middle" x="256" y="52">4</text><text text-anchor="middle" x="304" y="52">5</text><text text-anchor="middle" x="16" y="100">0</text><text text-anchor="middle" x="16" y="164">1</text><text text-anchor="middle" x="16" y="228">2</text><text text-anchor="middle" x="264" y="244">P</text><text text-anchor="middle" x="272" y="244">l</text><text text-anchor="middle" x="280" y="244">a</text><text text-anchor="middle" x="288" y="244">y</text><text text-anchor="middle" x="296" y="244">e</text><text text-anchor="middle" x="304" y="244">r</text><text text-anchor="middle" x="216" y="260">-</text><text text-anchor="middle" x="16" y="292">3</text><text text-anchor="middle" x="16" y="356">4</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;2:</b> Calculating player position on the tile map.</div></center>
+
+</p><pre class="listing tilde"><code><span class="line">f32 NewPlayerX = GameState-&gt;PlayerX + Input-&gt;dtForFrame * dPlayerX;</span>
+<span class="line">f32 NewPlayerY = GameState-&gt;PlayerY + Input-&gt;dtForFrame * dPlayerY;</span>
+<span class="line"></span><div class=" add"><span class="line">s32 PlayerTileX = NewPlayerX - UpperLeftX;</span>
+<span class="line">s32 PlayerTileY = NewPlayerY - UpperLeftY;</span></div><span class="line"></span>
+<span class="line">b32 IsValid = <span class="hljs-literal">false</span>;</span>
+<span class="line"><span class="hljs-comment">// ...</span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;18:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Player tile position.</div></center>
+<p>
+
+
+We can now calculate which tile the player occupies with a simple divide. We should divide our relative X position by the tile width and our relative Y position by the tile height.
+
+</p><p>
+
+<svg class="diagram" xmlns="http://www.w3.org/2000/svg" version="1.1" height="432" width="496" style="margin:0 auto 0 auto;"><g transform="translate(8,16 )">
+<path d="M 40,16 L 40,32 " style="fill:none;"/>
+<path d="M 40,64 L 40,400 " style="fill:none;"/>
+<path d="M 88,64 L 88,400 " style="fill:none;"/>
+<path d="M 136,64 L 136,400 " style="fill:none;"/>
+<path d="M 184,64 L 184,400 " style="fill:none;"/>
+<path d="M 208,16 L 208,32 " style="fill:none;"/>
+<path d="M 232,64 L 232,248 " style="fill:none;"/>
+<path d="M 232,272 L 232,400 " style="fill:none;"/>
+<path d="M 280,16 L 280,32 " style="fill:none;"/>
+<path d="M 280,64 L 280,240 " style="fill:none;"/>
+<path d="M 280,272 L 280,400 " style="fill:none;"/>
+<path d="M 328,16 L 328,32 " style="fill:none;"/>
+<path d="M 328,64 L 328,240 " style="fill:none;"/>
+<path d="M 328,272 L 328,400 " style="fill:none;"/>
+<path d="M 360,80 L 360,144 " style="fill:none;"/>
+<path d="M 384,80 L 384,96 " style="fill:none;"/>
+<path d="M 384,144 L 384,304 " style="fill:none;"/>
+<path d="M 40,16 L 208,16 " style="fill:none;"/>
+<path d="M 280,16 L 328,16 " style="fill:none;"/>
+<path d="M 16,80 L 328,80 " style="fill:none;"/>
+<path d="M 344,80 L 384,80 " style="fill:none;"/>
+<path d="M 16,144 L 328,144 " style="fill:none;"/>
+<path d="M 344,144 L 360,144 " style="fill:none;"/>
+<path d="M 16,208 L 328,208 " style="fill:none;"/>
+<path d="M 232,256 L 248,256 " style="fill:none;"/>
+<path d="M 16,272 L 216,272 " style="fill:none;"/>
+<path d="M 232,272 L 328,272 " style="fill:none;"/>
+<path d="M 344,304 L 384,304 " style="fill:none;"/>
+<path d="M 16,336 L 328,336 " style="fill:none;"/>
+<path d="M 16,400 L 328,400 " style="fill:none;"/>
+<path d="M 214,292 L 232,256 " style="fill:none;"/>
+<polygon points="222,292 210,286.4 210,297.6 "  style="stroke:none" transform="rotate(116.56505117707799,214,292 )"/>
+<circle cx="208" cy="304" r="6" class="closeddot"/><g transform="translate(0,0)"><text text-anchor="middle" x="24" y="4">R</text><text text-anchor="middle" x="32" y="4">e</text><text text-anchor="middle" x="40" y="4">l</text><text text-anchor="middle" x="48" y="4">a</text><text text-anchor="middle" x="56" y="4">t</text><text text-anchor="middle" x="64" y="4">i</text><text text-anchor="middle" x="72" y="4">v</text><text text-anchor="middle" x="80" y="4">e</text><text text-anchor="middle" x="96" y="4">P</text><text text-anchor="middle" x="104" y="4">l</text><text text-anchor="middle" x="112" y="4">a</text><text text-anchor="middle" x="120" y="4">y</text><text text-anchor="middle" x="128" y="4">e</text><text text-anchor="middle" x="136" y="4">r</text><text text-anchor="middle" x="152" y="4">X</text><text text-anchor="middle" x="168" y="4">P</text><text text-anchor="middle" x="176" y="4">o</text><text text-anchor="middle" x="184" y="4">s</text><text text-anchor="middle" x="192" y="4">i</text><text text-anchor="middle" x="200" y="4">t</text><text text-anchor="middle" x="208" y="4">i</text><text text-anchor="middle" x="216" y="4">o</text><text text-anchor="middle" x="224" y="4">n</text><text text-anchor="middle" x="272" y="4">T</text><text text-anchor="middle" x="280" y="4">i</text><text text-anchor="middle" x="288" y="4">l</text><text text-anchor="middle" x="296" y="4">e</text><text text-anchor="middle" x="312" y="4">W</text><text text-anchor="middle" x="320" y="4">i</text><text text-anchor="middle" x="328" y="4">d</text><text text-anchor="middle" x="336" y="4">t</text><text text-anchor="middle" x="344" y="4">h</text><text text-anchor="middle" x="64" y="68">0</text><text text-anchor="middle" x="112" y="68">1</text><text text-anchor="middle" x="160" y="68">2</text><text text-anchor="middle" x="208" y="68">3</text><text text-anchor="middle" x="256" y="68">4</text><text text-anchor="middle" x="304" y="68">5</text><text text-anchor="middle" x="16" y="116">0</text><text text-anchor="middle" x="376" y="116">T</text><text text-anchor="middle" x="384" y="116">i</text><text text-anchor="middle" x="392" y="116">l</text><text text-anchor="middle" x="400" y="116">e</text><text text-anchor="middle" x="376" y="132">H</text><text text-anchor="middle" x="384" y="132">e</text><text text-anchor="middle" x="392" y="132">i</text><text text-anchor="middle" x="400" y="132">g</text><text text-anchor="middle" x="408" y="132">h</text><text text-anchor="middle" x="416" y="132">t</text><text text-anchor="middle" x="16" y="180">1</text><text text-anchor="middle" x="400" y="196">R</text><text text-anchor="middle" x="408" y="196">e</text><text text-anchor="middle" x="416" y="196">l</text><text text-anchor="middle" x="424" y="196">a</text><text text-anchor="middle" x="432" y="196">t</text><text text-anchor="middle" x="440" y="196">i</text><text text-anchor="middle" x="448" y="196">v</text><text text-anchor="middle" x="456" y="196">e</text><text text-anchor="middle" x="400" y="212">P</text><text text-anchor="middle" x="408" y="212">l</text><text text-anchor="middle" x="416" y="212">a</text><text text-anchor="middle" x="424" y="212">y</text><text text-anchor="middle" x="432" y="212">e</text><text text-anchor="middle" x="440" y="212">r</text><text text-anchor="middle" x="456" y="212">Y</text><text text-anchor="middle" x="400" y="228">P</text><text text-anchor="middle" x="408" y="228">o</text><text text-anchor="middle" x="416" y="228">s</text><text text-anchor="middle" x="424" y="228">i</text><text text-anchor="middle" x="432" y="228">t</text><text text-anchor="middle" x="440" y="228">i</text><text text-anchor="middle" x="448" y="228">o</text><text text-anchor="middle" x="456" y="228">n</text><text text-anchor="middle" x="16" y="244">2</text><text text-anchor="middle" x="264" y="260">P</text><text text-anchor="middle" x="272" y="260">l</text><text text-anchor="middle" x="280" y="260">a</text><text text-anchor="middle" x="288" y="260">y</text><text text-anchor="middle" x="296" y="260">e</text><text text-anchor="middle" x="304" y="260">r</text><text text-anchor="middle" x="320" y="260">(</text><text text-anchor="middle" x="328" y="260">3</text><text text-anchor="middle" x="336" y="260">,</text><text text-anchor="middle" x="352" y="260">3</text><text text-anchor="middle" x="360" y="260">)</text><text text-anchor="middle" x="16" y="308">3</text><text text-anchor="middle" x="16" y="372">4</text></g></g></svg><center><div class="imagecaption"><a class="target" name="figure_x">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;3:</b> Calculating player tile index.</div></center>
+
+</p><p>
+
+This operation will give us a fractional value, which we should discard to reach the tile index. Rounding won't work here; we only want to round to the lower value. Luckily, that's precisely what C's <a href="https://www.geeksforgeeks.org/c-typecasting/">casting</a> does. 
+
+</p><p>
+
+To be explicit, let's define a new function that does the truncation for us:
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function"><span class="hljs-keyword">inline</span> u32</span>
+<span class="line"><span class="hljs-title">RoundReal32ToUInt32</span><span class="hljs-params">(f32 Number)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    u32 Result = (u32)(Number + <span class="hljs-number">0.5f</span>);</span>
+<span class="line">    <span class="hljs-keyword">return</span> (Result);</span>
+<span class="line">}</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-function"><span class="hljs-keyword">inline</span> s32</span>
+<span class="line"><span class="hljs-title">TruncateReal32ToInt32</span><span class="hljs-params">(f32 Number)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    s32 Result = (s32)Number;</span>
+<span class="line">    <span class="hljs-keyword">return</span> (Result);</span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;19:</b> <file>[handmade.cpp]</file> Introducing <code>TruncateReal32ToInt32</code>.</div></center>
+<p>
+
+
+Let's do the division that we talked about: 
+
+</p><pre class="listing tilde"><code><span class="line">f32 NewPlayerX = GameState-&gt;PlayerX + Input-&gt;dtForFrame * dPlayerX;</span>
+<span class="line">f32 NewPlayerY = GameState-&gt;PlayerY + Input-&gt;dtForFrame * dPlayerY;</span>
+<span class="line"></span><div class=" edit"><span class="line">s32 PlayerTileX = TruncateReal32ToInt32((NewPlayerX - UpperLeftX) / TileWidth);</span>
+<span class="line">s32 PlayerTileY = TruncateReal32ToInt32((NewPlayerY - UpperLeftY) / TileHeight);</span></div><span class="line"></span>
+<span class="line">b32 IsValid = <span class="hljs-literal">false</span>;</span>
+<span class="line"><span class="hljs-comment">// ...</span></span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;20:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Player tile index.</div></center>
+
+<a class="target" name="validateplayerposition">&nbsp;</a><a class="target" name="playercollisionwiththetilemap/validateplayerposition">&nbsp;</a><a class="target" name="toc2.3">&nbsp;</a><h2>Validate Player Position</h2>
+<p>
+
+
+We can now start thinking about validating the player's position. However, before we check whether the player is inside the wall, we should verify they are on the map at all! To do that, we need to confirm that the <code>TileX</code> and <code>TileY</code> values are larger (or equal) than zero but smaller than the overall tilemap size. 
+
+</p><p>
+
+We don't currently store this size; we pass 9 and 17 directly to the array. We could check against raw (also known as &ldquo;magic&rdquo;) numbers again, but we'd have to pay attention to changing the values if we decide to make our tilemap bigger or smaller in the future. Unfortunately, we can't simply store the values in a variable like usual. In C/C++, the array size must be known at compile time, so we have three options here: 
+
+</p><p>
+
+<ul>
+<li class="asterisk">Store the value as a &ldquo;magic&rdquo; number (like we do currently)
+</li>
+<li class="asterisk">Declare a <code>const</code> variable
+</li>
+<li class="asterisk">Use a <code>#define</code> macro</li></ul>
+
+</p><p>
+
+The latter two have no real difference; it's a style preference. You can use whichever you prefer. In this instance, let's go for a <code>#define</code>: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> TILE_MAP_COUNT_X 17</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> TILE_MAP_COUNT_Y 9</span></span></div><span class="line">f32 UpperLeftX = <span class="hljs-number">-30</span>;</span>
+<span class="line">f32 UpperLeftY = <span class="hljs-number">0</span>;</span>
+<span class="line">f32 TileWidth = <span class="hljs-number">60</span>;</span>
+<span class="line">f32 TileHeight = <span class="hljs-number">60</span>;</span>
+<span class="line"></span><div class=" edit"><span class="line">u32 TileMap[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] = <span class="hljs-comment">/* ... */</span> ;</span></div><span class="line"></span>
+<span class="line"><span class="hljs-comment">// ... </span></span>
+<span class="line"><span class="hljs-comment">// Tilemap drawing</span></span>
+<span class="line">DrawRectangle(Buffer, <span class="hljs-number">0.0f</span>, <span class="hljs-number">0.0f</span>, (f32)Buffer-&gt;Width, (f32)Buffer-&gt;Height, <span class="hljs-number">1.0f</span>, <span class="hljs-number">0.0f</span>, <span class="hljs-number">1.0f</span>);</span>
+<span class="line">    </span>
+<span class="line"><span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Row = <span class="hljs-number">0</span>;</span><div class=" edit"><span class="line">    Row &lt; TILE_MAP_COUNT_Y;</span></div><span class="line">    ++Row)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Column = <span class="hljs-number">0</span>;</span><div class=" edit"><span class="line">        Column &lt; TILE_MAP_COUNT_X;</span></div><span class="line">        ++Column)</span>
+<span class="line">    {</span>
+<span class="line">        <span class="hljs-comment">// ...</span></span>
+<span class="line">    }</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;21:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Storing the tilemap size.</div></center>
+<p>
+
+
+We can use these values to verify that the player position is within the tilemap bounds:
+
+</p><pre class="listing tilde"><code><span class="line">s32 PlayerTileX = TruncateReal32ToInt32((NewPlayerX - UpperLeftX) / TileWidth);</span>
+<span class="line">s32 PlayerTileY = TruncateReal32ToInt32((NewPlayerY - UpperLeftY) / TileHeight);</span>
+<span class="line"></span>
+<span class="line">b32 IsValid = <span class="hljs-literal">false</span>;</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-keyword">if</span> ((PlayerTileX &gt;= <span class="hljs-number">0</span>) &amp;&amp; (PlayerTileX &lt; TILE_MAP_COUNT_X) &amp;&amp; </span>
+<span class="line">    (PlayerTileY &gt;= <span class="hljs-number">0</span>) &amp;&amp; (PlayerTileY &lt; TILE_MAP_COUNT_Y))</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// Check for IsValid here</span></span>
+<span class="line">}</span></div><span class="line"></span>
+<span class="line"><span class="hljs-keyword">if</span> (IsValid)</span>
+<span class="line">{</span>
+<span class="line">    GameState-&gt;PlayerX = NewPlayerX;</span>
+<span class="line">    GameState-&gt;PlayerY = NewPlayerY;</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;22:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Making sure we're within the tilemap bounds.</div></center>
+<p>
+
+
+Finally, we can see if the tile we want to go to is occupied (in our case, by a wall). We can use the player tile coordinates to access a specific value inside the tile map. Then, we should check if the value we get is 0 since we use 1 to put a wall on the screen.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">if</span> ((PlayerTileX &gt;= <span class="hljs-number">0</span>) &amp;&amp; (PlayerTileX &lt; TILE_MAP_COUNT_X) &amp;&amp; </span>
+<span class="line">    (PlayerTileY &gt;= <span class="hljs-number">0</span>) &amp;&amp; (PlayerTileY &lt; TILE_MAP_COUNT_Y))</span>
+<span class="line">{</span><div class=" add"><span class="line">    u32 TileMapValue = TileMap[PlayerTileY][PlayerTileX];</span>
+<span class="line">    IsValid = (TileMapValue == <span class="hljs-number">0</span>);</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;23:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Validating the tile.</div></center>
+<p>
+
+
+As usual, this is nowhere near the final code, but this should be enough to get us going.
+
+</p>
+<a class="target" name="initializeplayerposition">&nbsp;</a><a class="target" name="playercollisionwiththetilemap/initializeplayerposition">&nbsp;</a><a class="target" name="toc2.4">&nbsp;</a><h2>Initialize Player Position</h2>
+<p>
+
+
+Since we don't do any of the initialization ourselves, the game spawns the player at position (0, 0) of our screen buffer. The new collision checks we put in place keep him stuck so he can never move away from its corner. Let's give him a spot on the map during the initialization step:
+
+</p><pre class="listing tilde"><code><span class="line">game_state *GameState = (game_state*)Memory-&gt;PermanentStorage;</span>
+<span class="line"><span class="hljs-keyword">if</span>(!Memory-&gt;IsInitialized)</span>
+<span class="line">{</span><div class=" add"><span class="line">    GameState-&gt;PlayerX = <span class="hljs-number">150</span>;</span>
+<span class="line">    GameState-&gt;PlayerY = <span class="hljs-number">150</span>;</span></div><span class="line">    </span>
+<span class="line">    Memory-&gt;IsInitialized = <span class="hljs-literal">true</span>;</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;24:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Initializing player position.</div></center>
+
+<a class="target" name="revisethetilemapcode">&nbsp;</a><a class="target" name="revisethetilemapcode">&nbsp;</a><a class="target" name="toc3">&nbsp;</a><h1>Revise the Tile Map Code</h1>
+<p>
+
+
+The player can now collide with the walls, but only with its center point. While we're OK with them eclipsing the scenery with its top part, we definitely want to consider player width. 
+
+</p><p>
+
+We'll start from there, but this will lead us to rework our existing code significantly so that everything falls into place.
+
+</p>
+<a class="target" name="introduceistilemappointempty">&nbsp;</a><a class="target" name="revisethetilemapcode/introduceistilemappointempty">&nbsp;</a><a class="target" name="toc3.1">&nbsp;</a><h2>Introduce <code>IsTileMapPointEmpty</code></h2>
+<p>
+
+
+A simple way to do wide collision is to check whether the player's rectangle's bottom right and left points are invading a wall tile, same as we did with the center.
+
+</p><p>
+
+Of course, we could just copy and paste the same code twice, but extracting the code we just wrote in a new function is more straightforward and less error-prone. Let's call this new function <code>IsTileMapPointEmpty</code>: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-function">internal b32</span>
+<span class="line"><span class="hljs-title">IsTileMapPointEmpty</span><span class="hljs-params">(f32 NewPlayerX, f32 NewPlayerY)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    b32 IsValid = <span class="hljs-literal">false</span>;</span>
+<span class="line"></span>
+<span class="line">    s32 PlayerTileX = TruncateReal32ToInt32((NewPlayerX - UpperLeftX) / TileWidth);</span>
+<span class="line">    s32 PlayerTileY = TruncateReal32ToInt32((NewPlayerY - UpperLeftY) / TileHeight);</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">if</span> ((PlayerTileX &gt;= <span class="hljs-number">0</span>) &amp;&amp; (PlayerTileX &lt; TILE_MAP_COUNT_X) &amp;&amp; </span>
+<span class="line">        (PlayerTileY &gt;= <span class="hljs-number">0</span>) &amp;&amp; (PlayerTileY &lt; TILE_MAP_COUNT_Y))</span>
+<span class="line">    {</span>
+<span class="line">        u32 TileMapValue = TileMap[PlayerTileY][PlayerTileX];</span>
+<span class="line">        IsValid = (TileMapValue == <span class="hljs-number">0</span>);</span>
+<span class="line">    }</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">return</span> (IsValid);</span>
+<span class="line">}</span></div><span class="line"></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> defined __cplusplus</span></span>
+<span class="line"><span class="hljs-keyword">extern</span> <span class="hljs-string">&quot;C&quot;</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span></span>
+<span class="line">GAME_UPDATE_AND_RENDER(GameUpdateAndRender)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line">    f32 NewPlayerX = GameState-&gt;PlayerX + Input-&gt;dtForFrame * dPlayerX;</span>
+<span class="line">    f32 NewPlayerY = GameState-&gt;PlayerY + Input-&gt;dtForFrame * dPlayerY;</span>
+<span class="line">    </span><div class=" delete"><span class="line">    s32 PlayerTileX = TruncateReal32ToInt32((NewPlayerX - UpperLeftX) / TileWidth);</span>
+<span class="line">    s32 PlayerTileY = TruncateReal32ToInt32((NewPlayerY - UpperLeftY) / TileHeight);</span>
+<span class="line">    </span>
+<span class="line">    b32 IsValid = <span class="hljs-literal">false</span>;</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">if</span> ((PlayerTileX &gt;= <span class="hljs-number">0</span>) &amp;&amp; (PlayerTileX &lt; TILE_MAP_COUNT_X) &amp;&amp; </span>
+<span class="line">        (PlayerTileY &gt;= <span class="hljs-number">0</span>) &amp;&amp; (PlayerTileY &lt; TILE_MAP_COUNT_Y))</span>
+<span class="line">    {</span>
+<span class="line">        u32 TileMapValue = TileMap[PlayerTileY][PlayerTileX];</span>
+<span class="line">        IsValid = (TileMapValue == <span class="hljs-number">0</span>);</span>
+<span class="line">    }</span>
+<span class="line">            </span></div><div class=" edit"><span class="line">    <span class="hljs-keyword">if</span> (IsTileMapPointEmpty(NewPlayerX, NewPlayerY))</span></div><span class="line">    {</span>
+<span class="line">        GameState-&gt;PlayerX = NewPlayerX;</span>
+<span class="line">        GameState-&gt;PlayerY = NewPlayerY;</span>
+<span class="line">    }</span>
+<span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;25:</b> <file>[handmade.cpp]</file> Introducing <code>IsTileMapPointEmpty</code>.</div></center>
+<p>
+
+
+Let's look better at <code>IsTileMapPointEmpty</code>. First of all, we probably want to rename a few variables to make the function more generic: 
+
+</p><pre class="listing tilde"><code><span class="line">internal b32</span><div class=" edit"><span class="line">IsTileMapPointEmpty(f32 TestX, f32 TestY)</span></div><span class="line">{</span><div class=" edit"><span class="line">    b32 Empty = <span class="hljs-literal">false</span>;</span></div><span class="line">    </span><div class=" edit"><span class="line">    s32 TileX = TruncateReal32ToInt32((TestX - UpperLeftX) / TileWidth);</span>
+<span class="line">    s32 TileY = TruncateReal32ToInt32((TestY - UpperLeftY) / TileHeight);</span></div><span class="line">    </span><div class=" edit"><span class="line">    <span class="hljs-keyword">if</span> ((TileX &gt;= <span class="hljs-number">0</span>) &amp;&amp; (TileX &lt; TILE_MAP_COUNT_X) &amp;&amp; </span>
+<span class="line">        (TileY &gt;= <span class="hljs-number">0</span>) &amp;&amp; (TileY &lt; TILE_MAP_COUNT_Y))</span></div><span class="line">    {</span><div class=" edit"><span class="line">        u32 TileMapValue = TileMap[TileY][TileX];</span>
+<span class="line">        Empty = (TileMapValue == <span class="hljs-number">0</span>);</span></div><span class="line">    }</span>
+<span class="line">    </span><div class=" edit"><span class="line">    <span class="hljs-keyword">return</span> (Empty);</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;26:</b> <file>[handmade.cpp]</file> Renaming variables.</div></center>
+
+<a class="target" name="introducetile_mapstructure">&nbsp;</a><a class="target" name="revisethetilemapcode/introducetile_mapstructure">&nbsp;</a><a class="target" name="toc3.2">&nbsp;</a><h2>Introduce <code>tile_map</code> Structure</h2>
+<p>
+
+
+If we try to compile, you will notice that we're missing a bunch of additional data: 
+
+</p><pre class="listing tilde"><code><span class="line">&#x27;UpperLeftX&#x27;: undeclared identifier</span>
+<span class="line">&#x27;UpperLeftY&#x27;: undeclared identifier</span>
+<span class="line">&#x27;TileWidth&#x27;: undeclared identifier</span>
+<span class="line">&#x27;TileHeight&#x27;: undeclared identifier</span>
+<span class="line">&#x27;TILE_MAP_COUNT_X&#x27;: undeclared identifier</span>
+<span class="line">&#x27;TILE_MAP_COUNT_Y&#x27;: undeclared identifier</span>
+<span class="line">&#x27;TileMap&#x27;: undeclared identifier</span></code></pre><p>
+
+Of course, we could pass all this data to the function directly, but it will get messy quickly. However, it's an indication of things that go together; we can, therefore, start grouping data into a struct that we can pass along instead. 
+
+</p><p>
+
+It's a very convenient practice - let structures emerge from the code instead of thinking about them beforehand. Even if, in this case, you might have guessed what such a structure might contain, it's always easier to let it emerge on its own. 
+
+</p><p>
+
+So, let's introduce a struct with information that allows us to do the math on a tile map: 
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">tile_map</span></span>
+<span class="line">{</span></span>
+<span class="line">    s32 CountX;</span>
+<span class="line">    s32 CountY;</span>
+<span class="line">    </span>
+<span class="line">    f32 UpperLeftX;</span>
+<span class="line">    f32 UpperLeftY;</span>
+<span class="line">    f32 TileWidth;</span>
+<span class="line">    f32 TileHeight;</span>
+<span class="line">    </span>
+<span class="line">    u32 *Tiles;</span>
+<span class="line">};</span></div><span class="line"></span>
+<span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">game_state</span></span>
+<span class="line">{</span></span>
+<span class="line">    f32 PlayerX;</span>
+<span class="line">    f32 PlayerY;</span>
+<span class="line">};</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;27:</b> <file>[handmade.h]</file> Introducing <code>tile_map</code>.</div></center>
+<p>
+
+
+The use case inside <code>IsTileMapPointEmpty</code> would be something along these lines.
+
+</p><pre class="listing tilde"><code><span class="line">internal b32</span><div class=" edit"><span class="line">IsTileMapPointEmpty(tile_map *TileMap, f32 TestX, f32 TestY)</span></div><span class="line">{</span>
+<span class="line">    b32 Empty = <span class="hljs-literal">false</span>;</span>
+<span class="line">    </span><div class=" edit"><span class="line">    s32 TileX = TruncateReal32ToInt32((TestX - TileMap-&gt;UpperLeftX) / TileMap-&gt;TileWidth);</span>
+<span class="line">    s32 TileY = TruncateReal32ToInt32((TestY - TileMap-&gt;UpperLeftY) / TileMap-&gt;TileHeight);</span></div><span class="line">    </span><div class=" edit"><span class="line">    <span class="hljs-keyword">if</span> ((TileX &gt;= <span class="hljs-number">0</span>) &amp;&amp; (TileX &lt; TileMap-&gt;CountX) &amp;&amp; </span>
+<span class="line">        (TileY &gt;= <span class="hljs-number">0</span>) &amp;&amp; (TileY &lt; TileMap-&gt;CountY))</span></div><span class="line">    {</span><div class=" edit"><span class="line">        u32 TileMapValue = TileMap-&gt;Tiles[TileY][TileX];</span></div><span class="line">        Empty = (TileMapValue == <span class="hljs-number">0</span>);</span>
+<span class="line">    }</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">return</span> (Empty);</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;28:</b> <file>[handmade.cpp]</file> Using <code>tile_map</code> in <code>IsTileMapPointEmpty</code>.</div></center>
+
+<a class="target" name="accessingthetilemapcells">&nbsp;</a><a class="target" name="revisethetilemapcode/accessingthetilemapcells">&nbsp;</a><a class="target" name="toc3.3">&nbsp;</a><h2>Accessing the Tile Map Cells</h2>
+<p>
+
+
+We still can't compile, though. This solution highlights an important consideration: in C/C++, you cannot pass or store arrays; they are always converted to pointers once they exit their scope. To solve this, we should change our tile map array from two-dimensional to one-dimensional. For the time being, this doesn't affect the tile map definiton; we can still <em class="underscore">define</em> it as two-dimensional. We have already arranged the tilemap to store rows first and columns second, setting ourselves up for success.
+
+</p><p>
+
+The approach to accessing the tile would be the same as we did for the pixels in our buffer: Multiply the desired Y by width and add the desired X position. We probably want to write a utility function to retrieve the cells so that we don't have to think about it all the time. We'll call this function <code>GetTileValueUnchecked</code> since we'll assume that we already did all the checks to ensure that the X and Y coordinates are within the tilemap bounds.
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-function"><span class="hljs-keyword">inline</span> u32</span>
+<span class="line"><span class="hljs-title">GetTileValueUnchecked</span><span class="hljs-params">(tile_map *TileMap, s32 TileX, s32 TileY)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    u32 TileMapValue = TileMap-&gt;Tiles[TileY * TileMap-&gt;CountX + TileX];</span>
+<span class="line">    <span class="hljs-keyword">return</span> (TileMapValue);</span>
+<span class="line">}</span></div><span class="line"></span>
+<span class="line"><span class="hljs-function">internal b32</span>
+<span class="line"><span class="hljs-title">IsTileMapPointEmpty</span><span class="hljs-params">(tile_map *TileMap, f32 TestX, f32 TestY)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    b32 Empty = <span class="hljs-literal">false</span>;</span>
+<span class="line">    </span>
+<span class="line">    s32 TileX = TruncateReal32ToInt32((TestX - TileMap-&gt;UpperLeftX) / TileMap-&gt;TileWidth);</span>
+<span class="line">    s32 TileY = TruncateReal32ToInt32((TestY - TileMap-&gt;UpperLeftY) / TileMap-&gt;TileHeight);</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">if</span> ((TileX &gt;= <span class="hljs-number">0</span>) &amp;&amp; (TileX &lt; TileMap-&gt;CountX) &amp;&amp; </span>
+<span class="line">        (TileY &gt;= <span class="hljs-number">0</span>) &amp;&amp; (TileY &lt; TileMap-&gt;CountY))</span>
+<span class="line">    {</span><div class=" edit"><span class="line">        u32 TileMapValue = GetTileValueUnchecked(TileMap, TileX, TileY);</span></div><span class="line">        Empty = (TileMapValue == <span class="hljs-number">0</span>);</span>
+<span class="line">    }</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">return</span> (Empty);</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;29:</b> <file>[handmade.cpp]</file> Introducing <code>GetTileValueUnchecked</code>.</div></center>
+
+<a class="target" name="redefineourtilemap">&nbsp;</a><a class="target" name="revisethetilemapcode/redefineourtilemap">&nbsp;</a><a class="target" name="toc3.4">&nbsp;</a><h2>Redefine our Tile Map</h2>
+<p>
+
+
+Having done all that, let's go back into <code>GameUpdateAndRender</code> to create and pass the tile map in a struct:
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> TILE_MAP_COUNT_X 17</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> TILE_MAP_COUNT_Y 9</span></span><div class=" edit"><span class="line">u32 Tiles[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] = </span></div><span class="line">{</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>}</span>
+<span class="line">};</span>
+<span class="line"></span><div class=" delete"><span class="line">f32 UpperLeftX = <span class="hljs-number">-30</span>;</span>
+<span class="line">f32 UpperLeftY = <span class="hljs-number">0</span>;</span>
+<span class="line">f32 TileWidth = <span class="hljs-number">60</span>;</span>
+<span class="line">f32 TileHeight = <span class="hljs-number">60</span>;</span></div><div class=" add"><span class="line">tile_map TileMap;</span>
+<span class="line">TileMap.CountX = TILE_MAP_COUNT_X;</span>
+<span class="line">TileMap.CountY = TILE_MAP_COUNT_Y;</span>
+<span class="line"></span>
+<span class="line">TileMap.UpperLeftX = <span class="hljs-number">-30</span>;</span>
+<span class="line">TileMap.UpperLeftY = <span class="hljs-number">0</span>;</span>
+<span class="line">TileMap.TileWidth = <span class="hljs-number">60</span>;</span>
+<span class="line">TileMap.TileHeight = <span class="hljs-number">60</span>;</span>
+<span class="line"></span>
+<span class="line">TileMap.Tiles = (u32 *)Tiles;</span></div><span class="line"></span>
+<span class="line"><span class="hljs-comment">// ... </span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> ControllerIndex = <span class="hljs-number">0</span>; <span class="hljs-comment">/* ... */</span> )</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">        </span>
+<span class="line">    f32 NewPlayerX = GameState-&gt;PlayerX + Input-&gt;dtForFrame * dPlayerX;</span>
+<span class="line">    f32 NewPlayerY = GameState-&gt;PlayerY + Input-&gt;dtForFrame * dPlayerY;</span>
+<span class="line">    </span><div class=" edit"><span class="line">    <span class="hljs-keyword">if</span> (IsTileMapPointEmpty(&amp;TileMap, NewPlayerX, NewPlayerY))</span></div><span class="line">    {</span>
+<span class="line">        GameState-&gt;PlayerX = NewPlayerX;</span>
+<span class="line">        GameState-&gt;PlayerY = NewPlayerY;</span>
+<span class="line">    }</span>
+<span class="line">    </span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Row = <span class="hljs-number">0</span>;</span>
+<span class="line">    Row &lt; TILE_MAP_COUNT_Y;</span>
+<span class="line">    ++Row)</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Column = <span class="hljs-number">0</span>;</span>
+<span class="line">        Column &lt; TILE_MAP_COUNT_X;</span>
+<span class="line">        ++Column)</span>
+<span class="line">    {</span><div class=" edit"><span class="line">        u32 TileID = GetTileValueUnchecked(&amp;TileMap, Column, Row);</span></div><span class="line">        f32 Gray = <span class="hljs-number">0.5f</span>;</span>
+<span class="line">        <span class="hljs-keyword">if</span> (TileID == <span class="hljs-number">1</span>)</span>
+<span class="line">        {</span>
+<span class="line">            Gray = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">        }</span>
+<span class="line">        </span><div class=" edit"><span class="line">        f32 MinX = TileMap.UpperLeftX + ((f32)Column) * TileMap.TileWidth;</span>
+<span class="line">        f32 MinY = TileMap.UpperLeftY + ((f32)Row) * TileMap.TileHeight;</span>
+<span class="line">        f32 MaxX = MinX + TileMap.TileWidth;</span>
+<span class="line">        f32 MaxY = MinY + TileMap.TileHeight;</span></div><span class="line">        </span>
+<span class="line">        DrawRectangle(Buffer, MinX, MinY, MaxX, MaxY, Gray, Gray, Gray);</span>
+<span class="line">    }</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line">f32 PlayerR = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">f32 PlayerG = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">f32 PlayerB = <span class="hljs-number">0.0f</span>;</span><div class=" edit"><span class="line">f32 PlayerWidth = <span class="hljs-number">0.75f</span> * TileMap.TileWidth;</span>
+<span class="line">f32 PlayerHeight = TileMap.TileHeight;</span></div><span class="line">f32 PlayerLeft = GameState-&gt;PlayerX - (<span class="hljs-number">0.5f</span> * PlayerWidth);</span>
+<span class="line">f32 PlayerTop = GameState-&gt;PlayerY - PlayerHeight;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;30:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Defining the tile map as a struct.</div></center>
+
+<a class="target" name="addplayerwidthtocollision">&nbsp;</a><a class="target" name="revisethetilemapcode/addplayerwidthtocollision">&nbsp;</a><a class="target" name="toc3.5">&nbsp;</a><h2>Add Player Width to Collision</h2>
+<p>
+
+
+We're now compiling! We haven't done anything new, though, since our code is doing the same thing it was before. It's easy to fix since we can call <code>IsTileMapPointEmpty</code> on multiple points and only accept the user's input if all of them are true: 
+
+</p><pre class="listing tilde"><code><span class="line">f32 NewPlayerX = GameState-&gt;PlayerX + Input-&gt;dtForFrame * dPlayerX;</span>
+<span class="line">f32 NewPlayerY = GameState-&gt;PlayerY + Input-&gt;dtForFrame * dPlayerY;</span>
+<span class="line"></span><div class=" edit"><span class="line"><span class="hljs-keyword">if</span> (IsTileMapPointEmpty(&amp;TileMap, NewPlayerX, NewPlayerY) &amp;&amp; </span></div><div class=" add"><span class="line">    IsTileMapPointEmpty(&amp;TileMap, NewPlayerX - <span class="hljs-number">0.5f</span> * PlayerWidth, NewPlayerY) &amp;&amp; </span>
+<span class="line">    IsTileMapPointEmpty(&amp;TileMap, NewPlayerX + <span class="hljs-number">0.5f</span> * PlayerWidth, NewPlayerY))</span></div><span class="line">{</span>
+<span class="line">    GameState-&gt;PlayerX = NewPlayerX;</span>
+<span class="line">    GameState-&gt;PlayerY = NewPlayerY;</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;31:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Adding two more points to collision check.</div></center>
+<p>
+
+
+We define the player width and height below, so we should move them towards the beginning. This action, again, should tingle your coding sense to refactor down the line eventually.
+
+</p><pre class="listing tilde"><code><span class="line">tile_map TileMap;</span>
+<span class="line">TileMap.CountX = TILE_MAP_COUNT_X;</span>
+<span class="line">TileMap.CountY = TILE_MAP_COUNT_Y;</span>
+<span class="line"></span>
+<span class="line">TileMap.UpperLeftX = <span class="hljs-number">-30</span>;</span>
+<span class="line">TileMap.UpperLeftY = <span class="hljs-number">0</span>;</span>
+<span class="line">TileMap.TileWidth = <span class="hljs-number">60</span>;</span>
+<span class="line">TileMap.TileHeight = <span class="hljs-number">60</span>;</span>
+<span class="line"></span>
+<span class="line">TileMap.Tiles = (u32 *)Tiles;</span>
+<span class="line"></span><div class=" add"><span class="line">f32 PlayerWidth = <span class="hljs-number">0.75f</span> * TileMap.TileWidth;</span>
+<span class="line">f32 PlayerHeight = TileMap.TileHeight;</span></div><span class="line"></span>
+<span class="line">game_state *GameState = (game_state*)Memory-&gt;PermanentStorage;</span>
+<span class="line"><span class="hljs-comment">// ... </span></span>
+<span class="line"></span>
+<span class="line">f32 PlayerR = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">f32 PlayerG = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">f32 PlayerB = <span class="hljs-number">0.0f</span>;</span><div class=" delete"><span class="line">f32 PlayerWidth = <span class="hljs-number">0.75f</span> * TileMap.TileWidth;</span>
+<span class="line">f32 PlayerHeight = TileMap.TileHeight;</span></div><span class="line">f32 PlayerLeft = GameState-&gt;PlayerX - (<span class="hljs-number">0.5f</span> * PlayerWidth);</span>
+<span class="line">f32 PlayerTop = GameState-&gt;PlayerY - PlayerHeight;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;32:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Extracting the player width and height from the drawing code.</div></center>
+<p>
+
+
+Finally, we are colliding as intended! The game feels awful; we're getting stuck once inside walls, but we're getting somewhere! Slow and steady, we're moving towards the design that we want. Concrete baby steps that give you an idea of whether your design moves in a good or wrong direction.
+
+</p>
+<a class="target" name="multipletilemaps">&nbsp;</a><a class="target" name="multipletilemaps">&nbsp;</a><a class="target" name="toc4">&nbsp;</a><h1>Multiple Tile Maps</h1>
+
+<a class="target" name="createanarrayoftilemaps">&nbsp;</a><a class="target" name="multipletilemaps/createanarrayoftilemaps">&nbsp;</a><a class="target" name="toc4.1">&nbsp;</a><h2>Create an Array of Tile Maps</h2>
+<p>
+
+
+We now have a player moving around our tilemap. When the player enters a door, we want them to transition into a new tilemap. Let's think about what has to happen for that to occur.
+
+</p><p>
+
+The first thing we'll need is, obviously, new tilemaps. Luckily, in our latest refactor, we had already set ourselves up for success. We have our <code>tile_map</code> structure, so it's simply a matter of filling it out for a new tilemap.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> TILE_MAP_COUNT_X 17</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> TILE_MAP_COUNT_Y 9</span></span><div class=" edit"><span class="line">u32 Tiles0[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] = </span></div><span class="line">{</span><div class=" edit"><span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>},</span></div><span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span><div class=" edit"><span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span></div><span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>}</span>
+<span class="line">};</span>
+<span class="line"></span><div class=" add"><span class="line">u32 Tiles1[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] = </span>
+<span class="line">{</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>}</span>
+<span class="line">};</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;33:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> We also want to close all the doors that don't connect to the other tilemap.</div></center>
+<p>
+
+
+We will create an array of two tile maps to store these tilemaps.
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line">tile_map TileMaps[<span class="hljs-number">2</span>];</span>
+<span class="line"></span></div><div class=" edit"><span class="line">TileMaps[<span class="hljs-number">0</span>].CountX = TILE_MAP_COUNT_X;</span>
+<span class="line">TileMaps[<span class="hljs-number">0</span>].CountY = TILE_MAP_COUNT_Y;</span>
+<span class="line"></span>
+<span class="line">TileMaps[<span class="hljs-number">0</span>].UpperLeftX = <span class="hljs-number">-30</span>;</span>
+<span class="line">TileMaps[<span class="hljs-number">0</span>].UpperLeftY = <span class="hljs-number">0</span>;</span>
+<span class="line">TileMaps[<span class="hljs-number">0</span>].TileWidth = <span class="hljs-number">60</span>;</span>
+<span class="line">TileMaps[<span class="hljs-number">0</span>].TileHeight = <span class="hljs-number">60</span>;</span>
+<span class="line"></span>
+<span class="line">TileMaps[<span class="hljs-number">0</span>].Tiles = (u32 *)Tiles0;</span>
+<span class="line"></span></div><div class=" add"><span class="line">TileMaps[<span class="hljs-number">1</span>] = TileMaps[<span class="hljs-number">0</span>];</span>
+<span class="line">TileMaps[<span class="hljs-number">1</span>].Tiles = (u32 *)Tiles1;</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;34:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Note that to create <code>TileMaps[1]</code> we largely clone `TileMaps[0].</div></center>
+<p>
+
+
+Finally, we will create a pointer <code>TileMap</code> that the rest of <code>GameUpdateAndRender</code> will use.
+
+</p><pre class="listing tilde"><code><span class="line">TileMaps[<span class="hljs-number">1</span>] = TileMaps[<span class="hljs-number">0</span>];</span>
+<span class="line">TileMaps[<span class="hljs-number">1</span>].Tiles = (u32 *)Tiles1;</span>
+<span class="line"></span><div class=" add"><span class="line">tile_map *TileMap = &amp;TileMaps[<span class="hljs-number">0</span>];</span></div><span class="line"></span><div class=" edit"><span class="line">f32 PlayerWidth = <span class="hljs-number">0.75f</span> * TileMap-&gt;TileWidth;</span>
+<span class="line">f32 PlayerHeight = TileMap-&gt;TileHeight;</span></div><span class="line"></span>
+<span class="line">game_state *GameState = (game_state*)Memory-&gt;PermanentStorage;</span>
+<span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> ControllerIndex = <span class="hljs-number">0</span>; <span class="hljs-comment">/* ... */</span> )</span>
+<span class="line">{    </span>
+<span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">    f32 NewPlayerX = GameState-&gt;PlayerX + Input-&gt;dtForFrame * dPlayerX;</span>
+<span class="line">    f32 NewPlayerY = GameState-&gt;PlayerY + Input-&gt;dtForFrame * dPlayerY;</span>
+<span class="line">    </span><div class=" edit"><span class="line">    <span class="hljs-keyword">if</span> (IsTileMapPointEmpty(TileMap, NewPlayerX, NewPlayerY) &amp;&amp; </span>
+<span class="line">        IsTileMapPointEmpty(TileMap, NewPlayerX - <span class="hljs-number">0.5f</span> * PlayerWidth, NewPlayerY) &amp;&amp; </span>
+<span class="line">        IsTileMapPointEmpty(TileMap, NewPlayerX + <span class="hljs-number">0.5f</span> * PlayerWidth, NewPlayerY))</span></div><span class="line">    {</span>
+<span class="line">        GameState-&gt;PlayerX = NewPlayerX;</span>
+<span class="line">        GameState-&gt;PlayerY = NewPlayerY;</span>
+<span class="line">    }</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line">DrawRectangle(Buffer, <span class="hljs-number">0.0f</span>, <span class="hljs-number">0.0f</span>, (f32)Buffer-&gt;Width, (f32)Buffer-&gt;Height, <span class="hljs-number">1.0f</span>, <span class="hljs-number">0.0f</span>, <span class="hljs-number">1.0f</span>);</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Row = <span class="hljs-number">0</span>; <span class="hljs-comment">/* ... */</span> )</span>
+<span class="line">{</span>
+<span class="line">    <span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> Column = <span class="hljs-number">0</span>;  <span class="hljs-comment">/* ... */</span> )</span>
+<span class="line">    {</span><div class=" edit"><span class="line">        u32 TileID = GetTileValueUnchecked(TileMap, Column, Row);</span></div><span class="line">        f32 Gray = <span class="hljs-number">0.5f</span>;</span>
+<span class="line">        <span class="hljs-keyword">if</span> (TileID == <span class="hljs-number">1</span>)</span>
+<span class="line">        {</span>
+<span class="line">            Gray = <span class="hljs-number">1.0f</span>;</span>
+<span class="line">        }</span>
+<span class="line">        </span><div class=" edit"><span class="line">        f32 MinX = TileMap-&gt;UpperLeftX + ((f32)Column) * TileMap-&gt;TileWidth;</span>
+<span class="line">        f32 MinY = TileMap-&gt;UpperLeftY + ((f32)Row) * TileMap-&gt;TileHeight;</span>
+<span class="line">        f32 MaxX = MinX + TileMap-&gt;TileWidth;</span>
+<span class="line">        f32 MaxY = MinY + TileMap-&gt;TileHeight;</span></div><span class="line">        </span>
+<span class="line">        DrawRectangle(Buffer, MinX, MinY, MaxX, MaxY, Gray, Gray, Gray);</span>
+<span class="line">    }</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;35:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Replacing a <code>tile_map</code> with a pointer to a <code>tile_map</code>.</div></center>
+
+<a class="target" name="introduceworlds">&nbsp;</a><a class="target" name="multipletilemaps/introduceworlds">&nbsp;</a><a class="target" name="toc4.2">&nbsp;</a><h2>Introduce Worlds</h2>
+<p>
+
+
+We want to think about the continuity of tile maps in the world. It's almost as if it were one big tilemap. But for different reasons we don't want to make it one big tilemap. For instance, we'd be wasting space if some tilemaps were empty.
+
+</p><p>
+
+Eventually, we want to have the flexibility of having extremely sparse tilemaps. At some point, we might add a third dimension to our world, and we'll be able to layer tilemaps over tilemaps vertically. Maybe some points would have extremely deep or extremely tall stacks. We don't want the whole world to explode in size only because of very few outliers.
+
+</p><p>
+
+So, when we step through a door, we would ask, &ldquo;Is it OK for the player to move outside? What's out there?&rdquo;. In practice, going off the edge of one tilemap would bring us onto another.
+
+</p><p>
+
+Currently, all functions, like <code>IsTileMapPointEmpty</code>, are geared towards thinking of one tilemap at a time. Instead, we want something that can think about more than one tilemap. It would be some higher-level structure that oversees the whole <em class="underscore">world's</em> tilemaps. Something like this: 
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function">internal b32</span>
+<span class="line"><span class="hljs-title">IsTileMapPointEmpty</span><span class="hljs-params">(tile_map *TileMap, f32 TestX, f32 TestY)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-function">internal b32</span>
+<span class="line"><span class="hljs-title">IsWorldPointEmpty</span><span class="hljs-params">(world *World, f32 TestX, f32 TestY)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    </span>
+<span class="line">}</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;36:</b> <file>[handmade.cpp]</file> Thinking about worlds.</div></center>
+<p>
+
+
+In <code>IsTileMapPointEmpty</code>, we assume there's nothing beyond the edges of the tilemap. That's why we only evaluate points that <em class="underscore">we know</em> lie within the tilemap. What if we projected the edges towards the tilemap we <em class="underscore">would</em> be in and query its world point? 
+
+</p><p>
+
+What we're thinking about is a higher coordinate system. Like tilemaps to pixels, we'd have worlds to tilemaps. 
+
+</p><p>
+
+To play around with this idea better, let's create a 2&times;2 grid of tilemaps, extending the amount of tilemaps to 4.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> TILE_MAP_COUNT_X 17</span></span>
+<span class="line"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> TILE_MAP_COUNT_Y 9</span></span><div class=" edit"><span class="line">u32 Tiles00[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =</span></div><span class="line">{</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span><div class=" edit"><span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>},</span></div><span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">};</span>
+<span class="line"></span><div class=" edit"><span class="line">u32 Tiles01[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =</span></div><span class="line">{</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span><div class=" edit"><span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>},</span></div><span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">};</span>
+<span class="line"></span><div class=" add"><span class="line">u32 Tiles10[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =</span>
+<span class="line">{</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">};</span>
+<span class="line"></span>
+<span class="line">u32 Tiles11[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =</span>
+<span class="line">{</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>,  <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">    {<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>,  <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>},</span>
+<span class="line">};</span></div><span class="line"></span><div class=" edit"><span class="line">tile_map TileMaps[<span class="hljs-number">2</span>][<span class="hljs-number">2</span>];</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;37:</b> <file>[handmade.cpp]</file> Adding two more tile maps and doors to reach them.</div></center>
+<p>
+
+
+Let's also define the related <code>tile_map</code> structures: 
+
+</p><pre class="listing tilde"><code><span class="line">tile_map TileMaps[<span class="hljs-number">2</span>][<span class="hljs-number">2</span>];</span><div class=" edit"><span class="line">TileMaps[<span class="hljs-number">0</span>][<span class="hljs-number">0</span>].CountX = TILE_MAP_COUNT_X;</span>
+<span class="line">TileMaps[<span class="hljs-number">0</span>][<span class="hljs-number">0</span>].CountY = TILE_MAP_COUNT_Y;</span>
+<span class="line"></span>
+<span class="line">TileMaps[<span class="hljs-number">0</span>][<span class="hljs-number">0</span>].UpperLeftX = <span class="hljs-number">-30</span>;</span>
+<span class="line">TileMaps[<span class="hljs-number">0</span>][<span class="hljs-number">0</span>].UpperLeftY = <span class="hljs-number">0</span>;</span>
+<span class="line">TileMaps[<span class="hljs-number">0</span>][<span class="hljs-number">0</span>].TileWidth = <span class="hljs-number">60</span>;</span>
+<span class="line">TileMaps[<span class="hljs-number">0</span>][<span class="hljs-number">0</span>].TileHeight = <span class="hljs-number">60</span>;</span>
+<span class="line"></span>
+<span class="line">TileMaps[<span class="hljs-number">0</span>][<span class="hljs-number">0</span>].Tiles = (uint32 *)Tiles00;</span>
+<span class="line"></span>
+<span class="line">TileMaps[<span class="hljs-number">0</span>][<span class="hljs-number">1</span>] = TileMaps[<span class="hljs-number">0</span>][<span class="hljs-number">0</span>];</span>
+<span class="line">TileMaps[<span class="hljs-number">0</span>][<span class="hljs-number">1</span>].Tiles = (uint32 *)Tiles01;</span>
+<span class="line"></span>
+<span class="line">TileMaps[<span class="hljs-number">1</span>][<span class="hljs-number">0</span>] = TileMaps[<span class="hljs-number">0</span>][<span class="hljs-number">0</span>];</span>
+<span class="line">TileMaps[<span class="hljs-number">1</span>][<span class="hljs-number">0</span>].Tiles = (uint32 *)Tiles10;</span>
+<span class="line"></span>
+<span class="line">TileMaps[<span class="hljs-number">1</span>][<span class="hljs-number">1</span>] = TileMaps[<span class="hljs-number">0</span>][<span class="hljs-number">0</span>];</span>
+<span class="line">TileMaps[<span class="hljs-number">1</span>][<span class="hljs-number">1</span>].Tiles = (uint32 *)Tiles11;</span>
+<span class="line"></span>
+<span class="line">tile_map *TileMap = &amp;TileMaps[<span class="hljs-number">0</span>][<span class="hljs-number">0</span>];</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;38:</b> <file>[handmade.cpp]</file> Using the 2D array of tilemaps.</div></center>
+<p>
+
+
+Finally, we can imagine the <code>world</code> struct to be something that will contain information about the tilemaps. We'll expand on this idea further next time. For the time being, let's simply store the <code>tile_map</code> array we just defined, as well as its X and Y size. However, we will want to implement sparseness in the future.
+
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">tile_map</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-comment">// ... </span></span>
+<span class="line">};</span>
+<span class="line"></span><div class=" add"><span class="line"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">world</span></span>
+<span class="line">{</span></span>
+<span class="line">    <span class="hljs-comment">// TODO(casey): Beginner&#x27;s sparseness</span></span>
+<span class="line">    s32 TileMapCountX;</span>
+<span class="line">    s32 TileMapCountY; </span>
+<span class="line"></span>
+<span class="line">    tile_map *TileMaps;</span>
+<span class="line">};</span></div></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;39:</b> <file>[handmade.h]</file> Introducing the <code>world</code> struct.</div></center>
+<p>
+
+
+Let's define it in <code>GameUpdateAndRender</code>: 
+
+</p><pre class="listing tilde"><code><span class="line">tile_map TileMaps[<span class="hljs-number">2</span>][<span class="hljs-number">2</span>];</span>
+<span class="line"><span class="hljs-comment">// ...</span></span>
+<span class="line"></span>
+<span class="line">tile_map *TileMap = &amp;TileMaps[<span class="hljs-number">0</span>][<span class="hljs-number">0</span>];</span>
+<span class="line"></span><div class=" add"><span class="line">world World;</span>
+<span class="line">World.TileMapCountX = <span class="hljs-number">2</span>;</span>
+<span class="line">World.TileMapCountY = <span class="hljs-number">2</span>;</span>
+<span class="line">World.TileMaps = (tile_map *)TileMaps;</span></div><span class="line"></span>
+<span class="line">f32 PlayerWidth = <span class="hljs-number">0.75f</span> * TileMap-&gt;TileWidth;</span>
+<span class="line">f32 PlayerHeight = TileMap-&gt;TileHeight;</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;40:</b> <file>[handmade.cpp > GameUpdateAndRender]</file> Defining our <code>World</code>.</div></center>
+<p>
+
+
+We should now compile with no changes to the game behavior.
+
+</p>
+<a class="target" name="connectingthetilemaps">&nbsp;</a><a class="target" name="multipletilemaps/connectingthetilemaps">&nbsp;</a><a class="target" name="toc4.3">&nbsp;</a><h2>Connecting the Tile Maps</h2>
+<p>
+
+
+Let's come back to the function we quickly stubbed before, <code>IsWorldPointEmpty</code>. We probably want to get the player's X and Y position in pixels, so we'll additionally need to add another layer to receive the player's X and Y position in tilemaps. From it, we will get a tilemap and, if it's valid, check if the player's X and Y position on that tilemap is valid, either: 
+
+</p><pre class="listing tilde"><code><span class="line">internal b32</span><div class=" edit"><span class="line">IsWorldPointEmpty(world *World, s32 TileMapX, s32 TileMapY, f32 TestX, f32 TestY)</span></div><span class="line">{</span><div class=" add"><span class="line">    b32 Empty = <span class="hljs-literal">false</span>;</span>
+<span class="line">    </span>
+<span class="line">    tile_map *TileMap = GetTileMap(World, TileMapX, TileMapY);</span>
+<span class="line">    <span class="hljs-keyword">if</span>(TileMap)</span>
+<span class="line">    {</span>
+<span class="line">        Empty = IsTileMapPointEmpty(TileMap, TestX, TestY);</span>
+<span class="line">    }</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">return</span> (Empty);</span></div><span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;41:</b> <file>[handmade.cpp]</file> Drafting <code>IsWorldPointEmpty</code>.</div></center>
+<p>
+
+
+Here, we can see a need for a <code>GetTileMap</code> function similar to <code>GetTileValueUnchecked</code>. The only difference is that we will need to check that the tile map exists before attempting to access it:
+
+</p><pre class="listing tilde"><code><div class=" add"><span class="line"><span class="hljs-function"><span class="hljs-keyword">inline</span> tile_map *</span>
+<span class="line"><span class="hljs-title">GetTileMap</span><span class="hljs-params">(world *World, s32 TileMapX, s32 TileMapY)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    tile_map *TileMap = <span class="hljs-number">0</span>;</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">if</span> ((TileMapX &gt;= <span class="hljs-number">0</span>) &amp;&amp; (TileMapX &lt; World-&gt;TileMapCountX) &amp;&amp;</span>
+<span class="line">        (TileMapY &gt;= <span class="hljs-number">0</span>) &amp;&amp; (TileMapY &lt; World-&gt;TileMapCountY))</span>
+<span class="line">    {</span>
+<span class="line">        TileMap = &amp;World-&gt;TileMaps[TileMapY * World-&gt;TileMapCountX + TileMapX];</span>
+<span class="line">    }</span>
+<span class="line">    </span>
+<span class="line">    <span class="hljs-keyword">return</span> (TileMap);</span>
+<span class="line">}</span></div><span class="line"></span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">inline</span> u32</span>
+<span class="line"><span class="hljs-title">GetTileValueUnchecked</span><span class="hljs-params">(tile_map *TileMap, s32 TileX, s32 TileY)</span></span>
+<span class="line"></span>{</span>
+<span class="line">    u32 TileMapValue = TileMap-&gt;Tiles[TileY * TileMap-&gt;CountX + TileX];</span>
+<span class="line">    <span class="hljs-keyword">return</span> (TileMapValue);</span>
+<span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_x">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;42:</b> <file>[handmade.cpp]</file> Introducing <code>GetTileMap</code>.</div></center>
+<p>
+
+
+Once again, we're compiling with no visible changes to the game behavior.
+
+</p>
+<a class="target" name="recap">&nbsp;</a><a class="target" name="recap">&nbsp;</a><a class="target" name="toc5">&nbsp;</a><h1>Recap</h1>
+<p>
+
+
+We'll wrap up on a bit of a cliffhanger today. Today, we completed our first basic collision system and started our journey toward multiple tilemaps. There are still some things that we keep around inside the <code>tile_map</code> struct, like <code>UpperLeft</code> coordinates or tile dimensions; it doesn't really make sense, and we'll need to look deeper into it next time.
+
+</p>
+<a class="target" name="navigation">&nbsp;</a><a class="target" name="navigation">&nbsp;</a><a class="target" name="toc6">&nbsp;</a><h1>Navigation</h1>
+<p>
+
+
+Previous: <a href="../html/day28.html">Day 28. Drawing a Tile Map</a>
+
+</p><p>
+
+Up Next: <a href="../html/day30.html">Day 30. Moving Between Tile Maps</a>
+
+</p><p>
+
+<a href="../index.md.html">Back to Index</a>
+
+</p>
+<div class="nonumberh1">Glossary </div>
+<p>
+
+
+<ul>
+<li class="asterisk">Name Mangling
+</li>
+<li class="asterisk">Casting</li></ul>
+
+</p>
+<div class="nonumberh1">MSDN</div>
+<p>
+
+
+<a href="https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-patblt">PatBlt</a>
+
+</p><p>
+
+<a href="https://learn.microsoft.com/en-us/windows-hardware/drivers/display/flipping">Page Flip</a>
+
+</p>
+<div class="nonumberh1">Other</div>
+<p>
+
+
+<a href="https://www.geeksforgeeks.org/c-typecasting/">casting</a>
+
+</p><p>
+
+<style class="fallback">
+  body {
+    visibility: hidden;
+    font-family: sans-serif;
+  }
+</style>
+
+</p><p>
+
+<script>
+  markdeepOptions = { tocStyle: 'long' };
+  window.alreadyProcessedMarkdeep ||
+    (document.body.style.visibility = 'visible');
+</script>
+</stdint.h></stdio.h></windows.h></stdint.h></stdint.h></math.h></p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.13&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div>
