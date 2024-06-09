@@ -2,9 +2,255 @@
 <link rel="stylesheet" href="../css/style.css" />
 
 **Day 30. Moving Between Tile Maps** 
-_Video Length (including Q&A): [XhXX](https://hero.handmade.network/episode/code/day030/)_ 
+_Video Length (including Q&A): [1h55](https://hero.handmade.network/episode/code/day030/)_ 
 
 (insert intro.md.html here) 
+
+For the past few days, we've been trying to imagine what our game will do so we can begin work on our engine. It's a bit of a paradox: we can't make a game without a game engine, but we can't make a game engine without understanding our game. That's why we're playing with the test code!
+
+We're in the middle of making a rudimentary way of transitioning between rooms. The code we're typing is awful, but we aren't doing it for demonstration purposes only; it's a legitimate way to develop good architecture. It's not a good idea to write clean code at this point; you will always have time to clean it up later. 
+
+# Expand World Definition
+
+Last time, we implemented basic collision for our tilemap and started thinking about transitioning between rooms. We introduced the concept of "worlds" but have not worked with them yet. 
+
+We also started drafting the `IsWorldPointEmpty` function. In it, we thought we'd need the `TileMapX` and `TileMapY` on top of the existing pixel X and Y coordinates. We probably want to store these coordinates in the game state always to know in which world the player was in the last frame:
+
+~~~~~~~ C++
+struct game_state
+{
+~~~~~~~ C++ add
+    s32 PlayerTileMapX;
+    s32 PlayerTileMapY;
+~~~~~~~ C++
+    
+    f32 PlayerX;
+    f32 PlayerY;
+};
+~~~~~~~
+[Listing [x]: <file>[handmade.h]</file> Storing player tile coordinates.]
+
+At the beginning of a new frame, we thus want to retrieve information about the _current_ tile map instead of the tile map 00. We also want to move the player width and height definition further up so that it's a "fixed" value. 
+
+~~~~~~~ C++
+TileMaps[0][0].UpperLeftX = -30;
+TileMaps[0][0].UpperLeftY = 0;
+TileMaps[0][0].TileWidth = 60;
+TileMaps[0][0].TileHeight = 60;
+
+~~~~~~~ C++ add
+f32 PlayerWidth = 0.75f * TileMaps[0][0].TileWidth;
+f32 PlayerHeight = TileMaps[0][0].TileHeight;
+~~~~~~~ C++
+
+TileMaps[0][0].Tiles = (u32 *)Tiles00;
+
+TileMaps[0][1] = TileMaps[0][0];
+TileMaps[0][1].Tiles = (u32 *)Tiles01;
+
+TileMaps[1][0] = TileMaps[0][0];
+TileMaps[1][0].Tiles = (u32 *)Tiles10;
+
+TileMaps[1][1] = TileMaps[0][0];
+TileMaps[1][1].Tiles = (u32 *)Tiles11;
+
+~~~~~~~ C++ edit
+tile_map *TileMap = &TileMaps[GameState->PlayerTileMapY][GameState->PlayerTileMapX];
+~~~~~~~ C++
+
+world World;
+World.TileMapCountX = 2;
+World.TileMapCountY = 2;
+World.TileMaps = (tile_map *)TileMaps;
+
+~~~~~~~ C++ delete
+f32 PlayerWidth = 0.75f * TileMap->TileWidth;
+f32 PlayerHeight = TileMap->TileHeight;
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Retrieving current tile map.]
+
+Even better, we have our `GetTileMap` function that we can use to retrieve a tile map. It helps us avoid mistakes (like forgetting to invert X and Y coordinates to access the array), adds bounds checking, and allows us to rework this functionality in the future.
+
+We also need to move this step to after the initializing the game state; otherwise, we won't be able to access it.
+
+~~~~~~~ C++ delete
+tile_map *TileMap = &TileMaps[GameState->PlayerTileMapY][GameState->PlayerTileMapX];
+~~~~~~~ C++
+
+world World;
+World.TileMapCountX = 2;
+World.TileMapCountY = 2;
+World.TileMaps = (tile_map *)TileMaps;
+
+game_state *GameState = (game_state*)Memory->PermanentStorage;
+if(!Memory->IsInitialized)
+{
+    GameState->PlayerX = 150;
+    GameState->PlayerY = 150;
+    
+    Memory->IsInitialized = true;
+}
+
+~~~~~~~ C++ add
+tile_map *TileMap = GetTileMap(&World, GameState->PlayerTileMapX, GameState->PlayerTileMapY);
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Using a helper function instead.]
+
+## Assertions
+
+We will _assert_ that the player's location is valid, as we don't want the player to wander too far into the void. If you recall, we introduced Assertions on day 14 but haven't used them much until now. We mainly used them to ensure our Win32 audio code wasn't too crazy. 
+
+The assertions will help us avoid blindsiding as we push into unfamiliar territories. Consider these as inline unit tests if you're more familiar with them. 
+
+In our case, the game will simply crash when an assertion fails, allowing us to go up the stack trace and verify what went wrong. If we fill the code with assertions enough, we'll be able to catch bugs long before we stop thinking about this or that part of the code.
+
+~~~~~~~ C++
+tile_map *TileMap = GetTileMap(&World, GameState->PlayerTileMapX, GameState->PlayerTileMapY);
+~~~~~~~ C++ add
+Assert(TileMap);
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp > GameUpdateAndRender]</file> Asserting the tile map exists.]
+
+## Rethinking `IsWorldPointEmpty`
+
+Last time, we quickly drafted a function to check whether we would transition to another tile map. 
+
+~~~~~~~ C++
+internal b32
+IsWorldPointEmpty(world *World, s32 TileMapX, s32 TileMapY, f32 TestX, f32 TestY)
+{
+    b32 Empty = false;
+    
+    tile_map *TileMap = GetTileMap(World, TileMapX, TileMapY);
+    if(TileMap)
+    {
+        Empty = IsTileMapPointEmpty(TileMap, TestX, TestY);
+    }
+    
+    return (Empty);
+}
+~~~~~~~
+[Listing [x]: <file>[handmade.cpp]</file> IsWorldPointEmpty.]
+
+This function doesn't currently do anything interesting: it just fetches a tile map and evaluates if its point is valid. Let's think about what it should do instead.
+
+Imagine a simple situation where our player goes through a door on the left. By doing so, they'd be traversing the tile map boundary: 
+
+*********************************************************
+*                          |      |                     *
+*                          |      |                     *
+*                          |      |                     *
+*                          |      |                     *
+*                          +------+  +----+             *
+*                                    |    |             *
+*                        * <---------|    |             *
+*                                    |    |             *
+*                                    +----+             *
+*                          +------+                     *
+*                          |      |                     *
+*                          |      |                     *
+*                          |      |                     *
+*                          |      |                     *
+*********************************************************
+[Figure [x]: Walking through the doors is easy, we're told.]
+
+If we map this onto the tile map coordinates, we can see that we want to go from a tile map X position of 1 to a new one of -1:
+
+*********************************************************
+*-----+------+------+------+------+------+------+------ *
+* -4  |  -3  |  -2  |  -1  |  0   |   1  |   2  |   3   *
+*                                                       *
+*                          |      |                     *
+*                          |      |                     *
+*                          +------+  +----+             *
+*                                    |    |             *
+*                        * <---------|    |             *
+*                                    |    |             *
+*                                    +----+             *
+*                          +------+                     *
+*                          |      |                     *
+*                          |      |                     *
+*                          |      |                     *
+*                          |      |                     *
+*********************************************************
+[Figure [x]: From the current tile map's perspective, we're going negative.]
+
+Until now, we'd assume a position of -1 to be blocked. What we want to do instead is to ask the tile map on the left whether its _right-most_ tile is occupied. Let's assume that each tile map is $n$-wide: 
+
+*********************************************************
+*       n (tile map 0)     |       n (tile map 1)       *
+*...----------------------' '------------------------...*
+*                          |                            *
+*-----+------+------+------+------+------+------+------ *
+* n-4 |  n-3 |  n-2 |  n-1 |  0   |   1  |   2  |   3   *
+*                                                       *
+*                          |      |                     *
+*                          |      |                     *
+*                          +------+  +----+             *
+*                                    |    |             *
+*                  Wall? * <---------|    |             *
+*                                    |    |             *
+*                                    +----+             *
+*                          +------+                     *
+*                          |      |                     *
+*                          |      |                     *
+*                          |      |                     *
+*                          |      |                     *
+*********************************************************
+[Figure [x]: We don't want to transition tile maps if we hit a wall on the other side.]
+
+You can easily see how the tiles on the left would map to the right tilemap's space: tile $n-1$ would become $-1$, $n-2 \rightarrow -2$, $n-3 \rightarrow -3$, and so forth. The opposite is true for the tiles right-most from a tilemap: 
+
+******************************************************************
+* .--------- n (tile map 0)     |       n (tile map 1) -------.  *
+*|....-------------------------' '-------------------------....| *
+*|                              |                              | *
+* '--> n-4 |  n-3 |  n-2 |  n-1 | n(+0)| n+1  | n+2  | n+3     | *
+*     -----+------+------+------+------+------+------+------   | *
+*      -4  |  -3  |  -2  |  -1  |  0   |  1   |  2   |  3  <--'  *
+*                                                                *
+*                        |      |      |                         *
+*                        |      |      |                         *
+*                        +------+------+  +----+                 *
+*                                         |    |                 *
+*                             * <---------|    |                 *
+*                                         |    |                 *
+*                                         +----+                 *
+*                        +------+------+                         *
+*                        |      |      |                         *
+*                        |      |      |                         *
+*                        |      |      |                         *
+*                        |      |      |                         *
+******************************************************************
+[Figure [x]: Everything is relative.]
+
+We know $n$: it's our `TileWidth` (or `TileHeight` if you apply the same logic vertically). 
+
+
+10:47 Checking if player is moving to a different tilemap
+12:51 Finding the next tilemap and querying the point
+36:07 Calculating the position in the new tilemap
+42:55 Storing X and Y positions relative to the tile
+56:07 Moving the player on to the new tilemap
+1:00:49 Floor instead of truncate
+1:10:48 Q&A 🗩
+1:11:52 Question: Can you talk about the inline keyword? Do you apply any strategies to make sure the compiler does not ignore the request?
+1:13:13 Question: Are we using C or C++?
+1:14:47 Question: How did we start the code for the game?
+1:15:07 Question: What's so bad about including math.h?
+1:15:54 Question: Why not substract 1 if input is under 0, instead of using floor()?
+1:17:09 Question: I thought integers were faster to compute than floats, even if the cpu has a floating-point unit.
+1:19:43 Question: How do you decide when to pack things in a struct?
+1:27:28 Question: Why would we care about screen coordinates? Isn't that just platform code.
+1:29:26 Question: Are you going to make walls obstruct the player the same way the player currently obstructs the walls?
+1:30:17 Question: Can you explain the raw_position and canonical_position again?
+1:32:16 Question: Instead of checking three points on the player, wouldn't it be better to check only the side the player is moving towards?
+1:34:39 Question: Why not have a single set of coordinates for the player that maps the player to a world position?
+1:42:14 Question: Are there any consequences of using inline in early development, i.e harder debugging?
+1:43:22 Question: Wouldn't it be better to call the X and Y variables something more descriptive?
+1:45:52 Question: The game will happen in whole screens without any scrolling or camera movement?
+1:48:13 Question: Could you explain how pointers/references are working or what you use them for and why?
+1:49:02 Question: Was there ever a point in your career where you used these unfortunate structure packing practices?
 
 ------------------------
 <!-- 
@@ -32,15 +278,15 @@ Chart: [Figure [x]: .]
 
 Previous: [Day 29. Basic Tile Map Collision Checking][day 29]
 
-Up Next: [Day 31. Tilemap Coordinate Systems][day ZZZ]
+Up Next: [Day 31. Tilemap Coordinate Systems][day 31]
 
 [Back to Index](../index.md.html)
 
 (#) Glossary 
 
-(insert glossary/glossary_day030.md.html here)
+(insert glossary/glossary_day30.md.html here)
 
-(insert references/refs_day030.md.html here) 
+(insert references/refs_day30.md.html here) 
 
 (insert links.md.html here)
 
