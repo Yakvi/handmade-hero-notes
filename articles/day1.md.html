@@ -790,7 +790,7 @@ In this section, we will be detailing some of important programming concepts tha
 
 But who called us in the first place? It's not actually the operating system that called us. "<b>C</b> <b>R</b>untime <b>L</b>ibrary" (CRT) was the one who's responsible for calling us. CRT is something that ships with all the C compilers, as mandated by the C specification (for Windows, you can find documentation on [MSDN][crt]). In turn, the CRT was called by Windows. 
 
-It is possible to disable the CRT library to get called by the operating system directly. This can have positive effect on the size of your binary and the number of dependencies. However removing CRT is not simple, because compiler accounts on CRT for many things in our code. If you are interested to learn more, check out [this discussion](https://hero.handmade.network/forums/code-discussion/t/94-guide_-_how_to_avoid_c_c++_runtime_on_windows) on Handmade Network.
+It is possible to disable the CRT library to get called by the operating system directly. This can have positive effect on the size of your binary and the number of dependencies. However removing CRT is not simple, because compiler counts on CRT for many things in our code. If you are interested to learn more, check out [this discussion](https://hero.handmade.network/forums/code-discussion/t/94-guide_-_how_to_avoid_c_c++_runtime_on_windows) on Handmade Network.
 
 ## Bitwise Operators
 
