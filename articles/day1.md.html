@@ -240,7 +240,7 @@ In this file we're going to do absolutely nothing (yet). We're going to insert j
 !!! Warning Learn ins and outs of MSDN!
     Much of the Windows core functionality has fallen into obscurity or obfuscated by the newer API. Additionally, while this newer API is actively pushed by Microsoft and many developers, this might not be something you actively need in game development. So searching for the minutia of the programming API on Windows might become complex. The MSDN is _huge_, and it's hard to find your way around. So one reason this course exists is exactly to help finding the correct (or some of the correct) calls and articles. Hopefully this series will become a backbone that would show you want to search for.
 
-    However, even if we will present the direct links to many of the articles, this doesn't mean that you should learn how to use MSDN. If you want to program on Windows, you'll need to learn to navigate this website, read these pages and understand what they say in order to _fully_ understand everything that's going on.
+    However, even if we will present the direct links to many of the articles, this doesn't mean that you shouldn't learn how to use MSDN. If you want to program on Windows, you'll need to learn to navigate this website, read these pages and understand what they say in order to _fully_ understand everything that's going on.
 
 If we search for `WinMain`, which is the entry point for Windows, you will quickly find the [related article](https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-winmain). `WinMain` is the entry point that Windows will be looking for in our program[^entrypoint], everything starts from here. Its `syntax` is specified at the top of its MSDN article we provided above: 
 
@@ -790,7 +790,7 @@ In this section, we will be detailing some of important programming concepts tha
 
 But who called us in the first place? It's not actually the operating system that called us. "<b>C</b> <b>R</b>untime <b>L</b>ibrary" (CRT) was the one who's responsible for calling us. CRT is something that ships with all the C compilers, as mandated by the C specification (for Windows, you can find documentation on [MSDN][crt]). In turn, the CRT was called by Windows. 
 
-It is possible to disable the CRT library to get called by the operating system directly. This can have positive effect on the size of your binary and the number of dependencies. However removing CRT is not simple, because compiler accounts on CRT for many things in our code. If you are interested to learn more, check out [this discussion](https://hero.handmade.network/forums/code-discussion/t/94-guide_-_how_to_avoid_c_c++_runtime_on_windows) on Handmade Network.
+It is possible to disable the CRT library to get called by the operating system directly. This can have positive effect on the size of your binary and the number of dependencies. However removing CRT is not simple, because compiler counts on CRT for many things in our code. If you are interested to learn more, check out [this discussion](https://hero.handmade.network/forums/code-discussion/t/94-guide_-_how_to_avoid_c_c++_runtime_on_windows) on Handmade Network.
 
 ## Bitwise Operators
 
