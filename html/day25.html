@@ -901,7 +901,7 @@ Well, this is actually very simple. Whenever the user presses <code>L</code>, we
 </p><pre class="listing tilde"><code><span class="line"><span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (VKCode == <span class="hljs-string">&#x27;L&#x27;</span>)</span>
 <span class="line">{</span>
 <span class="line">    <span class="hljs-keyword">if</span> (IsDown)</span>
-<span class="line">    {</span><div class=" add"><span class="line">        <span class="hljs-keyword">if</span> (Start-&gt;InputPlayingIndex == <span class="hljs-number">0</span>)</span>
+<span class="line">    {</span><div class=" add"><span class="line">        <span class="hljs-keyword">if</span> (State-&gt;InputPlayingIndex == <span class="hljs-number">0</span>)</span>
 <span class="line">        {</span></div><span class="line">            <span class="hljs-keyword">if</span> (State-&gt;InputRecordingIndex == <span class="hljs-number">0</span>)</span>
 <span class="line">            {</span>
 <span class="line">                Win32BeginRecordingInput(State, <span class="hljs-number">1</span>);</span>
