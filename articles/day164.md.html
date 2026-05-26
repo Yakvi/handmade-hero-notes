@@ -1,0 +1,139 @@
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../css/style.css" />
+
+**Day 164. Asset Processing with Windows Fonts**
+_Video Length (including Q&A): [1h19](https://hero.handmade.network/episode/code/day164/)_
+
+Welcome to ...
+
+We just finished extracting fonts using a library, stb_truetype! Now let's see if we can accomplish the same goal without any third-party library at all, only relying on what Windows provides. As you will see, it's a little more complicated, and you may appreciate stb_truetype even more after today.
+
+# Extract a font
+
+Before we do any work, let's setup the asset processor so we can easily switch between the two different font extraction methods. We can use this in the future to easily and quickly test out the differences in the results.
+
+## #define USE_FONTS_FROM_WINDOWS 1
+
+At the top of our asset processor, let's add a macro that will let us pick the extraction method.
+
+We can then switch on this macro to include the correct headers, and to use the correct codepath.
+
+~~~~~~~ C++
+#include "test_asset_builder.h"
+
+~~~~~~~ C++ add
+#define USE_FONTS_FROM_WINDOWS 1
+
+#if USE_FONTS_FROM_WINDOWS
+#include <windows.h>
+#else
+#include STB_TRUETYPE_IMPLEMENTATION
+#include "stb_truetype.h"
+#endif
+~~~~~~~ C++
+
+// ...
+// LoadGlyphBitmap
+// ...
+
+loaded_bitmap Result = {};
+
+~~~~~~~ C++ add
+#if USE_FONTS_FROM_WINDOWS
+
+#else
+~~~~~~~ C++
+// ...
+~~~~~~~ C++ add
+#endif
+~~~~~~~ C++
+
+return(Result);
+~~~~~~~
+[Listing 1: <file>test_asset_processor.cpp</file> Create and use the USE_FONTS_FROM_WINDOWS macro.]
+
+## Fonts and Device Contexts
+
+The Windows Graphics Device Interface (GDI) provides a function to draw text called TextOutW. As you can see from the documentation, its first parameter is a HDC, which is short for "Handle to a device context".
+
+We already talked about device contexts when we were talking about drawing stuff to the screen. Back then, we were getting a device context from the window, but in the asset processor we don't have one to use. It's fine, we can just use CreateCompatibleDC with a NULL argument to get one that uses the screen format.
+
+When a device context is created, it comes with a default bitmap which is 1 pixel wide and 1 pixel tall. We don't want that, so we will create a new bitmap to replace that default one. Since this is the asset processor and we don't care about being maximally efficient, let's just create a 1024x1024 bitmap that we will reuse for every glyph. We know that, for Handmade Hero, we're never gonna need glyphs that are bigger than that.
+
+We can create the bitmap with CreateCompatibleBitmap and assign it as the current one with SelectObject.
+
+~~~~~~~ C++
+#if USE_FONTS_FROM_WINDOWS
+~~~~~~~ C++ add
+	HDC DeviceContext = CreateCompatibleDC(NULL);
+	HBITMAP Bitmap = CreateCompatibleBitmap(DeviceContext, 1024, 1024);
+	SelectObject(DeviceContext, Bitmap);
+~~~~~~~ C++
+#else
+~~~~~~~
+[Listing 2: <file>test_asset_processor.cpp > LoadGlyphBitmap</file> Create the device context and the bitmap.]
+
+Actually, since we don't want to keep creating new device contexts every time we call LoadGlyphBitmap, let's declare it as static and only create it the first time.
+
+Note that CreateCompatibleDC returns NULL when it fails. This means that, if it fails the first time, it will just keep trying again the following times!
+
+~~~~~~~ C++
+#if USE_FONTS_FROM_WINDOWS
+~~~~~~~ C++ add
+	static HDC DeviceContext = 0;
+	if(!DeviceContext)
+	{
+~~~~~~~ C++ edit
+		DeviceContext = CreateCompatibleDC(0);
+		HBITMAP Bitmap = CreateCompatibleBitmap(DeviceContext, 1024, 1024);
+		SelectObject(DeviceContext, Bitmap);
+	}
+~~~~~~~ C++
+#else
+~~~~~~~
+[Listing 2: <file>test_asset_processor.cpp > LoadGlyphBitmap</file> Only create the device context once.]
+
+We can finally call TextOutW. If we pass in the device context we just created, it will draw the text on the current bitmap (the one we created and selected).
+
+TextOutW wants the text to be passed as a UTF-16 string. We have the codepoint as a u32, however. We don't really care about handling every character, and simply casting to a wchar_t will work fine for us. Let's call the casted codepoint CheesePoint, so we remember that it's not exactly correct.
+
+~~~~~~~ C++
+if(!DeviceContext)
+{
+	// ...
+}
+~~~~~~~ C++ add
+
+wchar_t CheesePoint ? (wchar_t)Codepoint;
+TextOutW(DeviceContext, 0, 0, &CheesePoint, 1);
+~~~~~~~
+[Listing 3: <file>test_asset_processor.cpp > LoadGlyphBitmap</file> Call TextOutW]
+
+# Navigation 
+
+<!-- Previous: [Day 163. Asset Processing with STB TrueType][day 163] -->
+Previous: [Day 30. Moving Between Tile Maps][day 30]
+
+<!-- Up Next: [Day 165. Fixing an Asset System Thread Bug][day 165] -->
+
+[Back to Index](../index.md.html)
+
+(#) Glossary
+
+(insert glossary/glossary_day164.md.html here)
+
+(#) References
+
+(insert references/refs_day164.md.html here)
+
+(insert links.md.html here)
+
+<style class="fallback">
+  body {
+    visibility: hidden;
+    font-family: sans-serif;
+  }
+</style>
+<!-- Markdeep: https://casual-effects.com/markdeep/ -->
+<script>markdeepOptions = { tocStyle: 'long' }; window.alreadyProcessedMarkdeep || (document.body.style.visibility = 'visible');</script>
+<script src="../js/markdeep.min.js" charset="utf-8"></script>
